@@ -80,7 +80,19 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    under its domain. Run the same command again whenever
    `github-deploy.yaml` changes, before the next deploy.
 
-2. Set the repository variables and secret:
+2. Add the local development name, `local.grigri.nu01.com`, pointing at
+   this machine (`127.0.0.1` and `::1`), for local HTTPS through Floci
+   ([grigri_floci/](../grigri_floci)) and OAuth origins that need a
+   public top-level domain:
+
+   ```bash
+   aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
+     --change-batch '{"Changes": [
+       {"Action": "UPSERT", "ResourceRecordSet": {"Name": "local.grigri.nu01.com", "Type": "A", "TTL": 300, "ResourceRecords": [{"Value": "127.0.0.1"}]}},
+       {"Action": "UPSERT", "ResourceRecordSet": {"Name": "local.grigri.nu01.com", "Type": "AAAA", "TTL": 300, "ResourceRecords": [{"Value": "::1"}]}}]}'
+   ```
+
+3. Set the repository variables and secret:
 
    ```bash
    gh variable set AWS_DEPLOY_ROLE_ARN --body "<DeployRoleArn>"

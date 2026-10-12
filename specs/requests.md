@@ -44,3 +44,13 @@ spec.
      ([grigri_infra/README.md](../grigri_infra/README.md)). Google sign-in
      clients have no API, so they're made in the Google Cloud console; the
      app doesn't sign in yet.
+2. **Add the local address so that local HTTPS works, like presence.**
+   Floci runs as the local CloudFront ([grigri_floci/](../grigri_floci),
+   `4-floci` in `devbox services up`), over HTTP on port 2114 and HTTPS on
+   2543 at https://local.grigri.nu01.com:2543/app/, with an mkcert
+   certificate made by `scripts/local-certs.sh`; devbox gains mkcert and
+   OpenSSL, the dev container forwards the new ports and binds the dev
+   servers on every interface, and the health monitor checks `🚚 cdn` and
+   `🔒 https` ([development environment](dev-environment.md)).
+   `local.grigri.nu01.com` needs A (127.0.0.1) and AAAA (::1) records in
+   the `grigri.nu01.com` zone ([grigri_infra/README.md](../grigri_infra/README.md)).

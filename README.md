@@ -17,6 +17,7 @@ specified in [specs/](specs/README.md).
 |---|---|
 | [grigri_app/](grigri_app) | The Flutter app (Android, iOS, web) |
 | [grigri_index/](grigri_index) | The site root page, which redirects to `/app/` |
+| [grigri_floci/](grigri_floci) | Floci as the local CloudFront, over HTTP and HTTPS |
 | [grigri_infra/](grigri_infra) | CloudFormation: the site (S3 + CloudFront) and the GitHub deploy roles |
 | [scripts/](scripts) | Build, run, release and deploy scripts |
 | [specs/](specs) | The specification, one file per feature, and the request log |
@@ -35,7 +36,7 @@ Inside the container (or any machine with [Devbox](https://www.jetify.com/devbox
 
 ```bash
 devbox shell              # enter the environment
-devbox services up        # web app on http://localhost:2112/app/, index on :2113
+devbox services up        # web app on http://localhost:2112/app/, HTTPS on https://local.grigri.nu01.com:2543/app/
 devbox run android        # run on the Android phone attached by USB
 make                      # build every platform this host can (see the Makefile)
 ```
@@ -49,15 +50,21 @@ Private settings (deploy targets) live in the private
 `devbox services up` starts, through [process-compose.yaml](process-compose.yaml):
 
 - `2-flutter-web`: the app in web mode ([scripts/flutter-web.sh](scripts/flutter-web.sh));
-- `5-index`: the site root ([grigri_index/](grigri_index));
-- `0-health-check`: once both are ready, prints the local URLs once, then
+- `4-floci`: [Floci](https://floci.io/) as the local CloudFront
+  ([grigri_floci/](grigri_floci)), routing `/app*` to the web app and the
+  rest to the index, like production, over HTTP (http://grigri.localhost:2114/app/)
+  and HTTPS (https://local.grigri.nu01.com:2543/app/), with an mkcert
+  certificate ([scripts/local-certs.sh](scripts/local-certs.sh)). Run
+  `devbox run mkcert -install` once so browsers trust it. Needs Docker;
+- `0-health-check`: once all are ready, prints the local URLs once, then
   one line per check every 15 s (`HEALTH_CHECK_INTERVAL`), each dependency
   with its icon, label and status:
 
 ```
 🧗 Grigri: http://localhost:2112/app/
 🏠 index:  http://localhost:2113/ (redirects to the app)
-2026-10-12 18:02:10  🏠 index ✅  🧗 web ✅
+🔒 HTTPS:  https://local.grigri.nu01.com:2543/app/ (through Floci's CloudFront)
+2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅
 ```
 
 Stop everything with `devbox services stop`.
