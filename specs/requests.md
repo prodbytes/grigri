@@ -142,7 +142,24 @@ spec.
       answer: avatar, name, how many said yes, and ✕ / ✓ (the same accept
       and decline as the request's card). After I answer, it leaves the
       callout; the card in the messages stays as the record.
-11. **Remove the static fake data; everything from the database; GA empty
+11. **Add the rbacr integration; at the end of the profile view, show the
+    user's roles.**
+    - New feature: [Roles](roles.md). The app depends on rbacr's Dart
+      client (pinned to a commit) and asks rbacr's `/api/me`; the
+      [Profile](screens.md) tab ends with a Roles card: my roles in the
+      `grigri` system and my global ones, the email rbacr knows me by,
+      or why there are none (not signed in, none yet, rbacr unreachable,
+      with Retry).
+    - Grigri has no sign-in yet, so only development builds ask rbacr,
+      with the local dev server's token; `scripts/dart-defines.sh` passes
+      `RBACR_URL`, and `RBACR_TOKEN` only to the dev run scripts, for a
+      localhost rbacr outside a deploy.
+    - [Development environment](dev-environment.md): `devbox services up`
+      runs rbacr's dev server (`1-rbacr`, port 2115, CORS for the web
+      app), the health line gains 🔑 rbacr, debug Android builds allow
+      plain http and `devbox run android` sets up `adb reverse` for it;
+      `.env.example` lists `RBACR_URL` and `RBACR_TOKEN`.
+12. **Remove the static fake data; everything from the database; GA empty
     and real, fake data in RC and local; an admin can approve/reject any
     request; Google sign-in.**
     - The app's data all comes from the backend API ([api.md](api.md)):

@@ -8,10 +8,12 @@ import 'data/auth.dart';
 import 'data/grigri_store.dart';
 import 'data/http_api.dart';
 import 'data/preferences.dart';
+import 'data/roles.dart';
 import 'theme.dart';
 import 'ui/common.dart';
 import 'ui/home_shell.dart';
 import 'ui/profile_editor.dart';
+import 'ui/roles_card.dart';
 import 'ui/sign_in_screen.dart';
 
 Future<void> main() async {
@@ -27,14 +29,21 @@ Future<void> main() async {
     auth: auth,
     preferences: await Preferences.open(),
   );
-  runApp(GrigriApp(store: store));
+  runApp(GrigriApp(store: store, roles: Roles.fromSettings()));
   unawaited(store.start());
 }
 
 class GrigriApp extends StatefulWidget {
-  const GrigriApp({super.key, required this.store});
+  const GrigriApp({
+    super.key,
+    required this.store,
+    this.roles = const Roles.none(),
+  });
 
   final GrigriStore store;
+
+  /// The user's roles, from rbacr.
+  final Roles roles;
 
   @override
   State<GrigriApp> createState() => _GrigriAppState();
@@ -80,13 +89,16 @@ class _GrigriAppState extends State<GrigriApp> {
     // Dark only, for now: the mountain palette (theme.dart).
     return StoreScope(
       store: widget.store,
-      child: MaterialApp(
-        title: AppVersion.title,
-        debugShowCheckedModeBanner: false,
-        theme: mountainTheme(),
-        scaffoldMessengerKey: _messenger,
-        navigatorKey: _navigator,
-        home: const Root(),
+      child: RolesScope(
+        roles: widget.roles,
+        child: MaterialApp(
+          title: AppVersion.title,
+          debugShowCheckedModeBanner: false,
+          theme: mountainTheme(),
+          scaffoldMessengerKey: _messenger,
+          navigatorKey: _navigator,
+          home: const Root(),
+        ),
       ),
     );
   }

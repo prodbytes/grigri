@@ -4,6 +4,7 @@ import '../app_version.dart';
 import '../theme.dart';
 import 'common.dart';
 import 'profile_editor.dart';
+import 'roles_card.dart';
 
 /// My profile, as others see it when I ask to join their plans, with Edit.
 class ProfileScreen extends StatelessWidget {
@@ -93,6 +94,8 @@ class ProfileScreen extends StatelessWidget {
             'When and where are for plans, made separately in Plans.',
             style: text.bodySmall?.copyWith(color: Mountain.granite),
           ),
+          const SizedBox(height: 12),
+          const RolesCard(),
           if (AppVersion.version.isNotEmpty) ...[
             const SizedBox(height: 24),
             Center(

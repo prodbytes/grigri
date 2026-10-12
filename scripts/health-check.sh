@@ -2,7 +2,7 @@
 # Continuous health monitor: every HEALTH_CHECK_INTERVAL seconds (15 by
 # default), one line per run: the time, then each dependency as its icon,
 # a short label and ✅/❌, e.g.
-#   2026-10-10 14:02:10 🏠 index ✅  🧗 web ✅
+#   2026-10-10 14:02:10 🏠 index ✅  🧗 web ✅  🔑 rbacr ✅
 # On start it prints, once, where to open the app locally.
 # Runs via `devbox services up` (see process-compose.yaml) or standalone.
 set -uo pipefail
@@ -24,15 +24,18 @@ status() {
 
 WEB_URL="http://localhost:${FLUTTER_WEB_PORT:-2112}/app/"
 INDEX_URL="http://localhost:${INDEX_PORT:-2113}/"
+RBACR_HEALTH_URL="http://localhost:${RBACR_PORT:-2115}/health"
 
 echo "🧗 Grigri: $WEB_URL"
 echo "🏠 index:  $INDEX_URL (redirects to the app)"
+echo "🔑 rbacr:  ${RBACR_HEALTH_URL%/health}/ (the roles; local dev server)"
 
 while true; do
     # Add more dependencies here, one status call each.
     checks=(
         "$(status 🏠 index get 5 "$INDEX_URL")"
         "$(status 🧗 web get 5 "$WEB_URL")"
+        "$(status 🔑 rbacr get 5 "$RBACR_HEALTH_URL")"
     )
     line="$(date '+%Y-%m-%d %H:%M:%S')"
     for check in "${checks[@]}"; do line+="  $check"; done

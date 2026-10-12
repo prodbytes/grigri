@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Debug builds may reach the local rbacr over plain http
+         (http://localhost:2115, through adb reverse). Release builds can't. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>
