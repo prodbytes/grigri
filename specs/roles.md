@@ -12,11 +12,12 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
 - **My roles**: my roles in the `grigri` system plus my global roles
   (`root` for rbacr's roots), sorted, without duplicates. Roles in other
   systems aren't shown.
-- **Who is asking**: Grigri has no sign-in yet, so the only token is the
-  local rbacr's dev token (`RBACR_TOKEN`, see
-  [Development environment](dev-environment.md)). Without it, nobody is
-  signed in and the app doesn't call rbacr. Once sign-in exists, the app
-  will ask as the signed-in user, with their Google ID token (rbacr accepts
+- **Who is asking**: the app now signs in with Google
+  ([sign-in](sign-in.md)), but doesn't pass that token to rbacr yet, so
+  the only token rbacr sees is the local rbacr's dev token (`RBACR_TOKEN`,
+  see [Development environment](dev-environment.md)). Without it, the
+  card says nobody is signed in and the app doesn't call rbacr. Next, the
+  app will ask as the signed-in user, with their Google ID token (rbacr accepts
   it for `/api/me` when its OAuth client is in rbacr's
   `RBACR_GOOGLE_AUDIENCES`, and on the web when the app's origin is in
   `RBACR_CORS_ORIGINS`).
@@ -36,3 +37,6 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
   root's.
 - **Tests**: widget tests cover the roles shown, nobody signed in, and the
   failure with Retry, with a fake rbacr (no network).
+
+Grigri's **admin** (the Admin tab, [api.md](api.md)) doesn't come from
+rbacr yet: the API decides it from the stage's `GRIGRI_ADMIN_EMAILS`.

@@ -4,7 +4,6 @@ import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'match_screen.dart';
 import 'swipe_deck.dart';
 
 /// The plans deck: swipe right (or tap ✓) to ask to join a plan, left to
@@ -22,26 +21,27 @@ class DiscoverScreen extends StatefulWidget {
 class _DiscoverScreenState extends State<DiscoverScreen> {
   final _controller = SwipeController();
 
-  void _swiped(GrigriStore store, Plan plan, {required bool right}) {
+  Future<void> _swiped(
+    GrigriStore store,
+    Plan plan, {
+    required bool right,
+  }) async {
     if (!right) {
-      store.pass(plan.id);
+      await store.pass(plan.id);
       return;
     }
-    final match = store.like(plan.id);
-    if (match != null) {
-      MatchScreen.show(context, match);
-    } else {
-      final organizer = store.climber(plan.organizerId).name.split(' ').first;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            store.waiting.any((r) => r.planId == plan.id)
-                ? 'Asked to join: pending. $organizer${plan.memberIds.length > 1 ? ' and the group' : ''} will decide; you\'ll get a notification.'
-                : 'Not this time: the group passed.',
-          ),
+    final messenger = ScaffoldMessenger.of(context);
+    if (!await store.like(plan.id)) return;
+    final organizer = store.climber(plan.organizerId).firstName;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          'Asked to join: pending. $organizer'
+          '${plan.memberIds.length > 1 ? ' and the group' : ''} will decide; '
+          'you\'ll get a notification.',
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override
@@ -49,12 +49,25 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final store = StoreScope.of(context);
     final plans = store.discover;
     return Scaffold(
-      appBar: AppBar(title: const Text('Discover plans')),
-      body: plans.isEmpty
+      appBar: AppBar(
+        title: const Text('Discover plans'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh),
+            onPressed: store.refreshDiscover,
+          ),
+        ],
+      ),
+      body: !store.isLoaded(Section.discover)
+          ? const Center(child: CircularProgressIndicator())
+          : plans.isEmpty
           ? EmptyState(
               icon: Icons.landscape_outlined,
-              title: "You've seen every plan",
-              message: 'Make your own, and climbers who fit will ask to join.',
+              title: 'No plans to join right now',
+              message:
+                  'Nobody has a plan open for you yet. Make your own: '
+                  'climbers who fit will ask to join.',
               action: FilledButton.icon(
                 icon: const Icon(Icons.add),
                 label: const Text('New plan'),

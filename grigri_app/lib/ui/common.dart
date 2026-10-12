@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/grigri_store.dart';
@@ -43,13 +42,17 @@ String dayLabel(DateTime t) =>
 String whenLabel(Plan plan) =>
     '${dayLabel(plan.start)} · ${clock(plan.start)}–${clock(plan.end)}';
 
-/// A climber's initials on a color of the palette, always the same one
-/// for the same person.
+/// A climber's photo, or their initials on a color of the palette, always
+/// the same one for the same person.
 class Avatar extends StatelessWidget {
-  const Avatar(this.climber, {super.key, this.radius = 20});
+  const Avatar(this.climber, {super.key, this.radius = 20, this.image});
 
   final Climber climber;
   final double radius;
+
+  /// The picture to show instead of their saved photo (the profile
+  /// editor's, before it's uploaded).
+  final ImageProvider? image;
 
   static const _colors = [
     Mountain.olive,
@@ -64,12 +67,17 @@ class Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final color =
         _colors[climber.id.codeUnits.fold(0, (a, b) => a + b) % _colors.length];
-    final photo = climber.photo;
+    final photo =
+        image ??
+        (climber.photo == null
+            ? null
+            : StoreScope.of(context).photo(climber.photo!));
     if (photo != null) {
       return CircleAvatar(
         radius: radius,
         backgroundColor: color,
-        backgroundImage: MemoryImage(photo),
+        backgroundImage: photo,
+        onBackgroundImageError: (_, _) {},
       );
     }
     return CircleAvatar(
@@ -310,9 +318,9 @@ class ProfileDetails extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                for (final (i, photo) in climber.gearPhotos.indexed)
+                for (final (i, key) in climber.gearPhotos.indexed)
                   PhotoThumb(
-                    photo,
+                    StoreScope.of(context).photo(key),
                     label: '${climber.name}\'s gear, photo ${i + 1}',
                   ),
               ],
@@ -333,7 +341,7 @@ class PhotoThumb extends StatelessWidget {
     this.size = 84,
   });
 
-  final Uint8List photo;
+  final ImageProvider photo;
   final String label;
   final double size;
 
@@ -346,12 +354,21 @@ class PhotoThumb extends StatelessWidget {
       onTap: () => showPhoto(context, photo),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child: Image.memory(
-          photo,
+        child: Image(
+          image: photo,
           width: size,
           height: size,
           fit: BoxFit.cover,
           gaplessPlayback: true,
+          errorBuilder: (_, _, _) => Container(
+            width: size,
+            height: size,
+            color: Mountain.surfaceHigh,
+            child: const Icon(
+              Icons.broken_image_outlined,
+              color: Mountain.granite,
+            ),
+          ),
         ),
       ),
     ),
@@ -359,12 +376,14 @@ class PhotoThumb extends StatelessWidget {
 }
 
 /// A photo, whole, over the screen; pinch to zoom, tap to close.
-Future<void> showPhoto(BuildContext context, Uint8List photo) => showDialog(
+Future<void> showPhoto(BuildContext context, ImageProvider photo) => showDialog(
   context: context,
   builder: (context) => GestureDetector(
     onTap: () => Navigator.pop(context),
     child: InteractiveViewer(
-      child: Center(child: Image.memory(photo, fit: BoxFit.contain)),
+      child: Center(
+        child: Image(image: photo, fit: BoxFit.contain),
+      ),
     ),
   ),
 );

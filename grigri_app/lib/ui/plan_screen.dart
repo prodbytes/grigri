@@ -7,35 +7,48 @@ import 'plan_editor.dart';
 
 /// One plan I'm in, or asked to join: the plan, its group, who's asking to
 /// join (answered in the group chat), and what I can do with it.
-class PlanScreen extends StatelessWidget {
+class PlanScreen extends StatefulWidget {
   const PlanScreen({super.key, required this.planId});
 
   final String planId;
 
   @override
+  State<PlanScreen> createState() => _PlanScreenState();
+}
+
+class _PlanScreenState extends State<PlanScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame: loading notifies, which can't happen mid-build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) StoreScope.read(context).loadPlan(widget.planId);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final plan = store.plan(planId);
+    final plan = store.isGone(widget.planId) ? null : store.plan(widget.planId);
     if (plan == null) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyState(
-          icon: Icons.landscape_outlined,
-          title: 'Plan gone',
-          message: 'Everyone left this plan.',
-        ),
+        body: store.isLoadingPlan(widget.planId)
+            ? const Center(child: CircularProgressIndicator())
+            : const EmptyState(
+                icon: Icons.landscape_outlined,
+                title: 'Plan gone',
+                message: 'Everyone left this plan, or it\'s no longer open.',
+              ),
       );
     }
     final text = Theme.of(context).textTheme;
     final organizing = plan.organizerId == store.me.id;
     final member = plan.memberIds.contains(store.me.id);
-    final mine = store.state.requests['${plan.id}/${store.me.id}'];
-    final pending = store.state.requests.values.where(
-      (r) =>
-          r.planId == plan.id &&
-          !r.rejected &&
-          !plan.memberIds.contains(r.climberId),
-    );
+    final mine = store.myRequest(plan.id);
+    final pending = store
+        .openRequests(plan.id)
+        .where((r) => !r.rejected && !plan.memberIds.contains(r.climberId));
     return Scaffold(
       appBar: AppBar(
         title: Text(organizing ? 'Your plan' : 'Plan'),
@@ -173,8 +186,8 @@ class PlanScreen extends StatelessWidget {
                   ),
                 );
                 if (sure == true && context.mounted) {
-                  Navigator.of(context).pop();
-                  store.leave(plan.id);
+                  final navigator = Navigator.of(context);
+                  if (await store.leave(plan.id)) navigator.pop();
                 }
               },
             ),

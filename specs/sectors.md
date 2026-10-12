@@ -54,7 +54,7 @@ allow reuse.
 
 ## For now: a placeholder
 
-The bundled file is a placeholder with the demo data's crags (ids
+The bundled file is a placeholder with a few crags (ids
 `demo:…`, no attribution), until the build runs where Overpass can be
 reached. It needs no change in the app: the build's output replaces it.
 Splitting the file per country, downloaded as needed, is the next step

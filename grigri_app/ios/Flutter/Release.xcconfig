@@ -1,3 +1,4 @@
 #include "Generated.xcconfig"
-// The developer's own signing team, from .env (scripts/dart-defines.sh); git-ignored.
+// The developer's own signing team and Google sign-in's iOS client ID, from
+// .env (scripts/dart-defines.sh); git-ignored.
 #include? "Private.xcconfig"

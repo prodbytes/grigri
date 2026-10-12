@@ -126,9 +126,18 @@ class _PlanEditorState extends State<PlanEditor> {
     if (date != null) setState(() => _day = _dayOf(date));
   }
 
-  void _save() {
-    if (!_form.currentState!.validate()) return;
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_saving || !_form.currentState!.validate()) return;
     final store = StoreScope.read(context);
+    final now = DateTime.now();
+    if (!_at(_hours.start).isAfter(now)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a time that\'s still to come.')),
+      );
+      return;
+    }
     final grades = GradeRange(
       _discipline.scale,
       _grades.start.round(),
@@ -140,33 +149,36 @@ class _PlanEditorState extends State<PlanEditor> {
     final start = _at(_hours.start);
     final end = _at(_hours.end);
     final existing = widget.plan;
-    if (existing == null) {
-      store.createPlan(
-        discipline: _discipline,
-        place: place,
-        area: area,
-        sectorId: sector?.id,
-        start: start,
-        end: end,
-        grades: grades,
-        notes: _notes.text.trim(),
-      );
-    } else {
-      store.updatePlan(
-        existing.copyWith(
-          discipline: _discipline,
-          place: place,
-          area: area,
-          sectorId: () => sector?.id,
-          start: start,
-          end: end,
-          grades: grades,
-          notes: _notes.text.trim(),
-        ),
-      );
-    }
-    Navigator.of(context).pop();
+    final plan = (existing ?? _draft).copyWith(
+      discipline: _discipline,
+      place: place,
+      area: area,
+      sectorId: () => sector?.id,
+      start: start,
+      end: end,
+      grades: grades,
+      notes: _notes.text.trim(),
+    );
+    setState(() => _saving = true);
+    final saved = existing == null
+        ? await store.createPlan(plan) != null
+        : await store.updatePlan(plan);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (saved) Navigator.of(context).pop();
   }
+
+  /// A new plan, before the server gives it an id and its group.
+  Plan get _draft => Plan(
+    id: '',
+    organizerId: '',
+    discipline: _discipline,
+    place: '',
+    start: _at(_hours.start),
+    end: _at(_hours.end),
+    grades: GradeRange(_discipline.scale, 0, 0),
+    memberIds: const [],
+  );
 
   /// The where field: searches the sector index as I type, and takes any
   /// place the index doesn't have.
@@ -242,7 +254,12 @@ class _PlanEditorState extends State<PlanEditor> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.plan == null ? 'New plan' : 'Edit plan'),
-        actions: [TextButton(onPressed: _save, child: const Text('Save'))],
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: const Text('Save'),
+          ),
+        ],
       ),
       body: Form(
         key: _form,
@@ -344,7 +361,7 @@ class _PlanEditorState extends State<PlanEditor> {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: _save,
+              onPressed: _saving ? null : _save,
               child: Text(widget.plan == null ? 'Publish the plan' : 'Save'),
             ),
           ],

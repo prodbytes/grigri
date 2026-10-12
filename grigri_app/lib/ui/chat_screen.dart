@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../model/plan.dart';
@@ -11,9 +13,16 @@ import 'plan_screen.dart';
 /// yes, and one no turns them down. The ones still waiting for my answer
 /// are also called out on top, under the plan.
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.planId});
+  const ChatScreen({
+    super.key,
+    required this.planId,
+    this.pollEvery = const Duration(seconds: 3),
+  });
 
   final String planId;
+
+  /// How often it checks for new messages while it's open.
+  final Duration pollEvery;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -21,22 +30,56 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final _input = TextEditingController();
+  Timer? _poll;
+  bool _sending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame: loading notifies, which can't happen mid-build.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final store = StoreScope.read(context);
+      store.loadPlan(widget.planId);
+      store.pollMessages(widget.planId);
+    });
+    _poll = Timer.periodic(widget.pollEvery, (_) {
+      // Only while the app is in the foreground.
+      final state = WidgetsBinding.instance.lifecycleState;
+      if (!mounted || (state != null && state != AppLifecycleState.resumed)) {
+        return;
+      }
+      StoreScope.read(context).pollMessages(widget.planId);
+    });
+  }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _input.dispose();
     super.dispose();
   }
 
-  void _send() {
-    StoreScope.read(context).send(widget.planId, _input.text);
-    _input.clear();
+  Future<void> _send() async {
+    final text = _input.text;
+    if (text.trim().isEmpty || _sending) return;
+    setState(() => _sending = true);
+    final sent = await StoreScope.read(context).send(widget.planId, text);
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (sent) _input.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final plan = store.plan(widget.planId);
+    if (plan == null && !store.isGone(widget.planId)) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     if (plan == null || !plan.memberIds.contains(store.me.id)) {
       return Scaffold(
         appBar: AppBar(),
@@ -135,7 +178,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   IconButton.filled(
                     tooltip: 'Send',
                     icon: const Icon(Icons.send),
-                    onPressed: _send,
+                    onPressed: _sending ? null : _send,
                   ),
                 ],
               ),
@@ -278,14 +321,16 @@ class _CalloutRow extends StatelessWidget {
           IconButton(
             tooltip: 'Decline ${person.name}',
             icon: const Icon(Icons.close, color: Mountain.clay),
-            onPressed: () => store.reject(request.id),
+            onPressed: () => store.reject(request),
           ),
           IconButton.filled(
             tooltip: 'Accept ${person.name}',
             icon: const Icon(Icons.check),
-            onPressed: () {
-              final match = store.accept(request.id);
-              if (match != null) MatchScreen.show(context, match);
+            onPressed: () async {
+              final match = await store.accept(request);
+              if (match != null && context.mounted) {
+                MatchScreen.show(context, match);
+              }
             },
           ),
         ],
@@ -306,18 +351,30 @@ class _RequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
-    final request = store.state.requests[message.requestId];
     final plan = store.plan(planId)!;
-    if (request == null) {
+    final requestId = message.requestId!;
+    final climberId = requestId.substring(requestId.lastIndexOf('/') + 1);
+    final open = store.openRequests(planId).where((r) => r.id == requestId);
+    final request =
+        open.firstOrNull ??
+        JoinRequest(
+          planId: planId,
+          climberId: climberId,
+          rejected: !plan.memberIds.contains(climberId),
+        );
+    final person = store.climber(request.climberId);
+    final joined = plan.memberIds.contains(person.id);
+    if (open.isEmpty && !joined && !store.knowsRequests(planId)) {
+      // Still loading the plan's requests.
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Center(child: Tag(message.text, color: Mountain.granite)),
       );
     }
-    final person = store.climber(request.climberId);
-    final joined = plan.memberIds.contains(person.id);
+    // Closed without joining: declined (by me, for sure, when I did it).
+    final closed = open.isEmpty && !joined;
     String first(String id) =>
-        id == store.me.id ? 'You' : store.climber(id).name.split(' ').first;
+        id == store.me.id ? 'You' : store.climber(id).firstName;
     final yes = [
       for (final id in plan.memberIds)
         if (request.acceptedBy.contains(id)) first(id),
@@ -330,6 +387,7 @@ class _RequestCard extends StatelessWidget {
     final fits = level != null && level.overlaps(plan.grades);
     final answering =
         !joined &&
+        !closed &&
         !request.rejected &&
         !request.acceptedBy.contains(store.me.id);
     return Center(
@@ -393,6 +451,8 @@ class _RequestCard extends StatelessWidget {
             const SizedBox(height: 10),
             if (joined)
               const Tag('Joined', icon: Icons.check, color: Mountain.olive)
+            else if (closed && !store.declinedHere(request.id))
+              const Tag('Closed', icon: Icons.close, color: Mountain.granite)
             else if (request.rejected)
               const Tag('Declined', icon: Icons.close, color: Mountain.clay)
             else
@@ -417,7 +477,7 @@ class _RequestCard extends StatelessWidget {
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Mountain.clay),
                       ),
-                      onPressed: () => store.reject(request.id),
+                      onPressed: () => store.reject(request),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -425,9 +485,11 @@ class _RequestCard extends StatelessWidget {
                     child: FilledButton.icon(
                       icon: const Icon(Icons.check),
                       label: const Text('Accept'),
-                      onPressed: () {
-                        final match = store.accept(request.id);
-                        if (match != null) MatchScreen.show(context, match);
+                      onPressed: () async {
+                        final match = await store.accept(request);
+                        if (match != null && context.mounted) {
+                          MatchScreen.show(context, match);
+                        }
                       },
                     ),
                   ),
@@ -493,7 +555,7 @@ class _Bubble extends StatelessWidget {
                 children: [
                   if (!mine && showAuthor)
                     Text(
-                      author.name.split(' ').first,
+                      author.firstName,
                       style: text.labelMedium?.copyWith(color: Mountain.tan),
                     ),
                   Text(message.text, style: text.bodyMedium),

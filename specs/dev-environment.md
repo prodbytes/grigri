@@ -50,9 +50,13 @@
 - **Settings**: `.env` (git-ignored; see [.env.example](../.env.example)),
   linked from the private `prodbytes/setec-astronomy` repo
   (`grigri.nu01/`) by `scripts/link-private.sh`. Only names listed in
-  `scripts/dart-defines.sh` reach the app (now `GRIGRI_STAGE`,
-  `RBACR_URL`, and `RBACR_TOKEN` only to the dev run scripts, when
-  `RBACR_URL` is a localhost rbacr and no stage is set); the version is passed as `GRIGRI_VERSION`.
+  `scripts/dart-defines.sh` reach the app (`GRIGRI_STAGE`,
+  `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID`: see
+  [sign-in](sign-in.md); `RBACR_URL`, and `RBACR_TOKEN` only to the dev
+  run scripts, when `RBACR_URL` is a localhost rbacr and no stage is set);
+  the version is passed as `GRIGRI_VERSION`. Without
+  `GOOGLE_WEB_CLIENT_ID`, a local build signs in with the local API's dev
+  sign-in.
 - **Checks**: `flutter analyze` and `flutter test` in `grigri_app/`; the
   Release workflow runs both on pull requests that touch the app or the
   build.
