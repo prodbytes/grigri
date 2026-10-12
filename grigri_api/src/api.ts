@@ -17,6 +17,7 @@ import {
 import * as rules from './domain/rules.js';
 import { asObject, id, messageText, parseDate, planInput, profileInput } from './domain/validate.js';
 import { type Params, Router } from './router.js';
+import { type Delivery, type Realtime, hintsFor } from './realtime.js';
 import { Conflict, type LoadedPlan, type Store } from './store/store.js';
 
 /** Most requests a plan keeps waiting: bounds its transactions (DynamoDB takes 100 items; each join writes 3). */
@@ -44,6 +45,8 @@ export interface Deps {
   photos: Photos;
   auth: Pick<Auth, 'signIn' | 'signOut' | 'signOutEverywhere'>;
   config: Config;
+  /** Live updates' hints (realtime.ts); none: off. */
+  realtime?: Realtime;
   clock?: () => Date;
 }
 
@@ -116,6 +119,7 @@ export class Api {
     r('GET /api/me', 'caller', async (_req, s) => ({ climber: s.me ?? null, admin: s.caller.admin }));
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
+    r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });
 
     r('GET /api/discover', 'profile', (_req, s) => this.discover(s));
     r('POST /api/plans', 'profile', (req, s) => this.createPlan(req, s));
@@ -290,20 +294,23 @@ export class Api {
       const input = planInput(req.body, s.now);
       const plan = rules.updatePlan(current.plan, s.me.id, input);
       await this.store.apply(current, { plan, requests: [], notices: [], messages: [], matches: [] }, s.now);
+      await this.hint(hintsFor(plan.memberIds, { kind: 'plan', planId }, s.me.id));
       return { plan };
     });
   }
 
   private async leave(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
-    await this.retry(async () => {
+    const members = await this.retry(async () => {
       const loaded = await this.loadPlan(planId);
       await this.loadNames(s, loaded.plan.memberIds, loaded.requests.map((r) => r.climberId));
       const effects = rules.leave(loaded, s.me.id, s.ctx);
       await this.store.apply(loaded, effects, s.now);
+      return effects.plan?.memberIds ?? [];
     });
     // Out of my deck, now that I've left it.
     await this.store.addPass(s.me.id, planId, s.now);
+    await this.hint(hintsFor(members, { kind: 'plan', planId }, s.me.id));
     return {};
   }
 
@@ -325,6 +332,7 @@ export class Api {
         }
         throw e;
       }
+      await this.hint(hintsFor(loaded.plan.memberIds, { kind: 'request', planId }, s.me.id));
       return { request: requestJson(effects.requests[0]!) };
     });
   }
@@ -362,6 +370,7 @@ export class Api {
       const effects =
         kind === 'accept' ? rules.accept(loaded, actor, climberId, s.ctx) : rules.reject(loaded, actor, climberId, s.ctx);
       await this.store.apply(loaded, effects, s.now);
+      await this.hint(answerHints(loaded, effects, kind, climberId, s.me.id));
       if (kind === 'reject') return {};
       return { match: effects.matches.find((m) => m.newcomerId === climberId) ?? null };
     });
@@ -424,10 +433,16 @@ export class Api {
     if (!current) throw notFound('no such plan');
     const message = rules.chatMessage(current.plan, s.me.id, text, s.ctx);
     await this.store.putMessage(message);
+    await this.hint(hintsFor(current.plan.memberIds, { kind: 'message', planId }, s.me.id));
     return { message };
   }
 
   // --- Helpers ------------------------------------------------------------------
+
+  /** Live updates: best effort, never fails the request (Realtime.notify). */
+  private async hint(deliveries: Delivery[]): Promise<void> {
+    await this.deps.realtime?.notify(deliveries);
+  }
 
   private async loadPlan(rawId: string | undefined): Promise<LoadedPlan> {
     const planId = id(rawId, 'plan id');
@@ -476,4 +491,32 @@ export class Api {
       }
     }
   }
+}
+
+/**
+ * Who hears about an answer: a newcomer (everyone said yes) gets a match
+ * and the members a plan change; a partial yes is a request change for
+ * the members; a no tells the requester (a notice) and the members.
+ */
+export function answerHints(
+  before: { plan: Plan },
+  effects: rules.Effects,
+  kind: 'accept' | 'reject',
+  climberId: string,
+  actorId: string,
+): Delivery[] {
+  const planId = before.plan.id;
+  const members = effects.plan?.memberIds ?? before.plan.memberIds;
+  if (kind === 'reject') {
+    return [
+      ...hintsFor([climberId], { kind: 'notice', planId }, actorId),
+      ...hintsFor(before.plan.memberIds, { kind: 'request', planId }, actorId),
+    ];
+  }
+  const newcomers = new Set(effects.matches.map((m) => m.newcomerId));
+  if (newcomers.size === 0) return hintsFor(members, { kind: 'request', planId }, actorId);
+  return [
+    ...hintsFor(newcomers, { kind: 'match', planId }, actorId),
+    ...hintsFor(members.filter((m) => !newcomers.has(m)), { kind: 'plan', planId }, actorId),
+  ];
 }

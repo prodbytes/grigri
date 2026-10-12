@@ -34,11 +34,23 @@ Parameters:
       The API's execute-api host name (the <prefix>-api stack's ApiDomain
       output, grigri_api/template.yaml); scripts/deploy.sh deploys that
       stack first and passes it.
+  IotEndpoint:
+    Type: String
+    Default: ''
+    AllowedPattern: '([a-z0-9-]+\.iot\.[a-z0-9-]+\.amazonaws\.com)?'
+    Description: >
+      Live updates: the account's IoT Data-ATS endpoint, which the web app
+      connects to over WebSocket (wss://<it>/mqtt); scripts/deploy.sh looks
+      it up (aws iot describe-endpoint --endpoint-type iot:Data-ATS). The
+      CSP's connect-src allows it. Empty: none (the app keeps polling).
   HealthNotificationEmails:
     Type: CommaDelimitedList
     Description: >
       Who is emailed when the health check fails and recovers, comma-separated.
       Each address must confirm AWS's subscription email first.
+
+Conditions:
+  HasIot: !Not [!Equals [!Ref IotEndpoint, '']]
 
 Resources:
   Certificate:
@@ -224,7 +236,8 @@ Resources:
   # - style-src 'unsafe-inline': Flutter's engine injects <style> elements
   #   and style attributes.
   # - connect-src: CanvasKit and Google's fonts, which Flutter downloads;
-  #   the API is 'self' (/api/*); photo uploads go to the photos bucket.
+  #   the API is 'self' (/api/*); photo uploads go to the photos bucket;
+  #   live updates are MQTT over WebSocket to the account's IoT endpoint.
   # - img-src: photos are 'self' (/photos/*); Google account pictures
   #   (lh3.googleusercontent.com, the sign-in button's too).
   # - Google Identity Services (sign-in): its script, style, frame and
@@ -239,20 +252,22 @@ Resources:
         SecurityHeadersConfig:
           ContentSecurityPolicy:
             Override: true
-            ContentSecurityPolicy: !Sub >-
-              default-src 'self';
-              script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com/flutter-canvaskit/ https://accounts.google.com/gsi/client;
-              style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style;
-              img-src 'self' data: blob: https://lh3.googleusercontent.com;
-              font-src 'self' data: https://fonts.gstatic.com;
-              connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://accounts.google.com/gsi/ https://${PhotosBucket}.s3.${AWS::Region}.amazonaws.com;
-              frame-src https://accounts.google.com/gsi/;
-              worker-src 'self' blob:;
-              manifest-src 'self';
-              object-src 'none';
-              base-uri 'self';
-              form-action 'self';
-              frame-ancestors 'none'
+            ContentSecurityPolicy: !Sub
+              - >-
+                default-src 'self';
+                script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com/flutter-canvaskit/ https://accounts.google.com/gsi/client;
+                style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style;
+                img-src 'self' data: blob: https://lh3.googleusercontent.com;
+                font-src 'self' data: https://fonts.gstatic.com;
+                connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://accounts.google.com/gsi/ https://${PhotosBucket}.s3.${AWS::Region}.amazonaws.com${Realtime};
+                frame-src https://accounts.google.com/gsi/;
+                worker-src 'self' blob:;
+                manifest-src 'self';
+                object-src 'none';
+                base-uri 'self';
+                form-action 'self';
+                frame-ancestors 'none'
+              - Realtime: !If [HasIot, !Sub ' wss://${IotEndpoint}', '']
           ContentTypeOptions:
             Override: true
           FrameOptions:

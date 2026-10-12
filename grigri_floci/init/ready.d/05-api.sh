@@ -20,6 +20,12 @@
 # with {"devUser": "<email>"}. The template refuses dev mode outside
 # Stage=local. Admins: whoever the local rbacr (on the host, port
 # RBACR_PORT) says holds grigri's admin role, asked with RBACR_TOKEN.
+#
+# Live updates: the app connects to Floci's own MQTT broker over WebSocket,
+# wss://<public host>:<HTTPS port>/mqtt (the same port and certificate as
+# the site), and the function publishes hints to it over MQTT. Floci has
+# no IoT custom authorizers, so the local broker is open, like dev mode
+# (specs/dev-environment.md, "Live updates").
 set -eu
 
 SRC=/opt/grigri-api
@@ -49,6 +55,8 @@ case "$(uname -m)" in
   *) ARCH=x86_64 ;;
 esac
 
+# Starts Floci's MQTT broker (live updates), if it isn't already.
+aws iot describe-endpoint --endpoint-type iot:Data-ATS >/dev/null
 aws s3 mb "s3://$ARTIFACTS" >/dev/null
 aws s3 mb "s3://$PHOTOS" >/dev/null
 # The local web app's origins post uploads to Floci's S3 directly.
@@ -77,7 +85,8 @@ aws s3api put-bucket-lifecycle-configuration --bucket "$PHOTOS" --lifecycle-conf
 aws cloudformation package --template-file "$SRC/template.yaml" \
   --s3-bucket "$ARTIFACTS" --output-template-file /tmp/grigri-api.yaml >/dev/null
 set -- "Stage=local" "DevMode=$DEV_MODE" "PhotosBucket=$PHOTOS" "Architecture=$ARCH" "Version=local" \
-  "PhotosUploadUrl=https://localhost:${FLOCI_HTTPS_PORT_HOST:-2543}/$PHOTOS"
+  "PhotosUploadUrl=https://localhost:${FLOCI_HTTPS_PORT_HOST:-2543}/$PHOTOS" \
+  "IotEndpoint=${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}:${FLOCI_HTTPS_PORT_HOST:-2543}"
 [ -n "$CLIENT_ID" ] && set -- "$@" "GoogleWebClientId=$CLIENT_ID"
 # The Lambda's container reaches the host's rbacr as host.docker.internal.
 [ -n "$RBACR_TOKEN" ] && set -- "$@" "RbacrUrl=http://host.docker.internal:${RBACR_PORT:-2115}" "RbacrToken=$RBACR_TOKEN"

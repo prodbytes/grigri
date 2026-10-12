@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -6,6 +7,7 @@ import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/preferences.dart';
+import 'package:grigri_app/data/realtime.dart';
 import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
@@ -241,6 +243,13 @@ class FakeApi implements GrigriApi, SessionApi {
 
   @override
   Uri photoUrl(String key) => Uri.parse('https://grigri.test/photos/$key');
+
+  /// What `GET /api/realtime` answers: null, live updates off.
+  RealtimeInfo? realtimeInfo;
+
+  @override
+  Future<RealtimeInfo?> realtime() =>
+      _route('GET /api/realtime', () => realtimeInfo);
 
   @override
   Future<Me> me() => _route(
@@ -680,13 +689,15 @@ FakeApi sampleApi({bool admin = false, bool profile = true}) {
 
 /// The store over [api], with photos from memory and the app's own
 /// sessions: signed in (unless [signedIn] is false) with a session kept on
-/// the device, or the one in [storage]. Signs in with [FakeGoogle].
+/// the device, or the one in [storage]. Signs in with [FakeGoogle]. Live
+/// updates over [realtime] when given.
 GrigriStore storeFor(
   FakeApi api, {
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
   MemorySessionStorage? storage,
   Preferences? preferences,
+  RealtimeTransport? realtime,
 }) {
   final auth = SessionAuth(
     method: FakeGoogle(mode: mode),
@@ -703,7 +714,65 @@ GrigriStore storeFor(
     auth: auth,
     image: (_) => MemoryImage(png),
     preferences: preferences,
+    realtime: realtime,
   );
+}
+
+/// Where the fake live updates say to connect.
+final fakeRealtimeInfo = RealtimeInfo(
+  url: Uri.parse('wss://mqtt.example.com/mqtt'),
+  authorizer: 'grigri-test-realtime',
+  topic: 'grigri/test/climbers/me/#',
+  clientIdPrefix: 'me-',
+);
+
+/// Live updates, made up: records each connection; tests send hints down
+/// [current] and drop it.
+class FakeRealtimeTransport implements RealtimeTransport {
+  final connects = <({Uri url, String clientId, String topic})>[];
+  final channels = <FakeRealtimeChannel>[];
+
+  /// Connections are refused while true.
+  bool refuse = false;
+
+  FakeRealtimeChannel get current => channels.last;
+
+  @override
+  Future<RealtimeChannel> connect({
+    required Uri url,
+    required String clientId,
+    required String topic,
+  }) async {
+    connects.add((url: url, clientId: clientId, topic: topic));
+    if (refuse) throw StateError('refused');
+    final channel = FakeRealtimeChannel();
+    channels.add(channel);
+    return channel;
+  }
+}
+
+class FakeRealtimeChannel implements RealtimeChannel {
+  final _messages = StreamController<String>.broadcast();
+  final _closed = Completer<void>();
+
+  bool get isClosed => _closed.isCompleted;
+
+  /// A message from the broker.
+  void send(String payload) => _messages.add(payload);
+
+  /// The connection drops.
+  void drop() {
+    if (!_closed.isCompleted) _closed.complete();
+  }
+
+  @override
+  Stream<String> get messages => _messages.stream;
+
+  @override
+  Future<void> get closed => _closed.future;
+
+  @override
+  void close() => drop();
 }
 
 /// The session token kept on [store]'s device.

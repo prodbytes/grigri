@@ -10,6 +10,7 @@ import '../model/plan.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'preferences.dart';
+import 'realtime.dart';
 
 /// A newcomer joined a plan I'm in, or I joined one: the match screen
 /// shows it.
@@ -57,13 +58,15 @@ class EditablePhoto {
 /// The app's data, a cache over the [GrigriApi]: the decks, my plans and
 /// requests, notifications, chats, my profile, and (for admins) every open
 /// request. Screens read it and call its actions; it refreshes from the
-/// API when they ask (see specs/matching.md, Refreshing).
+/// API when they ask, and on live updates' hints (see specs/matching.md,
+/// Refreshing, and specs/live-updates.md).
 class GrigriStore extends ChangeNotifier {
   GrigriStore({
     required this.api,
     required this.auth,
     ImageProvider Function(Uri url)? image,
     Preferences? preferences,
+    RealtimeTransport? realtime,
   }) : _image = image ?? ((url) => NetworkImage(url.toString())),
        _preferences = preferences ?? Preferences.none() {
     _gradeSystem = _preferences.gradeSystem;
@@ -73,7 +76,19 @@ class GrigriStore extends ChangeNotifier {
         ? language
         : null;
     auth.addListener(_authChanged);
+    if (realtime != null) {
+      _live = Realtime(
+        transport: realtime,
+        info: () => _call(api.realtime),
+        token: auth.sessionToken,
+        onHint: (hint) => unawaited(handleHint(hint)),
+        onReconnected: () => unawaited(_catchUp()),
+      )..addListener(notifyListeners);
+    }
   }
+
+  /// Live updates (none without a transport: polling only).
+  Realtime? _live;
 
   final GrigriApi api;
   final Auth auth;
@@ -194,6 +209,7 @@ class GrigriStore extends ChangeNotifier {
   }
 
   void _clear() {
+    _live?.stop();
     _session++;
     _me = null;
     _admin = false;
@@ -422,6 +438,67 @@ class GrigriStore extends ChangeNotifier {
       _me = me.copyWith(location: _me!.location, areas: _me!.areas);
       _climbers[me.id] = _me!;
     }
+  }
+
+  // --- Live updates ------------------------------------------------------
+
+  /// Whether a live connection is up: polling slows down meanwhile.
+  bool get live => _live?.connected ?? false;
+
+  /// Live updates on: while the tabs are on screen and the app is in the
+  /// foreground (HomeShell says when).
+  void goLive() {
+    if (_phase == Phase.ready) _live?.start();
+  }
+
+  /// Live updates off: in the background, or leaving the tabs.
+  void goQuiet() => _live?.stop();
+
+  /// A hint: refetches just what it names, through the API.
+  Future<void> handleHint(Hint hint) async {
+    if (_phase != Phase.ready) return;
+    final planId = hint.planId;
+    final chat = planId != null && _messages.containsKey(planId);
+    final open = planId != null && _open.containsKey(planId);
+    switch (hint.kind) {
+      case HintKind.message:
+        if (planId != null && (chat || _mine.contains(planId))) {
+          await pollMessages(planId);
+        }
+      case HintKind.request:
+        await Future.wait([
+          refreshRequests(),
+          refreshNotices(),
+          if (chat) pollMessages(planId),
+          if (open) loadPlan(planId),
+        ]);
+      case HintKind.notice:
+        await Future.wait([refreshNotices(), refreshPlans()]);
+      case HintKind.plan:
+        await Future.wait([
+          refreshPlans(),
+          refreshRequests(),
+          if (chat) pollMessages(planId),
+          if (open) loadPlan(planId),
+        ]);
+      case HintKind.match || HintKind.unknown:
+        await Future.wait([
+          refreshPlans(),
+          refreshRequests(),
+          refreshNotices(),
+        ]);
+    }
+  }
+
+  /// Back online after a drop: what hints may have said meanwhile.
+  Future<void> _catchUp() async {
+    if (_phase != Phase.ready) return;
+    await Future.wait([
+      refreshPlans(),
+      refreshRequests(),
+      refreshNotices(),
+      for (final id in _messages.keys.toList()) pollMessages(id),
+    ]);
   }
 
   // --- Refreshing --------------------------------------------------------
@@ -769,6 +846,7 @@ class GrigriStore extends ChangeNotifier {
 
   @override
   void dispose() {
+    _live?.dispose();
     auth.removeListener(_authChanged);
     _errors.close();
     _matches.close();

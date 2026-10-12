@@ -14,7 +14,13 @@ own **session**: the Google ID token is used once, to start it.
 - A session lasts **until sign-out, or 365 days without use**. It slides:
   each day it's used pushes the 365 days forward; there's no absolute
   limit.
-- The app never logs a token, and never puts one in a URL.
+- The same session token opens the app's [live updates](live-updates.md)
+  connection, checked by the MQTT broker's authorizer, which refuses an
+  ended session and drops a connection within the hour of its sign-out.
+- The app never logs a token. The only URL that carries one is the live
+  updates' WebSocket URL (browsers can't set headers on a WebSocket), to
+  AWS IoT Core over TLS; it's never logged or shown, and API calls never
+  put a token in a URL.
 
 ## Where the session is kept
 

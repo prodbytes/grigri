@@ -70,6 +70,22 @@ who are members, or by an admin.
   someone from the list takes effect at once). Admins see every open request (`GET /api/admin/requests`)
   and accept (they join at once, as if every member had said yes) or
   reject any.
+- **Live updates** ([live-updates.md](live-updates.md)): after a change,
+  the function publishes a tiny hint (`{"kind", "planId"}`, never data)
+  to each affected climber's MQTT topic on **AWS IoT Core**
+  (`iot-data:Publish`, QoS 0, at most 1.5 s, never failing the request);
+  its role may publish only to `topic/grigri/<stage>/climbers/*`. The app
+  subscribes over WebSocket with its session token, checked by an IoT
+  **custom authorizer** (`<prefix>-api-realtime`, unsigned) backed by a
+  second small function, `<prefix>-api-realtime-auth` (128 MB, its role
+  reads sessions and subjects from the table and nothing else), whose
+  policy allows connecting as `<climberId>-…` and subscribing to and
+  receiving only `grigri/<stage>/climbers/<climberId>/…`. `GET
+  /api/realtime` tells the app where to connect; the endpoint (the
+  account's IoT Data-ATS endpoint) is a template parameter that
+  `scripts/deploy.sh` looks up, and the site's CSP allows
+  `wss://<it>` in `connect-src`. Locally, Floci's MQTT broker stands in
+  ([dev-environment.md](dev-environment.md#live-updates)).
 - **Dev mode** (local only): without a Google client, the caller names
   themselves in an `X-Grigri-Dev-User: <email>` header, or gets a session
   from `POST /api/session` with `{"devUser": "<email>"}`. The template
@@ -112,8 +128,47 @@ and use is billed per request. Prices are us-east-1's.
 | S3 photos bucket | $0.023/GB-month, $0.005 per 1,000 uploads (and per 1,000 tag clears, one per new photo saved); deletes and lifecycle expirations free | $0 when empty | Photos stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has, cached for a year. Unsaved uploads expire after a day, so they don't pile up. |
 | CloudWatch Logs | $0.50/GB ingested; 14 days kept | $0 | The function logs only errors (plus Lambda's own lines per request), and the retention keeps storage near zero. |
 | Artifact bucket (per stage) | S3 storage of each deploy's ~200 KB zip, expired after 30 days | ~$0 | Where `aws cloudformation package` uploads the code. |
+| IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
+| Authorizer Lambda, arm64, 128 MB | $0.20 per million invocations + GB-seconds: one at each connect and one an hour per open connection (`refreshAfterInSeconds` 3600), ~30 ms each | $0 | A separate tiny function: the API's 256 MB bundle and role would be more than it needs. Hourly refresh, not every few minutes: sign-out reaches open connections within the hour at a twelfth of the invocations of a 5-minute refresh. |
 
 No NAT gateways, VPCs, provisioned capacity, KMS keys (AWS-owned keys
 encrypt the table and buckets) or always-on compute. A month with a few
 thousand users' worth of requests (say a million API calls) costs about a
 dollar for the API and a little more for DynamoDB.
+
+### Live updates' cost
+
+Per person with the app open for an hour: 60 connection-minutes
+($0.0000048), one or two authorizer invocations (~$0.0000003), and the
+hints about them (a busy chat, 100 hints an hour: $0.0002). About **half
+a cent per thousand person-hours online**, before hints.
+
+What it replaces: the app polled every 15 s (my plans, requests,
+notifications and the open tab: ~4 API calls) and an open chat every
+3 s, about **1,000–2,200 requests per person-hour**. Each request costs
+about $2 per million all told (HTTP API $1, Lambda ~$0.4, a session read
+and the route's reads in DynamoDB ~$0.6), so **$0.002–0.004 per
+person-hour**. With live updates the safety-net polling (2 minutes; a
+chat every minute) is ~30–90 requests an hour (~$0.0001), plus the IoT
+cost above: roughly **20–30× cheaper per open hour**, and changes show in
+well under a second instead of up to 15 s. Idle (nobody online), it's $0,
+like everything else here.
+
+Alternatives considered:
+
+- **API Gateway WebSocket APIs**: $1 per million messages (32 KB units)
+  and **$0.25 per million connection-minutes** (3× IoT's), and the API
+  would have to keep its own connection table (a DynamoDB write on every
+  connect and disconnect, a query per fan-out) and post to each
+  connection through the `@connections` API. IoT Core does the topic
+  fan-out and the per-topic authorization itself.
+- **Cloudflare Durable Objects** (WebSocket hibernation): cheap per
+  request, but a second platform and account, a cross-cloud hop from the
+  Lambda for every hint, and its own auth to keep in step with the API's
+  sessions.
+- **AppSync Events**: priced like IoT Core ($1 per million operations,
+  $0.08 per million connection-minutes); IoT Core's custom authorizer
+  returns an explicit per-climber policy (connect, subscribe, receive),
+  which keeps the "only my own topic" rule in one small, tested place.
+- **Polling faster** instead: costs grow with every second of every open
+  app, whether anything changed or not.
