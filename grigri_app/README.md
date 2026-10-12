@@ -7,7 +7,7 @@ Build and run it through the repository's scripts, which pass the version
 and settings (`GRIGRI_VERSION`, `GRIGRI_STAGE`):
 
 ```bash
-devbox services up        # web, on http://localhost:2112/app/
+devbox services up        # web, on http://localhost:7189/app/
 devbox run android        # the Android phone attached by USB
 make web|android|ios      # release builds (see the Makefile)
 ```
