@@ -1,14 +1,20 @@
 # grigri_floci
 
 Runs [Floci](https://floci.io/), a local AWS emulator, as the Grigri
-**CloudFront** distribution, over HTTP and HTTPS. Like the deployed
-CloudFront ([grigri_infra/site.yaml](../grigri_infra/site.yaml)), it only
-routes. The index and the app keep running on their own dev servers:
+**CloudFront** distribution, over HTTP and HTTPS, and as the local AWS the
+**API** runs in: the same template as in AWS
+([grigri_api/template.yaml](../grigri_api/template.yaml): Lambda, HTTP API,
+DynamoDB) plus the photos bucket, seeded with the made-up test data. Like
+the deployed CloudFront ([grigri_infra/site.yaml](../grigri_infra/site.yaml)),
+the distribution only routes. The index and the app keep running on their
+own dev servers:
 
 | Path | Origin |
 |------|--------|
 | default (`/`, anything else) | `grigri_index`, Python `http.server` (`INDEX_PORT`, 2113): `/` redirects to `/app/` |
 | `/app*` | Flutter dev server, `flutter run -d web-server --base-href /app/` (`FLUTTER_WEB_PORT`, 7189) |
+| `/api/*` | The local API: Floci's HTTP API `grigri` (`grigri.execute-api.localhost.floci.io`), its Lambda and table |
+| `/photos/*` | Floci's S3 bucket `grigri-local-photos` (objects under `photos/`) |
 
 Open **https://local.grigri.nu01.com:2543/app/**, or over HTTP
 **http://grigri.localhost:2114/app/**. Browsers and curl resolve
@@ -22,6 +28,7 @@ serves its own prefix: the app has the `/app/` base href.
 | Path | Holds |
 |------|-------|
 | [compose.yaml](compose.yaml) | The `grigri-floci` container, bound to 127.0.0.1 |
+| [init/ready.d/05-api.sh](init/ready.d/05-api.sh) | Ready hook: deploys the API stack `grigri-local-api` (from the host's build, mounted at `/opt/grigri-api`), the photos bucket with CORS for the local origins, and seeds it |
 | [init/ready.d/10-cloudfront.sh](init/ready.d/10-cloudfront.sh) | Ready hook: creates the cache policy, origin request policy and distribution |
 | `certs/` (git-ignored) | The local HTTPS certificate and key, from [scripts/local-certs.sh](../scripts/local-certs.sh) |
 
@@ -56,6 +63,38 @@ serves its own prefix: the app has the `/app/` base href.
   reads it as its own listen port, and the hook then can't reach it.
 - The health monitor's `🚚 cdn` check requests `/app/` with the alias as
   the `Host` header.
+
+## The API
+
+- `scripts/build-api.sh` runs before Floci starts: `npm ci` when the
+  lockfile changed, and the esbuild bundle when the sources did.
+  compose mounts `grigri_api/` read-only; `05-api.sh` packages and deploys
+  the template as `grigri-local-api` (Stage `local`, the host's CPU
+  architecture), then invokes the function with `{"grigriSeed": true}`.
+- Floci runs the function in a sibling Docker container (named
+  `grigri-lambda-*`), so compose mounts the Docker socket. That gives the
+  container control of the Docker daemon: local development only, with
+  Floci's ports bound to 127.0.0.1 and the image pinned by digest. Stopping
+  `4-floci` also removes those containers.
+- The HTTP API gets the fixed ID `grigri` (the template's
+  `floci:override-id` tag, local only), allowlisted as a private origin.
+- **Dev mode**: without `GOOGLE_WEB_CLIENT_ID` in `.env`, the API has no
+  authorizer, and the caller is whoever `X-Grigri-Dev-User: <email>`
+  names. With it, the JWT authorizer checks Google ID tokens as in AWS.
+  `GRIGRI_ADMIN_EMAILS` in `.env` names the local admins. For example:
+
+  ```bash
+  curl -H 'X-Grigri-Dev-User: alex@example.com' https://local.grigri.nu01.com:2543/api/discover
+  ```
+
+- Photo uploads go to `https://localhost:2543/grigri-local-photos` (Floci's
+  S3, path-style; the bucket allows POSTs from the local origins), and
+  photos come back through the CDN at `/photos/<key>`.
+- Floci doesn't enforce CloudFormation Rules (the template's refusal of
+  dev mode outside `local` is checked by AWS, and the function ignores the
+  header outside `local` too), and a stack update can't change the HTTP
+  API's fixed ID: the stack is always created fresh (memory storage).
+- The health monitor's `🔌 api` check asks `/api/health` through the CDN.
 
 ## HTTPS
 
@@ -104,6 +143,8 @@ covers it), or map the name to 127.0.0.1 in your hosts file.
 | `GRIGRI_CDN_ALIAS` | `grigri.localhost` | Distribution alias (host name to browse) |
 | `GRIGRI_PUBLIC_HOST` | `local.grigri.nu01.com` | Second alias, with a public TLD; also in the certificate |
 | `GRIGRI_ORIGIN_HOST` | `dev.grigri.localhost` | Origin host name: the Docker host inside the container, and loopback in the browser |
+| `GOOGLE_WEB_CLIENT_ID` | (none: dev mode) | From `.env`: the Google web client the local API's authorizer accepts |
+| `GRIGRI_ADMIN_EMAILS` | (none) | From `.env`: the local admins |
 
 ## Limitations
 

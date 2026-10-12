@@ -5,11 +5,13 @@ templates.
 
 | Template | Stack | Holds |
 |---|---|---|
-| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and a Route 53 health check of `/app/version.json` that emails `GRIGRI_HEALTH_EMAILS` when it fails |
-| [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition, the deploy policy |
+| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and a Route 53 health check of `/app/version.json` that emails `GRIGRI_HEALTH_EMAILS` when it fails |
+| [../grigri_api/template.yaml](../grigri_api/template.yaml) | `grigri-api` | The API: its Lambda, HTTP API (Google JWT authorizer), DynamoDB table and log group ([specs/backend.md](../specs/backend.md)) |
+| [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition: the deploy policies (site, API), the permissions boundary of the stage's roles (`<prefix>-app-boundary`) and the artifact bucket (`<prefix>-artifacts-<account>`) |
 
-`scripts/deploy.sh` deploys `grigri-web`. With `STAGE=rc` it deploys the
-release candidate's own copy, `grigri-rc-web`, for
+`scripts/deploy.sh` deploys `grigri-api`, then `grigri-web`. With
+`STAGE=rc` it deploys the release candidate's own copies, `grigri-rc-api`
+(seeded with made-up test data) and `grigri-rc-web`, for
 https://rc.grigri.nu01.com; `*RC*` tags do that through
 [deploy-rc.yml](../.github/workflows/deploy-rc.yml).
 
@@ -19,6 +21,8 @@ https://rc.grigri.nu01.com; `*RC*` tags do that through
 |---|---|
 | default (`/`) | S3 `index.html`, the [index page](../grigri_index) that redirects to `/app/` |
 | `/app*` | S3 `app/`, the Flutter web build (`--base-href /app/`). A CloudFront Function redirects `/app` to `/app/` and maps directory URIs to `index.html` |
+| `/api/*` | The `<prefix>-api` HTTP API: nothing cached, every viewer header but `Host` forwarded (`Authorization` included), all methods |
+| `/photos/*` | The photos bucket's `photos/` (origin access control), cached at the edge (keys are never reused) |
 
 Every file is uploaded with `Cache-Control: no-cache`, because Flutter's web
 files aren't content-hashed. Each deploy also invalidates `/*`.
@@ -30,11 +34,14 @@ Push a GA tag (`bash scripts/release-ga.sh`, on `main`). The
 is on `main`, then runs [scripts/deploy.sh](../scripts/deploy.sh), which:
 
 1. builds the web app for `/app/`;
-2. deploys `site.yaml` (certificate and distribution tagged with the
-   stage);
-3. uploads the content and invalidates the cache;
-4. checks that `https://grigri.nu01.com/app/version.json` reports the
-   tag's version and `/` is the index page.
+2. tests, builds and deploys the API (`grigri_api/template.yaml`, stack
+   `grigri-api`); never seeds production, seeds the RC;
+3. deploys `site.yaml` (certificate and distribution tagged with the
+   stage, `/api/*` to the API);
+4. uploads the content and invalidates the cache;
+5. checks that `https://grigri.nu01.com/app/version.json` reports the
+   tag's version, `/` is the index page and `/api/health` reports the
+   stage and version.
 
 If any step fails it prints the version that was live before and how to
 redeploy it. `scripts/deploy.sh` also runs by hand with admin credentials
@@ -74,11 +81,25 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    tags and `main`, each in both subject forms: `repo:prodbytes/grigri:ref:…`
    and the immutable `repo:prodbytes@288014477/grigri@1415803699:ref:…`
    (`GitHubImmutableRepository`; the repository uses immutable OIDC
-   subject claims). Each stage's policy covers its own `<prefix>-*`
+   subject claims). Each stage's policies cover its own `<prefix>-*`
    stacks, buckets, alarms and topics; CloudFront distributions and ACM
    certificates only with its `grigri:stage` tag; and DNS records only
-   under its domain. Run the same command again whenever
-   `github-deploy.yaml` changes, before the next deploy.
+   under its domain. For the API (`ApiDeployPolicy`): its `<prefix>-*`
+   Lambda functions, DynamoDB tables (create, update and describe only:
+   no deleting, no item access), `/aws/lambda/<prefix>-*` log groups, HTTP
+   APIs (they have only IDs, so any in the account, as in presence), and
+   `<prefix>-*` IAM roles, which it can create or give permissions only
+   with the stage's permissions boundary, `<prefix>-app-boundary`, on
+   them. The boundary allows only the stage's tables' items, its
+   function logs and uploads under its photos bucket's `photos/`, so
+   whatever a deploy writes into a role's policy, the role can't do more;
+   removing a boundary is denied. Also denied: the artifact buckets'
+   settings, and the photos buckets' objects (a deploy never reads or
+   deletes people's photos). The only function a deploy role may invoke
+   is `grigri-rc-api` (the RC seed). Run the same command again whenever
+   `github-deploy.yaml` changes, before the next deploy. **This change
+   (the API) needs it**: the deploy scripts check that the boundary and
+   the artifact bucket exist.
 
 2. Add the local development name, `local.grigri.nu01.com`, pointing at
    this machine (`127.0.0.1` and `::1`), for local HTTPS through Floci
@@ -92,13 +113,20 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
        {"Action": "UPSERT", "ResourceRecordSet": {"Name": "local.grigri.nu01.com", "Type": "AAAA", "TTL": 300, "ResourceRecords": [{"Value": "::1"}]}}]}'
    ```
 
-3. Set the repository variables and secret:
+3. Set the repository variables and secrets:
 
    ```bash
    gh variable set AWS_DEPLOY_ROLE_ARN --body "<DeployRoleArn>"
    gh variable set AWS_DEPLOY_RC_ROLE_ARN --body "<RcDeployRoleArn>"
    gh variable set HOSTED_ZONE_ID --body "<the grigri.nu01.com zone ID>"
-   # A secret, not a variable: the repository is public, and run logs
-   # show variables.
+   # The Google web OAuth client (Google Cloud console > Credentials) whose
+   # ID tokens the API accepts; a public identifier. Its authorized
+   # JavaScript origins: https://grigri.nu01.com, https://rc.grigri.nu01.com
+   # and https://local.grigri.nu01.com:2543.
+   gh variable set GOOGLE_WEB_CLIENT_ID --body "<number>-<id>.apps.googleusercontent.com"
+   # Secrets, not variables: the repository is public, and run logs show
+   # variables.
    gh secret set GRIGRI_HEALTH_EMAILS --body "<who gets health alarms>"
+   # Who may approve or reject any join request (verified Google emails).
+   gh secret set GRIGRI_ADMIN_EMAILS --body "<admin emails, comma-separated>"
    ```

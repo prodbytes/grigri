@@ -3,13 +3,20 @@
 # with STAGE=rc to the release-candidate site, https://rc.grigri.nu01.com
 # (its own stack, grigri-rc-web):
 #   1. builds the Flutter web app for /app/ (make web, WEB_BASE_HREF=/app/)
-#   2. deploys the site (CloudFormation grigri_infra/site.yaml:
-#      grigri-web: certificate, bucket, CloudFront, DNS, and the Route 53
-#      health check of /app/version.json with its alarm emails)
-#   3. uploads the index page (/) and the web build (/app/), and
+#   2. tests, builds and deploys the API (grigri_api/template.yaml, stack
+#      grigri-api / grigri-rc-api: the Lambda, its HTTP API and the
+#      DynamoDB table). Production starts empty and is never seeded; the
+#      RC is seeded with made-up test data after each deploy
+#      (scripts/seed.sh)
+#   3. deploys the site (CloudFormation grigri_infra/site.yaml:
+#      grigri-web: certificate, buckets (site and photos), CloudFront with
+#      /api/* to the API, DNS, and the Route 53 health check of
+#      /app/version.json with its alarm emails)
+#   4. uploads the index page (/) and the web build (/app/), and
 #      invalidates the CloudFront cache
-#   4. smoke-tests the live site: /app/version.json must report this
-#      version, and / must be the index page
+#   5. smoke-tests the live site: /app/version.json must report this
+#      version, / must be the index page, and /api/health must report this
+#      stage and version
 # If the deploy fails, it prints the version that was live before and how
 # to put it back.
 #
@@ -27,7 +34,17 @@
 #   GRIGRI_HEALTH_EMAILS who is emailed when the health check fails or
 #                recovers, comma-separated (also from .env). Each must
 #                confirm AWS's subscription email.
-# Needs the AWS CLI, Python 3 and Flutter (all in devbox).
+#   GOOGLE_WEB_CLIENT_ID the Google web OAuth client whose ID tokens the
+#                API accepts (also from .env; a public identifier)
+#   GRIGRI_ADMIN_EMAILS who may approve or reject any join request,
+#                comma-separated verified Google emails (also from .env;
+#                a secret in CI, since the repository is public)
+#   PERMISSIONS_BOUNDARY the API function role's boundary (default: the
+#                stage's, arn:aws:iam::<account>:policy/<prefix>-app-boundary)
+#   ARTIFACT_BUCKET where the API's code is uploaded (default: the stage's,
+#                <prefix>-artifacts-<account>)
+# Both come from grigri_infra/github-deploy.yaml.
+# Needs the AWS CLI, Python 3, Node.js and Flutter (all in devbox).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -46,6 +63,7 @@ case "$STAGE" in
   *) echo "error: STAGE must be prod or rc (got '$STAGE')" >&2; exit 2 ;;
 esac
 SITE_STACK=$stack_prefix-web
+API_STACK=$stack_prefix-api
 
 if [[ "${TAG:-}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$ ]]; then
   export VERSION_Z="${BASH_REMATCH[3]}"
@@ -110,7 +128,7 @@ stack_output() { # stack_output <stack> <output key>
 }
 
 # Private settings: from the environment, else the private .env.
-for name in HOSTED_ZONE_ID GRIGRI_HEALTH_EMAILS; do
+for name in HOSTED_ZONE_ID GRIGRI_HEALTH_EMAILS GOOGLE_WEB_CLIENT_ID GRIGRI_ADMIN_EMAILS; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
   fi
@@ -127,8 +145,35 @@ if [[ ! "$GRIGRI_HEALTH_EMAILS" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+(,[A-Za-z0-9
   echo "error: GRIGRI_HEALTH_EMAILS must be comma-separated emails" >&2
   exit 1
 fi
+if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com$ ]]; then
+  echo "error: GOOGLE_WEB_CLIENT_ID must be a Google OAuth client ID (<number>-<id>.apps.googleusercontent.com)" >&2
+  exit 1
+fi
+if [[ ! "$GRIGRI_ADMIN_EMAILS" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+(,[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+)*$ ]]; then
+  echo "error: GRIGRI_ADMIN_EMAILS must be comma-separated emails" >&2
+  exit 1
+fi
 # Emails are people's: logged only as a count.
 echo "    health alarm emails: $(tr ',' '\n' <<<"$GRIGRI_HEALTH_EMAILS" | grep -c .)"
+echo "    admins: $(tr ',' '\n' <<<"$GRIGRI_ADMIN_EMAILS" | grep -c .)"
+
+# The stage's permissions boundary and artifact bucket (grigri-github-deploy).
+account="$(aws sts get-caller-identity --query Account --output text)"
+PERMISSIONS_BOUNDARY="${PERMISSIONS_BOUNDARY:-arn:aws:iam::$account:policy/$stack_prefix-app-boundary}"
+ARTIFACT_BUCKET="${ARTIFACT_BUCKET:-$stack_prefix-artifacts-$account}"
+if ! aws iam get-policy --policy-arn "$PERMISSIONS_BOUNDARY" >/dev/null 2>&1; then
+  echo "error: the permissions boundary $PERMISSIONS_BOUNDARY doesn't exist (or isn't readable)." >&2
+  echo "  Redeploy grigri_infra/github-deploy.yaml (grigri_infra/README.md, one-time setup)." >&2
+  exit 1
+fi
+if ! aws s3api head-bucket --bucket "$ARTIFACT_BUCKET" >/dev/null 2>&1; then
+  echo "error: the artifact bucket $ARTIFACT_BUCKET doesn't exist (or isn't readable)." >&2
+  echo "  Redeploy grigri_infra/github-deploy.yaml (grigri_infra/README.md, one-time setup)." >&2
+  exit 1
+fi
+# The site stack's photos bucket (site.yaml names it so), which the API,
+# deployed first, presigns uploads to.
+PHOTOS_BUCKET="$SITE_STACK-photos-$account"
 
 # 1. The web app
 if [[ "${SKIP_BUILD:-}" != 1 ]]; then
@@ -163,20 +208,47 @@ if [[ "$built" != "$VERSION" ]]; then
   exit 1
 fi
 
-# 2. The site
+# 2. The API, before the site, whose CloudFront routes /api/* to it.
+echo "==> testing and building the API"
+(cd grigri_api && npm ci --no-audit --no-fund && npm run typecheck && npm test && npm run build)
+echo "==> deploying $API_STACK"
+packaged="$(mktemp -t grigri-api.XXXXXX)"
+aws cloudformation package --template-file grigri_api/template.yaml \
+  --s3-bucket "$ARTIFACT_BUCKET" --s3-prefix "$API_STACK" \
+  --output-template-file "$packaged" >/dev/null
+# NAMED_IAM: the function's role is named <stack>-function (the deploy
+# roles may only manage <prefix>-* roles, with the boundary).
+aws cloudformation deploy --stack-name "$API_STACK" \
+  --template-file "$packaged" --capabilities CAPABILITY_NAMED_IAM \
+  --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
+    "AdminEmails=$GRIGRI_ADMIN_EMAILS" "PhotosBucket=$PHOTOS_BUCKET" \
+    "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
+    "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
+  --no-fail-on-empty-changeset
+rm -f "$packaged"
+api_domain="$(stack_output "$API_STACK" ApiDomain)"
+echo "    API: $api_domain"
+# Made-up test data: the RC only. Production starts empty and holds only
+# real people's data, so it's never seeded (the function refuses anyway).
+if [[ "$STAGE" == rc ]]; then
+  echo "==> seeding the RC with made-up test data"
+  STAGE=rc bash scripts/seed.sh
+fi
+
+# 3. The site
 echo "==> deploying $SITE_STACK"
 # AUTO_EXPAND: the template's Fn::ForEach (AWS::LanguageExtensions).
 aws cloudformation deploy --stack-name "$SITE_STACK" \
   --template-file grigri_infra/site.yaml --capabilities CAPABILITY_AUTO_EXPAND \
   --parameter-overrides "DomainName=$DOMAIN" "Stage=$STAGE" \
-    "HostedZoneId=$HOSTED_ZONE_ID" \
+    "HostedZoneId=$HOSTED_ZONE_ID" "ApiDomainName=$api_domain" \
     "HealthNotificationEmails=$GRIGRI_HEALTH_EMAILS" \
   --no-fail-on-empty-changeset
 bucket="$(stack_output "$SITE_STACK" SiteBucketName)"
 distribution="$(stack_output "$SITE_STACK" DistributionId)"
 echo "    bucket: $bucket, distribution: $distribution"
 
-# 3. The content. Flutter's web files aren't content-hashed, so browsers
+# 4. The content. Flutter's web files aren't content-hashed, so browsers
 # revalidate everything (no-cache); CloudFront is invalidated below.
 echo "==> uploading"
 # The site's own pages (grigri_index/site) at the root; never under app/,
@@ -189,7 +261,7 @@ invalidation="$(aws cloudfront create-invalidation --distribution-id "$distribut
 echo "    waiting for invalidation $invalidation"
 aws cloudfront wait invalidation-completed --distribution-id "$distribution" --id "$invalidation"
 
-# 4. Smoke test (retried: on a first deploy DNS and the edge take a moment)
+# 5. Smoke test (retried: on a first deploy DNS and the edge take a moment)
 echo "==> checking https://$DOMAIN/"
 check() {
   local live
@@ -198,10 +270,15 @@ check() {
   [[ "$live" == "$VERSION" ]] || { echo "    /app/version.json says $live, want $VERSION"; return 1; }
   curl -fsS --max-time 20 "https://$DOMAIN/" | grep -q "location.replace('/app/'" || { echo "    / isn't the index page"; return 1; }
   curl -fsS --max-time 20 -o /dev/null "https://$DOMAIN/app/" || { echo "    /app/ failed"; return 1; }
+  local health
+  health="$(curl -fsS --max-time 20 "https://$DOMAIN/api/health?deploy=$BUILD_NUMBER" \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["stage"], d["version"])')" \
+    || { echo "    /api/health failed"; return 1; }
+  [[ "$health" == "$STAGE $VERSION" ]] || { echo "    /api/health says '$health', want '$STAGE $VERSION'"; return 1; }
 }
 for attempt in $(seq 1 30); do
   if check; then
-    echo "==> https://$DOMAIN/ serves version $VERSION"
+    echo "==> https://$DOMAIN/ serves version $VERSION (API: $STAGE)"
     exit 0
   fi
   echo "    not yet (attempt $attempt/30); retrying in 20 s"

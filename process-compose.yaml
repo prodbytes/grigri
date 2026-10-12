@@ -48,14 +48,19 @@ processes:
       backoff_seconds: 5
 
   4-floci:
-    # Floci as the local CloudFront, over HTTP and HTTPS (grigri_floci/).
-    # The mkcert certificate is generated first, when missing or stale.
-    command: bash scripts/local-certs.sh && docker compose -f grigri_floci/compose.yaml up floci
+    # Floci as the local CloudFront, over HTTP and HTTPS, and the local AWS
+    # the API runs in (grigri_floci/). The mkcert certificate is generated
+    # first, when missing or stale, and so is the API build, which Floci
+    # deploys and seeds (05-api.sh), with GOOGLE_WEB_CLIENT_ID (none: dev
+    # mode) and GRIGRI_ADMIN_EMAILS from .env.
+    command: bash scripts/local-certs.sh && bash scripts/build-api.sh && GOOGLE_WEB_CLIENT_ID="$(sed -n 's/^GOOGLE_WEB_CLIENT_ID=//p' .env 2>/dev/null | tail -1)" GRIGRI_ADMIN_EMAILS="$(sed -n 's/^GRIGRI_ADMIN_EMAILS=//p' .env 2>/dev/null | tail -1)" docker compose -f grigri_floci/compose.yaml up floci
     environment:
       - FLOCI_PORT=${FLOCI_PORT:-2114}
       - FLOCI_HTTPS_PORT=${FLOCI_HTTPS_PORT:-2543}
     shutdown:
-      command: docker compose -f grigri_floci/compose.yaml down; true
+      # Also removes the API's Lambda containers, which Floci starts beside
+      # itself.
+      command: docker compose -f grigri_floci/compose.yaml down; docker ps -aq --filter label=io.floci.service=lambda --filter name=grigri-lambda | xargs docker rm -f >/dev/null 2>&1; true
       timeout_seconds: 30
     readiness_probe:
       exec:
@@ -63,7 +68,7 @@ processes:
       initial_delay_seconds: 1
       period_seconds: 2
       timeout_seconds: 5
-      # Up to 6 minutes: the first run pulls the image.
+      # Up to 6 minutes: the first run pulls the images and builds the API.
       failure_threshold: 180
     availability:
       # Always, not on_failure: when the container is stopped from outside

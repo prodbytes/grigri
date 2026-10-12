@@ -7,7 +7,8 @@
     "gnumake": "latest",
     "curl":    "latest",
     "mkcert":  "latest",
-    "openssl": "latest"
+    "openssl": "latest",
+    "nodejs":  "22"
   },
   "shell": {
     "scripts": {
