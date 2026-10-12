@@ -86,8 +86,9 @@ processes:
     # the API runs in (grigri_floci/). The mkcert certificate is generated
     # first, when missing or stale, and so is the API build, which Floci
     # deploys and seeds (05-api.sh), with GOOGLE_WEB_CLIENT_ID (none: dev
-    # mode) and GRIGRI_ADMIN_EMAILS from .env.
-    command: bash scripts/local-certs.sh && bash scripts/build-api.sh && GOOGLE_WEB_CLIENT_ID="$(sed -n 's/^GOOGLE_WEB_CLIENT_ID=//p' .env 2>/dev/null | tail -1)" GRIGRI_ADMIN_EMAILS="$(sed -n 's/^GRIGRI_ADMIN_EMAILS=//p' .env 2>/dev/null | tail -1)" docker compose -f grigri_floci/compose.yaml up floci
+    # mode) and RBACR_TOKEN (the local rbacr's root token, with which the
+    # API asks who holds grigri's admin role) from .env.
+    command: bash scripts/local-certs.sh && bash scripts/build-api.sh && GOOGLE_WEB_CLIENT_ID="$(sed -n 's/^GOOGLE_WEB_CLIENT_ID=//p' .env 2>/dev/null | tail -1)" RBACR_TOKEN="$(sed -n 's/^RBACR_TOKEN=//p' .env 2>/dev/null | tail -1)" docker compose -f grigri_floci/compose.yaml up floci
     environment:
       - FLOCI_PORT=${FLOCI_PORT:-2114}
       - FLOCI_HTTPS_PORT=${FLOCI_HTTPS_PORT:-2543}

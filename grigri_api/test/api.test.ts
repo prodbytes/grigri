@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Api } from '../src/api.js';
-import { Auth, type Caller, parseAdminEmails, subjectHash } from '../src/auth.js';
+import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { FakeStore } from './fake-store.js';
 
@@ -60,7 +60,7 @@ beforeEach(async () => {
   auth = new Auth({
     store: store.asStore(),
     verify: async () => ({ subject: 'https://accounts.google.com#42', email: 'ada@example.com', emailVerified: true }),
-    config: { devMode: false, adminEmails: parseAdminEmails('root@example.com') },
+    config: { devMode: false, isAdmin: async (email) => email === 'root@example.com' },
     clock: () => now,
   });
   api = new Api({ store: store.asStore(), photos, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now });

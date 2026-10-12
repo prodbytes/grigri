@@ -48,8 +48,11 @@ services:
       # POST /api/session accepts only Google ID tokens for this client
       # (from .env; a public identifier). Empty: dev mode.
       GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
-      # Who may approve or reject any request locally (from .env).
-      GRIGRI_ADMIN_EMAILS: ${GRIGRI_ADMIN_EMAILS:-}
+      # The local rbacr (process-compose.yaml's 1-rbacr, on the host) and
+      # its root token (from .env): the API asks it who holds grigri's
+      # admin role. Empty: nobody is an admin locally.
+      RBACR_TOKEN: ${RBACR_TOKEN:-}
+      RBACR_PORT: ${RBACR_PORT:-2115}
       # Lambda containers are named grigri-lambda-*, so shutdown can find
       # them (process-compose.yaml).
       FLOCI_SERVICES_LAMBDA_CONTAINER_NAME_PREFIX: grigri-lambda

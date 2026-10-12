@@ -18,7 +18,8 @@
 # Without GOOGLE_WEB_CLIENT_ID (.env) the API runs in dev mode: the caller
 # is whoever X-Grigri-Dev-User names, or a session from POST /api/session
 # with {"devUser": "<email>"}. The template refuses dev mode outside
-# Stage=local. Admins: GRIGRI_ADMIN_EMAILS from .env.
+# Stage=local. Admins: whoever the local rbacr (on the host, port
+# RBACR_PORT) says holds grigri's admin role, asked with RBACR_TOKEN.
 set -eu
 
 SRC=/opt/grigri-api
@@ -39,8 +40,7 @@ if [ -z "$CLIENT_ID" ]; then
   DEV_MODE=true
   echo "grigri: GOOGLE_WEB_CLIENT_ID isn't set (.env); API in dev mode (X-Grigri-Dev-User, devUser sessions)" >&2
 fi
-# Spaces dropped: the parameter takes a bare comma-separated list.
-ADMINS="$(printf '%s' "${GRIGRI_ADMIN_EMAILS:-}" | tr -d ' ')"
+RBACR_TOKEN="${RBACR_TOKEN:-}"
 
 # The host's CPU, so Floci runs the Lambda without emulation (arm64 on
 # Apple silicon, x86_64 elsewhere).
@@ -79,7 +79,8 @@ aws cloudformation package --template-file "$SRC/template.yaml" \
 set -- "Stage=local" "DevMode=$DEV_MODE" "PhotosBucket=$PHOTOS" "Architecture=$ARCH" "Version=local" \
   "PhotosUploadUrl=https://localhost:${FLOCI_HTTPS_PORT_HOST:-2543}/$PHOTOS"
 [ -n "$CLIENT_ID" ] && set -- "$@" "GoogleWebClientId=$CLIENT_ID"
-[ -n "$ADMINS" ] && set -- "$@" "AdminEmails=$ADMINS"
+# The Lambda's container reaches the host's rbacr as host.docker.internal.
+[ -n "$RBACR_TOKEN" ] && set -- "$@" "RbacrUrl=http://host.docker.internal:${RBACR_PORT:-2115}" "RbacrToken=$RBACR_TOKEN"
 aws cloudformation deploy --stack-name "$STACK" --template-file /tmp/grigri-api.yaml \
   --capabilities CAPABILITY_NAMED_IAM --parameter-overrides "$@" >/dev/null
 

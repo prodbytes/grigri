@@ -36,9 +36,10 @@
 #                confirm AWS's subscription email.
 #   GOOGLE_WEB_CLIENT_ID the Google web OAuth client whose ID tokens the
 #                API accepts (also from .env; a public identifier)
-#   GRIGRI_ADMIN_EMAILS who may approve or reject any join request,
-#                comma-separated verified Google emails (also from .env;
-#                a secret in CI, since the repository is public)
+#   GRIGRI_RBACR_TOKEN an rbacr API token owned by an rbacr root, with
+#                which the API asks rbacr who holds grigri's admin role
+#                (also from .env; a secret in CI). Optional: without it
+#                nobody is an admin. Not RBACR_TOKEN, the local rbacr's.
 #   PERMISSIONS_BOUNDARY the API function role's boundary (default: the
 #                stage's, arn:aws:iam::<account>:policy/<prefix>-app-boundary)
 #   ARTIFACT_BUCKET where the API's code is uploaded (default: the stage's,
@@ -128,7 +129,11 @@ stack_output() { # stack_output <stack> <output key>
 }
 
 # Private settings: from the environment, else the private .env.
-for name in HOSTED_ZONE_ID GRIGRI_HEALTH_EMAILS GOOGLE_WEB_CLIENT_ID GRIGRI_ADMIN_EMAILS; do
+if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
+  GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
+fi
+GRIGRI_RBACR_TOKEN="${GRIGRI_RBACR_TOKEN:-}"
+for name in HOSTED_ZONE_ID GRIGRI_HEALTH_EMAILS GOOGLE_WEB_CLIENT_ID; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
   fi
@@ -149,13 +154,17 @@ if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.c
   echo "error: GOOGLE_WEB_CLIENT_ID must be a Google OAuth client ID (<number>-<id>.apps.googleusercontent.com)" >&2
   exit 1
 fi
-if [[ ! "$GRIGRI_ADMIN_EMAILS" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+(,[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+)*$ ]]; then
-  echo "error: GRIGRI_ADMIN_EMAILS must be comma-separated emails" >&2
+if [[ -n "$GRIGRI_RBACR_TOKEN" && ! "$GRIGRI_RBACR_TOKEN" =~ ^rbacr_[A-Za-z0-9_-]+$ ]]; then
+  echo "error: GRIGRI_RBACR_TOKEN must be an rbacr API token (rbacr_...)" >&2
   exit 1
 fi
 # Emails are people's: logged only as a count.
 echo "    health alarm emails: $(tr ',' '\n' <<<"$GRIGRI_HEALTH_EMAILS" | grep -c .)"
-echo "    admins: $(tr ',' '\n' <<<"$GRIGRI_ADMIN_EMAILS" | grep -c .)"
+if [[ -n "$GRIGRI_RBACR_TOKEN" ]]; then
+  echo "    admins: whoever rbacr says holds grigri's admin role"
+else
+  echo "warning: GRIGRI_RBACR_TOKEN isn't set: the API can't ask rbacr, so nobody is an admin" >&2
+fi
 
 # The stage's permissions boundary and artifact bucket (grigri-github-deploy).
 account="$(aws sts get-caller-identity --query Account --output text)"
@@ -221,7 +230,7 @@ aws cloudformation package --template-file grigri_api/template.yaml \
 aws cloudformation deploy --stack-name "$API_STACK" \
   --template-file "$packaged" --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
-    "AdminEmails=$GRIGRI_ADMIN_EMAILS" "PhotosBucket=$PHOTOS_BUCKET" \
+    "RbacrToken=$GRIGRI_RBACR_TOKEN" "PhotosBucket=$PHOTOS_BUCKET" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
   --no-fail-on-empty-changeset
