@@ -1,12 +1,13 @@
 #!/bin/sh
 # Deploys the Grigri API (grigri_api/template.yaml, built on the host by
 # scripts/build-api.sh and mounted at /opt/grigri-api) into Floci as the
-# stack grigri-local-api: the same Lambda, HTTP API (with its Google JWT
-# authorizer) and DynamoDB table as in AWS, plus the photos bucket
-# (site.yaml's, in AWS). Floci runs the function in a Docker container
-# (hence the Docker socket in compose.yaml) and verifies Google ID tokens
-# against Google's keys. Then it loads the made-up test data (the seed:
-# grigri_api/seed/), as RC has; production never gets it.
+# stack grigri-local-api: the same Lambda, HTTP API and DynamoDB table as
+# in AWS, plus the photos bucket (site.yaml's, in AWS, with the same
+# lifecycle rule for photos never saved to a profile). Floci runs the
+# function in a Docker container (hence the Docker socket in compose.yaml);
+# the function verifies Google ID tokens itself (POST /api/session) against
+# Google's keys and issues its own sessions. Then it loads the made-up test
+# data (the seed: grigri_api/seed/), as RC has; production never gets it.
 #
 # CloudFront only reaches private origins allowlisted by exact name
 # (compose.yaml), so the HTTP API gets the fixed ID "grigri" (the
@@ -14,10 +15,10 @@
 # grigri.execute-api.localhost.floci.io, is written to
 # /tmp/grigri-api-host, which 10-cloudfront.sh routes /api/* to.
 #
-# Without GOOGLE_WEB_CLIENT_ID (.env) the API runs in dev mode: no
-# authorizer, and the caller is whoever X-Grigri-Dev-User names. The
-# template refuses dev mode outside Stage=local. Admins:
-# GRIGRI_ADMIN_EMAILS from .env.
+# Without GOOGLE_WEB_CLIENT_ID (.env) the API runs in dev mode: the caller
+# is whoever X-Grigri-Dev-User names, or a session from POST /api/session
+# with {"devUser": "<email>"}. The template refuses dev mode outside
+# Stage=local. Admins: GRIGRI_ADMIN_EMAILS from .env.
 set -eu
 
 SRC=/opt/grigri-api
@@ -36,7 +37,7 @@ CLIENT_ID="${GOOGLE_WEB_CLIENT_ID:-}"
 DEV_MODE=false
 if [ -z "$CLIENT_ID" ]; then
   DEV_MODE=true
-  echo "grigri: GOOGLE_WEB_CLIENT_ID isn't set (.env); API in dev mode (X-Grigri-Dev-User)" >&2
+  echo "grigri: GOOGLE_WEB_CLIENT_ID isn't set (.env); API in dev mode (X-Grigri-Dev-User, devUser sessions)" >&2
 fi
 # Spaces dropped: the parameter takes a bare comma-separated list.
 ADMINS="$(printf '%s' "${GRIGRI_ADMIN_EMAILS:-}" | tr -d ' ')"
@@ -62,6 +63,16 @@ aws s3api put-bucket-cors --bucket "$PHOTOS" --cors-configuration "{
     \"MaxAgeSeconds\": 3000
   }]
 }"
+# As in AWS (site.yaml): uploads are tagged pending until a profile saves
+# them; pending ones expire after a day.
+aws s3api put-bucket-lifecycle-configuration --bucket "$PHOTOS" --lifecycle-configuration '{
+  "Rules": [{
+    "ID": "expire-pending-photos",
+    "Status": "Enabled",
+    "Filter": {"And": {"Prefix": "photos/", "Tags": [{"Key": "grigri-pending", "Value": "true"}]}},
+    "Expiration": {"Days": 1}
+  }]
+}'
 
 aws cloudformation package --template-file "$SRC/template.yaml" \
   --s3-bucket "$ARTIFACTS" --output-template-file /tmp/grigri-api.yaml >/dev/null
@@ -71,6 +82,11 @@ set -- "Stage=local" "DevMode=$DEV_MODE" "PhotosBucket=$PHOTOS" "Architecture=$A
 [ -n "$ADMINS" ] && set -- "$@" "AdminEmails=$ADMINS"
 aws cloudformation deploy --stack-name "$STACK" --template-file /tmp/grigri-api.yaml \
   --capabilities CAPABILITY_NAMED_IAM --parameter-overrides "$@" >/dev/null
+
+# Floci's CloudFormation skips the table's TimeToLiveSpecification; its
+# DynamoDB takes the call itself. (The function checks expiry anyway.)
+aws dynamodb update-time-to-live --table-name "$STACK" \
+  --time-to-live-specification Enabled=true,AttributeName=ttl >/dev/null
 
 api=$(aws cloudformation describe-stacks --stack-name "$STACK" \
   --query "Stacks[0].Outputs[?OutputKey=='ApiId'].OutputValue" --output text)
@@ -90,5 +106,5 @@ fi
 echo "grigri: seeded: $(cat /tmp/grigri-seed.json)"
 
 echo "$api.execute-api.localhost.floci.io" > /tmp/grigri-api-host
-mode=jwt; [ "$DEV_MODE" = true ] && mode=dev
+mode=google; [ "$DEV_MODE" = true ] && mode=dev
 echo "grigri: API $api deployed ($STACK, $mode mode)"
