@@ -5,7 +5,7 @@ templates.
 
 | Template | Stack | Holds |
 |---|---|---|
-| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and a Route 53 health check of `/app/version.json` that emails `GRIGRI_HEALTH_EMAILS` when it fails |
+| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and Route 53 health checks of `/app/version.json` and `/api/health` whose alarms email `GRIGRI_HEALTH_EMAILS` when they fail |
 | [../grigri_api/template.yaml](../grigri_api/template.yaml) | `grigri-api` | The API: its Lambda (which verifies Google ID tokens and issues the API's own sessions), HTTP API, DynamoDB table (with TTL) and log group ([specs/backend.md](../specs/backend.md)) |
 | [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition: the deploy policies (site, API), the permissions boundary of the stage's roles (`<prefix>-app-boundary`) and the artifact bucket (`<prefix>-artifacts-<account>`) |
 
