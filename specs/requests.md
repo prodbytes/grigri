@@ -397,3 +397,7 @@ spec.
       Release of non-GA tags use the repository variables
       `GOOGLE_WEB_CLIENT_ID_RC` and `GOOGLE_IOS_CLIENT_ID_RC`; Deploy and
       GA releases keep `GOOGLE_WEB_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID`.
+26. **Brazilian Portuguese would be better (than European).** `app_pt.arb`
+    is rewritten in Brazilian Portuguese (você; Salvar, Sair, celular,
+    Buscar; esportiva, academia, costuras, móveis, pico), and the picker
+    calls it "Português (Brasil)" ([i18n](i18n.md)).
