@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/seed.dart';
+import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/plan.dart';
 
@@ -18,10 +20,15 @@ void main() {
       final ids = store.discover.map((p) => p.id).toList();
       expect(ids, isNot(contains('my-sunday-siurana')));
       expect(ids, isNot(contains('thursday-bouldering')));
-      // Siurana: my grades, my weekend time and my place.
-      expect(ids.first, 'siurana-saturday');
-      // Margalef's 7a–7c doesn't overlap my 6a–6c+: the worst fit.
-      expect(ids.last, 'margalef-project');
+      // My grades first, soonest first: Tuesday's bouldering (V2–V5).
+      expect(ids, [
+        'tuesday-bouldering',
+        'after-work-leads',
+        'siurana-saturday',
+        'montserrat-multipitch',
+        // Margalef's 7a–7c doesn't overlap my 6a–6c+: the worst fit.
+        'margalef-project',
+      ]);
     });
 
     test('a pass takes the plan out of the deck', () {
@@ -79,6 +86,35 @@ void main() {
   });
 
   group('reviewing requests', () {
+    test('each request is in its chat, and notifies the members', () {
+      final store = demo();
+      final card = store
+          .messages('thursday-bouldering')
+          .singleWhere((m) => m.requestId != null);
+      expect(card.requestId, 'thursday-bouldering/noa');
+      expect(card.text, 'Noa Levi asked to join');
+      expect(
+        store.notices
+            .where((n) => n.kind == NoticeKind.request)
+            .map((n) => n.id),
+        [
+          'my-sunday-siurana/request/bruno',
+          'thursday-bouldering/request/noa',
+          'my-sunday-siurana/request/ines',
+        ],
+      );
+      expect(store.unreadNotices, 3);
+    });
+
+    test('my own request goes in the group\'s chat, not my notifications', () {
+      final store = demo()..like('margalef-project');
+      expect(
+        store.messages('margalef-project').last.requestId,
+        'margalef-project/me',
+      );
+      expect(store.unreadNotices, 3);
+    });
+
     test('lists people asking to join plans I am in', () {
       final store = demo();
       expect(store.toReview.map((r) => r.id), [
@@ -115,50 +151,6 @@ void main() {
         isNot(contains('my-sunday-siurana/bruno')),
       );
       expect(store.plan('my-sunday-siurana')!.memberIds, ['me']);
-    });
-
-    test('lists who is asking to join one plan, and who still needs me', () {
-      final store = demo();
-      expect(store.asking('my-sunday-siurana').map((r) => r.climberId), [
-        'ines',
-        'bruno',
-      ]);
-      expect(store.toReviewIn('thursday-bouldering').map((r) => r.climberId), [
-        'noa',
-      ]);
-      // Plans I'm not in have nobody for me to answer.
-      expect(store.toReviewIn('siurana-saturday'), isEmpty);
-      expect(store.asking('no-such-plan'), isEmpty);
-
-      store.reject('my-sunday-siurana/bruno');
-      expect(store.asking('my-sunday-siurana').map((r) => r.climberId), [
-        'ines',
-      ]);
-      store.accept('my-sunday-siurana/ines');
-      // Ines joined: she is no longer asking.
-      expect(store.asking('my-sunday-siurana'), isEmpty);
-      expect(store.toReviewIn('my-sunday-siurana'), isEmpty);
-    });
-
-    test('a request I said yes to waits for the others, off my list', () {
-      final demoData = demoState(now);
-      final store = GrigriStore(
-        GrigriState(
-          meId: demoData.meId,
-          climbers: demoData.climbers,
-          plans: demoData.plans,
-          requests: demoData.requests,
-          messages: demoData.messages,
-          policies: {...demoData.policies, 'ines': Policy.undecided},
-        ),
-        clock: () => now,
-      );
-      store.accept('my-sunday-siurana/ines');
-      expect(store.accept('my-sunday-siurana/bruno'), isNull);
-      expect(store.toReviewIn('my-sunday-siurana'), isEmpty);
-      expect(store.asking('my-sunday-siurana').map((r) => r.climberId), [
-        'bruno',
-      ]);
     });
 
     test('a full plan takes nobody else', () {
@@ -228,8 +220,8 @@ void main() {
       expect(notices.single.planTitle, 'Siurana sport day');
       expect(store.waiting, isEmpty);
       expect(store.myPlans.map((p) => p.id), contains('siurana-saturday'));
-      expect(store.unreadNotices, 1);
-      // The seeded one, from two days ago, comes last.
+      // With the demo's three requests to join my plans.
+      expect(store.unreadNotices, 4);
       expect(store.notices.first.planId, 'siurana-saturday');
 
       store.readNotices();
@@ -260,7 +252,10 @@ void main() {
     test('nobody is notified of answers to others\' requests', () {
       final store = slow()..reject('my-sunday-siurana/bruno');
       store.accept('thursday-bouldering/noa');
-      expect(store.unreadNotices, 0);
+      expect(
+        store.notices.where((n) => n.kind != NoticeKind.request).length,
+        1,
+      );
     });
   });
 
@@ -273,11 +268,21 @@ void main() {
     expect(last.authorId, 'me');
   });
 
+  test('age is optional', () {
+    final store = demo()..updateProfile(demo().me.copyWith(age: null));
+    expect(store.me.age, isNull);
+    expect(store.me.nameAndAge, 'You');
+    final json = jsonEncode(store.state.toJson());
+    final again = GrigriState.fromJson((jsonDecode(json) as Map).cast());
+    expect(again.climbers['me']!.age, isNull);
+    expect(store.me.copyWith(age: 30).nameAndAge, 'You, 30');
+  });
+
   test('the state survives a round trip through JSON', () {
     final store = demo()
       ..like('siurana-saturday')
       ..like('margalef-project');
-    expect(store.unreadNotices, 1);
+    expect(store.unreadNotices, 4);
     final json = jsonEncode(store.state.toJson());
     final again = GrigriStore(
       GrigriState.fromJson((jsonDecode(json) as Map).cast()),
@@ -285,5 +290,37 @@ void main() {
     );
     expect(jsonEncode(again.state.toJson()), json);
     expect(again.me.levels[Discipline.sport]!.label, '6a–6c+');
+  });
+
+  test('a profile keeps its photos, and ignores when and where', () {
+    final photo = Uint8List.fromList([0xff, 0xd8, 0xff, 0xd9]);
+    final me = Climber(
+      id: 'me',
+      name: 'You',
+      age: 30,
+      photo: photo,
+      gearPhotos: [photo, photo],
+    );
+    final again = Climber.fromJson(
+      (jsonDecode(jsonEncode(me.toJson())) as Map).cast(),
+    );
+    expect(again.photo, photo);
+    expect(again.gearPhotos, [photo, photo]);
+    expect(again.copyWith(clearPhoto: true).photo, isNull);
+
+    // Saved by an older version, with home area, availability and places.
+    final old = Climber.fromJson({
+      'id': 'me',
+      'name': 'You',
+      'age': 30,
+      'homeArea': 'Barcelona',
+      'yearsClimbing': 4,
+      'availability': ['6:morning'],
+      'places': ['Siurana'],
+      'gear': ['rope'],
+    });
+    expect(old.photo, isNull);
+    expect(old.gear, {Gear.rope});
+    expect(old.toJson().keys, isNot(contains('places')));
   });
 }

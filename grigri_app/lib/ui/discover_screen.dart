@@ -4,7 +4,6 @@ import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'notices_screen.dart';
 import 'match_screen.dart';
 import 'swipe_deck.dart';
 
@@ -50,10 +49,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final store = StoreScope.of(context);
     final plans = store.discover;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Discover plans'),
-        actions: const [NoticesButton()],
-      ),
+      appBar: AppBar(title: const Text('Discover plans')),
       body: plans.isEmpty
           ? EmptyState(
               icon: Icons.landscape_outlined,
@@ -174,7 +170,7 @@ class _PlanCard extends StatelessWidget {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: Avatar(c),
-                        title: Text('${c.name}, ${c.age}'),
+                        title: Text(c.nameAndAge),
                         subtitle: Text(
                           c.levels.entries
                               .map((e) => '${e.key.label} ${e.value.label}')

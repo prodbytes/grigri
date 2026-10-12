@@ -84,14 +84,41 @@ spec.
      and a no shows a note at the bottom.
    - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
      each person asking to join.
-6. **When someone likes the plan but doesn't match yet, call it out at the
-   top of the chat, so people know they need to approve or reject the new
-   person.**
-   - The [group chat](matching.md#group-chat) shows a callout under the
-     pinned plan for each person asking to join that I haven't answered:
-     avatar, name, how many said yes, and ✕ / ✓ (the same answer as in
-     Requests). After my yes it becomes "You said yes to <name> · waiting
-     for N others". [Chats](screens.md) badges each chat with how many
-     are waiting for my answer.
-   - Fix: long chat notes ("You created the plan…") overflowed a phone's
-     width; tags now wrap their text.
+6. **Make the age optional in the profile; don't show it when it's left
+   empty.** The profile editor's Age (optional) can be blank. A profile
+   without an age shows just the name ("Name" instead of "Name, 30") on
+   the decks, profile sheets and Profile.
+7. **In the profile: a photo, a description, the climbs; no when or where
+   (that's for plans), and nothing under the picture (no home area or years
+   climbing); the gear, with photos of it.**
+   - [Profiles](matching.md#profiles-and-plans-are-separate) gain a photo
+     (shown wherever their avatar is, initials otherwise) and up to 6 gear
+     photos, and lose availability, places, home area and years climbing;
+     profiles saved before are read without them.
+   - Discover ranks by grades alone, then the soonest, and its only badge
+     is "Your grades". The demo deck now opens on Tuesday's bouldering.
+   - The [profile editor](screens.md) takes or picks the photos
+     (image_picker, downsized as picked, kept on the device); iOS gains the
+     camera and photo library usage strings ([platforms](platforms.md)).
+8. **No Requests tab: the tabs are Discover, Plans, Chats, Notifications
+   and Profile. Accepting or declining a join request happens inside the
+   group chat; when someone asks to join, notify the organizer and
+   everyone already in.**
+   - The Requests tab and its people deck are gone. Each request is a
+     card in the plan's group chat, with Accept / Decline and who has said
+     yes ([matching](matching.md#join-requests-in-the-group-chat)); one
+     decline still turns them down. Chats shows "N to answer", and its tab
+     badge counts them.
+   - Notifications is a tab (the bell on each tab's bar is gone). It adds
+     "<name> wants to join" for every member of the plan, which opens the
+     chat. A newcomer also hears of the requests still open.
+   - The plan screen no longer has ✓ / ✕; it points to the chat.
+   - Fixed: long chat notes overflowed their label instead of wrapping.
+10. **When someone likes the plan but doesn't match yet, call it out at
+    the top of the chat, so people know they need to approve or reject
+    the new person.**
+    - The [group chat](matching.md#join-requests-in-the-group-chat) pins
+      a callout under the plan for each request still waiting for my
+      answer: avatar, name, how many said yes, and ✕ / ✓ (the same accept
+      and decline as the request's card). After I answer, it leaves the
+      callout; the card in the messages stays as the record.

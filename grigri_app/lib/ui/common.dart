@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/grigri_store.dart';
@@ -63,6 +64,14 @@ class Avatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final color =
         _colors[climber.id.codeUnits.fold(0, (a, b) => a + b) % _colors.length];
+    final photo = climber.photo;
+    if (photo != null) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: color,
+        backgroundImage: MemoryImage(photo),
+      );
+    }
     return CircleAvatar(
       radius: radius,
       backgroundColor: color,
@@ -139,6 +148,7 @@ class Tag extends StatelessWidget {
             Icon(icon, size: 14, color: c),
             const SizedBox(width: 5),
           ],
+          // Long labels (the chat's notes) wrap instead of overflowing.
           Flexible(
             child: Text(label, style: TextStyle(color: c, fontSize: 12.5)),
           ),
@@ -220,32 +230,9 @@ class PlanHighlight extends StatelessWidget {
               style: text.bodyMedium?.copyWith(color: Mountain.snow),
             ),
           ],
-          if (fit != null && fit!.score > 0) ...[
+          if (fit?.grades ?? false) ...[
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                if (fit!.grades)
-                  const Tag(
-                    'Your grades',
-                    icon: Icons.check,
-                    color: Mountain.sand,
-                  ),
-                if (fit!.time)
-                  const Tag(
-                    'Your time',
-                    icon: Icons.check,
-                    color: Mountain.sand,
-                  ),
-                if (fit!.place)
-                  const Tag(
-                    'Your place',
-                    icon: Icons.check,
-                    color: Mountain.sand,
-                  ),
-              ],
-            ),
+            const Tag('Your grades', icon: Icons.check, color: Mountain.sand),
           ],
         ],
       ),
@@ -281,7 +268,7 @@ class ProfileDetails extends StatelessWidget {
 
   final Climber climber;
 
-  /// Leaves out availability and gear.
+  /// Leaves out the gear.
   final bool compact;
 
   @override
@@ -297,10 +284,8 @@ class ProfileDetails extends StatelessWidget {
         ),
       ),
     );
-    final byDay = <int, List<DayPart>>{};
-    for (final slot in climber.availability) {
-      (byDay[slot.weekday] ??= []).add(slot.part);
-    }
+    final showGear =
+        !compact && (climber.gear.isNotEmpty || climber.gearPhotos.isNotEmpty);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -319,44 +304,77 @@ class ProfileDetails extends StatelessWidget {
             ],
           ),
         ],
-        if (!compact && byDay.isNotEmpty) ...[
-          heading('When'),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final day in byDay.keys.toList()..sort())
-                Tag(
-                  '${weekdayLabels[day - 1]} '
-                  '${byDay[day]!.length == 3 ? 'all day' : (byDay[day]!..sort((a, b) => a.index - b.index)).map((p) => p.label.toLowerCase()).join(', ')}',
-                  color: Mountain.sky,
-                ),
-            ],
-          ),
-        ],
-        if (climber.places.isNotEmpty) ...[
-          heading('Where'),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final place in climber.places)
-                Tag(place, icon: Icons.place_outlined, color: Mountain.tan),
-            ],
-          ),
-        ],
-        if (!compact && climber.gear.isNotEmpty) ...[
+        if (showGear) ...[
           heading('Gear'),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [for (final g in climber.gear) Tag(g.label)],
           ),
+          if (climber.gearPhotos.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (i, photo) in climber.gearPhotos.indexed)
+                  PhotoThumb(
+                    photo,
+                    label: '${climber.name}\'s gear, photo ${i + 1}',
+                  ),
+              ],
+            ),
+          ],
         ],
       ],
     );
   }
 }
+
+/// A square photo thumbnail; tap to see it whole.
+class PhotoThumb extends StatelessWidget {
+  const PhotoThumb(
+    this.photo, {
+    super.key,
+    required this.label,
+    this.size = 84,
+  });
+
+  final Uint8List photo;
+  final String label;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: label,
+    button: true,
+    child: InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => showPhoto(context, photo),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.memory(
+          photo,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          gaplessPlayback: true,
+        ),
+      ),
+    ),
+  );
+}
+
+/// A photo, whole, over the screen; pinch to zoom, tap to close.
+Future<void> showPhoto(BuildContext context, Uint8List photo) => showDialog(
+  context: context,
+  builder: (context) => GestureDetector(
+    onTap: () => Navigator.pop(context),
+    child: InteractiveViewer(
+      child: Center(child: Image.memory(photo, fit: BoxFit.contain)),
+    ),
+  ),
+);
 
 /// A climber's name line: "Marta Soler, 29".
 class ClimberHeader extends StatelessWidget {
@@ -374,11 +392,6 @@ class ClimberHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final details = [
-      if (climber.homeArea.isNotEmpty) climber.homeArea,
-      if (climber.yearsClimbing > 0)
-        '${climber.yearsClimbing} ${climber.yearsClimbing == 1 ? 'year' : 'years'} climbing',
-    ].join(' · ');
     return Row(
       children: [
         Avatar(climber, radius: radius),
@@ -388,15 +401,15 @@ class ClimberHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${climber.name}, ${climber.age}',
+                climber.nameAndAge,
                 style: text.titleMedium?.copyWith(
                   color: Mountain.sand,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              if ((subtitle ?? details).isNotEmpty)
+              if (subtitle != null && subtitle!.isNotEmpty)
                 Text(
-                  subtitle ?? details,
+                  subtitle!,
                   style: text.bodySmall?.copyWith(color: Mountain.granite),
                 ),
             ],

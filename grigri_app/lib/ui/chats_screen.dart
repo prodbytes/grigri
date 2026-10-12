@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
-import 'notices_screen.dart';
 
-/// The group chats: one per plan I'm in, most recent first.
+/// The group chats: one per plan I'm in, most recent first, with how many
+/// join requests in each wait for my answer.
 class ChatsScreen extends StatelessWidget {
   const ChatsScreen({super.key});
 
@@ -22,11 +22,10 @@ class ChatsScreen extends StatelessWidget {
           final tb = b.last?.time ?? b.plan.start;
           return tb.compareTo(ta);
         });
+    int toAnswer(String planId) =>
+        store.toReview.where((r) => r.planId == planId).length;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chats'),
-        actions: const [NoticesButton()],
-      ),
+      appBar: AppBar(title: const Text('Chats')),
       body: chats.isEmpty
           ? const EmptyState(
               icon: Icons.forum_outlined,
@@ -38,7 +37,6 @@ class ChatsScreen extends StatelessWidget {
               separatorBuilder: (_, _) => const Divider(height: 1, indent: 76),
               itemBuilder: (context, i) {
                 final (:plan, :last) = chats[i];
-                final toAnswer = store.toReviewIn(plan.id).length;
                 final author = last?.authorId == null
                     ? null
                     : last!.authorId == store.me.id
@@ -72,7 +70,7 @@ class ChatsScreen extends StatelessWidget {
                     style: const TextStyle(color: Mountain.granite),
                   ),
                   trailing: Column(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
@@ -81,17 +79,12 @@ class ChatsScreen extends StatelessWidget {
                           color: Mountain.granite,
                         ),
                       ),
-                      if (toAnswer > 0) ...[
+                      if (toAnswer(plan.id) > 0) ...[
                         const SizedBox(height: 4),
-                        Tooltip(
-                          message: toAnswer == 1
-                              ? '1 person waiting for your answer'
-                              : '$toAnswer people waiting for your answer',
-                          child: Badge(
-                            label: Text('$toAnswer'),
-                            backgroundColor: Mountain.tan,
-                            textColor: Mountain.night,
-                          ),
+                        Badge(
+                          label: Text('${toAnswer(plan.id)} to answer'),
+                          backgroundColor: Mountain.sky,
+                          textColor: Mountain.night,
                         ),
                       ],
                     ],

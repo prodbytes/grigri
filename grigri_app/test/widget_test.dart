@@ -1,20 +1,40 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/seed.dart';
 import 'package:grigri_app/main.dart';
+import 'package:grigri_app/model/climber.dart';
+import 'package:grigri_app/ui/common.dart';
+import 'package:grigri_app/ui/profile_editor.dart';
 
 // The demo data (lib/data/seed.dart), on a fixed Monday.
 final now = DateTime(2026, 10, 12, 10);
 
-Future<GrigriStore> pumpApp(WidgetTester tester) async {
+Future<GrigriStore> pumpApp(
+  WidgetTester tester, {
+  bool siuranaFirst = false,
+}) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.6;
   addTearDown(tester.view.reset);
   final store = GrigriStore(demoState(now), clock: () => now);
+  if (siuranaFirst) passToSiurana(store);
   await tester.pumpWidget(GrigriApp(store: store));
   return store;
 }
+
+/// Passes the two sooner plans, so Siurana's (whose only member, Marta,
+/// accepts) tops the Discover deck.
+void passToSiurana(GrigriStore store) => store
+  ..pass('tuesday-bouldering')
+  ..pass('after-work-leads');
+
+/// A tiny valid PNG, standing in for a picked photo.
+final photo = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==',
+);
 
 void main() {
   testWidgets('Discover shows the best-fitting plan first, highlighted', (
@@ -22,14 +42,15 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('THE PLAN'), findsWidgets);
-    expect(find.text('Siurana sport day'), findsOneWidget);
-    expect(find.text('Marta Soler, 29'), findsOneWidget);
+    expect(find.text('Evening bouldering session'), findsOneWidget);
+    expect(find.text('Lena Vogel, 26'), findsOneWidget);
+    expect(find.text('Your grades'), findsWidgets);
   });
 
   testWidgets(
     'joining a plan whose group accepts shows the match, then the chat',
     (tester) async {
-      final store = await pumpApp(tester);
+      final store = await pumpApp(tester, siuranaFirst: true);
       await tester.tap(find.byTooltip('Ask to join'));
       await tester.pumpAndSettle();
       expect(find.text("It's a match!"), findsOneWidget);
@@ -46,7 +67,7 @@ void main() {
   );
 
   testWidgets('dragging a card left passes on the plan', (tester) async {
-    final store = await pumpApp(tester);
+    final store = await pumpApp(tester, siuranaFirst: true);
     await tester.timedDrag(
       find.text('Siurana sport day'),
       const Offset(-600, 0),
@@ -57,20 +78,43 @@ void main() {
     expect(find.text('Siurana sport day'), findsNothing);
   });
 
-  testWidgets('accepting the last missing yes in Requests matches the group', (
+  testWidgets('the tabs are Discover, Plans, Chats, Notifications, Profile', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    // They fit a narrow phone (an overflow fails the test).
+    tester.view.physicalSize = const Size(1080, 2280);
+    tester.view.devicePixelRatio = 3;
+    await tester.pumpAndSettle();
+    final labels = tester
+        .widgetList<NavigationDestination>(find.byType(NavigationDestination))
+        .map((d) => d.label);
+    expect(labels, ['Discover', 'Plans', 'Chats', 'Notifications', 'Profile']);
+  });
+
+  testWidgets('a request notification opens the chat, to accept there', (
     tester,
   ) async {
     final store = await pumpApp(tester);
-    await tester.tap(find.text('Requests'));
+    await tester.tap(find.text('Notifications'));
     await tester.pumpAndSettle();
-    expect(find.text('WANTS TO JOIN'), findsWidgets);
-    // Ines and Bruno for my plan first, then Noa for Thursday's.
-    await tester.tap(find.byTooltip('Decline'));
+    expect(find.text('Noa Levi wants to join'), findsOneWidget);
+    expect(store.unreadNotices, 0);
+    await tester.tap(find.text('Noa Levi wants to join'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Decline'));
-    await tester.pumpAndSettle();
-    expect(find.text('Noa Levi, 24'), findsOneWidget);
-    await tester.tap(find.byTooltip('Accept'));
+    final card = find.byKey(const ValueKey('request thursday-bouldering/noa'));
+    expect(
+      find.descendant(of: card, matching: find.text('Lena said yes')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('Lena said yes · waiting for You'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.descendant(of: card, matching: find.text('Accept')));
     await tester.pumpAndSettle();
     expect(find.text("It's a match!"), findsOneWidget);
     expect(store.plan('thursday-bouldering')!.memberIds, ['lena', 'me', 'noa']);
@@ -88,6 +132,7 @@ void main() {
       clock: () => time,
       answerAfter: const Duration(seconds: 10),
     );
+    passToSiurana(store);
     await tester.pumpWidget(GrigriApp(store: store));
 
     await tester.tap(find.byTooltip('Ask to join'));
@@ -109,24 +154,129 @@ void main() {
     expect(find.text('Pending'), findsNothing);
     expect(find.text('Accepted'), findsNWidgets(2));
 
-    await tester.tap(find.byTooltip('Notifications').hitTestable());
+    await tester.tap(find.text('Notifications'));
     await tester.pumpAndSettle();
     expect(find.text("You're in: Siurana sport day"), findsOneWidget);
-    expect(find.text('New'), findsOneWidget);
+    // Mine, and the demo's three requests to join my plans.
+    expect(find.text('New'), findsNWidgets(4));
     expect(store.unreadNotices, 0);
   });
 
-  testWidgets('a member can decline from the plan', (tester) async {
+  testWidgets('one member declining in the chat turns them down', (
+    tester,
+  ) async {
     final store = await pumpApp(tester);
-    await tester.tap(find.text('Plans'));
+    await tester.tap(find.text('Chats'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 to answer'), findsOneWidget);
+    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.pumpAndSettle();
+    final card = find.byKey(const ValueKey('request my-sunday-siurana/bruno'));
+    await tester.tap(find.descendant(of: card, matching: find.text('Decline')));
+    await tester.pumpAndSettle();
+    expect(store.state.requests['my-sunday-siurana/bruno']!.rejected, isTrue);
+    expect(
+      find.descendant(of: card, matching: find.text('Declined')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: card, matching: find.text('Accept')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('the chat calls out on top who still needs my answer', (
+    tester,
+  ) async {
+    final store = await pumpApp(tester);
+    await tester.tap(find.text('Chats'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Sunday at Siurana'));
     await tester.pumpAndSettle();
-    expect(find.text('ASKING TO JOIN'), findsOneWidget);
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNWidgets(2));
+
     await tester.tap(find.byTooltip('Decline Bruno Costa'));
     await tester.pumpAndSettle();
     expect(store.state.requests['my-sunday-siurana/bruno']!.rejected, isTrue);
-    expect(find.text('Bruno Costa'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('callout my-sunday-siurana/bruno')),
+      findsNothing,
+    );
+    // The card in the messages stays, as the record.
+    final card = find.byKey(const ValueKey('request my-sunday-siurana/bruno'));
+    expect(
+      find.descendant(of: card, matching: find.text('Declined')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Accept Inés Prado'));
+    await tester.pumpAndSettle();
+    expect(find.text("It's a match!"), findsOneWidget);
+    await tester.tap(find.text('Keep swiping'));
+    await tester.pumpAndSettle();
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    expect(store.plan('my-sunday-siurana')!.memberIds, ['me', 'ines']);
+  });
+
+  testWidgets('after my yes the callout goes, the card waits for the rest', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final demo = demoState(now);
+    final store = GrigriStore(
+      GrigriState(
+        meId: demo.meId,
+        climbers: demo.climbers,
+        plans: demo.plans,
+        requests: demo.requests,
+        messages: demo.messages,
+        // Inés joins my plan, then doesn't answer Bruno.
+        policies: {...demo.policies, 'ines': Policy.undecided},
+        passed: demo.passed,
+        notices: demo.notices,
+      ),
+      clock: () => now,
+    )..accept('my-sunday-siurana/ines');
+    await tester.pumpWidget(GrigriApp(store: store));
+    await tester.tap(find.text('Chats'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 2 said yes'), findsNothing);
+    expect(find.text('0 of 2 said yes'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Accept Bruno Costa'));
+    await tester.pumpAndSettle();
+    expect(find.text("It's a match!"), findsNothing);
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    final card = find.byKey(const ValueKey('request my-sunday-siurana/bruno'));
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('You said yes · waiting for Inés'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('the age can be left out of the profile', (tester) async {
+    final store = await pumpApp(tester);
+    await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('You, 30'), findsOneWidget);
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Age (optional)'),
+      '',
+    );
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(store.me.age, isNull);
+    expect(find.text('You'), findsWidgets);
+    expect(find.text('You, 30'), findsNothing);
   });
 
   testWidgets('a new plan shows up in Plans', (tester) async {
@@ -148,64 +298,89 @@ void main() {
     expect(find.text('Gym night'), findsOneWidget);
   });
 
-  testWidgets('the chat calls out who asks to join, to accept or decline', (
+  testWidgets('the profile has no when or where, and shows the gear', (
     tester,
   ) async {
-    final store = await pumpApp(tester);
-    await tester.tap(find.text('Chats'));
+    await pumpApp(tester);
+    await tester.tap(find.text('Profile'));
     await tester.pumpAndSettle();
-    expect(find.byTooltip('2 people waiting for your answer'), findsOneWidget);
-    expect(find.byTooltip('1 person waiting for your answer'), findsOneWidget);
-
-    await tester.tap(find.text('Sunday at Siurana'));
-    await tester.pumpAndSettle();
-    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNWidgets(2));
-    expect(find.text('Inés Prado'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Decline Bruno Costa'));
-    await tester.pumpAndSettle();
-    expect(store.state.requests['my-sunday-siurana/bruno']!.rejected, isTrue);
-    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsOneWidget);
-
-    await tester.tap(find.byTooltip('Accept Inés Prado'));
-    await tester.pumpAndSettle();
-    expect(find.text("It's a match!"), findsOneWidget);
-    await tester.tap(find.text('Keep swiping'));
-    await tester.pumpAndSettle();
-    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
-    expect(store.plan('my-sunday-siurana')!.memberIds, ['me', 'ines']);
+    expect(find.text('You, 30'), findsOneWidget);
+    expect(find.text('CLIMBS'), findsOneWidget);
+    expect(find.text('GEAR'), findsOneWidget);
+    expect(find.text('WHEN'), findsNothing);
+    expect(find.text('WHERE'), findsNothing);
+    expect(find.textContaining('years climbing'), findsNothing);
   });
 
-  testWidgets('after my yes, the chat says who the request waits for', (
+  testWidgets('a profile photo and gear photos are saved with the profile', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1080, 2340);
     tester.view.devicePixelRatio = 2.6;
     addTearDown(tester.view.reset);
-    final demoData = demoState(now);
-    final store = GrigriStore(
-      GrigriState(
-        meId: demoData.meId,
-        climbers: demoData.climbers,
-        plans: demoData.plans,
-        requests: demoData.requests,
-        messages: demoData.messages,
-        policies: {...demoData.policies, 'ines': Policy.undecided},
+    final store = GrigriStore(demoState(now), clock: () => now);
+    final asked = <double>[];
+    await tester.pumpWidget(
+      StoreScope(
+        store: store,
+        child: MaterialApp(
+          home: ProfileEditor(
+            pick: (source, maxSide) async {
+              asked.add(maxSide);
+              return photo;
+            },
+          ),
+        ),
       ),
-      clock: () => now,
-    )..accept('my-sunday-siurana/ines');
-    await tester.pumpWidget(GrigriApp(store: store));
-    await tester.tap(find.text('Chats'));
+    );
+    expect(find.text('Home area'), findsNothing);
+    expect(find.text('Years climbing'), findsNothing);
+    expect(find.text('WHEN YOU CLIMB'), findsNothing);
+    expect(find.text('WHERE YOU CLIMB'), findsNothing);
+
+    await tester.tap(find.byTooltip('Add a photo'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.tap(find.text('Choose a photo'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Change your photo'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byTooltip('Add a gear photo'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.ensureVisible(find.byTooltip('Add a gear photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Add a gear photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose a photo'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byTooltip('Remove gear photo 1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save').first);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Accept Bruno Costa'));
-    await tester.pumpAndSettle();
-    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
-    expect(
-      find.text('You said yes to Bruno · waiting for 1 other'),
-      findsOneWidget,
+    expect(asked, [640, 1080, 1080]);
+    expect(store.me.photo, photo);
+    expect(store.me.gearPhotos, [photo]);
+  });
+
+  testWidgets('gear photos stop at the most a profile keeps', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final store = GrigriStore(demoState(now), clock: () => now);
+    store.updateProfile(
+      store.me.copyWith(gearPhotos: List.filled(Climber.maxGearPhotos, photo)),
     );
+    await tester.pumpWidget(
+      StoreScope(
+        store: store,
+        child: const MaterialApp(home: ProfileEditor()),
+      ),
+    );
+    expect(find.byTooltip('Add a gear photo'), findsNothing);
   });
 }

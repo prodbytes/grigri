@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'notices_screen.dart';
 import 'plan_screen.dart';
 
 /// My plans: the ones I'm in (organizing, or accepted into), and the ones
@@ -31,10 +30,7 @@ class PlansScreen extends StatelessWidget {
       ),
     );
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Your plans'),
-        actions: const [NoticesButton()],
-      ),
+      appBar: AppBar(title: const Text('Your plans')),
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
         label: const Text('New plan'),

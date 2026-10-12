@@ -3,10 +3,9 @@ import 'package:flutter/material.dart';
 import '../app_version.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'notices_screen.dart';
 import 'profile_editor.dart';
 
-/// My profile, as others see it on the Requests deck, with Edit.
+/// My profile, as others see it when I ask to join their plans, with Edit.
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -19,7 +18,6 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
-          const NoticesButton(),
           PopupMenuButton<String>(
             onSelected: (_) async {
               final sure = await showDialog<bool>(
@@ -55,24 +53,22 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Center(child: Avatar(me, radius: 52)),
+          Center(
+            child: me.photo == null
+                ? Avatar(me, radius: 52)
+                : GestureDetector(
+                    onTap: () => showPhoto(context, me.photo!),
+                    child: Avatar(me, radius: 52),
+                  ),
+          ),
           const SizedBox(height: 12),
           Center(
             child: Text(
-              '${me.name}, ${me.age}',
+              me.nameAndAge,
               style: text.headlineSmall?.copyWith(
                 color: Mountain.sand,
                 fontWeight: FontWeight.w700,
               ),
-            ),
-          ),
-          Center(
-            child: Text(
-              [
-                if (me.homeArea.isNotEmpty) me.homeArea,
-                if (me.yearsClimbing > 0) '${me.yearsClimbing} years climbing',
-              ].join(' · '),
-              style: text.bodyMedium?.copyWith(color: Mountain.granite),
             ),
           ),
           const SizedBox(height: 16),
@@ -94,8 +90,8 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Your profile is about you: how, when and where you like to climb. '
-            'Each outing is a plan, made separately in Plans.',
+            'Your profile is about you: what you climb and the gear you have. '
+            'When and where are for plans, made separately in Plans.',
             style: text.bodySmall?.copyWith(color: Mountain.granite),
           ),
           if (AppVersion.version.isNotEmpty) ...[

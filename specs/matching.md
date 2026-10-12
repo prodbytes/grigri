@@ -7,41 +7,54 @@ person, and a plan can take a whole group.
 ## Profiles and plans are separate
 
 - A **profile** ([Climber](../grigri_app/lib/model/climber.dart)) is about
-  the person: name, age, home area, years climbing, a bio, and how they
-  climb:
-  - **grades per discipline**: sport, trad and gym on the French scale
-    (4a–9a), bouldering on the V scale (VB–V13);
-  - **when**: weekdays × morning (before 12:00), afternoon (12:00–17:00),
-    evening (from 17:00);
-  - **where**: crags and gyms they like;
-  - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car.
+  the person: a **photo** (or their initials), name, age (optional:
+  without it, cards show just the name), a bio, and:
+  - **grades per discipline** (what they climb): sport, trad and gym on
+    the French scale (4a–9a), bouldering on the V scale (VB–V13);
+  - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car,
+    and up to 6 **photos of their gear**.
+
+  When and where are only the plan's: a profile has no availability,
+  places, home area or years climbing.
 - A **plan** ([Plan](../grigri_app/lib/model/plan.dart)) is one outing:
   title, discipline, crag or gym and area, date, start time and length,
   the grades it's for, the group size (2–12, the organizer included), and
   notes. Its members are its **group**, organizer first.
 
-## The two decks
+## The deck
 
 - **Discover**: plans to join. Upcoming plans with a spot open, that I'm
-  not in and haven't swiped on, best fits first: my grades for the plan's
-  discipline overlap its grades (counts double), it's at one of my times,
-  it's at one of my places; then the soonest. Each card shows **the plan
-  first, highlighted**, with badges for what fits ("Your grades", "Your
-  time", "Your place"), then the organizer's profile and the rest of the
-  group.
+  not in and haven't swiped on: first those whose grades overlap my grades
+  for the plan's discipline, then the rest, each soonest first. Each card
+  shows **the plan first, highlighted**, with a "Your grades" badge when
+  they fit, then the organizer's profile (without the gear) and the rest
+  of the group.
   - Right / ✓: I ask to join (a join request).
   - Left / ✕: I pass; the plan leaves my deck.
-- **Requests**: people who asked to join a plan I'm in, that I haven't
-  answered. Each card shows the plan they want ("Wants to join"), who in
-  the group has said yes and who hasn't, then **their profile**, with
-  their grade for the plan's discipline marked when it fits.
-  - Right / ✓: I accept them. Left / ✕: I turn them down.
-  - The plan's screen lists them too, with ✓ and ✕ for each one I haven't
-    answered.
 
-Cards are dragged (they tilt, and stamp JOIN / PASS or ACCEPT / DECLINE),
+Cards are dragged (they tilt, and stamp JOIN / PASS),
 or thrown by the buttons. A drag past 28% of the width, or a quick flick,
 counts.
+
+## Join requests, in the group chat
+
+Someone asking to join a plan shows up in its **group chat** as a card
+("Asked to join" and when): their photo, name and age (tap for their
+whole profile), their grade for the plan's discipline (marked when it
+fits), and who in the group has said yes and who it's waiting for. Until
+I've answered it has **Decline** and **Accept**; then it shows "You said
+yes" and who it's still waiting for, **Joined**, or **Declined**. The
+organizer and **every member** are notified ("<name> wants to join"), and
+a newcomer is notified of the requests still open when they join. Chats
+marks each chat with how many requests wait for my answer, and the Chats
+tab's badge counts them all. The plan's screen lists them too, with
+"Answer in the chat".
+
+So the group doesn't miss them, the requests still waiting for **my**
+answer are also **called out at the top of the chat**, under the pinned
+plan: their avatar and name, how many have said yes, and ✕ / ✓ (the same
+answer as the card's). Once I've answered, the request leaves the
+callout; its card in the messages stays as the record.
 
 ## The group decides
 
@@ -73,34 +86,39 @@ time: … said no" at the bottom of the screen.
 
 ## Notifications
 
-A bell on every tab's bar opens **Notifications**, with a badge counting
-the unread ones. Each one is a group's answer to my request: **"You're
-in: <plan>"** (tap for the plan) or **"Not this time: <plan>"**, with when
-it happened, newest first. Opening the screen marks them read; the ones
-that were new stay highlighted ("New") while it's open. Only the person who
-asked is notified.
+The **Notifications** tab, with a badge counting the unread ones, lists
+newest first, with when it happened:
+
+- **"<name> wants to join"** a plan I'm in (tap for its group chat, to
+  answer);
+- **"You're in: <plan>"** when a group accepted me (tap for the chat);
+- **"Not this time: <plan>"** when one declined me (tap for the plan).
+
+Opening the tab marks them read; the ones that were new stay highlighted
+("New") until I come back to it, and so do ones that arrive while it's
+open.
 
 ## Group chat
 
 Each plan has one chat for its whole group, with the plan pinned on top.
-It notes who joined and who left. Chats lists them, most recent first.
-
-Someone asking to join is called out at the top of the chat, for each
-member who hasn't answered them yet, with ✕ and ✓ right there: the same
-answer as in Requests or on the plan, so the group knows it has to decide.
-After my yes, the chat says who it's still waiting for. Chats badges each
-chat with how many people are waiting for my answer.
+It notes who joined and who left, and holds the
+[join requests](#join-requests-in-the-group-chat) for the group to
+answer. Chats lists them, most recent first.
 
 ## For now: on the device
 
 There's no backend yet, so everything runs and is kept on the device
 ([GrigriStore](../grigri_app/lib/data/grigri_store.dart), saved as JSON
-with shared_preferences: local storage on the web). The app starts with
+with shared_preferences: local storage on the web). Photos are kept in
+it too, downsized as they're picked (my photo to 640 px, gear photos to
+1080 px, JPEG quality 75), which is why a profile keeps at most 6 gear
+photos. The made-up climbers have no photos. The app starts with
 demo data ([seed.dart](../grigri_app/lib/data/seed.dart)): my profile
 ("You", to edit), eight made-up climbers with their plans, dates always in
 the coming days, two people asking to join my plan, and a bouldering group
-I'm in where Noa waits only for my yes, and the (read) notification that
-I was accepted into it. The made-up climbers answer requests by a fixed
+I'm in where Noa waits only for my yes; their request cards in the chats
+and unread notifications for the three requests, and the (read)
+notification that I was accepted into the bouldering group. The made-up climbers answer requests by a fixed
 policy: accept everyone, accept only overlapping grades, never decide (the
 request waits), or turn everyone down. They answer 10 seconds after I ask
 (the app checks every 2 seconds), so my request is pending first; tests

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
@@ -8,6 +7,9 @@ import 'match_screen.dart';
 import 'plan_screen.dart';
 
 /// A plan's group chat: everyone in the plan, with the plan pinned on top.
+/// Join requests show in it as cards the group answers: everyone must say
+/// yes, and one no turns them down. The ones still waiting for my answer
+/// are also called out on top, under the plan.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, required this.planId});
 
@@ -85,7 +87,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           _PinnedPlan(plan: plan),
-          _JoinCallout(plan: plan),
+          _AnswerCallout(plan: plan),
           Expanded(
             child: ListView.builder(
               reverse: true,
@@ -93,6 +95,9 @@ class _ChatScreenState extends State<ChatScreen> {
               itemCount: messages.length,
               itemBuilder: (context, i) {
                 final m = messages[i];
+                if (m.requestId != null) {
+                  return _RequestCard(message: m, planId: plan.id);
+                }
                 final previous = i + 1 < messages.length
                     ? messages[i + 1]
                     : null;
@@ -173,121 +178,62 @@ class _PinnedPlan extends StatelessWidget {
   );
 }
 
-/// People asking to join, called out on top of the chat until I answer
-/// them: their name and how many said yes, with Decline and Accept. The
-/// ones I said yes to stay as a line, waiting for the rest of the group.
-class _JoinCallout extends StatelessWidget {
-  const _JoinCallout({required this.plan});
+/// People asking to join who still need my answer, pinned on top of the
+/// chat so I don't miss them: who they are and Decline / Accept. Once I've
+/// answered they leave it; their card in the messages stays as the record.
+class _AnswerCallout extends StatelessWidget {
+  const _AnswerCallout({required this.plan});
 
   final Plan plan;
-
-  void _accept(BuildContext context, GrigriStore store, JoinRequest r) {
-    final match = store.accept(r.id);
-    if (match != null) {
-      MatchScreen.show(context, match);
-      return;
-    }
-    final name = store.climber(r.climberId).name.split(' ').first;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'You said yes to $name. Waiting for the rest of the group.',
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final text = Theme.of(context).textTheme;
-    final toAnswer = store.toReviewIn(plan.id);
-    final answered = [
-      for (final r in store.asking(plan.id))
-        if (r.acceptedBy.contains(store.me.id)) r,
+    final toAnswer = [
+      for (final r in store.toReview)
+        if (r.planId == plan.id) r,
     ];
-    if (toAnswer.isEmpty && answered.isEmpty) return const SizedBox.shrink();
+    if (toAnswer.isEmpty) return const SizedBox.shrink();
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.sizeOf(context).height * 0.4,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.35,
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final r in toAnswer) ...[
-              _AskingCard(
-                request: r,
-                plan: plan,
-                onDecline: () => store.reject(r.id),
-                onAccept: () => _accept(context, store, r),
-              ),
-              const SizedBox(height: 6),
-            ],
-            for (final r in answered)
+            for (final r in toAnswer)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.hourglass_top,
-                      size: 14,
-                      color: Mountain.granite,
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        _waitingLabel(store, r),
-                        style: text.bodySmall?.copyWith(
-                          color: Mountain.granite,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                padding: const EdgeInsets.only(top: 4),
+                child: _CalloutRow(request: r, plan: plan),
               ),
           ],
         ),
       ),
     );
   }
-
-  /// "You said yes to Ines · waiting for 2 others".
-  String _waitingLabel(GrigriStore store, JoinRequest r) {
-    final name = store.climber(r.climberId).name.split(' ').first;
-    final left = plan.memberIds.where((id) => !r.acceptedBy.contains(id));
-    return 'You said yes to $name · waiting for '
-        '${left.length == 1 ? '1 other' : '${left.length} others'}';
-  }
 }
 
-/// One person asking to join, waiting for my answer.
-class _AskingCard extends StatelessWidget {
-  const _AskingCard({
-    required this.request,
-    required this.plan,
-    required this.onDecline,
-    required this.onAccept,
-  });
+/// One person in the [_AnswerCallout].
+class _CalloutRow extends StatelessWidget {
+  const _CalloutRow({required this.request, required this.plan});
 
   final JoinRequest request;
   final Plan plan;
-  final VoidCallback onDecline;
-  final VoidCallback onAccept;
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
     final person = store.climber(request.climberId);
-    final yes = request.acceptedBy.where(plan.memberIds.contains).length;
+    final yes = plan.memberIds.where(request.acceptedBy.contains).length;
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+      key: ValueKey('callout ${request.id}'),
+      padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
       decoration: BoxDecoration(
         color: Mountain.tan.withValues(alpha: 0.14),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Mountain.tan.withValues(alpha: 0.55)),
+        border: Border.all(color: Mountain.tan.withValues(alpha: 0.6)),
       ),
       child: Row(
         children: [
@@ -297,7 +243,7 @@ class _AskingCard extends StatelessWidget {
               onTap: () => showProfileSheet(context, person),
               child: Row(
                 children: [
-                  Avatar(person, radius: 20),
+                  Avatar(person, radius: 18),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -315,7 +261,6 @@ class _AskingCard extends StatelessWidget {
                           person.name,
                           style: text.titleSmall?.copyWith(
                             color: Mountain.sand,
-                            fontWeight: FontWeight.w700,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -333,18 +278,164 @@ class _AskingCard extends StatelessWidget {
           IconButton(
             tooltip: 'Decline ${person.name}',
             icon: const Icon(Icons.close, color: Mountain.clay),
-            onPressed: onDecline,
+            onPressed: () => store.reject(request.id),
           ),
           IconButton.filled(
             tooltip: 'Accept ${person.name}',
-            style: IconButton.styleFrom(
-              backgroundColor: Mountain.olive,
-              foregroundColor: Mountain.night,
-            ),
             icon: const Icon(Icons.check),
-            onPressed: onAccept,
+            onPressed: () {
+              final match = store.accept(request.id);
+              if (match != null) MatchScreen.show(context, match);
+            },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Someone asking to join, in the chat: who they are, who has said yes,
+/// and Accept / Decline until I've answered.
+class _RequestCard extends StatelessWidget {
+  const _RequestCard({required this.message, required this.planId});
+
+  final Message message;
+  final String planId;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final text = Theme.of(context).textTheme;
+    final request = store.state.requests[message.requestId];
+    final plan = store.plan(planId)!;
+    if (request == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Center(child: Tag(message.text, color: Mountain.granite)),
+      );
+    }
+    final person = store.climber(request.climberId);
+    final joined = plan.memberIds.contains(person.id);
+    String first(String id) =>
+        id == store.me.id ? 'You' : store.climber(id).name.split(' ').first;
+    final yes = [
+      for (final id in plan.memberIds)
+        if (request.acceptedBy.contains(id)) first(id),
+    ];
+    final waiting = [
+      for (final id in plan.memberIds)
+        if (!request.acceptedBy.contains(id) && id != person.id) first(id),
+    ];
+    final level = person.levels[plan.discipline];
+    final fits = level != null && level.overlaps(plan.grades);
+    final answering =
+        !joined &&
+        !request.rejected &&
+        !request.acceptedBy.contains(store.me.id);
+    return Center(
+      child: Container(
+        key: ValueKey('request ${request.id}'),
+        constraints: const BoxConstraints(maxWidth: 440),
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Mountain.surfaceHigh,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: answering
+                ? Mountain.sky
+                : Mountain.granite.withValues(alpha: 0.3),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'ASKED TO JOIN · ${clock(message.time)}',
+              style: text.labelSmall?.copyWith(
+                color: Mountain.sky,
+                letterSpacing: 1.4,
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => showProfileSheet(context, person),
+              child: Row(
+                children: [
+                  Avatar(person, radius: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          person.nameAndAge,
+                          style: text.titleMedium?.copyWith(
+                            color: Mountain.sand,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Tag(
+                          level == null
+                              ? 'No ${plan.discipline.label.toLowerCase()} grades yet'
+                              : '${plan.discipline.label} ${level.label}',
+                          icon: fits ? Icons.check : Icons.info_outline,
+                          color: fits ? Mountain.olive : Mountain.tan,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Mountain.granite),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            if (joined)
+              const Tag('Joined', icon: Icons.check, color: Mountain.olive)
+            else if (request.rejected)
+              const Tag('Declined', icon: Icons.close, color: Mountain.clay)
+            else
+              Text(
+                [
+                  if (yes.isNotEmpty) '${yes.join(', ')} said yes',
+                  if (waiting.isNotEmpty) 'waiting for ${waiting.join(', ')}',
+                ].join(' · '),
+                style: text.bodySmall?.copyWith(color: Mountain.sky),
+              ),
+            if (answering) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.close, color: Mountain.clay),
+                      label: const Text(
+                        'Decline',
+                        style: TextStyle(color: Mountain.clay),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Mountain.clay),
+                      ),
+                      onPressed: () => store.reject(request.id),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.check),
+                      label: const Text('Accept'),
+                      onPressed: () {
+                        final match = store.accept(request.id);
+                        if (match != null) MatchScreen.show(context, match);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

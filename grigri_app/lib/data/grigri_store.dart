@@ -180,32 +180,6 @@ class GrigriStore extends ChangeNotifier {
         r,
   ];
 
-  /// People asking to join a plan: not turned down and not in it yet.
-  /// Empty when the plan is gone.
-  List<JoinRequest> asking(String planId) {
-    final plan = _state.plans[planId];
-    if (plan == null) return const [];
-    return [
-      for (final r in _state.requests.values)
-        if (r.planId == planId &&
-            !r.rejected &&
-            !plan.memberIds.contains(r.climberId))
-          r,
-    ];
-  }
-
-  /// [toReview] for one plan: who asking to join it still needs my answer.
-  /// Empty when I'm not in it.
-  List<JoinRequest> toReviewIn(String planId) {
-    if (!(_state.plans[planId]?.memberIds.contains(me.id) ?? false)) {
-      return const [];
-    }
-    return [
-      for (final r in asking(planId))
-        if (!r.acceptedBy.contains(me.id)) r,
-    ];
-  }
-
   /// My swipes right still waiting for members to decide.
   List<JoinRequest> get waiting => [
     for (final r in _state.requests.values)
@@ -226,7 +200,8 @@ class GrigriStore extends ChangeNotifier {
   ];
 
   /// My notifications, newest first.
-  List<Notice> get notices => _state.notices.reversed.toList();
+  List<Notice> get notices =>
+      _state.notices.toList()..sort((a, b) => b.time.compareTo(a.time));
 
   int get unreadNotices => _state.notices.where((n) => !n.read).length;
 
@@ -238,11 +213,7 @@ class GrigriStore extends ChangeNotifier {
   /// Why a plan suits me.
   Fit fit(Plan plan) {
     final level = me.levels[plan.discipline];
-    return Fit(
-      grades: level != null && level.overlaps(plan.grades),
-      time: me.availability.contains(Slot.at(plan.start)),
-      place: me.places.any((p) => p.toLowerCase() == plan.place.toLowerCase()),
-    );
+    return Fit(grades: level != null && level.overlaps(plan.grades));
   }
 
   // --- Swiping -----------------------------------------------------------
@@ -251,12 +222,7 @@ class GrigriStore extends ChangeNotifier {
   /// they all accept, I join and get a [Match].
   Match? like(String planId) {
     final plan = _state.plans[planId]!;
-    final request = JoinRequest(
-      planId: planId,
-      climberId: me.id,
-      time: _clock(),
-    );
-    _state.requests[request.id] = request;
+    _ask(JoinRequest(planId: planId, climberId: me.id, time: _clock()));
     final match = _settle(plan.id);
     _changed();
     return match.where((m) => m.newcomer.id == me.id).firstOrNull;
@@ -286,6 +252,38 @@ class GrigriStore extends ChangeNotifier {
       rejected: true,
     );
     _changed();
+  }
+
+  /// Someone asks to join a plan: the request shows in its group chat, and
+  /// every member is notified.
+  void _ask(JoinRequest request) {
+    final plan = _state.plans[request.planId]!;
+    _state.requests[request.id] = request;
+    _state.messages.add(
+      Message(
+        planId: plan.id,
+        authorId: null,
+        text: '${climber(request.climberId).name} asked to join',
+        time: _clock(),
+        requestId: request.id,
+      ),
+    );
+    _tellMembers(request, plan.memberIds);
+  }
+
+  /// Tells the given members that someone asked to join their plan. Only
+  /// I am notified on this device; a backend would notify each of them.
+  void _tellMembers(JoinRequest request, Iterable<String> memberIds) {
+    if (!memberIds.contains(me.id) || request.climberId == me.id) return;
+    _state.notices.add(
+      Notice(
+        kind: NoticeKind.request,
+        planId: request.planId,
+        planTitle: _state.plans[request.planId]!.title,
+        climberId: request.climberId,
+        time: _clock(),
+      ),
+    );
   }
 
   /// I clear a group's "no" from my plans; the plan stays out of my deck.
@@ -364,6 +362,14 @@ class GrigriStore extends ChangeNotifier {
           _note(planId, '${climber(r.climberId).name} joined the plan 🎉');
           joined.add(Match(plan: grown, newcomer: climber(r.climberId)));
           _notify(NoticeKind.accepted, r);
+          // A newcomer decides on the requests still open, too.
+          for (final open in _state.requests.values) {
+            if (open.planId == planId &&
+                !open.rejected &&
+                !grown.memberIds.contains(open.climberId)) {
+              _tellMembers(open, [r.climberId]);
+            }
+          }
           _touched = true;
           changed = true;
           break;
@@ -387,7 +393,7 @@ class GrigriStore extends ChangeNotifier {
   }
 
   /// A made-up member's answer: true, false, or null (not yet). I answer
-  /// for myself, in the Requests deck or on the plan.
+  /// for myself, in the group chat.
   bool? _decide(String memberId, JoinRequest request, Plan plan) {
     if (memberId == me.id) return null;
     final asked = request.time;
@@ -525,18 +531,13 @@ class GrigriStore extends ChangeNotifier {
   }
 }
 
-/// How a plan fits my profile.
+/// How a plan fits my profile. Profiles hold no time or place (those are
+/// the plan's), so it's the grades.
 class Fit {
-  const Fit({required this.grades, required this.time, required this.place});
+  const Fit({required this.grades});
 
   /// My grades for its discipline overlap its grades.
   final bool grades;
 
-  /// It's at a time I like to climb.
-  final bool time;
-
-  /// It's at one of my places.
-  final bool place;
-
-  int get score => (grades ? 2 : 0) + (time ? 1 : 0) + (place ? 1 : 0);
+  int get score => grades ? 1 : 0;
 }
