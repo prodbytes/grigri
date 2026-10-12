@@ -13,6 +13,7 @@ import 'data/roles.dart';
 import 'data/session_storage.dart';
 import 'theme.dart';
 import 'ui/common.dart';
+import 'ui/document_language/document_language.dart';
 import 'ui/home_shell.dart';
 import 'ui/profile_editor.dart';
 import 'ui/roles_card.dart';
@@ -66,10 +67,15 @@ class _GrigriAppState extends State<GrigriApp> {
   final _navigator = GlobalKey<NavigatorState>();
   StreamSubscription<String>? _errors;
   Phase? _phase;
+  late Locale? _locale = widget.store.locale;
 
   /// Leaving the tabs (signed out, or back to creating a profile) closes
-  /// the screens opened over them.
-  void _phaseChanged() {
+  /// the screens opened over them. Picking a language rebuilds the app in
+  /// it.
+  void _storeChanged() {
+    if (widget.store.locale != _locale) {
+      setState(() => _locale = widget.store.locale);
+    }
     final phase = widget.store.phase;
     if (phase == _phase) return;
     if (_phase == Phase.ready) {
@@ -81,7 +87,7 @@ class _GrigriAppState extends State<GrigriApp> {
   @override
   void initState() {
     super.initState();
-    widget.store.addListener(_phaseChanged);
+    widget.store.addListener(_storeChanged);
     _errors = widget.store.errors.listen(
       (message) => _messenger.currentState
         ?..hideCurrentSnackBar()
@@ -91,7 +97,7 @@ class _GrigriAppState extends State<GrigriApp> {
 
   @override
   void dispose() {
-    widget.store.removeListener(_phaseChanged);
+    widget.store.removeListener(_storeChanged);
     _errors?.cancel();
     super.dispose();
   }
@@ -107,6 +113,18 @@ class _GrigriAppState extends State<GrigriApp> {
           title: AppVersion.title,
           debugShowCheckedModeBanner: false,
           theme: mountainTheme(),
+          // The language picked in the profile, or the device's (English
+          // when the app doesn't speak it): specs/i18n.md.
+          locale: _locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) {
+            // The store words some messages itself (what failed).
+            final l10n = AppLocalizations.of(context);
+            widget.store.l10n = l10n;
+            setDocumentLanguage(l10n.localeName);
+            return child!;
+          },
           scaffoldMessengerKey: _messenger,
           navigatorKey: _navigator,
           home: const Root(),
@@ -123,6 +141,7 @@ class Root extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = context.l10n;
     return switch (store.phase) {
       Phase.starting || Phase.loading => const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -133,19 +152,13 @@ class Root extends StatelessWidget {
       Phase.failed => Scaffold(
         body: EmptyState(
           icon: Icons.cloud_off,
-          title: 'Couldn\'t load your profile',
-          message: store.loadError ?? 'Something went wrong.',
+          title: l.loadFailedTitle,
+          message: store.loadError ?? l.errorGeneric,
           action: Wrap(
             spacing: 12,
             children: [
-              FilledButton(
-                onPressed: store.loadMe,
-                child: const Text('Try again'),
-              ),
-              TextButton(
-                onPressed: store.signOut,
-                child: const Text('Sign out'),
-              ),
+              FilledButton(onPressed: store.loadMe, child: Text(l.tryAgain)),
+              TextButton(onPressed: store.signOut, child: Text(l.signOut)),
             ],
           ),
         ),

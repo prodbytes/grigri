@@ -32,9 +32,11 @@ for that tag:
    `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
    both stacks. Production is **never seeded**: it starts empty;
 3. deploys the `grigri-web` stack: certificate, site and photos buckets,
-   CloudFront (with `/api/*` to the API's domain), DNS records, and a
-   Route 53 health check of `/app/version.json` (it must name
-   `grigri_app`) whose alarm emails `GRIGRI_HEALTH_EMAILS`;
+   CloudFront (with `/api/*` to the API's domain), DNS records, and two
+   Route 53 health checks, each with an alarm that emails
+   `GRIGRI_HEALTH_EMAILS` when it fails or recovers: `/app/version.json`
+   (it must name `grigri_app`) for the web app and `/api/health` (it must
+   say `"ok":true`) for the API;
 4. uploads the index page and the web build (`Cache-Control: no-cache`,
    Flutter's files aren't content-hashed) and invalidates `/*`;
 5. checks, for up to 10 minutes, that `/app/version.json` reports the
@@ -95,7 +97,9 @@ buckets' objects. Origin access controls, response headers policies and
 HTTP APIs have only IDs (no names or tags to scope by), so they can't be
 separated by stage. The RC seed is the only invoke allowed
 (`grigri-rc-api`). Repository variables: `AWS_DEPLOY_ROLE_ARN`,
-`AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`;
+`AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
+(production's Google web client) and `GOOGLE_WEB_CLIENT_ID_RC` (the
+RC's);
 repository secrets: `GRIGRI_HEALTH_EMAILS` and `GRIGRI_ADMIN_EMAILS`
 (secrets because the repository is public and run logs show
 variables). One-time setup:

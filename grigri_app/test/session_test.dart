@@ -180,7 +180,7 @@ void main() {
       api.failNext = const ApiException(401, 'signed out');
       await store.auth.signIn();
       expect(store.auth.signedIn, isFalse);
-      expect(store.auth.error, 'Couldn\'t sign in. Try again.');
+      expect(store.auth.error, SignInError.session);
       expect(keptToken(store), isNull);
       expect(store.phase, Phase.signedOut);
     });

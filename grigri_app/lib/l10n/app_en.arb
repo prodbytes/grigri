@@ -1,0 +1,1139 @@
+{
+  "@@locale": "en",
+  "disciplineSport": "Sport",
+  "@disciplineSport": {
+    "description": "Discipline: sport climbing (bolted routes)."
+  },
+  "disciplineTrad": "Trad",
+  "@disciplineTrad": {
+    "description": "Discipline: traditional climbing, placing your own protection."
+  },
+  "disciplineBouldering": "Bouldering",
+  "@disciplineBouldering": {
+    "description": "Discipline: bouldering."
+  },
+  "disciplineGym": "Gym",
+  "@disciplineGym": {
+    "description": "Discipline: climbing in an indoor gym."
+  },
+  "gradeSystemEuropean": "European",
+  "@gradeSystemEuropean": {
+    "description": "Grade system toggle: French grades for routes, Fontainebleau for boulders."
+  },
+  "gradeSystemAmerican": "American",
+  "@gradeSystemAmerican": {
+    "description": "Grade system toggle: YDS for routes, the V scale for boulders."
+  },
+  "gearRope": "Rope",
+  "@gearRope": {
+    "description": "Gear someone can bring: a climbing rope."
+  },
+  "gearQuickdraws": "Quickdraws",
+  "@gearQuickdraws": {
+    "description": "Gear someone can bring: quickdraws."
+  },
+  "gearRack": "Trad rack",
+  "@gearRack": {
+    "description": "Gear someone can bring: a trad rack (cams and nuts)."
+  },
+  "gearCrashPad": "Crash pad",
+  "@gearCrashPad": {
+    "description": "Gear someone can bring: a bouldering crash pad."
+  },
+  "gearCar": "Car",
+  "@gearCar": {
+    "description": "Gear someone can bring: a car, for a lift."
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Button: save the form."
+  },
+  "cancel": "Cancel",
+  "@cancel": {
+    "description": "Dialog button: dismiss without doing anything."
+  },
+  "more": "More",
+  "@more": {
+    "description": "Tooltip of the overflow (three dots) menu."
+  },
+  "refresh": "Refresh",
+  "@refresh": {
+    "description": "Tooltip of the refresh button."
+  },
+  "signOut": "Sign out",
+  "@signOut": {
+    "description": "Menu item and button: sign out of the app."
+  },
+  "tryAgain": "Try again",
+  "@tryAgain": {
+    "description": "Button: try loading again."
+  },
+  "retry": "Retry",
+  "@retry": {
+    "description": "Small button: retry a failed request."
+  },
+  "newPlan": "New plan",
+  "@newPlan": {
+    "description": "Button and screen title: create a new climbing plan."
+  },
+  "you": "You",
+  "@you": {
+    "description": "Stands for the user in lists of people (\"You, Marta\"), capitalized."
+  },
+  "youLower": "you",
+  "@youLower": {
+    "description": "Stands for the user in a lowercase list of first names (\"marta, you\")."
+  },
+  "someone": "Someone",
+  "@someone": {
+    "description": "Name shown for a climber the app does not know yet."
+  },
+  "climberCount": "{count, plural, =1{1 climber} other{{count} climbers}}",
+  "@climberCount": {
+    "description": "How many climbers are in a plan.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "saidYesCount": "{yes} of {total} said yes",
+  "@saidYesCount": {
+    "description": "How many members of the group accepted a join request.",
+    "placeholders": {
+      "yes": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "declined": "Declined",
+  "@declined": {
+    "description": "Status tag: the join request was turned down."
+  },
+  "pending": "Pending",
+  "@pending": {
+    "description": "Status tag: the join request waits for the group."
+  },
+  "accept": "Accept",
+  "@accept": {
+    "description": "Button: let the person join the plan."
+  },
+  "decline": "Decline",
+  "@decline": {
+    "description": "Button: turn down the person asking to join."
+  },
+  "dayAndTime": "{day}, {time}",
+  "@dayAndTime": {
+    "description": "A day and a time, e.g. \"Sat 17 Oct, 18:30\".",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "example": "Sat 17 Oct"
+      },
+      "time": {
+        "type": "String",
+        "example": "18:30"
+      }
+    }
+  },
+  "errorGeneric": "Something went wrong.",
+  "@errorGeneric": {
+    "description": "Shown when something failed without a reason."
+  },
+  "errorStatus": "Something went wrong ({status}).",
+  "@errorStatus": {
+    "description": "The server failed without a message; status is the HTTP status code.",
+    "placeholders": {
+      "status": {
+        "type": "int",
+        "example": "500"
+      }
+    }
+  },
+  "errorTimeout": "The server took too long to answer.",
+  "@errorTimeout": {
+    "description": "The server did not answer in time."
+  },
+  "errorUnreachable": "Couldn't reach the server.",
+  "@errorUnreachable": {
+    "description": "No connection to the server."
+  },
+  "errorPhotoTimeout": "The photo upload took too long.",
+  "@errorPhotoTimeout": {
+    "description": "A photo upload did not finish in time."
+  },
+  "errorPhotoUnreachable": "Couldn't upload the photo.",
+  "@errorPhotoUnreachable": {
+    "description": "A photo upload could not connect."
+  },
+  "errorPhotoStatus": "The photo upload failed ({status}).",
+  "@errorPhotoStatus": {
+    "description": "A photo upload failed; status is the HTTP status code.",
+    "placeholders": {
+      "status": {
+        "type": "int",
+        "example": "500"
+      }
+    }
+  },
+  "errorPhotoType": "Use a JPEG, PNG or WebP photo.",
+  "@errorPhotoType": {
+    "description": "The picked photo is in a format the app cannot upload."
+  },
+  "errorSignedOut": "Signed out: please sign in again.",
+  "@errorSignedOut": {
+    "description": "Snackbar: the session expired and the user was signed out."
+  },
+  "errorSignIn": "Couldn't sign in with Google. Try again.",
+  "@errorSignIn": {
+    "description": "Google sign-in failed."
+  },
+  "errorSession": "Couldn't sign in. Try again.",
+  "@errorSession": {
+    "description": "The API would not start a session after signing in."
+  },
+  "errorSignOutEverywhere": "Couldn't sign out everywhere. Try again.",
+  "@errorSignOutEverywhere": {
+    "description": "Snackbar: signing out of every device failed."
+  },
+  "loadFailedTitle": "Couldn't load your profile",
+  "@loadFailedTitle": {
+    "description": "Title of the screen shown when the profile could not be loaded."
+  },
+  "signInTagline": "Find climbing partners: make a plan, or swipe right on one, and climb together.",
+  "@signInTagline": {
+    "description": "Sign-in screen, under the app name."
+  },
+  "signInWithGoogle": "Sign in with Google",
+  "@signInWithGoogle": {
+    "description": "Button: sign in with a Google account."
+  },
+  "devSignInHeading": "Dev sign-in · local API only",
+  "@devSignInHeading": {
+    "description": "Heading over the developer sign-in form (local builds only)."
+  },
+  "emailLabel": "Email",
+  "@emailLabel": {
+    "description": "Label of the email field."
+  },
+  "devSignIn": "Dev sign-in",
+  "@devSignIn": {
+    "description": "Button: developer sign-in (local builds only)."
+  },
+  "signInUnconfigured": "Sign-in isn't set up in this build (no Google client ID).",
+  "@signInUnconfigured": {
+    "description": "Shown when the build has no Google client ID."
+  },
+  "tabDiscover": "Discover",
+  "@tabDiscover": {
+    "description": "Bottom tab: the deck of plans to join."
+  },
+  "tabPlans": "Plans",
+  "@tabPlans": {
+    "description": "Bottom tab: my plans."
+  },
+  "tabChats": "Chats",
+  "@tabChats": {
+    "description": "Bottom tab: group chats."
+  },
+  "tabNotifications": "Notifications",
+  "@tabNotifications": {
+    "description": "Bottom tab: notifications."
+  },
+  "tabProfile": "Profile",
+  "@tabProfile": {
+    "description": "Bottom tab: my profile."
+  },
+  "tabAdmin": "Admin",
+  "@tabAdmin": {
+    "description": "Bottom tab for admins."
+  },
+  "thePlan": "The plan",
+  "@thePlan": {
+    "description": "Heading of the highlighted plan card (shown uppercased)."
+  },
+  "yourGrades": "Your grades",
+  "@yourGrades": {
+    "description": "Badge: the plan is at grades the user climbs."
+  },
+  "profileClimbs": "Climbs",
+  "@profileClimbs": {
+    "description": "Profile section heading: disciplines and grades (shown uppercased)."
+  },
+  "profileGear": "Gear",
+  "@profileGear": {
+    "description": "Profile section heading: gear (shown uppercased)."
+  },
+  "gearPhotoOf": "{name}'s gear, photo {number}",
+  "@gearPhotoOf": {
+    "description": "Accessibility label of a photo of someone's gear.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta"
+      },
+      "number": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "language": "Language",
+  "@language": {
+    "description": "Label of the app language picker."
+  },
+  "languageSystem": "System default",
+  "@languageSystem": {
+    "description": "Language picker option: follow the device's language."
+  },
+  "profileTitle": "Profile",
+  "@profileTitle": {
+    "description": "Title of the Profile tab."
+  },
+  "signOutQuestion": "Sign out?",
+  "@signOutQuestion": {
+    "description": "Title of the sign-out confirmation dialog."
+  },
+  "signOutMessage": "Your profile, plans and chats stay saved; sign back in to see them.",
+  "@signOutMessage": {
+    "description": "Body of the sign-out confirmation dialog."
+  },
+  "signOutEverywhere": "Sign out everywhere",
+  "@signOutEverywhere": {
+    "description": "Menu item and button: end the sessions on every phone and browser."
+  },
+  "signOutEverywhereQuestion": "Sign out everywhere?",
+  "@signOutEverywhereQuestion": {
+    "description": "Title of the sign-out-everywhere confirmation dialog."
+  },
+  "signOutEverywhereMessage": "Signs you out on every phone and browser you signed in on, this one too. Your profile, plans and chats stay saved.",
+  "@signOutEverywhereMessage": {
+    "description": "Body of the sign-out-everywhere confirmation dialog."
+  },
+  "editProfile": "Edit profile",
+  "@editProfile": {
+    "description": "Button and screen title: edit my profile."
+  },
+  "profileFootnote": "Your profile is about you: what you climb and the gear you have. When and where are for plans, made separately in Plans.",
+  "@profileFootnote": {
+    "description": "Note under my profile."
+  },
+  "createProfile": "Create your profile",
+  "@createProfile": {
+    "description": "Title of the first-time profile step."
+  },
+  "takePhoto": "Take a photo",
+  "@takePhoto": {
+    "description": "Photo source option: the camera."
+  },
+  "choosePhoto": "Choose a photo",
+  "@choosePhoto": {
+    "description": "Photo source option: the photo library."
+  },
+  "removePhoto": "Remove photo",
+  "@removePhoto": {
+    "description": "Option: remove my profile photo."
+  },
+  "photoFailed": "Couldn't get that photo",
+  "@photoFailed": {
+    "description": "Snackbar: the picked photo could not be read."
+  },
+  "welcomeIntro": "Welcome to Grigri! Tell climbers who you are and what you climb: they see it when you ask to join their plans.",
+  "@welcomeIntro": {
+    "description": "Intro text of the first-time profile step."
+  },
+  "addPhoto": "Add a photo",
+  "@addPhoto": {
+    "description": "Tooltip of my avatar when it has no photo."
+  },
+  "changePhoto": "Change your photo",
+  "@changePhoto": {
+    "description": "Tooltip of my avatar when it has a photo."
+  },
+  "nameLabel": "Name",
+  "@nameLabel": {
+    "description": "Label of the name field."
+  },
+  "nameRequired": "Your name, please",
+  "@nameRequired": {
+    "description": "Error when the name field is empty."
+  },
+  "ageLabel": "Age (optional)",
+  "@ageLabel": {
+    "description": "Label of the optional age field."
+  },
+  "ageRange": "{min} to {max}",
+  "@ageRange": {
+    "description": "Error when the age is out of range.",
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "16"
+      },
+      "max": {
+        "type": "int",
+        "example": "99"
+      }
+    }
+  },
+  "bioLabel": "About you",
+  "@bioLabel": {
+    "description": "Label of the free-text field about the user."
+  },
+  "whatYouClimb": "What you climb",
+  "@whatYouClimb": {
+    "description": "Profile editor section heading (shown uppercased)."
+  },
+  "whatYouClimbHint": "Pick your disciplines and the grades you climb.",
+  "@whatYouClimbHint": {
+    "description": "Hint under the \"What you climb\" heading."
+  },
+  "gearYouCanBring": "Gear you can bring",
+  "@gearYouCanBring": {
+    "description": "Profile editor section heading (shown uppercased)."
+  },
+  "gearHint": "Add photos of it, too.",
+  "@gearHint": {
+    "description": "Hint under the gear heading."
+  },
+  "gearPhoto": "Gear photo {number}",
+  "@gearPhoto": {
+    "description": "Accessibility label of one of my gear photos.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "removeGearPhoto": "Remove gear photo {number}",
+  "@removeGearPhoto": {
+    "description": "Tooltip: remove one of my gear photos.",
+    "placeholders": {
+      "number": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "addGearPhoto": "Add a gear photo",
+  "@addGearPhoto": {
+    "description": "Tooltip: add a gear photo."
+  },
+  "startClimbing": "Start climbing",
+  "@startClimbing": {
+    "description": "Button finishing the first-time profile step."
+  },
+  "whereYouClimb": "Where you climb",
+  "@whereYouClimb": {
+    "description": "Profile editor section heading: my location and areas (shown uppercased)."
+  },
+  "whereYouClimbHint": "Plans near here come first on Discover. Only you see it.",
+  "@whereYouClimbHint": {
+    "description": "Hint under the \"Where you climb\" heading."
+  },
+  "setYourLocation": "Set your location",
+  "@setYourLocation": {
+    "description": "Location row when no location is set."
+  },
+  "yourLocation": "Your location",
+  "@yourLocation": {
+    "description": "Subtitle of the location row, and title of the location picker."
+  },
+  "clearYourLocation": "Clear your location",
+  "@clearYourLocation": {
+    "description": "Tooltip: clear my location."
+  },
+  "removeArea": "Remove {name}",
+  "@removeArea": {
+    "description": "Tooltip: remove one of my areas of interest.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Siurana"
+      }
+    }
+  },
+  "addArea": "Add an area",
+  "@addArea": {
+    "description": "Button and picker title: add an area where I like to climb."
+  },
+  "locationSearchLabel": "A crag or gym near there",
+  "@locationSearchLabel": {
+    "description": "Label of the location picker search field."
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Hint of a search field."
+  },
+  "locationPrivacy": "Kept to about 1 km, and only you see it.",
+  "@locationPrivacy": {
+    "description": "Helper under the location search: the location is rounded and private."
+  },
+  "placesAttribution": "Places: {attribution}",
+  "@placesAttribution": {
+    "description": "Credit for the place data, under the location search.",
+    "placeholders": {
+      "attribution": {
+        "type": "String",
+        "example": "© OpenStreetMap contributors"
+      }
+    }
+  },
+  "loadingPlaces": "Loading places…",
+  "@loadingPlaces": {
+    "description": "The place index is still loading."
+  },
+  "noPlacesFound": "No places found",
+  "@noPlacesFound": {
+    "description": "The location search found nothing."
+  },
+  "distanceKm": "{km, plural, =0{Under 1 km from you} other{{km} km from you}}",
+  "@distanceKm": {
+    "description": "How far a plan is from me, in kilometres (0 means under 1 km).",
+    "placeholders": {
+      "km": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "setWhereYouClimbHint": "Set where you climb to see plans near you first.",
+  "@setWhereYouClimbHint": {
+    "description": "Discover hint when I have no location or areas."
+  },
+  "setAction": "Set",
+  "@setAction": {
+    "description": "Button next to the Discover hint: open the profile editor to set it."
+  },
+  "discoverTitle": "Discover plans",
+  "@discoverTitle": {
+    "description": "Title of the Discover tab."
+  },
+  "askedToJoinPending": "Asked to join: pending. {organizer} will decide; you'll get a notification.",
+  "@askedToJoinPending": {
+    "description": "Snackbar after asking to join a plan with one member.",
+    "placeholders": {
+      "organizer": {
+        "type": "String",
+        "example": "Marta"
+      }
+    }
+  },
+  "askedToJoinPendingGroup": "Asked to join: pending. {organizer} and the group will decide; you'll get a notification.",
+  "@askedToJoinPendingGroup": {
+    "description": "Snackbar after asking to join a plan with a group.",
+    "placeholders": {
+      "organizer": {
+        "type": "String",
+        "example": "Marta"
+      }
+    }
+  },
+  "noPlansToJoinTitle": "No plans to join right now",
+  "@noPlansToJoinTitle": {
+    "description": "Discover, empty: title."
+  },
+  "noPlansToJoinMessage": "Nobody has a plan open for you yet. Make your own: climbers who fit will ask to join.",
+  "@noPlansToJoinMessage": {
+    "description": "Discover, empty: message."
+  },
+  "swipeJoin": "Join",
+  "@swipeJoin": {
+    "description": "Stamp on a card dragged right: ask to join (shown uppercased, keep it short)."
+  },
+  "swipePass": "Pass",
+  "@swipePass": {
+    "description": "Stamp on a card dragged left: skip it (shown uppercased, keep it short)."
+  },
+  "pass": "Pass",
+  "@pass": {
+    "description": "Tooltip of the button that skips a plan."
+  },
+  "askToJoin": "Ask to join",
+  "@askToJoin": {
+    "description": "Tooltip of the button that asks to join a plan."
+  },
+  "organizedBy": "Organized by",
+  "@organizedBy": {
+    "description": "Heading over the plan organizer (shown uppercased)."
+  },
+  "alsoInGroup": "Also in the group",
+  "@alsoInGroup": {
+    "description": "Heading over the other members (shown uppercased)."
+  },
+  "chatsTitle": "Chats",
+  "@chatsTitle": {
+    "description": "Title of the Chats tab."
+  },
+  "noChatsTitle": "No chats yet",
+  "@noChatsTitle": {
+    "description": "Chats, empty: title."
+  },
+  "noChatsMessage": "Every plan you're in has a group chat. Make a plan, or ask to join one, and its chat opens here.",
+  "@noChatsMessage": {
+    "description": "Chats, empty: message."
+  },
+  "findPlan": "Find a plan",
+  "@findPlan": {
+    "description": "Button: go find a plan in Discover."
+  },
+  "messagePreview": "{author}: {text}",
+  "@messagePreview": {
+    "description": "Last message in the chat list: author and text.",
+    "placeholders": {
+      "author": {
+        "type": "String",
+        "example": "Marta"
+      },
+      "text": {
+        "type": "String",
+        "example": "See you at 9"
+      }
+    }
+  },
+  "toAnswer": "{count} to answer",
+  "@toAnswer": {
+    "description": "Badge: join requests waiting for my answer in a chat.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "1"
+      }
+    }
+  },
+  "notInGroupTitle": "Not in this group",
+  "@notInGroupTitle": {
+    "description": "Chat of a plan I left: title."
+  },
+  "notInGroupMessage": "You left this plan, so its chat is closed.",
+  "@notInGroupMessage": {
+    "description": "Chat of a plan I left: message."
+  },
+  "messageHint": "Message the group",
+  "@messageHint": {
+    "description": "Hint of the chat input."
+  },
+  "send": "Send",
+  "@send": {
+    "description": "Tooltip of the send button."
+  },
+  "wantsToJoinYourAnswer": "Wants to join · your answer",
+  "@wantsToJoinYourAnswer": {
+    "description": "Callout over someone asking to join who waits for my answer (shown uppercased)."
+  },
+  "declineName": "Decline {name}",
+  "@declineName": {
+    "description": "Tooltip: decline this person.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "acceptName": "Accept {name}",
+  "@acceptName": {
+    "description": "Tooltip: accept this person.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "askedToJoinAt": "Asked to join · {time}",
+  "@askedToJoinAt": {
+    "description": "Header of a join request card in the chat (shown uppercased).",
+    "placeholders": {
+      "time": {
+        "type": "String",
+        "example": "18:30"
+      }
+    }
+  },
+  "noGradesYet": "{discipline, select, sport{No sport grades yet} trad{No trad grades yet} bouldering{No bouldering grades yet} gym{No gym grades yet} other{No grades yet}}",
+  "@noGradesYet": {
+    "description": "Someone asking to join has no grades for the plan discipline.",
+    "placeholders": {
+      "discipline": {
+        "type": "String",
+        "example": "sport"
+      }
+    }
+  },
+  "joined": "Joined",
+  "@joined": {
+    "description": "Status tag: the person joined the plan."
+  },
+  "closed": "Closed",
+  "@closed": {
+    "description": "Status tag: the request closed without the person joining."
+  },
+  "namesSaidYes": "{count, plural, =1{{names} said yes} other{{names} said yes}}",
+  "@namesSaidYes": {
+    "description": "Who accepted a join request: a comma-separated list of first names.",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "You, Marta"
+      },
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "waitingFor": "waiting for {names}",
+  "@waitingFor": {
+    "description": "Who has not answered a join request yet (lowercase, follows \"… said yes ·\").",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "You, Marta"
+      }
+    }
+  },
+  "itsAMatch": "It's a match!",
+  "@itsAMatch": {
+    "description": "Big title when someone joins a plan."
+  },
+  "matchEveryoneSaidYes": "Everyone in the group said yes. You're climbing together:",
+  "@matchEveryoneSaidYes": {
+    "description": "Match screen, when I joined."
+  },
+  "matchJoinsGroup": "{name} joins the group:",
+  "@matchJoinsGroup": {
+    "description": "Match screen, when someone else joined.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "openGroupChat": "Open the group chat",
+  "@openGroupChat": {
+    "description": "Button: open the group chat."
+  },
+  "keepSwiping": "Keep swiping",
+  "@keepSwiping": {
+    "description": "Button: close the match screen."
+  },
+  "notificationsTitle": "Notifications",
+  "@notificationsTitle": {
+    "description": "Title of the Notifications tab."
+  },
+  "nothingYetTitle": "Nothing yet",
+  "@nothingYetTitle": {
+    "description": "Notifications, empty: title."
+  },
+  "nothingYetMessage": "When someone asks to join a plan you're in, or a group answers your request, you'll hear about it here.",
+  "@nothingYetMessage": {
+    "description": "Notifications, empty: message."
+  },
+  "noticeWantsToJoin": "{name} wants to join",
+  "@noticeWantsToJoin": {
+    "description": "Notification title: someone asked to join my plan.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "noticeAnswerInChat": "{plan} · answer in the group chat",
+  "@noticeAnswerInChat": {
+    "description": "Notification body for a join request.",
+    "placeholders": {
+      "plan": {
+        "type": "String",
+        "example": "El Pati"
+      }
+    }
+  },
+  "noticeYoureIn": "You're in: {plan}",
+  "@noticeYoureIn": {
+    "description": "Notification title: a group accepted me.",
+    "placeholders": {
+      "plan": {
+        "type": "String",
+        "example": "El Pati"
+      }
+    }
+  },
+  "noticeAcceptedBody": "The group accepted you. Say hi in the chat.",
+  "@noticeAcceptedBody": {
+    "description": "Notification body: a group accepted me."
+  },
+  "noticeNotThisTime": "Not this time: {plan}",
+  "@noticeNotThisTime": {
+    "description": "Notification title: a group declined me.",
+    "placeholders": {
+      "plan": {
+        "type": "String",
+        "example": "El Pati"
+      }
+    }
+  },
+  "noticeDeclinedBody": "The group declined your request.",
+  "@noticeDeclinedBody": {
+    "description": "Notification body: a group declined me."
+  },
+  "newTag": "New",
+  "@newTag": {
+    "description": "Tag on a notification I have not seen."
+  },
+  "planGoneTitle": "Plan gone",
+  "@planGoneTitle": {
+    "description": "A plan that no longer exists: title."
+  },
+  "planGoneMessage": "Everyone left this plan, or it's no longer open.",
+  "@planGoneMessage": {
+    "description": "A plan that no longer exists: message."
+  },
+  "yourPlan": "Your plan",
+  "@yourPlan": {
+    "description": "Title of a plan I organize."
+  },
+  "planTitle": "Plan",
+  "@planTitle": {
+    "description": "Title of a plan someone else organizes."
+  },
+  "edit": "Edit",
+  "@edit": {
+    "description": "Tooltip: edit the plan."
+  },
+  "declinedGroupSaidNo": "Declined: the group said no",
+  "@declinedGroupSaidNo": {
+    "description": "Tag on a plan whose group declined me."
+  },
+  "pendingSaidYes": "Pending: {yes} of {total} said yes",
+  "@pendingSaidYes": {
+    "description": "Tag on a plan I asked to join.",
+    "placeholders": {
+      "yes": {
+        "type": "int",
+        "example": "1"
+      },
+      "total": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "theGroupCount": "The group · {count}",
+  "@theGroupCount": {
+    "description": "Heading over the plan members (shown uppercased).",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "organizer": "Organizer",
+  "@organizer": {
+    "description": "Role of the member who organizes the plan."
+  },
+  "member": "Member",
+  "@member": {
+    "description": "Role of the other members."
+  },
+  "askingToJoin": "Asking to join",
+  "@askingToJoin": {
+    "description": "Heading over people asking to join (shown uppercased)."
+  },
+  "youSaidYes": "You said yes",
+  "@youSaidYes": {
+    "description": "Tag: I accepted this request."
+  },
+  "answerInChat": "Answer in the chat",
+  "@answerInChat": {
+    "description": "Tag: answer this request in the chat."
+  },
+  "groupChat": "Group chat",
+  "@groupChat": {
+    "description": "Button: open the group chat."
+  },
+  "cancelPlan": "Cancel the plan",
+  "@cancelPlan": {
+    "description": "Button: cancel a plan I am alone in."
+  },
+  "leavePlan": "Leave the plan",
+  "@leavePlan": {
+    "description": "Button: leave the plan."
+  },
+  "cancelPlanQuestion": "Cancel the plan?",
+  "@cancelPlanQuestion": {
+    "description": "Dialog title: cancel the plan?"
+  },
+  "leavePlanQuestion": "Leave the plan?",
+  "@leavePlanQuestion": {
+    "description": "Dialog title: leave the plan?"
+  },
+  "cancelPlanMessage": "It and its chat will be gone.",
+  "@cancelPlanMessage": {
+    "description": "Dialog body: what cancelling does."
+  },
+  "leaveOrganizerMessage": "{name} will organize it.",
+  "@leaveOrganizerMessage": {
+    "description": "Dialog body: the next member takes over as organizer.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "leaveMessage": "You can't rejoin it later.",
+  "@leaveMessage": {
+    "description": "Dialog body: leaving is final."
+  },
+  "stay": "Stay",
+  "@stay": {
+    "description": "Dialog button: do not leave."
+  },
+  "leave": "Leave",
+  "@leave": {
+    "description": "Dialog button: leave the plan."
+  },
+  "editPlan": "Edit plan",
+  "@editPlan": {
+    "description": "Title of the plan editor for an existing plan."
+  },
+  "pickFutureTime": "Pick a time that's still to come.",
+  "@pickFutureTime": {
+    "description": "Snackbar: the plan time is in the past."
+  },
+  "sectorLabel": "Sector, crag or gym",
+  "@sectorLabel": {
+    "description": "Label of the where field."
+  },
+  "sectorHint": "Search, or type it in",
+  "@sectorHint": {
+    "description": "Hint of the where field."
+  },
+  "sectorsAttribution": "Sectors: {attribution}",
+  "@sectorsAttribution": {
+    "description": "Credit for the sector data, under the where field.",
+    "placeholders": {
+      "attribution": {
+        "type": "String",
+        "example": "© OpenStreetMap contributors"
+      }
+    }
+  },
+  "whereRequired": "Where are you climbing?",
+  "@whereRequired": {
+    "description": "Error when the where field is empty."
+  },
+  "sectionDiscipline": "Climbing",
+  "@sectionDiscipline": {
+    "description": "Plan editor section: which discipline (shown uppercased)."
+  },
+  "sectionWhere": "Where",
+  "@sectionWhere": {
+    "description": "Plan editor section (shown uppercased)."
+  },
+  "sectionWhen": "When",
+  "@sectionWhen": {
+    "description": "Plan editor section (shown uppercased)."
+  },
+  "sectionGrades": "Grades",
+  "@sectionGrades": {
+    "description": "Plan editor section (shown uppercased)."
+  },
+  "sectionNotes": "Notes",
+  "@sectionNotes": {
+    "description": "Plan editor section (shown uppercased)."
+  },
+  "notesHint": "Meeting point, car seats, the routes you have in mind…",
+  "@notesHint": {
+    "description": "Hint of the plan notes field."
+  },
+  "publishPlan": "Publish the plan",
+  "@publishPlan": {
+    "description": "Button: create the plan."
+  },
+  "yourPlans": "Your plans",
+  "@yourPlans": {
+    "description": "Title of the Plans tab."
+  },
+  "noPlansYetTitle": "No plans yet",
+  "@noPlansYetTitle": {
+    "description": "Plans, empty: title."
+  },
+  "noPlansYetMessage": "Make a plan (what, where, when) and climbers who fit will ask to join. Or swipe right on one in Discover.",
+  "@noPlansYetMessage": {
+    "description": "Plans, empty: message."
+  },
+  "plansClimbing": "Climbing",
+  "@plansClimbing": {
+    "description": "Plans tab heading: plans I am in (shown uppercased)."
+  },
+  "plansAskedToJoin": "Asked to join",
+  "@plansAskedToJoin": {
+    "description": "Plans tab heading: plans I asked to join (shown uppercased)."
+  },
+  "organizing": "Organizing",
+  "@organizing": {
+    "description": "Tag: I organize this plan."
+  },
+  "accepted": "Accepted",
+  "@accepted": {
+    "description": "Tag: I was accepted into this plan."
+  },
+  "toReview": "{count} to review",
+  "@toReview": {
+    "description": "Tag: join requests for me to review.",
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "groupSaidNo": "The group said no",
+  "@groupSaidNo": {
+    "description": "The group declined my request."
+  },
+  "waitingForNames": "Waiting for {names}",
+  "@waitingForNames": {
+    "description": "Who my request still waits for (first names).",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Marta, Joan"
+      }
+    }
+  },
+  "dismiss": "Dismiss",
+  "@dismiss": {
+    "description": "Tooltip: remove a declined request from the list."
+  },
+  "adminTitle": "Admin: join requests",
+  "@adminTitle": {
+    "description": "Title of the Admin tab."
+  },
+  "noOpenRequestsTitle": "No open requests",
+  "@noOpenRequestsTitle": {
+    "description": "Admin, empty: title."
+  },
+  "noOpenRequestsMessage": "When anyone asks to join a plan, their request shows up here for you to approve or reject.",
+  "@noOpenRequestsMessage": {
+    "description": "Admin, empty: message."
+  },
+  "aPlan": "a plan",
+  "@aPlan": {
+    "description": "Stands for a plan the admin cannot see the details of."
+  },
+  "askedAt": "Asked {day}, {time}",
+  "@askedAt": {
+    "description": "When someone asked to join.",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "example": "Sat 17 Oct"
+      },
+      "time": {
+        "type": "String",
+        "example": "18:30"
+      }
+    }
+  },
+  "reject": "Reject",
+  "@reject": {
+    "description": "Admin button: reject the request."
+  },
+  "approve": "Approve",
+  "@approve": {
+    "description": "Admin button: approve the request."
+  },
+  "rejectNameQuestion": "Reject {name}?",
+  "@rejectNameQuestion": {
+    "description": "Admin dialog title.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "rejectMessage": "They won't join {plan}, and they'll be told the group declined.",
+  "@rejectMessage": {
+    "description": "Admin dialog body.",
+    "placeholders": {
+      "plan": {
+        "type": "String",
+        "example": "El Pati"
+      }
+    }
+  },
+  "approveNameQuestion": "Approve {name}?",
+  "@approveNameQuestion": {
+    "description": "Admin dialog title.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "approveMessage": "They join {plan} now, as if everyone in the group had said yes.",
+  "@approveMessage": {
+    "description": "Admin dialog body.",
+    "placeholders": {
+      "plan": {
+        "type": "String",
+        "example": "El Pati"
+      }
+    }
+  },
+  "adminJoined": "{name} joined {plan}.",
+  "@adminJoined": {
+    "description": "Snackbar after an admin approves a request.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      },
+      "plan": {
+        "type": "String",
+        "example": "El Pati"
+      }
+    }
+  },
+  "roles": "Roles",
+  "@roles": {
+    "description": "Heading of the roles card (shown uppercased)."
+  },
+  "rolesSignedOut": "Not signed in: your roles show here once you sign in.",
+  "@rolesSignedOut": {
+    "description": "Roles card when signed out."
+  },
+  "rolesFailed": "Couldn't get your roles from rbacr.",
+  "@rolesFailed": {
+    "description": "Roles card when loading the roles failed. rbacr is the roles service: keep its name."
+  },
+  "noRoles": "No roles in Grigri yet.",
+  "@noRoles": {
+    "description": "Roles card when the user has no roles."
+  },
+  "rolesAs": "As {email}",
+  "@rolesAs": {
+    "description": "Which account the roles belong to.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "someone@example.com"
+      }
+    }
+  }
+}

@@ -360,7 +360,44 @@ spec.
       center` from OpenStreetMap; the placeholder gets approximate
       points); a plan keeps its sector's point. The index is cached once
       loaded, not as a pending load.
-23. **Live updates: push over MQTT (AWS IoT Core) instead of polling.**
+23. **Make sure the app is internationalized (English, Spanish, German,
+    French, Portuguese, Catalan); keep the translation bundles up to date;
+    let the user pick in the profile.**
+    - New feature: [Languages](i18n.md). Flutter's gen-l10n with ARB
+      bundles in `grigri_app/lib/l10n/` (`app_en.arb` the described
+      template, and es, de, fr, pt, ca); every text the app writes
+      itself moved into them, with ICU plurals, placeholders and a
+      `select` for disciplines; discipline, gear and grade-system names
+      and dates follow the language; the failures the app describes itself
+      (timeouts, unreachable server, photo uploads, signed out, sign-in,
+      signing out everywhere) too, as do the Where-you-climb section, the
+      location picker, the Discover hint and plan distances. Server data
+      and messages stay as written.
+    - A **Language** picker (System default, or each language named in
+      itself) in the [profile editor](screens.md) and on the Profile tab,
+      applied at once and kept on the device next to the grade system;
+      by default the device's language, English when the app doesn't
+      speak it. The web page's `<html lang>` follows it.
+    - `test/l10n_test.dart` fails when a bundle misses or adds keys, or
+      its placeholders differ from English; widget tests cover the device
+      language, the English fallback, switching to Spanish and back, and
+      the pick kept on the device.
+24. **Check the running health checks; add them if not yet done.** The
+    health checks' half of entry 25.
+    - [Deploy](deploy.md): each stage's site stack also has a Route 53
+      health check of `/api/health` (it must say `"ok":true`), with its
+      own alarm (`<stack>-api-health`) on the same topic, so the API is
+      watched like the web app.
+25. **Check the data works as expected: GA with no data, RC with made-up
+    data; push the tags, check the workflows and the health checks.**
+    The deploy configuration's half; the health checks' is entry 24.
+    - [Sign-in](sign-in.md), [deploy](deploy.md): each stage has its own
+      Google web client (its JavaScript origin is its own site), so the
+      RC's sign-in works on https://rc.grigri.nu01.com: Deploy RC and the
+      Release of non-GA tags use the repository variables
+      `GOOGLE_WEB_CLIENT_ID_RC` and `GOOGLE_IOS_CLIENT_ID_RC`; Deploy and
+      GA releases keep `GOOGLE_WEB_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID`.
+26. **Live updates: push over MQTT (AWS IoT Core) instead of polling.**
     - New feature, [Live updates](live-updates.md): after each change the
       API publishes a tiny hint (`{"kind", "planId"}`, never data) to each
       affected climber's topic, `grigri/<stage>/climbers/<id>/hint`

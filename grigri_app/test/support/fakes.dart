@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
+import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/realtime.dart';
 import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/model/climber.dart';
@@ -695,6 +696,7 @@ GrigriStore storeFor(
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
   MemorySessionStorage? storage,
+  Preferences? preferences,
   RealtimeTransport? realtime,
 }) {
   final auth = SessionAuth(
@@ -711,6 +713,7 @@ GrigriStore storeFor(
     api: api,
     auth: auth,
     image: (_) => MemoryImage(png),
+    preferences: preferences,
     realtime: realtime,
   );
 }

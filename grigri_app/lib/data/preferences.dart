@@ -2,13 +2,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/climbing.dart';
 
-/// The one thing the app keeps on the device: how I like grades written
-/// (a display choice, like Celsius or Fahrenheit, not data). Everything
-/// else comes from the API.
+/// What the app keeps on the device, display choices rather than data:
+/// how I like grades written (like Celsius or Fahrenheit) and the app's
+/// language. Everything else comes from the API.
 class Preferences {
   Preferences._(this._prefs);
 
   static const _gradeSystem = 'grigri.gradeSystem';
+  static const _language = 'grigri.language';
 
   final SharedPreferencesWithCache? _prefs;
 
@@ -18,7 +19,7 @@ class Preferences {
       return Preferences._(
         await SharedPreferencesWithCache.create(
           cacheOptions: const SharedPreferencesWithCacheOptions(
-            allowList: {_gradeSystem},
+            allowList: {_gradeSystem, _language},
           ),
         ),
       );
@@ -36,4 +37,12 @@ class Preferences {
 
   Future<void> setGradeSystem(GradeSystem system) async =>
       _prefs?.setString(_gradeSystem, system.name);
+
+  /// The language code I picked for the app ("es"); null to follow the
+  /// device's language.
+  String? get language => _prefs?.getString(_language);
+
+  Future<void> setLanguage(String? code) async => code == null
+      ? _prefs?.remove(_language)
+      : _prefs?.setString(_language, code);
 }

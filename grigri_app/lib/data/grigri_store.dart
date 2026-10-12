@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../l10n/app_localizations.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/plan.dart';
@@ -69,6 +70,11 @@ class GrigriStore extends ChangeNotifier {
   }) : _image = image ?? ((url) => NetworkImage(url.toString())),
        _preferences = preferences ?? Preferences.none() {
     _gradeSystem = _preferences.gradeSystem;
+    final language = _preferences.language;
+    _language =
+        AppLocalizations.supportedLocales.any((l) => l.languageCode == language)
+        ? language
+        : null;
     auth.addListener(_authChanged);
     if (realtime != null) {
       _live = Realtime(
@@ -101,6 +107,35 @@ class GrigriStore extends ChangeNotifier {
 
   /// [range] written the way I like.
   String grades(GradeRange range) => range.label(_gradeSystem);
+
+  String? _language;
+
+  /// The language I picked for the app, kept on the device; null follows
+  /// the device's language (English when the app doesn't speak it).
+  Locale? get locale => _language == null ? null : Locale(_language!);
+
+  set locale(Locale? locale) {
+    _language = locale?.languageCode;
+    notifyListeners();
+    _preferences.setLanguage(_language);
+  }
+
+  /// The app's texts in the language it shows, for the messages the store
+  /// words itself; the app sets it as the language resolves.
+  AppLocalizations l10n = lookupAppLocalizations(const Locale('en'));
+
+  /// What failed, in the server's words, or in the app's for the failures
+  /// it describes itself.
+  String _describe(ApiException e) => switch (e.client) {
+    null => e.message,
+    ClientError.timeout => l10n.errorTimeout,
+    ClientError.unreachable => l10n.errorUnreachable,
+    ClientError.failed => l10n.errorStatus(e.status),
+    ClientError.photoTimeout => l10n.errorPhotoTimeout,
+    ClientError.photoUnreachable => l10n.errorPhotoUnreachable,
+    ClientError.photoFailed => l10n.errorPhotoStatus(e.status),
+    ClientError.photoType => l10n.errorPhotoType,
+  };
 
   Phase _phase = Phase.starting;
   Phase get phase => _phase;
@@ -211,7 +246,7 @@ class GrigriStore extends ChangeNotifier {
       if (_phase == Phase.ready) await refreshAll();
     } on ApiException catch (e) {
       if (_phase == Phase.signedOut || e.status == _stale) return;
-      loadError = e.message;
+      loadError = _describe(e);
       _phase = Phase.failed;
       notifyListeners();
     }
@@ -224,7 +259,7 @@ class GrigriStore extends ChangeNotifier {
   /// API couldn't be told.
   Future<void> signOutEverywhere() async {
     if (!await auth.signOutEverywhere()) {
-      _errors.add('Couldn\'t sign out everywhere. Try again.');
+      _errors.add(l10n.errorSignOutEverywhere);
     }
   }
 
@@ -243,7 +278,7 @@ class GrigriStore extends ChangeNotifier {
 
   /// Someone, as far as the app knows them.
   Climber climber(String id) =>
-      _climbers[id] ?? Climber(id: id, name: 'Someone');
+      _climbers[id] ?? Climber(id: id, name: l10n.someone);
 
   Plan? plan(String id) => _plans[id];
 
@@ -343,7 +378,7 @@ class GrigriStore extends ChangeNotifier {
         throw const ApiException(_stale, 'stale');
       }
       if (e.status == 401) {
-        _errors.add('Signed out: please sign in again.');
+        _errors.add(l10n.errorSignedOut);
         // Auth notifies, and _authChanged clears everything.
         await auth.signedOut();
         rethrow;
@@ -365,7 +400,7 @@ class GrigriStore extends ChangeNotifier {
     try {
       return await _call(call);
     } on ApiException catch (e) {
-      if (e.status != 401 && e.status != _stale) _errors.add(e.message);
+      if (e.status != 401 && e.status != _stale) _errors.add(_describe(e));
       return null;
     }
   }
@@ -732,7 +767,11 @@ class GrigriStore extends ChangeNotifier {
       final bytes = p.bytes!;
       final type = photoContentType(bytes);
       if (type == null) {
-        throw const ApiException(400, 'Use a JPEG, PNG or WebP photo.');
+        throw const ApiException(
+          400,
+          'Use a JPEG, PNG or WebP photo.',
+          client: ClientError.photoType,
+        );
       }
       final upload = await _call(() => api.newPhoto(kind, type));
       await api.uploadPhoto(upload, bytes);

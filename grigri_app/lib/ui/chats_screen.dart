@@ -17,6 +17,7 @@ class ChatsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     final chats =
         [
           for (final plan in store.myPlans)
@@ -29,19 +30,17 @@ class ChatsScreen extends StatelessWidget {
     int toAnswer(String planId) =>
         store.toReview.where((r) => r.planId == planId).length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Chats')),
+      appBar: AppBar(title: Text(l.chatsTitle)),
       body: !store.isLoaded(Section.plans)
           ? const Center(child: CircularProgressIndicator())
           : chats.isEmpty
           ? EmptyState(
               icon: Icons.forum_outlined,
-              title: 'No chats yet',
-              message:
-                  'Every plan you\'re in has a group chat. Make a plan, or '
-                  'ask to join one, and its chat opens here.',
+              title: l.noChatsTitle,
+              message: l.noChatsMessage,
               action: FilledButton.icon(
                 icon: const Icon(Icons.landscape_outlined),
-                label: const Text('Find a plan'),
+                label: Text(l.findPlan),
                 onPressed: onDiscover,
               ),
             )
@@ -53,7 +52,7 @@ class ChatsScreen extends StatelessWidget {
                 final author = last?.authorId == null
                     ? null
                     : last!.authorId == store.me.id
-                    ? 'You'
+                    ? l.you
                     : store.climber(last.authorId!).firstName;
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
@@ -74,10 +73,10 @@ class ChatsScreen extends StatelessWidget {
                   ),
                   subtitle: Text(
                     last == null
-                        ? '${plan.memberIds.length} climbers'
+                        ? l.climberCount(plan.memberIds.length)
                         : author == null
                         ? last.text
-                        : '$author: ${last.text}',
+                        : l.messagePreview(author, last.text),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Mountain.granite),
@@ -87,7 +86,7 @@ class ChatsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        dayLabel(plan.start),
+                        dayLabel(context, plan.start),
                         style: text.labelSmall?.copyWith(
                           color: Mountain.granite,
                         ),
@@ -95,7 +94,7 @@ class ChatsScreen extends StatelessWidget {
                       if (toAnswer(plan.id) > 0) ...[
                         const SizedBox(height: 4),
                         Badge(
-                          label: Text('${toAnswer(plan.id)} to answer'),
+                          label: Text(l.toAnswer(toAnswer(plan.id))),
                           backgroundColor: Mountain.sky,
                           textColor: Mountain.night,
                         ),

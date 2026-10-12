@@ -18,7 +18,7 @@ person, and a plan can take a whole group.
     two write the same grades, index for index; switching changes how
     grades read everywhere in the app, never the grades themselves (the
     API stores them as `routes` / `boulders` indices); the choice is kept
-    on the device, the one thing the app keeps there;
+    on the device, like the app's [language](i18n.md);
   - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car,
     and up to 6 **photos of their gear**.
 
@@ -138,8 +138,8 @@ answer. Chats lists them, most recent first.
 
 Everything comes from the database, through the backend's API
 ([api.md](api.md)); the app has no built-in data, and keeps nothing
-between runs but my grade system (shared_preferences, a display choice)
-and the bundled [sector index](sectors.md). [GrigriStore](../grigri_app/lib/data/grigri_store.dart) is
+between runs but my grade system and the app's [language](i18n.md)
+(shared_preferences, display choices) and the bundled [sector index](sectors.md). [GrigriStore](../grigri_app/lib/data/grigri_store.dart) is
 a cache over the API client ([api.dart](../grigri_app/lib/data/api.dart),
 [http_api.dart](../grigri_app/lib/data/http_api.dart)): screens read it
 and call its actions (like, pass, accept, reject, dismiss, create,

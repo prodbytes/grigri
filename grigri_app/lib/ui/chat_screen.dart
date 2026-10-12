@@ -87,6 +87,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = context.l10n;
     final plan = store.plan(widget.planId);
     if (plan == null && !store.isGone(widget.planId)) {
       return Scaffold(
@@ -97,10 +98,10 @@ class _ChatScreenState extends State<ChatScreen> {
     if (plan == null || !plan.memberIds.contains(store.me.id)) {
       return Scaffold(
         appBar: AppBar(),
-        body: const EmptyState(
+        body: EmptyState(
           icon: Icons.forum_outlined,
-          title: 'Not in this group',
-          message: 'You left this plan, so its chat is closed.',
+          title: l.notInGroupTitle,
+          message: l.notInGroupMessage,
         ),
       );
     }
@@ -131,7 +132,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${plan.memberIds.length} climbers · ${dayLabel(plan.start)}',
+                      '${l.climberCount(plan.memberIds.length)} · '
+                      '${dayLabel(context, plan.start)}',
                       style: text.bodySmall?.copyWith(color: Mountain.granite),
                     ),
                   ],
@@ -178,9 +180,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       minLines: 1,
                       maxLines: 4,
                       textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                        hintText: 'Message the group',
-                        contentPadding: EdgeInsets.symmetric(
+                      decoration: InputDecoration(
+                        hintText: l.messageHint,
+                        contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 12,
                         ),
@@ -190,7 +192,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const SizedBox(width: 4),
                   IconButton.filled(
-                    tooltip: 'Send',
+                    tooltip: l.send,
                     icon: const Icon(Icons.send),
                     onPressed: _sending ? null : _send,
                   ),
@@ -226,7 +228,8 @@ class _PinnedPlan extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            '${whenLabel(plan)} · ${StoreScope.of(context).grades(plan.grades)}',
+            '${whenLabel(context, plan)} · '
+            '${StoreScope.of(context).grades(plan.grades)}',
             style: const TextStyle(color: Mountain.snow),
           ),
         ),
@@ -282,6 +285,7 @@ class _CalloutRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     final person = store.climber(request.climberId);
     final yes = plan.memberIds.where(request.acceptedBy.contains).length;
     return Container(
@@ -307,7 +311,7 @@ class _CalloutRow extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'WANTS TO JOIN · YOUR ANSWER',
+                          l.wantsToJoinYourAnswer.toUpperCase(),
                           style: text.labelSmall?.copyWith(
                             color: Mountain.tan,
                             letterSpacing: 1.2,
@@ -322,7 +326,7 @@ class _CalloutRow extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '$yes of ${plan.memberIds.length} said yes',
+                          l.saidYesCount(yes, plan.memberIds.length),
                           style: text.bodySmall?.copyWith(color: Mountain.sky),
                         ),
                       ],
@@ -333,12 +337,12 @@ class _CalloutRow extends StatelessWidget {
             ),
           ),
           IconButton(
-            tooltip: 'Decline ${person.name}',
+            tooltip: l.declineName(person.name),
             icon: const Icon(Icons.close, color: Mountain.clay),
             onPressed: () => store.reject(request),
           ),
           IconButton.filled(
-            tooltip: 'Accept ${person.name}',
+            tooltip: l.acceptName(person.name),
             icon: const Icon(Icons.check),
             onPressed: () async {
               final match = await store.accept(request);
@@ -365,6 +369,7 @@ class _RequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     final plan = store.plan(planId)!;
     final requestId = message.requestId!;
     final climberId = requestId.substring(requestId.lastIndexOf('/') + 1);
@@ -388,7 +393,7 @@ class _RequestCard extends StatelessWidget {
     // Closed without joining: declined (by me, for sure, when I did it).
     final closed = open.isEmpty && !joined;
     String first(String id) =>
-        id == store.me.id ? 'You' : store.climber(id).firstName;
+        id == store.me.id ? l.you : store.climber(id).firstName;
     final yes = [
       for (final id in plan.memberIds)
         if (request.acceptedBy.contains(id)) first(id),
@@ -423,7 +428,7 @@ class _RequestCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ASKED TO JOIN · ${clock(message.time)}',
+              l.askedToJoinAt(clock(message.time)).toUpperCase(),
               style: text.labelSmall?.copyWith(
                 color: Mountain.sky,
                 letterSpacing: 1.4,
@@ -450,8 +455,9 @@ class _RequestCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Tag(
                           level == null
-                              ? 'No ${plan.discipline.label.toLowerCase()} grades yet'
-                              : '${plan.discipline.label} ${store.grades(level)}',
+                              ? l.noGradesYet(plan.discipline.name)
+                              : '${plan.discipline.label(l)} '
+                                    '${store.grades(level)}',
                           icon: fits ? Icons.check : Icons.info_outline,
                           color: fits ? Mountain.olive : Mountain.tan,
                         ),
@@ -464,16 +470,17 @@ class _RequestCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             if (joined)
-              const Tag('Joined', icon: Icons.check, color: Mountain.olive)
+              Tag(l.joined, icon: Icons.check, color: Mountain.olive)
             else if (closed && !store.declinedHere(request.id))
-              const Tag('Closed', icon: Icons.close, color: Mountain.granite)
+              Tag(l.closed, icon: Icons.close, color: Mountain.granite)
             else if (request.rejected)
-              const Tag('Declined', icon: Icons.close, color: Mountain.clay)
+              Tag(l.declined, icon: Icons.close, color: Mountain.clay)
             else
               Text(
                 [
-                  if (yes.isNotEmpty) '${yes.join(', ')} said yes',
-                  if (waiting.isNotEmpty) 'waiting for ${waiting.join(', ')}',
+                  if (yes.isNotEmpty)
+                    l.namesSaidYes(yes.join(', '), yes.length),
+                  if (waiting.isNotEmpty) l.waitingFor(waiting.join(', ')),
                 ].join(' · '),
                 style: text.bodySmall?.copyWith(color: Mountain.sky),
               ),
@@ -484,9 +491,9 @@ class _RequestCard extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       icon: const Icon(Icons.close, color: Mountain.clay),
-                      label: const Text(
-                        'Decline',
-                        style: TextStyle(color: Mountain.clay),
+                      label: Text(
+                        l.decline,
+                        style: const TextStyle(color: Mountain.clay),
                       ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Mountain.clay),
@@ -498,7 +505,7 @@ class _RequestCard extends StatelessWidget {
                   Expanded(
                     child: FilledButton.icon(
                       icon: const Icon(Icons.check),
-                      label: const Text('Accept'),
+                      label: Text(l.accept),
                       onPressed: () async {
                         final match = await store.accept(request);
                         if (match != null && context.mounted) {

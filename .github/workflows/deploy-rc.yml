@@ -147,9 +147,10 @@ jobs:
           # a secret, not a variable, so the public run logs never show it.
           GRIGRI_HEALTH_EMAILS: ${{ secrets.GRIGRI_HEALTH_EMAILS }}
           # Google sign-in's web client ID: compiled into the web app, and the
-          # client whose ID tokens the API accepts. A public repository
-          # variable, not a secret (specs/sign-in.md).
-          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          # client whose ID tokens the API accepts. The RC has its own
+          # client (its JavaScript origin is the RC site): a public
+          # repository variable, not a secret (specs/sign-in.md).
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID_RC }}
           # Who may approve or reject any join request: a secret, like the
           # health emails.
           GRIGRI_ADMIN_EMAILS: ${{ secrets.GRIGRI_ADMIN_EMAILS }}

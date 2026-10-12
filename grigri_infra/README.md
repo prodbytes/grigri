@@ -5,7 +5,7 @@ templates.
 
 | Template | Stack | Holds |
 |---|---|---|
-| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and a Route 53 health check of `/app/version.json` that emails `GRIGRI_HEALTH_EMAILS` when it fails |
+| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and Route 53 health checks of `/app/version.json` and `/api/health` whose alarms email `GRIGRI_HEALTH_EMAILS` when they fail |
 | [../grigri_api/template.yaml](../grigri_api/template.yaml) | `grigri-api` | The API: its Lambda (which verifies Google ID tokens and issues the API's own sessions), HTTP API, DynamoDB table (with TTL) and log group ([specs/backend.md](../specs/backend.md)) |
 | [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition: the deploy policies (site, API), the permissions boundary of the stage's roles (`<prefix>-app-boundary`) and the artifact bucket (`<prefix>-artifacts-<account>`) |
 
@@ -124,11 +124,15 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    gh variable set AWS_DEPLOY_ROLE_ARN --body "<DeployRoleArn>"
    gh variable set AWS_DEPLOY_RC_ROLE_ARN --body "<RcDeployRoleArn>"
    gh variable set HOSTED_ZONE_ID --body "<the grigri.nu01.com zone ID>"
-   # The Google web OAuth client (Google Cloud console > Credentials) whose
-   # ID tokens the API trades for its sessions; a public identifier. Its authorized
-   # JavaScript origins: https://grigri.nu01.com, https://rc.grigri.nu01.com
-   # and https://local.grigri.nu01.com:2543.
+   # Each stage's Google web OAuth client (Google Cloud console >
+   # Credentials), whose ID tokens its API trades for sessions; public
+   # identifiers. Authorized JavaScript origins: https://grigri.nu01.com
+   # for production's, https://rc.grigri.nu01.com for the RC's. The iOS
+   # clients are optional until iOS releases sign in.
    gh variable set GOOGLE_WEB_CLIENT_ID --body "<number>-<id>.apps.googleusercontent.com"
+   gh variable set GOOGLE_WEB_CLIENT_ID_RC --body "<number>-<id>.apps.googleusercontent.com"
+   gh variable set GOOGLE_IOS_CLIENT_ID --body "<number>-<id>.apps.googleusercontent.com"
+   gh variable set GOOGLE_IOS_CLIENT_ID_RC --body "<number>-<id>.apps.googleusercontent.com"
    # Secrets, not variables: the repository is public, and run logs show
    # variables.
    gh secret set GRIGRI_HEALTH_EMAILS --body "<who gets health alarms>"

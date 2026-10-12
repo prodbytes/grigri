@@ -62,9 +62,17 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
         await _client.send(request).timeout(timeout),
       ).timeout(timeout);
     } on TimeoutException {
-      throw const ApiException(0, 'The server took too long to answer.');
+      throw const ApiException(
+        0,
+        'The server took too long to answer.',
+        client: ClientError.timeout,
+      );
     } on http.ClientException {
-      throw const ApiException(0, 'Couldn\'t reach the server.');
+      throw const ApiException(
+        0,
+        'Couldn\'t reach the server.',
+        client: ClientError.unreachable,
+      );
     }
     Object? json;
     if (response.body.isNotEmpty) {
@@ -75,10 +83,14 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       }
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = json is Map && json['error'] is String
-          ? json['error'] as String
-          : 'Something went wrong (${response.statusCode}).';
-      throw ApiException(response.statusCode, message);
+      if (json is Map && json['error'] is String) {
+        throw ApiException(response.statusCode, json['error'] as String);
+      }
+      throw ApiException(
+        response.statusCode,
+        'Something went wrong (${response.statusCode}).',
+        client: ClientError.failed,
+      );
     }
     if (json is Map) return json.cast();
     return const {};
@@ -228,14 +240,23 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       response = await _client.send(request).timeout(timeout);
       await response.stream.drain<void>();
     } on TimeoutException {
-      throw const ApiException(0, 'The photo upload took too long.');
+      throw const ApiException(
+        0,
+        'The photo upload took too long.',
+        client: ClientError.photoTimeout,
+      );
     } on http.ClientException {
-      throw const ApiException(0, 'Couldn\'t upload the photo.');
+      throw const ApiException(
+        0,
+        'Couldn\'t upload the photo.',
+        client: ClientError.photoUnreachable,
+      );
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(
         response.statusCode,
         'The photo upload failed (${response.statusCode}).',
+        client: ClientError.photoFailed,
       );
     }
   }

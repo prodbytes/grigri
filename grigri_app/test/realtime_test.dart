@@ -271,6 +271,8 @@ void main() {
         StoreScope(
           store: store,
           child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: HomeShell(
               refreshEvery: Duration(seconds: 1),
               liveRefreshEvery: Duration(seconds: 4),

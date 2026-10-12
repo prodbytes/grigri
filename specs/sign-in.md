@@ -81,14 +81,18 @@ The settings are public identifiers, never secrets, compiled in with
 `--dart-define` (allowed by `scripts/dart-defines.sh`, from the environment
 or `.env`; see [.env.example](../.env.example)):
 
-- `GOOGLE_WEB_CLIENT_ID`: the web client ID. CI takes it from the
-  repository variable of the same name (Deploy, Deploy RC and Release).
+- `GOOGLE_WEB_CLIENT_ID`: the web client ID. Each stage has its own
+  client, whose JavaScript origin is its site: CI takes production's from
+  the repository variable `GOOGLE_WEB_CLIENT_ID` (Deploy, and Release for
+  GA tags) and the RC's from `GOOGLE_WEB_CLIENT_ID_RC` (Deploy RC, and
+  Release for the other tags).
 - `GOOGLE_IOS_CLIENT_ID`: iOS only. `scripts/dart-defines.sh` also writes
   it, and its reversed form `com.googleusercontent.apps.<id>`, to the
   git-ignored `grigri_app/ios/Flutter/Private.xcconfig` as
   `GOOGLE_IOS_CLIENT_ID` and `GOOGLE_IOS_URL_SCHEME`, which `Info.plist`
   uses; no ID is committed. CI's Release takes it from the repository
-  variable of the same name.
+  variable `GOOGLE_IOS_CLIENT_ID` for GA tags, `GOOGLE_IOS_CLIENT_ID_RC`
+  for the rest.
 - `GRIGRI_API_URL`: the API's site. Optional: the web app calls its own
   origin (`/api`, `/photos`, served by the same CloudFront distribution);
   Android and iOS default to the stage's site: https://grigri.nu01.com for
