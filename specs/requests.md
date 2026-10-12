@@ -416,3 +416,10 @@ spec.
       the API asks the local rbacr with `.env`'s `RBACR_TOKEN`.
     - The repository secret `GRIGRI_HEALTH_EMAILS` is set (not in the
       repository).
+28. **(Follow-up to 25: the first deploys failed.)** The deploy roles
+    couldn't tag the HTTP API's stage (`apigateway:TagResource`), so both
+    stages' first API create rolled back.
+    - [Deploy](deploy.md): the roles may `apigateway:TagResource` and
+      `UntagResource` on HTTP APIs; `scripts/deploy.sh` deletes a stack
+      left in `ROLLBACK_COMPLETE` (a failed first create, holding nothing)
+      before deploying it again.
