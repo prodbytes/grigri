@@ -9,7 +9,7 @@
 // {"devUser": "<email>"} to /api/session.
 import { createHash, randomBytes } from 'node:crypto';
 import { ApiError, badRequest } from './domain/errors.js';
-import { type IdTokenVerifier, InvalidIdToken } from './google.js';
+import { type GoogleIdentity, type IdTokenVerifier, InvalidIdToken, profileName } from './google.js';
 import type { AdminCheck } from './rbacr.js';
 
 export const SESSION_DAYS = 365;
@@ -21,6 +21,8 @@ export interface Caller {
   /** Verified email, lowercased; only for the admin check (rbacr), never returned. */
   email?: string;
   admin: boolean;
+  /** The account's name from Google, for the profile GET /api/me creates; never returned. */
+  name?: string;
   /** The session's id (its token's hash); none for the dev header. */
   sessionId?: string;
 }
@@ -33,6 +35,8 @@ export interface SessionRecord {
   /** Lowercased, and only when verified. */
   email?: string;
   emailVerified: boolean;
+  /** The account's name, from Google at sign-in. */
+  name?: string;
   createdAt: string;
   lastUsedAt: string;
   /** Epoch seconds: lastUsedAt + SESSION_DAYS (the table's TTL attribute). */
@@ -84,7 +88,7 @@ export class Auth {
   async signIn(body: unknown): Promise<{ token: string; expiresAt: string }> {
     if (typeof body !== 'object' || body === null || Array.isArray(body)) throw badRequest('send {"idToken"}');
     const { idToken, devUser } = body as Record<string, unknown>;
-    let identity: { subject: string; email?: string; emailVerified: boolean };
+    let identity: GoogleIdentity;
     if (typeof idToken === 'string' && idToken.length > 0) {
       try {
         identity = await this.deps.verify(idToken);
@@ -96,7 +100,8 @@ export class Auth {
       if (!this.deps.config.devMode) throw new ApiError(401, 'dev sign-in is local only');
       const email = typeof devUser === 'string' ? devUser.trim().toLowerCase() : '';
       if (!EMAIL.test(email)) throw badRequest('devUser must be an email');
-      identity = { subject: `dev#${email}`, email, emailVerified: true };
+      const name = profileName(email.split('@')[0]!);
+      identity = { subject: `dev#${email}`, email, emailVerified: true, ...(name ? { name } : {}) };
     } else {
       throw badRequest('send {"idToken"}');
     }
@@ -107,6 +112,7 @@ export class Auth {
       subject: identity.subject,
       ...(identity.emailVerified && identity.email ? { email: identity.email } : {}),
       emailVerified: identity.emailVerified,
+      ...(identity.name ? { name: identity.name } : {}),
       createdAt: now.toISOString(),
       lastUsedAt: now.toISOString(),
       ttl: expiry(now),
@@ -126,7 +132,10 @@ export class Auth {
     }
     if (this.deps.config.devMode) {
       const dev = headers['x-grigri-dev-user']?.trim().toLowerCase();
-      if (dev && EMAIL.test(dev)) return { subject: `dev#${dev}`, email: dev, admin: await this.deps.config.isAdmin(dev) };
+      if (dev && EMAIL.test(dev)) {
+        const name = profileName(dev.split('@')[0]!);
+        return { subject: `dev#${dev}`, email: dev, admin: await this.deps.config.isAdmin(dev), ...(name ? { name } : {}) };
+      }
     }
     throw signedOut();
   }
@@ -167,6 +176,7 @@ export class Auth {
       subject: session.subject,
       ...(email ? { email } : {}),
       admin: email !== undefined && (await this.deps.config.isAdmin(email)),
+      ...(session.name ? { name: session.name } : {}),
       sessionId: id,
     };
   }

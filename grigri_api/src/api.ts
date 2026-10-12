@@ -1,7 +1,8 @@
 // The routes (specs/api.md): authorization, then the domain rules, then the
 // store. Every route but GET /api/health and POST /api/session needs a
 // caller (handler.ts finds it from the session token); most also need the
-// caller's profile (409 "no profile" until PUT /api/me).
+// caller's profile (409 "no profile" until GET /api/me creates it, from the
+// Google account's name, or PUT /api/me saves it).
 import { randomBytes } from 'node:crypto';
 import { type Auth, type Caller, subjectHash } from './auth.js';
 import { ApiError, badRequest, conflict, forbidden, notFound } from './domain/errors.js';
@@ -22,6 +23,9 @@ import { Conflict, type LoadedPlan, type Store } from './store/store.js';
 
 /** Most requests a plan keeps waiting: bounds its transactions (DynamoDB takes 100 items; each join writes 3). */
 export const MAX_OPEN_REQUESTS = 30;
+
+/** A new profile's name when Google didn't give one (sessions from before names were kept). */
+export const NO_NAME = 'Climber';
 
 export interface Photos {
   /**
@@ -116,7 +120,7 @@ export class Api {
       return {};
     });
 
-    r('GET /api/me', 'caller', async (_req, s) => ({ climber: s.me ?? null, admin: s.caller.admin }));
+    r('GET /api/me', 'caller', async (_req, s) => ({ climber: await this.myProfile(s), admin: s.caller.admin }));
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
     r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });
@@ -172,7 +176,7 @@ export class Api {
     const names = new Map<string, string>();
     const session: Session = {
       caller: req.caller,
-      // Undefined only on 'caller' routes, before the first PUT /api/me.
+      // Undefined only on 'caller' routes, before the first GET or PUT /api/me.
       me: me as Climber,
       now,
       ctx: { now, newId: messageIds(), name: (cid) => names.get(cid) ?? 'Someone' },
@@ -183,6 +187,33 @@ export class Api {
   }
 
   // --- Profile and photos --------------------------------------------------
+
+  /**
+   * GET /api/me: my profile, created the first time from my Google account
+   * (its name; the rest empty, for me to fill in).
+   */
+  private async myProfile(s: Session): Promise<Climber> {
+    if (s.me) return s.me;
+    const starter: Climber = {
+      id: newId(),
+      name: s.caller.name ?? NO_NAME,
+      bio: '',
+      levels: {},
+      gear: [],
+      gearPhotos: [],
+    };
+    try {
+      await this.store.createProfile(s.caller.subject, starter, s.now);
+      return starter;
+    } catch (e) {
+      if (!(e instanceof Conflict)) throw e;
+      // Created meanwhile (two first loads at once): that one.
+      const existing = await this.store.climberIdFor(s.caller.subject);
+      const climber = existing ? await this.store.getClimber(existing) : undefined;
+      if (!climber) throw e;
+      return climber;
+    }
+  }
 
   private async saveProfile(req: Request, s: Session) {
     const owners = [subjectHash(s.caller.subject), ...(s.me ? [s.me.id] : [])];

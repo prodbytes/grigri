@@ -520,12 +520,6 @@ abstract class AppLocalizations {
   /// **'Your profile is about you: what you climb and the gear you have. When and where are for plans, made separately in Plans.'**
   String get profileFootnote;
 
-  /// Title of the first-time profile step.
-  ///
-  /// In en, this message translates to:
-  /// **'Create your profile'**
-  String get createProfile;
-
   /// Photo source option: the camera.
   ///
   /// In en, this message translates to:
@@ -549,12 +543,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t get that photo'**
   String get photoFailed;
-
-  /// Intro text of the first-time profile step.
-  ///
-  /// In en, this message translates to:
-  /// **'Welcome to Grigri! Tell climbers who you are and what you climb: they see it when you ask to join their plans.'**
-  String get welcomeIntro;
 
   /// Tooltip of my avatar when it has no photo.
   ///
@@ -639,12 +627,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add a gear photo'**
   String get addGearPhoto;
-
-  /// Button finishing the first-time profile step.
-  ///
-  /// In en, this message translates to:
-  /// **'Start climbing'**
-  String get startClimbing;
 
   /// Profile editor section heading: my location and areas (shown uppercased).
   ///

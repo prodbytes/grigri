@@ -15,7 +15,6 @@ import 'theme.dart';
 import 'ui/common.dart';
 import 'ui/document_language/document_language.dart';
 import 'ui/home_shell.dart';
-import 'ui/profile_editor.dart';
 import 'ui/roles_card.dart';
 import 'ui/sign_in_screen.dart';
 
@@ -134,7 +133,7 @@ class _GrigriAppState extends State<GrigriApp> {
   }
 }
 
-/// Signing in, then creating a profile the first time, then the tabs.
+/// Signing in, then the tabs (the first sign-in creates my profile).
 class Root extends StatelessWidget {
   const Root({super.key});
 
@@ -147,7 +146,6 @@ class Root extends StatelessWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       Phase.signedOut => const SignInScreen(),
-      Phase.needsProfile => const ProfileEditor(create: true),
       Phase.ready => const HomeShell(),
       Phase.failed => Scaffold(
         body: EmptyState(

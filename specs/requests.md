@@ -466,3 +466,18 @@ spec.
       HTTP Publish doesn't reach subscribers, so locally the broker is
       open (like dev mode) and the function publishes over MQTT. The
       health check gains `📡 mqtt`.
+30. **Create the profile from the Google account at sign-in, then let it
+    be edited: no "Create your profile" screen; just signing in should
+    be fine.**
+    - [API](api.md), [backend](backend.md): `POST /api/session` keeps the
+      Google ID token's `name` claim on the session (dev mode: the
+      email's part before the @). The first `GET /api/me` creates the
+      profile with that name (`Climber` without one) and the rest empty,
+      so it never answers `"climber": null`. No new resource: one more
+      attribute on the session item and one write per new account, both
+      within what DynamoDB on demand already bills (fractions of a cent).
+    - [Sign-in](sign-in.md), [screens](screens.md), [matching](matching.md),
+      [i18n](i18n.md): the app goes from sign-in straight to the tabs; the
+      "Create your profile" step, its welcome line, **Start climbing** and
+      its strings are gone. **Edit profile** on the Profile tab fills in
+      the rest. A 409 "no profile" now loads the profile again.

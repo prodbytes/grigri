@@ -54,6 +54,9 @@ class FakeApi implements GrigriApi, SessionApi {
 
   /// The caller's climber id once they have a profile.
   String? meId;
+
+  /// The signed-in Google account's name, for the profile GET /api/me makes.
+  String googleName = 'Pat Quill';
   bool admin;
 
   final climbers = <String, Climber>{};
@@ -251,10 +254,14 @@ class FakeApi implements GrigriApi, SessionApi {
       _route('GET /api/realtime', () => realtimeInfo);
 
   @override
-  Future<Me> me() => _route(
-    'GET /api/me',
-    () => Me(climber: meId == null ? null : climbers[meId], admin: admin),
-  );
+  Future<Me> me() => _route('GET /api/me', () {
+    // Like the API: the first load makes my profile from my Google name.
+    if (meId == null) {
+      meId = 'me';
+      climbers['me'] = Climber(id: 'me', name: googleName);
+    }
+    return Me(climber: climbers[meId], admin: admin);
+  });
 
   @override
   Future<Climber> saveMe(Climber profile) => _route('PUT /api/me', () {

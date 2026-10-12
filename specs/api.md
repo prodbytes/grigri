@@ -75,13 +75,15 @@ the web, so the API issues its own sessions:
   (`https://www.googleapis.com/oauth2/v3/certs`, cached across warm
   invocations), `iss` `accounts.google.com` or
   `https://accounts.google.com`, `aud` the Google **web** client ID, not
-  expired. → `{"token": "<opaque>", "expiresAt": "<ISO time>"}`. 401
+  expired. It keeps the token's `name` claim (whitespace collapsed, at
+  most 60 characters) for the profile `GET /api/me` creates; dev mode
+  uses the email's part before the @. → `{"token": "<opaque>", "expiresAt": "<ISO time>"}`. 401
   `{"error": "invalid Google ID token"}` for a bad, expired or foreign
   token; 400 without `idToken`. Dev mode only: `{"devUser": "<email>"}`
   instead (401 outside dev mode).
 - The token: 32 random bytes, base64url (43 characters). Stored only as
   its SHA-256 hash: item `SESSION#<hash>` with the subject, the email (only
-  if verified), `emailVerified`, `createdAt`, `lastUsedAt` and `ttl`
+  if verified), `emailVerified`, the Google name (when given), `createdAt`, `lastUsedAt` and `ttl`
   (DynamoDB's TTL attribute, epoch seconds) = lastUsedAt + **365 days**.
 - It slides: a request more than a day after `lastUsedAt` moves both
   forward (at most one write per session per day). No absolute limit: a
@@ -149,9 +151,9 @@ unknown or expired session token; or a bad Google ID token at
 asked, already a member, changed meanwhile), 413 (body over 64 KB), 415
 (a body that isn't `application/json`), 500 (`{"error": "internal error"}`;
 details only in the function's log). A signed-in caller without a profile
-yet gets 409 `{"error": "no profile"}` from every route except
-`GET/PUT /api/me`, `POST /api/photos`, the session routes and
-`GET /api/health`.
+yet (before their first `GET /api/me`) gets 409 `{"error": "no profile"}`
+from every route except `GET/PUT /api/me`, `POST /api/photos`, the
+session routes and `GET /api/health`.
 
 ## Routes
 
@@ -163,7 +165,7 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `POST /api/session` | body `{"idToken"}` (dev mode: or `{"devUser"}`) → `{"token", "expiresAt"}` (no auth; see [Sessions](#sessions)) |
 | `DELETE /api/session` | sign out: this session ends. → `{}` |
 | `DELETE /api/sessions` | sign out everywhere: all my sessions end. → `{}` |
-| `GET /api/me` | `{"climber": Climber or null, "admin": bool}` |
+| `GET /api/me` | `{"climber": Climber, "admin": bool}`. The first time, it creates my profile from my Google account: the session's name (`Climber` when the session has none, as sessions from before names were kept), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
 | `GET /api/realtime` | where [live updates](#live-updates) come from: `{"url": "wss://<IoT endpoint>/mqtt", "authorizer": "<prefix>-api-realtime" (empty locally), "topic": "grigri/<stage>/climbers/<my climber id>/#", "clientIdPrefix": "<my climber id>-"}`, or `{"url": null}` when they're off |
 | `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars, age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
 | `GET /api/discover` | plans to swipe on: upcoming (start > now), I'm not in, I haven't passed or asked; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known) |

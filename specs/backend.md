@@ -63,8 +63,10 @@ who are members, or by an admin.
   had signed people out hourly.
 - **Identity**: a Google account (`https://accounts.google.com#<sub>`) is
   linked to one climber id (random, made by the server at the first
-  profile save). Emails are only used for the admin check: kept on the
-  session (only when verified), never on a profile, never returned.
+  `GET /api/me`, which starts the profile with the account's Google
+  name). Emails are only used for the admin check: kept on the session
+  (only when verified), never on a profile, never returned. The Google
+  name is kept on the session only to start the profile.
 - **Admin**: a signed-in caller whose session's verified email is in the
   stage's current admin list, checked on every request (so removing
   someone from the list takes effect at once). Admins see every open request (`GET /api/admin/requests`)
