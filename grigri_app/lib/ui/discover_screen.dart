@@ -174,7 +174,7 @@ class _PlanCard extends StatelessWidget {
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: Avatar(c),
-                        title: Text('${c.name}, ${c.age}'),
+                        title: Text(c.nameAndAge),
                         subtitle: Text(
                           c.levels.entries
                               .map((e) => '${e.key.label} ${e.value.label}')

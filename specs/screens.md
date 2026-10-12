@@ -25,7 +25,7 @@ notifications bell, with a badge for unread ones.
   time, length (1–12 h), grades (a range on the discipline's scale,
   starting at my own grades), group size, notes. Title and place are
   required.
-- **Profile editor**: name, age (16–99), years climbing, home area, about,
+- **Profile editor**: name, age (optional, 16–99 when given), years climbing, home area, about,
   per discipline a switch and a grade range, a weekday × part-of-day grid
   for when, places to add and remove, and gear.
 - **Match**: see [matching](matching.md#matches).

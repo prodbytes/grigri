@@ -59,7 +59,7 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Center(
             child: Text(
-              '${me.name}, ${me.age}',
+              me.nameAndAge,
               style: text.headlineSmall?.copyWith(
                 color: Mountain.sand,
                 fontWeight: FontWeight.w700,
