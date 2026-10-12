@@ -48,3 +48,9 @@ spec.
    and a sky blue), harmonious, dark for now.** The app is dark only, with
    an explicit color scheme ([theme](theme.md)) instead of one derived from
    a seed color; every text color passes WCAG AA.
+4. **A better icon instead of Flutter's default.** Mountain peaks with a
+   snow cap and a moon, in a sand ring, on the theme's dark background,
+   for Android (with an adaptive icon), iOS and the web (favicon, PWA
+   icons, and the manifest's colors in the theme's instead of Flutter
+   blue). The SVG sources and how to regenerate the icons are in
+   [platforms](platforms.md).
