@@ -14,7 +14,6 @@ import {
   type NoticeKind,
   type Plan,
   isOpen,
-  overlaps,
   requestId,
 } from './model.js';
 
@@ -54,15 +53,60 @@ export interface PlanState {
 
 // --- Decks ---------------------------------------------------------------
 
-/** Whether the climber's grades for the plan's discipline overlap its grades. */
-export function fits(climber: Pick<Climber, 'levels'>, plan: Plan): boolean {
+/**
+ * How well the plan's grades suit me, 0 to 1: 1 when my grades for its
+ * discipline overlap its grades, less the further apart they are (0 at 4
+ * grades apart), 0 when I don't climb its discipline.
+ */
+export function fitScore(climber: Pick<Climber, 'levels'>, plan: Plan): number {
   const level = climber.levels[plan.discipline];
-  return level !== undefined && overlaps(level, plan.grades);
+  if (level === undefined || level.scale !== plan.grades.scale) return 0;
+  const gap = Math.max(level.min - plan.grades.max, plan.grades.min - level.max, 0);
+  return gap === 0 ? 1 : Math.max(0, 0.6 * (1 - (gap - 1) / 3));
+}
+
+const EARTH_KM = 6371;
+
+/** Great-circle distance, in km. */
+export function haversineKm(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
 /**
- * Plans to swipe on (never full: groups have no size limit): upcoming, I'm not in, I haven't passed or
- * asked; my grades' fits first, then soonest.
+ * How far the plan is from me: from the nearest of my location and areas.
+ * Undefined when the plan has no point (typed in by hand) or I set none.
+ */
+export function distanceKm(climber: Pick<Climber, 'location' | 'areas'>, plan: Plan): number | undefined {
+  if (plan.lat === undefined || plan.lon === undefined) return undefined;
+  const mine = [...(climber.location ? [climber.location] : []), ...(climber.areas ?? [])];
+  if (mine.length === 0) return undefined;
+  const point = { lat: plan.lat, lon: plan.lon };
+  return Math.min(...mine.map((l) => haversineKm(l, point)));
+}
+
+/** Nearness, 0 to 1: 1 on my doorstep, about 0.37 at 50 km, 0.14 at 100 km. */
+export const NEAR_KM = 50;
+/** The nearness of a plan whose distance isn't known: like one about 70 km away. */
+export const UNKNOWN_NEARNESS = 0.25;
+
+export function nearScore(km: number | undefined): number {
+  return km === undefined ? UNKNOWN_NEARNESS : Math.exp(-km / NEAR_KM);
+}
+
+/** A deck: the plans, best first, and how far each is from me (km, rounded), when known. */
+export interface Deck {
+  plans: Plan[];
+  distanceKm: Record<string, number>;
+}
+
+/**
+ * Plans to swipe on (never full: groups have no size limit): upcoming, I'm
+ * not in, I haven't passed or asked. Ranked by how well they match my
+ * profile plus how close they are (fitScore + nearScore), then soonest.
  */
 export function discover(
   plans: Plan[],
@@ -70,9 +114,10 @@ export function discover(
   passed: ReadonlySet<string>,
   asked: ReadonlySet<string>,
   now: Date,
-): Plan[] {
+): Deck {
   const nowIso = now.toISOString();
-  return plans
+  const distances: Record<string, number> = {};
+  const scored = plans
     .filter(
       (p) =>
         p.start > nowIso &&
@@ -80,11 +125,17 @@ export function discover(
         !passed.has(p.id) &&
         !asked.has(p.id),
     )
-    .sort((a, b) => {
-      const byFit = Number(fits(me, b)) - Number(fits(me, a));
-      if (byFit !== 0) return byFit;
-      return a.start < b.start ? -1 : a.start > b.start ? 1 : a.id.localeCompare(b.id);
+    .map((plan) => {
+      const km = distanceKm(me, plan);
+      if (km !== undefined) distances[plan.id] = Math.round(km);
+      return { plan, score: fitScore(me, plan) + nearScore(km) };
     });
+  scored.sort((a, b) => {
+    if (a.score !== b.score) return b.score - a.score;
+    const [x, y] = [a.plan, b.plan];
+    return x.start < y.start ? -1 : x.start > y.start ? 1 : x.id.localeCompare(y.id);
+  });
+  return { plans: scored.map((s) => s.plan), distanceKm: distances };
 }
 
 /** Requests for me to review: open, on plans I'm in, that I haven't accepted. */
