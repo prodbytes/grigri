@@ -50,8 +50,12 @@ dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
   waiting a minute, then two.
 - It writes the file only when every country came through, so a failed
   run leaves the index as it was.
-- It takes the country's crags and sectors (`climbing=crag`) and climbing
-  gyms (`climbing=gym`, or `leisure=sports_centre` with `sport=climbing`).
+- It takes the country's named climbing places: areas (`climbing=area`,
+  e.g. Siurana), crags and sectors (`climbing=crag`), gyms
+  (`climbing=gym`), and places tagged only `sport=climbing` (a cliff, a
+  sports centre). Not single routes or boulders: Fontainebleau alone has
+  thousands of boulders, which time the query out, and neither is what a
+  plan's where means.
 - A sector's area is the climbing area (a `climbing=area` relation) it's a
   member of; a gym's is its town (`addr:city`). Ids are the OSM elements
   ("osm:n123", "osm:w45").

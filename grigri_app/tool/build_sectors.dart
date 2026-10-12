@@ -55,8 +55,9 @@ Future<void> main(List<String> args) async {
 }
 
 /// The Overpass query for one country (an ISO 3166-1 code): the country's
-/// name; its climbing places (areas, crags, sectors, boulders and gyms,
-/// however they're tagged), but not single routes; and the climbing areas
+/// name; its climbing places (areas, crags and sectors, and gyms, however
+/// they're tagged), but not single routes or boulders (Fontainebleau alone
+/// has thousands, and they time the query out); and the climbing areas
 /// with their members, to tell each sector which crag it's in.
 String query(String country) =>
     '''
@@ -64,7 +65,9 @@ String query(String country) =>
 area["ISO3166-1"="$country"][admin_level=2]->.c;
 .c out tags;
 (
-  nwr["climbing"~"^(area|crag|boulder|gym)\$"]["name"](area.c);
+  nwr["climbing"="area"]["name"](area.c);
+  nwr["climbing"="crag"]["name"](area.c);
+  nwr["climbing"="gym"]["name"](area.c);
   nwr["sport"="climbing"]["name"][!"climbing"](area.c);
 );
 out tags;
