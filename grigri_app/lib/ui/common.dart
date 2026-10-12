@@ -386,7 +386,7 @@ class ClimberHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${climber.name}, ${climber.age}',
+                climber.nameAndAge,
                 style: text.titleMedium?.copyWith(
                   color: Mountain.sand,
                   fontWeight: FontWeight.w600,

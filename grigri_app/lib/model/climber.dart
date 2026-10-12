@@ -6,7 +6,7 @@ class Climber {
   const Climber({
     required this.id,
     required this.name,
-    required this.age,
+    this.age,
     this.bio = '',
     this.homeArea = '',
     this.yearsClimbing = 0,
@@ -18,7 +18,9 @@ class Climber {
 
   final String id;
   final String name;
-  final int age;
+
+  /// Optional: null when they'd rather not say.
+  final int? age;
   final String bio;
 
   /// Where they live or usually climb from, e.g. "Barcelona".
@@ -37,15 +39,21 @@ class Climber {
 
   Set<Discipline> get disciplines => levels.keys.toSet();
 
+  /// "Name, age", or just the name when there's no age.
+  String get nameAndAge => age == null ? name : '$name, $age';
+
   /// The name's initials, for an avatar.
   String get initials {
     final words = name.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty);
     return words.take(2).map((w) => w[0].toUpperCase()).join();
   }
 
+  static const _keep = Object();
+
+  /// A copy with the given fields changed; `age: null` clears the age.
   Climber copyWith({
     String? name,
-    int? age,
+    Object? age = _keep,
     String? bio,
     String? homeArea,
     int? yearsClimbing,
@@ -56,7 +64,7 @@ class Climber {
   }) => Climber(
     id: id,
     name: name ?? this.name,
-    age: age ?? this.age,
+    age: identical(age, _keep) ? this.age : age as int?,
     bio: bio ?? this.bio,
     homeArea: homeArea ?? this.homeArea,
     yearsClimbing: yearsClimbing ?? this.yearsClimbing,
@@ -69,7 +77,7 @@ class Climber {
   Map<String, Object> toJson() => {
     'id': id,
     'name': name,
-    'age': age,
+    'age': ?age,
     'bio': bio,
     'homeArea': homeArea,
     'yearsClimbing': yearsClimbing,
@@ -82,7 +90,7 @@ class Climber {
   static Climber fromJson(Map<String, Object?> json) => Climber(
     id: json['id']! as String,
     name: json['name']! as String,
-    age: json['age']! as int,
+    age: json['age'] as int?,
     bio: json['bio'] as String? ?? '',
     homeArea: json['homeArea'] as String? ?? '',
     yearsClimbing: json['yearsClimbing'] as int? ?? 0,
