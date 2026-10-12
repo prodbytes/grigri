@@ -100,6 +100,7 @@ class GrigriStore extends ChangeNotifier {
   final _climbers = <String, Climber>{};
   final _plans = <String, Plan>{};
   List<String> _discover = [];
+  Map<String, int> _distanceKm = {};
   List<String> _mine = [];
   List<JoinRequest> _asked = [];
   List<JoinRequest> _toReview = [];
@@ -164,6 +165,7 @@ class GrigriStore extends ChangeNotifier {
     _climbers.clear();
     _plans.clear();
     _discover = [];
+    _distanceKm = {};
     _mine = [];
     _asked = [];
     _toReview = [];
@@ -241,6 +243,10 @@ class GrigriStore extends ChangeNotifier {
 
   /// Plans to swipe on, best fits first (the server's order).
   List<Plan> get discover => [for (final id in _discover) ?_plans[id]];
+
+  /// How far a plan on the deck is from my nearest location or area, in
+  /// km; null when it isn't known.
+  int? distanceKm(String planId) => _distanceKm[planId];
 
   /// Plans I'm in, soonest first.
   List<Plan> get myPlans => [for (final id in _mine) ?_plans[id]];
@@ -375,7 +381,12 @@ class GrigriStore extends ChangeNotifier {
   void _learn(Map<String, Climber> climbers) {
     _climbers.addAll(climbers);
     final me = _me == null ? null : climbers[_me!.id];
-    if (me != null) _me = me;
+    // Others' copies of my profile come without my location and areas
+    // (they're private): keep mine.
+    if (me != null) {
+      _me = me.copyWith(location: _me!.location, areas: _me!.areas);
+      _climbers[me.id] = _me!;
+    }
   }
 
   // --- Refreshing --------------------------------------------------------
@@ -398,6 +409,7 @@ class GrigriStore extends ChangeNotifier {
       _plans[p.id] = p;
     }
     _discover = [for (final p in list.plans) p.id];
+    _distanceKm = list.distanceKm;
     _loaded.add(Section.discover);
   });
 
@@ -670,6 +682,8 @@ class GrigriStore extends ChangeNotifier {
       unawaited(refreshAll());
     } else {
       notifyListeners();
+      // My grades, location and areas rank the deck.
+      unawaited(refreshDiscover());
     }
     return true;
   }

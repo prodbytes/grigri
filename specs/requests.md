@@ -342,3 +342,21 @@ spec.
       gone.
     - The seed's plans carry their places' approximate points.
     - Cost: none; it's computed in the same request, over the same reads.
+22. **On the Discover view, rank the suggestions by how much they match my
+    profile and how close they are to me; let people set their location on
+    their profile and add other locations of interest.** The app's half;
+    the backend's is entry 21.
+    - [Matching](matching.md): a profile has a private **location** and up
+      to 5 **areas**, picked from the sector index; the deck is ranked by
+      grade fit plus nearness to the nearest of them (the server's score),
+      replacing "fits first, then soonest"; cards say how far each plan
+      is. The app keeps my location and areas when a refresh brings my
+      profile back without them.
+    - [Screens](screens.md): the profile editor's "Where you climb"
+      section and a full-screen location picker; Discover's distance
+      line and, without a location, a hint with **Set**; saving the
+      profile refreshes the deck.
+    - [Sectors](sectors.md): index rows carry each place's point (`out
+      center` from OpenStreetMap; the placeholder gets approximate
+      points); a plan keeps its sector's point. The index is cached once
+      loaded, not as a pending load.

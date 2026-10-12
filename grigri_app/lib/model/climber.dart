@@ -1,7 +1,8 @@
 import 'climbing.dart';
+import 'location.dart';
 
-/// A person's profile: who they are, what they climb and the gear they
-/// have. When and where they climb belongs to their [Plan]s, which are
+/// A person's profile: who they are, what they climb, the gear they have
+/// and where they are. When they climb belongs to their [Plan]s, which are
 /// specific outings.
 class Climber {
   const Climber({
@@ -13,10 +14,15 @@ class Climber {
     this.levels = const {},
     this.gear = const {},
     this.gearPhotos = const [],
+    this.location,
+    this.areas = const [],
   });
 
   /// The most gear photos a profile keeps.
   static const maxGearPhotos = 6;
+
+  /// The most areas of interest a profile keeps, besides its location.
+  static const maxAreas = 5;
 
   /// Given by the server at the first profile save; empty for a profile
   /// not saved yet.
@@ -38,6 +44,13 @@ class Climber {
   /// Pictures of their gear: keys in the photo store.
   final List<String> gearPhotos;
 
+  /// Where I am, and other places I'd climb near: the Discover deck ranks
+  /// plans by how close they are to the nearest. Private: the server
+  /// keeps them to about 1 km and only my own profile has them; everyone
+  /// else's comes without.
+  final Location? location;
+  final List<Location> areas;
+
   Set<Discipline> get disciplines => levels.keys.toSet();
 
   /// "Name, age", or just the name when there's no age.
@@ -54,8 +67,8 @@ class Climber {
 
   static const _keep = Object();
 
-  /// A copy with the given fields changed; `age: null` clears the age and
-  /// `photo: null` the picture.
+  /// A copy with the given fields changed; `age: null` clears the age,
+  /// `photo: null` the picture and `location: null` the location.
   Climber copyWith({
     String? name,
     Object? age = _keep,
@@ -64,6 +77,8 @@ class Climber {
     Map<Discipline, GradeRange>? levels,
     Set<Gear>? gear,
     List<String>? gearPhotos,
+    Object? location = _keep,
+    List<Location>? areas,
   }) => Climber(
     id: id,
     name: name ?? this.name,
@@ -73,6 +88,10 @@ class Climber {
     levels: levels ?? this.levels,
     gear: gear ?? this.gear,
     gearPhotos: gearPhotos ?? this.gearPhotos,
+    location: identical(location, _keep)
+        ? this.location
+        : location as Location?,
+    areas: areas ?? this.areas,
   );
 
   /// The profile as the API takes it (`PUT /api/me`): without the id.
@@ -84,6 +103,8 @@ class Climber {
     'levels': {for (final e in levels.entries) e.key.name: e.value.toJson()},
     'gear': [for (final g in gear) g.name],
     'gearPhotos': gearPhotos,
+    'location': location?.toJson(),
+    'areas': [for (final a in areas) a.toJson()],
   };
 
   /// Reads a profile from the API. Unknown disciplines and gear are
@@ -105,6 +126,13 @@ class Climber {
     },
     gearPhotos: [
       for (final p in json['gearPhotos'] as List? ?? []) p as String,
+    ],
+    location: json['location'] == null
+        ? null
+        : Location.fromJson((json['location']! as Map).cast()),
+    areas: [
+      for (final a in json['areas'] as List? ?? [])
+        Location.fromJson((a as Map).cast()),
     ],
   );
 }

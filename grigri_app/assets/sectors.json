@@ -1,10 +1,10 @@
 {"attribution":"","note":"Placeholder: build the index with tool/build_sectors.dart","sectors":[
-["demo:siurana","Siurana","Catalonia","Spain"],
-["demo:el-pati","El Pati","Siurana","Spain"],
-["demo:l-olla","L'Olla","Siurana","Spain"],
-["demo:can-pique","Can Piqué","Siurana","Spain"],
-["demo:margalef","Margalef","Catalonia","Spain"],
-["demo:montserrat","Montserrat","Catalonia","Spain"],
-["demo:boulder-gym","Boulder gym","Barcelona","Spain"],
-["demo:climbing-gym","Climbing gym","Barcelona","Spain"]
+["demo:siurana","Siurana","Catalonia","Spain",41.2577,0.9318],
+["demo:el-pati","El Pati","Siurana","Spain",41.2577,0.9318],
+["demo:l-olla","L'Olla","Siurana","Spain",41.2569,0.9302],
+["demo:can-pique","Can Piqué","Siurana","Spain",41.2585,0.9335],
+["demo:margalef","Margalef","Catalonia","Spain",41.2853,0.7536],
+["demo:montserrat","Montserrat","Catalonia","Spain",41.5933,1.8375],
+["demo:boulder-gym","Boulder gym","Barcelona","Spain",41.3975,2.1915],
+["demo:climbing-gym","Climbing gym","Barcelona","Spain",41.3792,2.1405]
 ]}

@@ -58,11 +58,14 @@ void main() {
         {
           'type': 'node',
           'id': 11,
+          'lat': 41.123456789,
+          'lon': 0.5,
           'tags': {'climbing': 'crag', 'name': 'Pared Gris'},
         },
         {
           'type': 'way',
           'id': 12,
+          'center': {'lat': 41.2, 'lon': 0.6},
           'tags': {'climbing': 'crag', 'name': 'Valle Alto'},
         },
         {
@@ -96,13 +99,20 @@ void main() {
       [for (final s in sectors) s.toRow()],
       [
         ['osm:n14', 'Bloc Club', 'Ciudad', 'Spain'],
-        ['osm:n11', 'Pared Gris', 'Valle Alto', 'Spain'],
+        // A node's point, kept to 5 decimals; a way's center.
+        ['osm:n11', 'Pared Gris', 'Valle Alto', 'Spain', 41.12346, 0.5],
         // The crag named like its area isn't said to be in itself.
-        ['osm:w12', 'Valle Alto', '', 'Spain'],
+        ['osm:w12', 'Valle Alto', '', 'Spain', 41.2, 0.6],
       ],
     );
     final again = SectorIndex.parse(build.indexJson(sectors));
     expect(again.length, 3);
+    expect(
+      again.search('pared').single.location?.name,
+      'Pared Gris, Valle Alto, Spain',
+    );
+    expect(again.search('bloc').single.location, isNull);
+    expect(build.query('ES'), contains('out center tags'));
     expect(again.attribution, contains('OpenStreetMap'));
     expect(build.query('ES'), contains('"ISO3166-1"="ES"'));
   });
