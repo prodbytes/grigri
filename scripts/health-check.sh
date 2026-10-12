@@ -2,7 +2,7 @@
 # Continuous health monitor: every HEALTH_CHECK_INTERVAL seconds (15 by
 # default), one line per run: the time, then each dependency as its icon,
 # a short label and ✅/❌, e.g.
-#   2026-10-10 14:02:10  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅
+#   2026-10-10 14:02:10  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅
 # On start it prints, once, where to open the app locally.
 # Runs via `devbox services up` (see process-compose.yaml) or standalone.
 set -uo pipefail
@@ -46,9 +46,16 @@ https() {
         --resolve "$PUBLIC_HOST:$HTTPS_PORT:127.0.0.1" "$HTTPS_URL"
 }
 
+# The API through the CDN (Floci's CloudFront to the local HTTP API and
+# Lambda): GET /api/health must answer ok for the local stage.
+api() {
+    curl -fs --max-time 10 -H "Host: $CDN_ALIAS" "$FLOCI/api/health" | grep -q '"ok":true,"stage":"local"'
+}
+
 echo "🧗 Grigri: $WEB_URL"
 echo "🏠 index:  $INDEX_URL (redirects to the app)"
 echo "🔒 HTTPS:  $HTTPS_URL (through Floci's CloudFront)"
+echo "🔌 API:    https://$PUBLIC_HOST:$HTTPS_PORT/api/health (dev mode without GOOGLE_WEB_CLIENT_ID: X-Grigri-Dev-User)"
 
 while true; do
     # Add more dependencies here, one status call each.
@@ -57,6 +64,7 @@ while true; do
         "$(status 🧗 web get 5 "$WEB_URL")"
         "$(status 🚚 cdn cdn)"
         "$(status 🔒 https https)"
+        "$(status 🔌 api api)"
     )
     line="$(date '+%Y-%m-%d %H:%M:%S')"
     for check in "${checks[@]}"; do line+="  $check"; done

@@ -2,9 +2,11 @@
 # Creates the Grigri CloudFront distribution in Floci. It only routes, as
 # the deployed CloudFront would; the index and the app run on their own dev
 # servers:
-#   /app*   -> Flutter dev server  (http://$GRIGRI_ORIGIN_HOST:$FLUTTER_WEB_PORT)
-#   *       -> grigri_index       (http://$GRIGRI_ORIGIN_HOST:$INDEX_PORT),
-#              whose / redirects to /app/
+#   /app*     -> Flutter dev server  (http://$GRIGRI_ORIGIN_HOST:$FLUTTER_WEB_PORT)
+#   /api/*    -> the local API       (Floci's HTTP API, from 05-api.sh)
+#   /photos/* -> the photos bucket   (Floci's S3, grigri-local-photos)
+#   *         -> grigri_index       (http://$GRIGRI_ORIGIN_HOST:$INDEX_PORT),
+#                whose / redirects to /app/
 # Paths are forwarded as is (CloudFront can't strip a prefix), so the app is
 # served under /app/ (--base-href /app/).
 #
@@ -25,6 +27,10 @@ ALIAS="${GRIGRI_CDN_ALIAS:-grigri.localhost}"
 PUBLIC_HOST="${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}"
 WEB_PORT="${FLUTTER_WEB_PORT:-7189}"
 INDEX_PORT="${INDEX_PORT:-2113}"
+# The local API's host, deployed into this Floci by 05-api.sh. Missing (no
+# build): no /api/* or /photos/* routes.
+API_HOST="$(cat /tmp/grigri-api-host 2>/dev/null || true)"
+PHOTOS_BUCKET=grigri-local-photos
 
 cache_policy=$(aws cloudfront create-cache-policy \
   --query CachePolicy.Id --output text \
@@ -59,6 +65,19 @@ behavior() {
     "$1" "$cache_policy" "$origin_request_policy"
 }
 
+origin_count=2
+behavior_count=1
+api_origins=""
+api_behaviors=""
+if [ -n "$API_HOST" ]; then
+  origin_count=4
+  behavior_count=3
+  # The API: Floci itself, on its own port, over HTTP (inside the
+  # container). Photos: Floci's in-process S3.
+  api_origins=$(printf ', {"Id": "api", "DomainName": "%s", "CustomOriginConfig": {"HTTPPort": 4566, "HTTPSPort": 443, "OriginProtocolPolicy": "http-only"}}, {"Id": "photos", "DomainName": "%s.s3.amazonaws.com", "S3OriginConfig": {"OriginAccessIdentity": ""}}' "$API_HOST" "$PHOTOS_BUCKET")
+  api_behaviors=", {\"PathPattern\": \"/api/*\", $(behavior api)}, {\"PathPattern\": \"/photos/*\", $(behavior photos)}"
+fi
+
 distribution=$(aws cloudfront create-distribution \
   --query 'Distribution.Id' --output text \
   --distribution-config "{
@@ -66,11 +85,11 @@ distribution=$(aws cloudfront create-distribution \
     \"Comment\": \"Grigri local CDN\",
     \"Enabled\": true,
     \"Aliases\": {\"Quantity\": 2, \"Items\": [\"$ALIAS\", \"$PUBLIC_HOST\"]},
-    \"Origins\": {\"Quantity\": 2, \"Items\": [$(origin app "$WEB_PORT"), $(origin index "$INDEX_PORT")]},
+    \"Origins\": {\"Quantity\": $origin_count, \"Items\": [$(origin app "$WEB_PORT"), $(origin index "$INDEX_PORT")$api_origins]},
     \"DefaultCacheBehavior\": {$(behavior index)},
-    \"CacheBehaviors\": {\"Quantity\": 1, \"Items\": [
-      {\"PathPattern\": \"/app*\", $(behavior app)}
+    \"CacheBehaviors\": {\"Quantity\": $behavior_count, \"Items\": [
+      {\"PathPattern\": \"/app*\", $(behavior app)}$api_behaviors
     ]}
   }")
 
-echo "grigri: CloudFront distribution $distribution serves $ALIAS and $PUBLIC_HOST (index, /app/)"
+echo "grigri: CloudFront distribution $distribution serves $ALIAS and $PUBLIC_HOST (index, /app/${API_HOST:+, /api/, /photos/})"

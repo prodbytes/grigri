@@ -59,3 +59,42 @@ spec.
    `process-compose.yaml`, the run and health scripts, Floci's CloudFront
    origin, and the dev container's forwarded ports
    ([development environment](dev-environment.md)).
+4. **Remove the static fake data; everything from a cheap database
+   (DynamoDB); GA empty and real, fake data in RC and local; an admin can
+   approve/reject any request.**
+   - A backend, [grigri_api/](../grigri_api) ([backend](backend.md),
+     [API](api.md)): one TypeScript Lambda (Node.js 22, arm64, 256 MB)
+     with an internal router behind one HTTP API, whose JWT authorizer
+     checks Google ID tokens (`GOOGLE_WEB_CLIENT_ID`) on every route but
+     `GET /api/health`; one on-demand DynamoDB table (single-table design;
+     point-in-time recovery and deletion protection in prod only);
+     photos in a private bucket of the site stack, uploaded with presigned
+     POSTs and served under `/photos/*`. The matchmaking rules (deck,
+     unanimous yes, one no, leaving and organizer handover, notices, chat
+     notes) moved from the app to pure, unit-tested modules, without the
+     auto-answering made-up climbers. Admins (`GRIGRI_ADMIN_EMAILS`) see
+     and accept or reject any open request. Plans follow the app's new
+     shape (place, area, sector, start and end; no title or group size;
+     grade scales `routes` and `boulders`).
+   - Environments: production starts empty and is never seeded; the RC is
+     seeded with made-up test data after each deploy, and the local stack
+     on every start (`scripts/seed.sh`, idempotent, refuses prod).
+   - Deploys ([deploy](deploy.md)): `scripts/deploy.sh` tests, builds and
+     deploys the `<prefix>-api` stack before the site, whose CloudFront
+     routes `/api/*` to it, and checks `/api/health`; the workflows set up
+     Node.js and pass `GOOGLE_WEB_CLIENT_ID` and `GRIGRI_ADMIN_EMAILS`.
+     The deploy roles gain the API's resources, scoped by name, with a
+     permissions boundary on every role they create, and an artifact
+     bucket per stage ([grigri_infra/README.md](../grigri_infra/README.md):
+     redeploy `github-deploy.yaml`, set the new variable and secret). The
+     web app's CSP allows photo uploads to the bucket and Google Identity
+     Services.
+   - Local ([development environment](dev-environment.md)): devbox gains
+     Node.js 22; Floci deploys the same template (Lambda, HTTP API,
+     DynamoDB, S3) and seeds it, routes `/api/*` and `/photos/*`, and runs
+     in dev mode (`X-Grigri-Dev-User`) without a Google client; the health
+     monitor checks `🔌 api`.
+   - Cost ([backend](backend.md#cost)): nothing new costs anything while
+     idle; DynamoDB on demand rather than Aurora Serverless v2 (about
+     $43/month minimum) or RDS (hourly), an HTTP API ($1 per million)
+     rather than a REST API ($3.50), one Lambda, S3 for photos.

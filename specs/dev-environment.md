@@ -1,8 +1,9 @@
 # Development environment
 
 - **Toolchain**: [devbox.json](../devbox.json), locked in `devbox.lock`:
-  Flutter, Python (the index server, the deploy script), the AWS CLI, GNU
-  make, curl, and mkcert and OpenSSL (the local HTTPS certificate). `devbox shell` enters it.
+  Flutter, Node.js 22 (the API, [grigri_api/](../grigri_api)), Python (the
+  index server, the deploy script), the AWS CLI, GNU make, curl, and
+  mkcert and OpenSSL (the local HTTPS certificate). `devbox shell` enters it.
 - **Dev container** ([.devcontainer/](../.devcontainer)): Ubuntu 24.04 with
   Devbox 0.18.1 (the release binary, SHA-256 checked) and Nix 2.35.0
   (single-user, installer hash-checked); `post-create.sh` fetches the
@@ -20,9 +21,17 @@
     answers. Stopping it also stops whatever listens on the port.
   - `5-index`: [grigri_index/site](../grigri_index) on
     http://localhost:2113/.
-  - `4-floci`: [Floci](https://floci.io/) as the local CloudFront
-    ([grigri_floci/](../grigri_floci), Docker, bound to 127.0.0.1): `/app*`
-    to the web app, everything else to the index, as in production.
+  - `4-floci`: [Floci](https://floci.io/) as the local CloudFront and the
+    local AWS ([grigri_floci/](../grigri_floci), Docker, bound to
+    127.0.0.1): `/app*` to the web app, `/api/*` to the local API,
+    `/photos/*` to the local photos bucket, everything else to the index,
+    as in production. Before it starts, `scripts/build-api.sh` builds the
+    API when its sources changed; its ready hook deploys the API's
+    template into Floci (Lambda, HTTP API, DynamoDB, S3) and loads the
+    made-up test data. Without `GOOGLE_WEB_CLIENT_ID` in `.env` the API
+    runs in dev mode: callers name themselves with
+    `X-Grigri-Dev-User: <email>`; `GRIGRI_ADMIN_EMAILS` in `.env` lists
+    the local admins ([backend.md](backend.md)).
     HTTP on http://grigri.localhost:2114/app/ (`FLOCI_PORT`), HTTPS on
     **https://local.grigri.nu01.com:2543/app/** (`FLOCI_HTTPS_PORT`) and
     https://grigri.localhost:2543/app/. Hot reload works through it.
@@ -35,13 +44,14 @@
     `local.grigri.nu01.com` is a public name for 127.0.0.1 and ::1 (Route
     53), so it works as an OAuth origin.
   - `0-health-check`: once all are ready, it prints the local URLs once
-    (🧗 the app, 🏠 the index, 🔒 HTTPS), then every 15 s
+    (🧗 the app, 🏠 the index, 🔒 HTTPS, 🔌 the API), then every 15 s
     (`HEALTH_CHECK_INTERVAL`) one line for the whole check: the time, then
     each dependency as its icon, a short label and ✅ or ❌, e.g.
-    `2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅`.
+    `2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅`.
     `🚚 cdn` asks Floci with the alias as `Host`; `🔒 https` validates the
     certificate against mkcert's CA and pins the name to 127.0.0.1, so
-    neither needs DNS or `mkcert -install`.
+    neither needs DNS or `mkcert -install`; `🔌 api` asks
+    `/api/health` through the CDN and expects the `local` stage.
   - The ports (7189, 2113, 2114, 2543) differ from presence's and TabScan's, so the
     projects can run side by side. Servers bind to 127.0.0.1;
     `GRIGRI_BIND_HOST=0.0.0.0` serves other devices (a phone's browser).
@@ -60,4 +70,7 @@
   version is passed as `GRIGRI_VERSION`.
 - **Checks**: `flutter analyze` and `flutter test` in `grigri_app/`; the
   Release workflow runs both on pull requests that touch the app or the
-  build.
+  build. The API: `npm run check` in `grigri_api/` (type check, tests,
+  build); the deploys run it too.
+- **Test data**: `STAGE=local bash scripts/seed.sh` re-seeds the local
+  stack (Floci seeds it on every start).
