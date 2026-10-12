@@ -44,3 +44,7 @@ spec.
      ([grigri_infra/README.md](../grigri_infra/README.md)). Google sign-in
      clients have no API, so they're made in the Google Cloud console; the
      app doesn't sign in yet.
+3. **Theme in mountain colors (olive, light brown, sand, gray, other greens
+   and a sky blue), harmonious, dark for now.** The app is dark only, with
+   an explicit color scheme ([theme](theme.md)) instead of one derived from
+   a seed color; every text color passes WCAG AA.

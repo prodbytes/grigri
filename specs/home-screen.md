@@ -8,5 +8,5 @@ The app opens on a single static screen, centered:
   through the repository's scripts do; a bare `flutter run` or a test
   doesn't).
 
-Light or dark follows the system, with an orange color scheme (seed
-`#F07020`). The browser tab's title is the same as the screen's.
+The browser tab's title is the same as the screen's. The look is the
+app's [theme](theme.md).

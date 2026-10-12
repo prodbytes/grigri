@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'app_version.dart';
+import 'theme.dart';
 
 void main() {
   runApp(const GrigriApp());
@@ -11,18 +12,11 @@ class GrigriApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Orange, like a belay device's anodized aluminium.
-    ThemeData theme(Brightness brightness) => ThemeData(
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFFF07020),
-        brightness: brightness,
-      ),
-    );
+    // Dark only, for now: the mountain palette (theme.dart).
     return MaterialApp(
       title: AppVersion.title,
       debugShowCheckedModeBanner: false,
-      theme: theme(Brightness.light),
-      darkTheme: theme(Brightness.dark),
+      theme: mountainTheme(),
       home: const HomeScreen(),
     );
   }

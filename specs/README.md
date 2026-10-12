@@ -17,6 +17,7 @@ they're built.
 **App**
 
 - [Home screen](home-screen.md): the app's name, tagline and version.
+- [Theme](theme.md): dark, in mountain colors.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.
 
