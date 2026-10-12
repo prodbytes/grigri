@@ -147,4 +147,65 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Gym night'), findsOneWidget);
   });
+
+  testWidgets('the chat calls out who asks to join, to accept or decline', (
+    tester,
+  ) async {
+    final store = await pumpApp(tester);
+    await tester.tap(find.text('Chats'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('2 people waiting for your answer'), findsOneWidget);
+    expect(find.byTooltip('1 person waiting for your answer'), findsOneWidget);
+
+    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.pumpAndSettle();
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNWidgets(2));
+    expect(find.text('Inés Prado'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Decline Bruno Costa'));
+    await tester.pumpAndSettle();
+    expect(store.state.requests['my-sunday-siurana/bruno']!.rejected, isTrue);
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Accept Inés Prado'));
+    await tester.pumpAndSettle();
+    expect(find.text("It's a match!"), findsOneWidget);
+    await tester.tap(find.text('Keep swiping'));
+    await tester.pumpAndSettle();
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    expect(store.plan('my-sunday-siurana')!.memberIds, ['me', 'ines']);
+  });
+
+  testWidgets('after my yes, the chat says who the request waits for', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final demoData = demoState(now);
+    final store = GrigriStore(
+      GrigriState(
+        meId: demoData.meId,
+        climbers: demoData.climbers,
+        plans: demoData.plans,
+        requests: demoData.requests,
+        messages: demoData.messages,
+        policies: {...demoData.policies, 'ines': Policy.undecided},
+      ),
+      clock: () => now,
+    )..accept('my-sunday-siurana/ines');
+    await tester.pumpWidget(GrigriApp(store: store));
+    await tester.tap(find.text('Chats'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Accept Bruno Costa'));
+    await tester.pumpAndSettle();
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    expect(
+      find.text('You said yes to Bruno · waiting for 1 other'),
+      findsOneWidget,
+    );
+  });
 }

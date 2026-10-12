@@ -139,7 +139,9 @@ class Tag extends StatelessWidget {
             Icon(icon, size: 14, color: c),
             const SizedBox(width: 5),
           ],
-          Text(label, style: TextStyle(color: c, fontSize: 12.5)),
+          Flexible(
+            child: Text(label, style: TextStyle(color: c, fontSize: 12.5)),
+          ),
         ],
       ),
     );

@@ -180,6 +180,32 @@ class GrigriStore extends ChangeNotifier {
         r,
   ];
 
+  /// People asking to join a plan: not turned down and not in it yet.
+  /// Empty when the plan is gone.
+  List<JoinRequest> asking(String planId) {
+    final plan = _state.plans[planId];
+    if (plan == null) return const [];
+    return [
+      for (final r in _state.requests.values)
+        if (r.planId == planId &&
+            !r.rejected &&
+            !plan.memberIds.contains(r.climberId))
+          r,
+    ];
+  }
+
+  /// [toReview] for one plan: who asking to join it still needs my answer.
+  /// Empty when I'm not in it.
+  List<JoinRequest> toReviewIn(String planId) {
+    if (!(_state.plans[planId]?.memberIds.contains(me.id) ?? false)) {
+      return const [];
+    }
+    return [
+      for (final r in asking(planId))
+        if (!r.acceptedBy.contains(me.id)) r,
+    ];
+  }
+
   /// My swipes right still waiting for members to decide.
   List<JoinRequest> get waiting => [
     for (final r in _state.requests.values)

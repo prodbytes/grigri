@@ -9,7 +9,7 @@ notifications bell, with a badge for unread ones.
 | **Discover** | The plans deck ([matching](matching.md)), with ✕ and ✓ buttons. When it runs out: "You've seen every plan" and **New plan**. |
 | **Requests** | The people deck: who asked to join plans I'm in. The tab's badge counts them. Empty: what it's for. |
 | **Plans** | The plans I'm in, soonest first (discipline, place, date, the group's avatars and size, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). |
-| **Chats** | One group chat per plan I'm in, most recent first, with the last message. |
+| **Chats** | One group chat per plan I'm in, most recent first, with the last message, and a badge counting the people asking to join it who are waiting for my answer. |
 | **Profile** | My profile as others see it, **Edit profile**, and, in ⋯, Reset the demo data. The version at the bottom. |
 
 - **Plan** (from Plans, a notification, or a chat's title): the plan
@@ -30,8 +30,13 @@ notifications bell, with a badge for unread ones.
   for when, places to add and remove, and gear.
 - **Match**: see [matching](matching.md#matches).
 - **Chat**: the group's avatars, the plan's title and date, the plan pinned
-  under the bar, messages (mine on the right in pine, others' on the left
-  with their name), the join and leave notes, and a message box.
+  under the bar, then a callout for each person asking to join that I
+  haven't answered ("Wants to join · your answer", their avatar and name,
+  N of M said yes, ✕ / ✓; tap them for their profile). Once I've said yes
+  it shrinks to a line, "You said yes to <name> · waiting for N others",
+  until the group decides; a ✕ removes it. Then the messages (mine on the
+  right in pine, others' on the left with their name), the join and leave
+  notes (long ones wrap), and a message box.
 - Tapping a person anywhere opens their whole profile in a sheet.
 
 The browser tab's title is **Grigri** (**🧪 Grigri RC** on the RC site).

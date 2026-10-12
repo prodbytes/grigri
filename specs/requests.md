@@ -84,3 +84,14 @@ spec.
      and a no shows a note at the bottom.
    - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
      each person asking to join.
+6. **When someone likes the plan but doesn't match yet, call it out at the
+   top of the chat, so people know they need to approve or reject the new
+   person.**
+   - The [group chat](matching.md#group-chat) shows a callout under the
+     pinned plan for each person asking to join that I haven't answered:
+     avatar, name, how many said yes, and ✕ / ✓ (the same answer as in
+     Requests). After my yes it becomes "You said yes to <name> · waiting
+     for N others". [Chats](screens.md) badges each chat with how many
+     are waiting for my answer.
+   - Fix: long chat notes ("You created the plan…") overflowed a phone's
+     width; tags now wrap their text.

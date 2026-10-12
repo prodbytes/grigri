@@ -31,12 +31,7 @@ class PlanScreen extends StatelessWidget {
     final organizing = plan.organizerId == store.me.id;
     final member = plan.memberIds.contains(store.me.id);
     final mine = store.state.requests['${plan.id}/${store.me.id}'];
-    final pending = store.state.requests.values.where(
-      (r) =>
-          r.planId == plan.id &&
-          !r.rejected &&
-          !plan.memberIds.contains(r.climberId),
-    );
+    final pending = store.asking(plan.id);
     return Scaffold(
       appBar: AppBar(
         title: Text(organizing ? 'Your plan' : 'Plan'),

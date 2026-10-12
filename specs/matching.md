@@ -85,6 +85,12 @@ asked is notified.
 Each plan has one chat for its whole group, with the plan pinned on top.
 It notes who joined and who left. Chats lists them, most recent first.
 
+Someone asking to join is called out at the top of the chat, for each
+member who hasn't answered them yet, with ✕ and ✓ right there: the same
+answer as in Requests or on the plan, so the group knows it has to decide.
+After my yes, the chat says who it's still waiting for. Chats badges each
+chat with how many people are waiting for my answer.
+
 ## For now: on the device
 
 There's no backend yet, so everything runs and is kept on the device

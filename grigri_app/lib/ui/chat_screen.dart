@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'match_screen.dart';
 import 'plan_screen.dart';
 
 /// A plan's group chat: everyone in the plan, with the plan pinned on top.
@@ -83,6 +85,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           _PinnedPlan(plan: plan),
+          _JoinCallout(plan: plan),
           Expanded(
             child: ListView.builder(
               reverse: true,
@@ -168,6 +171,183 @@ class _PinnedPlan extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// People asking to join, called out on top of the chat until I answer
+/// them: their name and how many said yes, with Decline and Accept. The
+/// ones I said yes to stay as a line, waiting for the rest of the group.
+class _JoinCallout extends StatelessWidget {
+  const _JoinCallout({required this.plan});
+
+  final Plan plan;
+
+  void _accept(BuildContext context, GrigriStore store, JoinRequest r) {
+    final match = store.accept(r.id);
+    if (match != null) {
+      MatchScreen.show(context, match);
+      return;
+    }
+    final name = store.climber(r.climberId).name.split(' ').first;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'You said yes to $name. Waiting for the rest of the group.',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final text = Theme.of(context).textTheme;
+    final toAnswer = store.toReviewIn(plan.id);
+    final answered = [
+      for (final r in store.asking(plan.id))
+        if (r.acceptedBy.contains(store.me.id)) r,
+    ];
+    if (toAnswer.isEmpty && answered.isEmpty) return const SizedBox.shrink();
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.4,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final r in toAnswer) ...[
+              _AskingCard(
+                request: r,
+                plan: plan,
+                onDecline: () => store.reject(r.id),
+                onAccept: () => _accept(context, store, r),
+              ),
+              const SizedBox(height: 6),
+            ],
+            for (final r in answered)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.hourglass_top,
+                      size: 14,
+                      color: Mountain.granite,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _waitingLabel(store, r),
+                        style: text.bodySmall?.copyWith(
+                          color: Mountain.granite,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// "You said yes to Ines · waiting for 2 others".
+  String _waitingLabel(GrigriStore store, JoinRequest r) {
+    final name = store.climber(r.climberId).name.split(' ').first;
+    final left = plan.memberIds.where((id) => !r.acceptedBy.contains(id));
+    return 'You said yes to $name · waiting for '
+        '${left.length == 1 ? '1 other' : '${left.length} others'}';
+  }
+}
+
+/// One person asking to join, waiting for my answer.
+class _AskingCard extends StatelessWidget {
+  const _AskingCard({
+    required this.request,
+    required this.plan,
+    required this.onDecline,
+    required this.onAccept,
+  });
+
+  final JoinRequest request;
+  final Plan plan;
+  final VoidCallback onDecline;
+  final VoidCallback onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final text = Theme.of(context).textTheme;
+    final person = store.climber(request.climberId);
+    final yes = request.acceptedBy.where(plan.memberIds.contains).length;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+      decoration: BoxDecoration(
+        color: Mountain.tan.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Mountain.tan.withValues(alpha: 0.55)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => showProfileSheet(context, person),
+              child: Row(
+                children: [
+                  Avatar(person, radius: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'WANTS TO JOIN · YOUR ANSWER',
+                          style: text.labelSmall?.copyWith(
+                            color: Mountain.tan,
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          person.name,
+                          style: text.titleSmall?.copyWith(
+                            color: Mountain.sand,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '$yes of ${plan.memberIds.length} said yes',
+                          style: text.bodySmall?.copyWith(color: Mountain.sky),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Decline ${person.name}',
+            icon: const Icon(Icons.close, color: Mountain.clay),
+            onPressed: onDecline,
+          ),
+          IconButton.filled(
+            tooltip: 'Accept ${person.name}',
+            style: IconButton.styleFrom(
+              backgroundColor: Mountain.olive,
+              foregroundColor: Mountain.night,
+            ),
+            icon: const Icon(Icons.check),
+            onPressed: onAccept,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _Bubble extends StatelessWidget {

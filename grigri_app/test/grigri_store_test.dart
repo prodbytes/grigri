@@ -117,6 +117,50 @@ void main() {
       expect(store.plan('my-sunday-siurana')!.memberIds, ['me']);
     });
 
+    test('lists who is asking to join one plan, and who still needs me', () {
+      final store = demo();
+      expect(store.asking('my-sunday-siurana').map((r) => r.climberId), [
+        'ines',
+        'bruno',
+      ]);
+      expect(store.toReviewIn('thursday-bouldering').map((r) => r.climberId), [
+        'noa',
+      ]);
+      // Plans I'm not in have nobody for me to answer.
+      expect(store.toReviewIn('siurana-saturday'), isEmpty);
+      expect(store.asking('no-such-plan'), isEmpty);
+
+      store.reject('my-sunday-siurana/bruno');
+      expect(store.asking('my-sunday-siurana').map((r) => r.climberId), [
+        'ines',
+      ]);
+      store.accept('my-sunday-siurana/ines');
+      // Ines joined: she is no longer asking.
+      expect(store.asking('my-sunday-siurana'), isEmpty);
+      expect(store.toReviewIn('my-sunday-siurana'), isEmpty);
+    });
+
+    test('a request I said yes to waits for the others, off my list', () {
+      final demoData = demoState(now);
+      final store = GrigriStore(
+        GrigriState(
+          meId: demoData.meId,
+          climbers: demoData.climbers,
+          plans: demoData.plans,
+          requests: demoData.requests,
+          messages: demoData.messages,
+          policies: {...demoData.policies, 'ines': Policy.undecided},
+        ),
+        clock: () => now,
+      );
+      store.accept('my-sunday-siurana/ines');
+      expect(store.accept('my-sunday-siurana/bruno'), isNull);
+      expect(store.toReviewIn('my-sunday-siurana'), isEmpty);
+      expect(store.asking('my-sunday-siurana').map((r) => r.climberId), [
+        'bruno',
+      ]);
+    });
+
     test('a full plan takes nobody else', () {
       final store = demo();
       store.updatePlan(store.plan('my-sunday-siurana')!.copyWith(spots: 2));
