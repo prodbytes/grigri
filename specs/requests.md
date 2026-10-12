@@ -114,6 +114,26 @@ spec.
      chat. A newcomer also hears of the requests still open.
    - The plan screen no longer has ✓ / ✕; it points to the chat.
    - Fixed: long chat notes overflowed their label instead of wrapping.
+9. **A searchable database of climbing sectors, the cheapest way; then in
+   the new plan screen: no title; where is one search field; when is the
+   date and a time range (from, to) instead of a start and a length; a
+   European / American grade system switch above the grades, like Celsius
+   and Fahrenheit; no group size (the group is whoever matches); notes;
+   publish.**
+   - [Sectors](sectors.md): a static index searched on the device (no
+     server), built from OpenStreetMap by `tool/build_sectors.dart`.
+     OpenBeta was set aside: it barely covers Europe. The bundled index is
+     a placeholder until the build runs.
+   - [Plans](matching.md#profiles-and-plans-are-separate) lose their title
+     (they're called by their place), length and group size, and gain an
+     end time and the sector's id; plans saved before are read with their
+     length as the time range. Discover no longer skips full plans: none
+     are.
+   - The grade system is my setting, everywhere: grades on cards, chats,
+     profiles and the editors read in it. The scales are now routes and
+     boulders, each written both ways.
+   - The [plan editor](screens.md) is as asked; the profile editor gains
+     the same grade switch.
 10. **When someone likes the plan but doesn't match yet, call it out at
     the top of the chat, so people know they need to approve or reject
     the new person.**

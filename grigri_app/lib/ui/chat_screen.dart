@@ -169,7 +169,7 @@ class _PinnedPlan extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            '${plan.place} · ${whenLabel(plan)} · ${plan.grades.label}',
+            '${whenLabel(plan)} · ${StoreScope.of(context).grades(plan.grades)}',
             style: const TextStyle(color: Mountain.snow),
           ),
         ),
@@ -379,7 +379,7 @@ class _RequestCard extends StatelessWidget {
                         Tag(
                           level == null
                               ? 'No ${plan.discipline.label.toLowerCase()} grades yet'
-                              : '${plan.discipline.label} ${level.label}',
+                              : '${plan.discipline.label} ${store.grades(level)}',
                           icon: fits ? Icons.check : Icons.info_outline,
                           color: fits ? Mountain.olive : Mountain.tan,
                         ),

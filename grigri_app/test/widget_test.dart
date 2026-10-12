@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/seed.dart';
 import 'package:grigri_app/main.dart';
+import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
@@ -42,7 +43,7 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('THE PLAN'), findsWidgets);
-    expect(find.text('Evening bouldering session'), findsOneWidget);
+    expect(find.text('Boulder gym'), findsOneWidget);
     expect(find.text('Lena Vogel, 26'), findsOneWidget);
     expect(find.text('Your grades'), findsWidgets);
   });
@@ -69,13 +70,13 @@ void main() {
   testWidgets('dragging a card left passes on the plan', (tester) async {
     final store = await pumpApp(tester, siuranaFirst: true);
     await tester.timedDrag(
-      find.text('Siurana sport day'),
+      find.text('El Pati'),
       const Offset(-600, 0),
       const Duration(milliseconds: 400),
     );
     await tester.pumpAndSettle();
     expect(store.state.passed, contains('siurana-saturday'));
-    expect(find.text('Siurana sport day'), findsNothing);
+    expect(find.text('El Pati'), findsNothing);
   });
 
   testWidgets('the tabs are Discover, Plans, Chats, Notifications, Profile', (
@@ -156,7 +157,7 @@ void main() {
 
     await tester.tap(find.text('Notifications'));
     await tester.pumpAndSettle();
-    expect(find.text("You're in: Siurana sport day"), findsOneWidget);
+    expect(find.text("You're in: El Pati"), findsOneWidget);
     // Mine, and the demo's three requests to join my plans.
     expect(find.text('New'), findsNWidgets(4));
     expect(store.unreadNotices, 0);
@@ -169,7 +170,7 @@ void main() {
     await tester.tap(find.text('Chats'));
     await tester.pumpAndSettle();
     expect(find.text('2 to answer'), findsOneWidget);
-    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.tap(find.text('Siurana'));
     await tester.pumpAndSettle();
     final card = find.byKey(const ValueKey('request my-sunday-siurana/bruno'));
     await tester.tap(find.descendant(of: card, matching: find.text('Decline')));
@@ -191,9 +192,12 @@ void main() {
     final store = await pumpApp(tester);
     await tester.tap(find.text('Chats'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.tap(find.text('Siurana'));
     await tester.pumpAndSettle();
     expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNWidgets(2));
+    // The request cards show the newcomers' grades, written as grades.
+    expect(find.textContaining(RegExp(r'^Sport \d')), findsWidgets);
+    expect(find.textContaining('Closure'), findsNothing);
 
     await tester.tap(find.byTooltip('Decline Bruno Costa'));
     await tester.pumpAndSettle();
@@ -242,7 +246,7 @@ void main() {
     await tester.pumpWidget(GrigriApp(store: store));
     await tester.tap(find.text('Chats'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.tap(find.text('Siurana'));
     await tester.pumpAndSettle();
     expect(find.text('1 of 2 said yes'), findsNothing);
     expect(find.text('0 of 2 said yes'), findsOneWidget);
@@ -279,23 +283,65 @@ void main() {
     expect(find.text('You, 30'), findsNothing);
   });
 
-  testWidgets('a new plan shows up in Plans', (tester) async {
-    await pumpApp(tester);
+  Future<void> openNewPlan(WidgetTester tester) async {
     await tester.tap(find.text('Plans'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('New plan'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Title'),
-      'Gym night',
-    );
-    await tester.enterText(
-      find.widgetWithText(TextFormField, 'Crag or gym'),
-      'Climbing gym',
-    );
-    await tester.tap(find.text('Save'));
+  }
+
+  Future<void> publish(WidgetTester tester) async {
+    final button = find.text('Publish the plan');
+    await tester.ensureVisible(button);
     await tester.pumpAndSettle();
-    expect(find.text('Gym night'), findsOneWidget);
+    await tester.tap(button);
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets('a new plan picks its sector from the search', (tester) async {
+    final store = await pumpApp(tester);
+    await openNewPlan(tester);
+    expect(find.widgetWithText(TextFormField, 'Title'), findsNothing);
+    expect(find.text('GROUP SIZE'), findsNothing);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sector, crag or gym'),
+      'pati',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('El Pati'));
+    await tester.pumpAndSettle();
+    expect(find.text('Siurana, Spain'), findsOneWidget);
+    await publish(tester);
+    final plan = store.myPlans.firstWhere((p) => p.place == 'El Pati');
+    expect(plan.sectorId, 'demo:el-pati');
+    expect(plan.area, 'Siurana, Spain');
+    expect(plan.start.hour, 9);
+    expect(plan.end.hour, 17);
+    expect(find.text('El Pati'), findsOneWidget);
+  });
+
+  testWidgets('a place the index lacks is typed in by hand', (tester) async {
+    final store = await pumpApp(tester);
+    await openNewPlan(tester);
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Sector, crag or gym'),
+      'Secret wall',
+    );
+    await tester.pumpAndSettle();
+    await publish(tester);
+    final plan = store.myPlans.firstWhere((p) => p.place == 'Secret wall');
+    expect(plan.sectorId, isNull);
+    expect(plan.area, isEmpty);
+  });
+
+  testWidgets('grades switch between European and American', (tester) async {
+    final store = await pumpApp(tester);
+    await openNewPlan(tester);
+    expect(find.text('6a–6c+'), findsOneWidget);
+    await tester.tap(find.text('American'));
+    await tester.pumpAndSettle();
+    expect(find.text('5.10b–5.11c'), findsOneWidget);
+    expect(store.gradeSystem, GradeSystem.american);
   });
 
   testWidgets('the profile has no when or where, and shows the gear', (

@@ -36,6 +36,7 @@ class GrigriState {
     required this.policies,
     Set<String>? passed,
     List<Notice>? notices,
+    this.gradeSystem = GradeSystem.european,
   }) : passed = passed ?? {},
        notices = notices ?? [];
 
@@ -56,6 +57,9 @@ class GrigriState {
   /// My notifications, oldest first.
   final List<Notice> notices;
 
+  /// How I like grades written.
+  GradeSystem gradeSystem;
+
   Map<String, Object> toJson() => {
     'meId': meId,
     'climbers': [for (final c in climbers.values) c.toJson()],
@@ -65,6 +69,7 @@ class GrigriState {
     'policies': {for (final e in policies.entries) e.key: e.value.name},
     'passed': passed.toList(),
     'notices': [for (final n in notices) n.toJson()],
+    'gradeSystem': gradeSystem.name,
   };
 
   static GrigriState fromJson(Map<String, Object?> json) {
@@ -90,6 +95,9 @@ class GrigriState {
         for (final n in json['notices'] as List? ?? [])
           Notice.fromJson((n as Map).cast()),
       ],
+      gradeSystem:
+          GradeSystem.values.asNameMap()[json['gradeSystem']] ??
+          GradeSystem.european,
     );
   }
 }
@@ -152,14 +160,13 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Decks -------------------------------------------------------------
 
-  /// Plans to swipe on: upcoming, with a spot open, that I'm not in and
+  /// Plans to swipe on: upcoming, that I'm not in and
   /// haven't swiped on yet, best fits first.
   List<Plan> get discover {
     final now = _clock();
     final plans = _state.plans.values.where(
       (p) =>
           p.start.isAfter(now) &&
-          !p.isFull &&
           !p.memberIds.contains(me.id) &&
           !_state.passed.contains(p.id) &&
           !_state.requests.containsKey(_requestId(p.id, me.id)),
@@ -352,9 +359,7 @@ class GrigriStore extends ChangeNotifier {
           _touched = true;
           if (r.rejected) _notify(NoticeKind.declined, r);
         }
-        if (!r.rejected &&
-            !plan.isFull &&
-            plan.memberIds.every(r.acceptedBy.contains)) {
+        if (!r.rejected && plan.memberIds.every(r.acceptedBy.contains)) {
           final grown = plan.copyWith(
             memberIds: [...plan.memberIds, r.climberId],
           );
@@ -417,27 +422,25 @@ class GrigriStore extends ChangeNotifier {
 
   /// A new plan, organized by me.
   Plan createPlan({
-    required String title,
     required Discipline discipline,
     required String place,
-    required String area,
+    String area = '',
+    String? sectorId,
     required DateTime start,
-    required int hours,
+    required DateTime end,
     required GradeRange grades,
-    required int spots,
     String notes = '',
   }) {
     final plan = Plan(
       id: 'plan-${_clock().microsecondsSinceEpoch}',
       organizerId: me.id,
-      title: title,
       discipline: discipline,
       place: place,
       area: area,
+      sectorId: sectorId,
       start: start,
-      hours: hours,
+      end: end,
       grades: grades,
-      spots: spots,
       memberIds: [me.id],
       notes: notes,
     );
@@ -465,21 +468,11 @@ class GrigriStore extends ChangeNotifier {
       _state.requests.removeWhere((_, r) => r.planId == planId);
       _state.messages.removeWhere((m) => m.planId == planId);
     } else {
-      _state.plans[planId] = Plan(
-        id: plan.id,
+      _state.plans[planId] = plan.copyWith(
         organizerId: plan.organizerId == me.id
             ? members.first
             : plan.organizerId,
-        title: plan.title,
-        discipline: plan.discipline,
-        place: plan.place,
-        area: plan.area,
-        start: plan.start,
-        hours: plan.hours,
-        grades: plan.grades,
-        spots: plan.spots,
         memberIds: members,
-        notes: plan.notes,
       );
       _note(planId, '${me.name} left the plan');
       // One fewer member to wait for.
@@ -496,6 +489,17 @@ class GrigriStore extends ChangeNotifier {
     _state.climbers[me.id] = profile;
     _changed();
   }
+
+  /// How I like grades written, everywhere in the app.
+  GradeSystem get gradeSystem => _state.gradeSystem;
+
+  set gradeSystem(GradeSystem system) {
+    _state.gradeSystem = system;
+    _changed();
+  }
+
+  /// [range] written the way I like.
+  String grades(GradeRange range) => range.label(_state.gradeSystem);
 
   // --- Chat --------------------------------------------------------------
 
