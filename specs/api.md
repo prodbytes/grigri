@@ -50,8 +50,13 @@ An admin can approve or reject any join request.
 Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
 `<site origin>/photos/<key>`.
 
-- **Climber** (public profile):
-  `{"id", "name", "age"?: int, "bio", "photo"?: key, "levels": {"sport": {"scale": "routes", "min": 6, "max": 11}, ...}, "gear": ["rope", ...], "gearPhotos": [key, ...]}`
+- **Climber** (profile):
+  `{"id", "name", "age"?: int, "bio", "photo"?: key, "levels": {"sport": {"scale": "routes", "min": 6, "max": 11}, ...}, "gear": ["rope", ...], "gearPhotos": [key, ...], "location"?: Location, "areas": [Location, ...]}`
+  `location` (where I am) and `areas` (up to 5 other places I'd climb
+  near) are **private**: only my own profile (`GET`/`PUT /api/me`)
+  carries them; everyone else's, in any response's `climbers`, has
+  neither. They're stored rounded to 2 decimals (about 1 km), so they
+  never say exactly where someone lives.
   Disciplines: sport, trad, bouldering, gym. Scales: `routes` (25 grades,
   indices 0..24; written French 4a..9a or YDS 5.5..5.14d, a display choice
   kept on the device) and `boulders` (15 grades, indices 0..14; Font 3..8B
@@ -59,12 +64,16 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   names `french` (= routes) and `vScale` (= boulders) on input; always
   store and return the new names. Gear: rope, quickdraws, rack,
   crashPad, car.
-- **Plan**: `{"id", "organizerId", "discipline", "place", "area", "sectorId"?, "start", "end", "grades": {"scale","min","max"}, "memberIds": [organizer first, then in join order], "notes"}`.
+- **Location**: `{"name", "lat", "lon"}`: a named point (a crag, gym
+  or town), name 1–120 characters, lat −90..90, lon −180..180.
+- **Plan**: `{"id", "organizerId", "discipline", "place", "area", "sectorId"?, "lat"?, "lon"?, "start", "end", "grades": {"scale","min","max"}, "memberIds": [organizer first, then in join order], "notes"}`.
   No title (the app names a plan by its place), no length in hours (start
   and end), and **no group size: a group is as big as the people who match,
   so nothing is ever "full"**. `place` is a sector, crag or gym; `area` is
   where it is ("Siurana, Spain"); `sectorId` is the app's sector-index id
-  (e.g. "osm:n123456"), absent for a place typed by hand.
+  (e.g. "osm:n123456"), absent for a place typed by hand. `lat` and
+  `lon` are where the place is, from the sector index (both or neither,
+  kept to 4 decimals); absent for a place typed by hand.
 - **JoinRequest**: `{"id": "<planId>/<climberId>", "planId", "climberId", "acceptedBy": [climberIds], "rejected": bool, "time"}`
 - **Notice**: `{"id", "kind": "accepted"|"declined"|"request", "planId", "planTitle" (the plan's place when the notice was made), "climberId"?, "time", "read": bool}`
 - **Message**: `{"id", "planId", "authorId": climberId|null, "text", "time", "requestId"?}`
@@ -95,8 +104,8 @@ All need a token except `GET /api/health`.
 |---|---|
 | `GET /api/health` | `{"ok": true, "stage": "prod"|"rc"|"local", "version"}` (no auth) |
 | `GET /api/me` | `{"climber": Climber or null, "admin": bool}` |
-| `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars, age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`). → `{"climber"}` |
-| `GET /api/discover` | plans to swipe on: upcoming (start > now), I'm not in, I haven't passed or asked; sorted: my grades for its discipline overlap its grades first, then soonest. → `{"plans": [Plan], "climbers"}` (organizers and members) |
+| `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars, age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. → `{"climber"}` (mine, with location and areas) |
+| `GET /api/discover` | plans to swipe on: upcoming (start > now), I'm not in, I haven't passed or asked; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known) |
 | `POST /api/plans` | new plan, I organize it; body: Plan without id, organizerId, memberIds. Validates: place required (≤ 80), area ≤ 120, sectorId ≤ 64 when given, start in the future, end after start and at most 24 h later, notes ≤ 1000, grades on the discipline's scale. → `{"plan"}` |
 | `GET /api/plans` | mine: `{"plans": [plans I'm in, soonest first], "asked": [{"request", "plan"}] (my requests still waiting, or declined and not dismissed), "climbers"}` |
 | `GET /api/plans/{id}` | `{"plan", "requests": [open requests, only if I'm a member], "climbers"}` |
@@ -117,6 +126,24 @@ All need a token except `GET /api/health`.
 | `POST /api/admin/requests/{planId}/{climberId}/accept` | admin only: they join now, as if every member accepted; same notes and Notice. → `{"match"}` |
 | `POST /api/admin/requests/{planId}/{climberId}/reject` | admin only: rejected, Notice declined. → `{}` |
 
+## The deck's ranking
+
+Each plan scores **fit + nearness**, each 0 to 1 (pure functions in
+[rules.ts](../grigri_api/src/domain/rules.ts)); higher first, then
+soonest:
+
+- **Fit** (my profile against the plan): 1 when my grades for its
+  discipline overlap its grades; 0.6 when one grade apart, then less,
+  down to 0 at 4 grades apart; 0 when I don't climb its discipline.
+- **Nearness**: e^(−km / 50) for the distance (great circle) from the
+  plan's point to the nearest of my location and areas: 1 on my
+  doorstep, 0.37 at 50 km, 0.14 at 100 km. 0.25 (like about 70 km
+  away) when it isn't known: the plan has no point (typed by hand) or
+  I set no location or area.
+
+So a plan in my grades nearby comes first, and a plan in my grades
+150 km away still comes before one next door that I don't climb.
+
 ## Seed (RC and local only)
 
 Made-up climbers (never real people) and their plans, dates relative to
@@ -125,7 +152,8 @@ climbers so the admin view and Requests have something. The made-up
 climbers have no Google subject (nobody signs in as them) and ids prefixed
 `seed-`. The seed is idempotent (re-running refreshes the seed records and
 their dates, never touches real people's data) and refuses to run against
-prod. RC: run after each RC deploy. Local: run when Floci starts.
+prod. Seed plans carry their places' approximate points, so a tester
+with a location sees the deck ranked by distance. RC: run after each RC deploy. Local: run when Floci starts.
 
 The seed lives in [grigri_api/seed/](../grigri_api/seed) and runs inside
 the stage's function (a direct invoke of `{"grigriSeed": true}`, which the

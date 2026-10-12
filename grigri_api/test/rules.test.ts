@@ -43,10 +43,10 @@ describe('discover', () => {
       plan({ id: 'ok' }),
     ];
     const out = rules.discover(plans, me, new Set(['passed']), new Set(['asked']), now);
-    expect(out.map((p) => p.id)).toEqual(['big', 'ok']);
+    expect(out.plans.map((p) => p.id)).toEqual(['big', 'ok']);
   });
 
-  it('sorts fitting grades first, then soonest', () => {
+  it('without locations, sorts by grade fit, then soonest', () => {
     const plans = [
       plan({ id: 'late-fit', start: '2030-06-01T08:00:00.000Z' }),
       plan({ id: 'soon-nofit', start: '2030-05-02T08:00:00.000Z', grades: { scale: 'routes', min: 18, max: 20 } }),
@@ -54,7 +54,57 @@ describe('discover', () => {
       plan({ id: 'boulder', discipline: 'bouldering', grades: { scale: 'boulders', min: 0, max: 3 }, start: '2030-05-02T09:00:00.000Z' }),
     ];
     const out = rules.discover(plans, me, new Set(), new Set(), now);
-    expect(out.map((p) => p.id)).toEqual(['soon-fit', 'late-fit', 'soon-nofit', 'boulder']);
+    expect(out.plans.map((p) => p.id)).toEqual(['soon-fit', 'late-fit', 'soon-nofit', 'boulder']);
+    expect(out.distanceKm).toEqual({});
+  });
+
+  // Made-up points: a home, a crag ~10 km away and one ~150 km away.
+  const home = { name: 'Home', lat: 41.39, lon: 2.17 };
+  const near = { lat: 41.47, lon: 2.1 };
+  const far = { lat: 41.26, lon: 0.38 };
+
+  it('ranks by grade fit plus nearness to my nearest location or area', () => {
+    const located: Climber = { ...me, location: home };
+    const plans = [
+      plan({ id: 'far-fit', ...far }),
+      plan({ id: 'near-fit', ...near, start: '2030-06-01T08:00:00.000Z' }),
+      plan({ id: 'near-close-grades', ...near, grades: { scale: 'routes', min: 13, max: 14 } }),
+      plan({ id: 'near-nofit', ...near, grades: { scale: 'routes', min: 20, max: 22 } }),
+      plan({ id: 'unknown-fit' }),
+    ];
+    const out = rules.discover(plans, located, new Set(), new Set(), now);
+    expect(out.plans.map((p) => p.id)).toEqual(['near-fit', 'near-close-grades', 'unknown-fit', 'far-fit', 'near-nofit']);
+    expect(out.distanceKm['near-fit']).toBe(11);
+    expect(out.distanceKm['far-fit']).toBe(150);
+    expect(out.distanceKm).not.toHaveProperty('unknown-fit');
+
+    // An area of interest next to the far crag brings it close.
+    const withArea: Climber = { ...located, areas: [{ name: 'Away', ...far }] };
+    const again = rules.discover(plans, withArea, new Set(), new Set(), now);
+    expect(again.distanceKm['far-fit']).toBe(0);
+    expect(again.plans[0]!.id).toBe('far-fit');
+  });
+});
+
+describe('scores', () => {
+  it('fitScore: 1 on overlap, fading over 4 grades apart, 0 for other disciplines', () => {
+    const at = (min: number, max: number) => rules.fitScore(me, plan({ grades: { scale: 'routes', min, max } }));
+    expect(at(10, 14)).toBe(1);
+    expect(at(13, 15)).toBeCloseTo(0.6);
+    expect(at(14, 15)).toBeCloseTo(0.4);
+    expect(at(17, 18)).toBe(0);
+    expect(at(2, 6)).toBeCloseTo(0.4);
+    expect(rules.fitScore(me, plan({ discipline: 'bouldering', grades: { scale: 'boulders', min: 0, max: 3 } }))).toBe(0);
+  });
+
+  it('nearScore: 1 here, e^-1 at 50 km, a quarter when unknown', () => {
+    expect(rules.nearScore(0)).toBe(1);
+    expect(rules.nearScore(50)).toBeCloseTo(Math.exp(-1));
+    expect(rules.nearScore(undefined)).toBe(0.25);
+  });
+
+  it('haversineKm: Barcelona to Madrid is about 505 km', () => {
+    expect(rules.haversineKm({ lat: 41.39, lon: 2.17 }, { lat: 40.42, lon: -3.7 })).toBeCloseTo(505, -1);
   });
 });
 
