@@ -360,3 +360,9 @@ spec.
       center` from OpenStreetMap; the placeholder gets approximate
       points); a plan keeps its sector's point. The index is cached once
       loaded, not as a pending load.
+24. **Check the running health checks; add them if not yet done.** The
+    health checks' half of entry 23.
+    - [Deploy](deploy.md): each stage's site stack also has a Route 53
+      health check of `/api/health` (it must say `"ok":true`), with its
+      own alarm (`<stack>-api-health`) on the same topic, so the API is
+      watched like the web app.

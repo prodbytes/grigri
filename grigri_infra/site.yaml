@@ -7,9 +7,9 @@ Description: >
   https://rc.grigri.nu01.com). One CloudFront distribution in front of the
   index page (/) and the Flutter web app (/app/), both from a private S3
   bucket, the API (/api/*, the grigri_api stack's HTTP API) and people's
-  photos (/photos/*, a private bucket). A Route 53 health check polls
-  https://DomainName/app/version.json;
-  when it fails, an alarm emails HealthNotificationEmails.
+  photos (/photos/*, a private bucket). Route 53 health checks poll
+  https://DomainName/app/version.json and /api/health;
+  when one fails, its alarm emails HealthNotificationEmails.
   Deploy in us-east-1 (CloudFront certificates must live there).
 
 Parameters:
@@ -442,6 +442,25 @@ Resources:
         - Key: Name
           Value: !Sub ${DomainName}/app/version.json
 
+  # Polls https://DomainName/api/health through CloudFront: the API's
+  # Lambda behind /api/*. Healthy only on a 2xx/3xx whose body says ok.
+  ApiHealthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        Type: HTTPS_STR_MATCH
+        FullyQualifiedDomainName: !Ref DomainName
+        Port: 443
+        ResourcePath: /api/health
+        SearchString: '"ok":true'
+        EnableSNI: true
+        RequestInterval: 30
+        FailureThreshold: 3
+        Regions: [us-east-1, us-west-2, eu-west-1]
+      HealthCheckTags:
+        - Key: Name
+          Value: !Sub ${DomainName}/api/health
+
   HealthTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -481,6 +500,26 @@ Resources:
       AlarmActions: [!Ref HealthTopic]
       OKActions: [!Ref HealthTopic]
 
+  ApiHealthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${AWS::StackName}-api-health
+      AlarmDescription: !Sub https://${DomainName}/api/health is failing (Route 53 health check)
+      Namespace: AWS/Route53
+      MetricName: HealthCheckStatus
+      Dimensions:
+        - Name: HealthCheckId
+          Value: !GetAtt ApiHealthCheck.HealthCheckId
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      DatapointsToAlarm: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref HealthTopic]
+      OKActions: [!Ref HealthTopic]
+
 Outputs:
   SiteUrl:
     Value: !Sub https://${DomainName}/
@@ -497,6 +536,9 @@ Outputs:
   HealthCheckId:
     Description: The Route 53 health check of https://DomainName/app/version.json
     Value: !GetAtt HealthCheck.HealthCheckId
+  ApiHealthCheckId:
+    Description: The Route 53 health check of https://DomainName/api/health
+    Value: !GetAtt ApiHealthCheck.HealthCheckId
   HealthTopicArn:
     Description: Where health alarms go (HealthNotificationEmails subscribe to it)
     Value: !Ref HealthTopic
