@@ -1,5 +1,19 @@
 @AGENTS.md
 
+## Cost comes first
+
+In this project, cost is the most important perspective in design:
+
+- Build on serverless services that cost nothing when idle and little
+  when used (pay per request, generous free tiers), never on servers or
+  clusters that bill by the hour, unless no serverless option meets the
+  requirements.
+- When choosing between services or libraries, take the least costly one
+  that meets the requirements. Count running costs (requests, storage,
+  data transfer, minimum charges) as well as licenses.
+- When a change adds or changes a cloud resource, say what it will cost
+  and why it's the cheapest option that works.
+
 ## Keep the specification up to date
 
 After every user request, update the [specs/](specs/) folder in the same

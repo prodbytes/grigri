@@ -113,3 +113,7 @@ spec.
    [scripts/make-icon.py](../scripts/make-icon.py) cleans its stray yellow
    pixels and makes the full and the adaptive-foreground PNGs
    ([platforms](platforms.md)).
+9. **Make cost the most important perspective in design.** CLAUDE.md now
+   says: serverless services with minimal cost; between services or
+   libraries, the least costly one that meets the requirements; and say
+   what a new cloud resource costs.
