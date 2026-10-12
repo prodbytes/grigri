@@ -36,6 +36,13 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.6
   image_picker: ^1.2.4
+  # The user's roles (lib/data/roles.dart); not on pub.dev. Pinned to a
+  # commit: bump the ref to update.
+  rbacr:
+    git:
+      url: https://github.com/prodbytes/rbacr.git
+      path: rbacr-flutter
+      ref: c3cbfd1875208331f5a3df09e3116daa979c1816
 
 dev_dependencies:
   flutter_test:

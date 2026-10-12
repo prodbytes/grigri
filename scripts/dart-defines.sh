@@ -5,13 +5,29 @@
 # Only the names below are passed: anything given to Flutter is compiled
 # into the app (readable in the web bundle), so secrets in .env must never
 # be listed here. Add public identifiers only.
-_allowed=(GRIGRI_STAGE)
+#
+# The one exception is RBACR_TOKEN, the local rbacr's dev token: it is
+# passed only to the dev run scripts (flutter-web.sh and flutter-run.sh set
+# GRIGRI_DEV_RUN=1), when RBACR_URL is a localhost rbacr (the dev server
+# from `devbox services up`) and no deploy stage is set, so no release or
+# deployed build carries it. Those ask rbacr as the signed-in user instead.
+_allowed=(GRIGRI_STAGE RBACR_URL RBACR_TOKEN)
 _env="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env"
 DART_DEFINES=()
+# _setting <name>: its value from the environment, else from .env.
+_setting() {
+  local value="${!1:-}"
+  if [[ -z "$value" && -f "$_env" ]]; then
+    value="$(sed -n "s/^${1}=//p" "$_env" | tail -1)"
+  fi
+  printf '%s' "$value"
+}
 for _name in "${_allowed[@]}"; do
-  _value="${!_name:-}"
-  if [[ -z "$_value" && -f "$_env" ]]; then
-    _value="$(sed -n "s/^${_name}=//p" "$_env" | tail -1)"
+  _value="$(_setting "$_name")"
+  if [[ "$_name" == RBACR_TOKEN ]] && { [[ "${GRIGRI_DEV_RUN:-}" != 1 ]] ||
+    [[ -n "$(_setting GRIGRI_STAGE)" ]] ||
+    ! [[ "$(_setting RBACR_URL)" =~ ^http://(localhost|127\.0\.0\.1)(:[0-9]+)?/?$ ]]; }; then
+    continue
   fi
   [[ -n "$_value" ]] && DART_DEFINES+=(--dart-define="${_name}=${_value}")
 done
@@ -29,3 +45,4 @@ elif [[ -n "$_value" ]]; then
   echo "warning: IOS_DEVELOPMENT_TEAM isn't a 10-character team ID; iOS stays unsigned" >&2
 fi
 unset _allowed _env _name _value _ios
+unset -f _setting

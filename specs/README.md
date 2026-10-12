@@ -25,6 +25,8 @@ Each match opens the plan's group chat.
   match screen and the chat.
 - [Sectors](sectors.md): the searchable index of climbing sectors, crags
   and gyms that a plan's "where" picks from, built from OpenStreetMap.
+- [Roles](roles.md): my roles in Grigri, from rbacr, at the end of the
+  profile.
 - [Theme](theme.md): dark, in mountain colors.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.

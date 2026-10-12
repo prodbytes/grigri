@@ -7,6 +7,7 @@ processes:
       - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-15}
       - INDEX_PORT=${INDEX_PORT:-2113}
       - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-2112}
+      - RBACR_PORT=${RBACR_PORT:-2115}
     # Start logging once every service passes its readiness probe, so the
     # first status line reflects a fully started stack.
     depends_on:
@@ -18,10 +19,42 @@ processes:
       restart: on_failure
       backoff_seconds: 5
 
+  1-rbacr:
+    # rbacr's dev server (prodbytes/rbacr-local), where the app gets the
+    # user's roles: rbacr's README, "Local rbacr for your app". It reads
+    # RBACR_TOKEN from .env (process-compose loads it), the same token the
+    # app sends; without one it generates a token and logs it, to copy into
+    # .env. Roots: dev@rbacr.local. Its own container and volume, so it runs
+    # beside presence's. The web app's origin may call it (CORS).
+    command: >-
+      docker run --rm --name grigri-rbacr
+      -p "127.0.0.1:${RBACR_PORT:-2115}:8686"
+      -e "RBACR_TOKEN=${RBACR_TOKEN:-}"
+      -e "RBACR_CORS_ORIGINS=http://localhost:${FLUTTER_WEB_PORT:-2112}"
+      -v grigri-rbacr-data:/data
+      prodbytes/rbacr-local:latest
+    shutdown:
+      command: docker stop grigri-rbacr
+      timeout_seconds: 30
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        port: ${RBACR_PORT:-2115}
+        path: /health
+      initial_delay_seconds: 2
+      period_seconds: 2
+      failure_threshold: 30
+    availability:
+      restart: on_failure
+      backoff_seconds: 5
+
   2-flutter-web:
     command: bash scripts/flutter-web.sh
     environment:
       - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-2112}
+      # The roles on the profile come from the local rbacr (1-rbacr), with
+      # .env's RBACR_TOKEN (scripts/dart-defines.sh).
+      - RBACR_URL=${RBACR_URL:-http://localhost:${RBACR_PORT:-2115}}
     # Stopping only the script leaves flutter's dart process serving the
     # old build on the port, and the next start then fails to bind it. Stop
     # whatever listens on the port (flutter's wrapper exits with it).

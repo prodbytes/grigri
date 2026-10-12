@@ -9,7 +9,7 @@ Notifications and Profile. The labels fit a 360 dp wide phone.
 | **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message and "N to answer" when join requests wait for my answer. The tab's badge counts those requests. |
 | **Notifications** | Join requests for my plans, and the groups' answers to mine ([matching](matching.md#notifications)). The tab's badge counts the unread ones. |
-| **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; in ⋯, Reset the demo data. The version at the bottom. |
+| **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; in ⋯, Reset the demo data. Then my [roles](roles.md), from rbacr. The version at the bottom. |
 
 - **Plan** (from Plans, a notification, or a chat's title): the plan
   highlighted, my request's status when I'm not in it yet (Pending, N of

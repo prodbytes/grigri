@@ -336,6 +336,15 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  rbacr:
+    dependency: "direct main"
+    description:
+      path: rbacr-flutter
+      ref: c3cbfd1875208331f5a3df09e3116daa979c1816
+      resolved-ref: c3cbfd1875208331f5a3df09e3116daa979c1816
+      url: "https://github.com/prodbytes/rbacr.git"
+    source: git
+    version: "0.1.0"
   shared_preferences:
     dependency: "direct main"
     description:
