@@ -25,7 +25,7 @@ spec.
      identity, the install script site, legal pages, and the Linux /
      Raspberry Pi builds.
    - The app ([grigri_app/](../grigri_app)): the
-     [home screen](home-screen.md), a static screen with the name, a
+     home screen, a static screen with the name, a
      tagline and the version, on [Android, iOS and the web](platforms.md),
      with a widget test.
    - Deploys to https://grigri.nu01.com (GA) and
@@ -42,9 +42,28 @@ spec.
      `AWS_DEPLOY_ROLE_ARN` / `AWS_DEPLOY_RC_ROLE_ARN` variables and the
      `GRIGRI_HEALTH_EMAILS` secret
      ([grigri_infra/README.md](../grigri_infra/README.md)). Google sign-in
-     clients have no API, so they're made in the Google Cloud console; the
-     app doesn't sign in yet.
+     clients have no API, so they're made in the Google Cloud console
+     (project `grigri-511416`); the app doesn't sign in yet.
+   - Google clients so far: GA Android (`com.nu01.grigri`), its ID in
+     `.env` as `GOOGLE_ANDROID_CLIENT_ID_GA` (named in `.env.example`).
+     Still to make: web (both sites' origins and `localhost:2112`), iOS,
+     and RC Android if the RC gets its own package.
 3. **Theme in mountain colors (olive, light brown, sand, gray, other greens
    and a sky blue), harmonious, dark for now.** The app is dark only, with
    an explicit color scheme ([theme](theme.md)) instead of one derived from
    a seed color; every text color passes WCAG AA.
+4. **Begin the app: matchmaking like Tinder or Happn, for sports.** Swipe
+   left / right or the buttons; profiles with climbing details (grades,
+   when, where); plans separate from profiles and highlighted on the match
+   screen; mutual yes makes a match and opens a chat; several people can
+   match the same plan, which becomes a group; a newcomer joins only when
+   every current member accepts.
+   - [Matching](matching.md): the Discover deck of plans (best fits first)
+     and the Requests deck of people; unanimous acceptance, one "no" is
+     enough; matches; one group chat per plan.
+   - [Screens](screens.md): Discover, Requests, Plans, Chats and Profile;
+     the plan and profile editors; the match screen. The static home
+     screen is gone.
+   - No backend yet: the rules run on the device, the state is saved
+     with shared_preferences, and demo data with made-up climbers (who
+     answer by fixed policies) starts it.

@@ -42,8 +42,8 @@ The version is `X.Y.Z`: X and Y from [version.X.txt](../version.X.txt) and
 CFBundleVersion) is the same time in Unix seconds. `scripts/version.sh`
 works these out; `VERSION_Z` and `BUILD_NUMBER` override them. A tag that
 carries `X.Y.Z` keeps its Z for the build, and fails if its X.Y doesn't
-match the version files. The app shows the version on the
-[home screen](home-screen.md).
+match the version files. The app shows the version at the bottom of
+Profile ([screens](screens.md)).
 
 ## Cutting a release
 

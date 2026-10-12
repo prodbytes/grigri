@@ -1,56 +1,31 @@
 import 'package:flutter/material.dart';
 
 import 'app_version.dart';
+import 'data/grigri_store.dart';
 import 'theme.dart';
+import 'ui/common.dart';
+import 'ui/home_shell.dart';
 
-void main() {
-  runApp(const GrigriApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(GrigriApp(store: await GrigriStore.load()));
 }
 
 class GrigriApp extends StatelessWidget {
-  const GrigriApp({super.key});
+  const GrigriApp({super.key, required this.store});
+
+  final GrigriStore store;
 
   @override
   Widget build(BuildContext context) {
     // Dark only, for now: the mountain palette (theme.dart).
-    return MaterialApp(
-      title: AppVersion.title,
-      debugShowCheckedModeBanner: false,
-      theme: mountainTheme(),
-      home: const HomeScreen(),
-    );
-  }
-}
-
-/// The only screen for now: the app's name and what it's for, with the
-/// version underneath.
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(AppVersion.title, style: text.displayMedium),
-              const SizedBox(height: 8),
-              Text(
-                'Find a partner to climb with',
-                style: text.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              if (AppVersion.version.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Text(AppVersion.version, style: text.bodySmall),
-              ],
-            ],
-          ),
-        ),
+    return StoreScope(
+      store: store,
+      child: MaterialApp(
+        title: AppVersion.title,
+        debugShowCheckedModeBanner: false,
+        theme: mountainTheme(),
+        home: const HomeShell(),
       ),
     );
   }

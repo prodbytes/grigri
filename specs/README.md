@@ -7,16 +7,21 @@ it.
 
 ## Product
 
-Grigri is a matchmaking app for sports, climbing first: it will help people
-find partners to climb (and train) with. For now it is a single static
-screen, deployed with the full release pipeline so features can ship as
-they're built.
+Grigri is a matchmaking app for sports, climbing first, like Tinder or
+Happn: swipe right or left. People match on **plans** (an outing: what,
+where, when, which grades), which are separate from their profiles, and
+a plan's group grows one newcomer at a time, when every member says yes.
+Each match opens the plan's group chat.
 
 ## Features
 
 **App**
 
-- [Home screen](home-screen.md): the app's name, tagline and version.
+- [Matching](matching.md): profiles and plans, the Discover and Requests
+  decks, the group's unanimous yes, matches and group chats; the demo data
+  and on-device storage, for now.
+- [Screens](screens.md): the five tabs, the plan and profile editors, the
+  match screen and the chat.
 - [Theme](theme.md): dark, in mountain colors.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.
