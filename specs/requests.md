@@ -275,11 +275,77 @@ spec.
     - `prodbytes/rbacr-local` republished (amd64 and arm64,
       `0.1.202610121814` and `latest`) from rbacr's main, so the local
       rbacr answers the web app's CORS preflights.
-20. **On the Discover view, rank the suggestions by how much they match my
+    - Also merged: the API's long sessions and pending-photo cleanup
+      (#21, from `local-https`) with the app's side (#19) and Discover's
+      ranking by match and distance (#20).
+20. **Make sign-in last as long as possible: the API's own sessions (365
+    days without use, sliding); clean up photos never saved to a
+    profile.** (Asked as "make sign out longer, max time": Google ID tokens
+    last an hour and can't be refreshed quietly on the web, so people were
+    signed out hourly.)
+    - Sessions ([API](api.md#sessions), [backend](backend.md)):
+      `POST /api/session` trades a Google ID token, now verified by the
+      function (jose, Google's keys cached; issuer, audience, expiry), for
+      an opaque session token stored only as its SHA-256 hash. Every other
+      route but `GET /api/health` takes it as a bearer token (401
+      `signed out` otherwise). It slides (at most one write per session per
+      day) and expires after 365 days without use (DynamoDB TTL, checked by
+      the function too); no absolute limit. `DELETE /api/session` signs
+      out, `DELETE /api/sessions` everywhere (a new keys-only index, gsi3,
+      by subject). Admin is decided per request from the session's
+      verified email and the current list. The HTTP API's JWT authorizer
+      is gone. Dev mode (local only) keeps `X-Grigri-Dev-User` and also
+      takes `{"devUser"}` at `POST /api/session`.
+    - Photos: presigned uploads are tagged `grigri-pending=true`, a
+      lifecycle rule on the photos bucket expires pending photos after a
+      day, and saving a profile clears the tag of its new photos (400 if
+      one isn't uploaded) and deletes the ones it drops. The function may
+      now tag, untag and delete under `photos/` (still no reads); the
+      permissions boundary allows the same, and the deploy roles may turn
+      on TTL. Administrators redeploy `github-deploy.yaml` before the next
+      API deploy.
+    - Cost ([backend](backend.md#cost)): one DynamoDB read per request
+      (about $0.06 per million), a write per active session per day, and
+      one S3 request per new photo saved; nothing while idle.
+    - Local ([Floci](../grigri_floci/README.md)): the same; Floci ignores
+      the upload's tag field and skips the template's TTL setting (the
+      ready hook turns TTL on itself).
+    - The app (on the web people were signed out after about an hour, when
+      the Google ID token it sent on every call expired): after Google
+      sign-in it calls `POST /api/session` once with the ID token and
+      sends the API's session token as the bearer on every call; Google
+      isn't asked again until a 401 or a sign-out. A kept session starts
+      the app signed in, straight to `GET /api/me`. Sessions last until
+      sign-out or 365 days without use ([sign-in](sign-in.md)).
+    - The token is kept in secure storage on Android and iOS
+      (flutter_secure_storage: Keystore, Keychain this-device-only) and in
+      local storage on the web (guarded by the site's CSP).
+    - A 401 forgets the token and goes back to the sign-in screen; the
+      quiet Google refresh on 401 is gone. Sign out calls
+      `DELETE /api/session`; Profile's ⋯ adds **Sign out everywhere**
+      (`DELETE /api/sessions`, after a confirmation;
+      [screens](screens.md)).
+    - The local dev sign-in starts a session with `{"devUser"}` too,
+      instead of sending `X-Grigri-Dev-User` on every call.
+21. **On the Discover view, rank the suggestions by how much they match my
+    profile and how close they are to me; let people set their location on
+    their profile and add other locations of interest.** This entry is the
+    backend's half; the app's is on the app's branch.
+    - [API](api.md): a profile takes a `location` and up to 5 `areas`
+      (named points), rounded to about 1 km and **private**: only my own
+      profile carries them, never anyone else's `climbers`. Plans take
+      their place's point (`lat`, `lon`), from the sector index.
+    - The deck is ranked by [fit + nearness](api.md#the-decks-ranking):
+      how well its grades suit mine (0–1) plus how close it is to my
+      nearest location or area (0–1, e^(−km/50)), then soonest; it
+      returns each plan's distance in km. The old "fits first" rule is
+      gone.
+    - The seed's plans carry their places' approximate points.
+    - Cost: none; it's computed in the same request, over the same reads.
+22. **On the Discover view, rank the suggestions by how much they match my
     profile and how close they are to me; let people set their location on
     their profile and add other locations of interest.** The app's half;
-    the backend's is in [api.md](api.md#the-decks-ranking) (PR #20 on
-    main).
+    the backend's is entry 21.
     - [Matching](matching.md): a profile has a private **location** and up
       to 5 **areas**, picked from the sector index; the deck is ranked by
       grade fit plus nearness to the nearest of them (the server's score),

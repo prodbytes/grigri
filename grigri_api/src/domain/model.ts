@@ -44,7 +44,20 @@ export function overlaps(a: GradeRange, b: GradeRange): boolean {
   return a.scale === b.scale && a.min <= b.max && b.min <= a.max;
 }
 
-/** A climber's public profile. */
+/** A point on the map with a name to show, e.g. a crag, a gym or a town. */
+export interface Location {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+/** The most areas of interest a profile keeps, besides its location. */
+export const MAX_AREAS = 5;
+
+/**
+ * A climber's profile. `location` and `areas` are private: only the
+ * climber's own profile (GET/PUT /api/me) carries them; see publicClimber.
+ */
 export interface Climber {
   id: string;
   name: string;
@@ -54,6 +67,18 @@ export interface Climber {
   levels: Partial<Record<Discipline, GradeRange>>;
   gear: Gear[];
   gearPhotos: string[];
+  /** Where I am (rounded to ~1 km). Private. */
+  location?: Location;
+  /** Other places I'd climb near (rounded to ~1 km). Private. */
+  areas?: Location[];
+}
+
+/** A profile as other people see it: without where its climber is. */
+export type PublicClimber = Omit<Climber, 'location' | 'areas'>;
+
+export function publicClimber(c: Climber): PublicClimber {
+  const { location: _location, areas: _areas, ...rest } = c;
+  return rest;
 }
 
 /**
@@ -70,6 +95,9 @@ export interface Plan {
   area: string;
   /** The app's sector-index id (e.g. "osm:n123456"); absent when typed by hand. */
   sectorId?: string;
+  /** Where the place is on the map, from the sector index; absent when typed by hand. */
+  lat?: number;
+  lon?: number;
   /** ISO 8601 UTC. */
   start: string;
   /** ISO 8601 UTC, after start and at most 24 hours later. */

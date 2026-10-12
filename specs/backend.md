@@ -13,7 +13,7 @@ has no built-in demo data. The routes and JSON shapes are in
 | Site | https://grigri.nu01.com | https://rc.grigri.nu01.com | https://local.grigri.nu01.com:2543 |
 | API stack | `grigri-api` | `grigri-rc-api` | `grigri-local-api`, in Floci |
 | Data | **Starts empty: only real people's data.** Never seeded | Made-up test data, re-seeded after each RC deploy, beside testers' real data | Made-up test data, seeded on every Floci start (Floci keeps nothing) |
-| Sign-in | Google ID tokens (`GOOGLE_WEB_CLIENT_ID`) | Same | Google ID tokens when `.env` has `GOOGLE_WEB_CLIENT_ID`; otherwise **dev mode** |
+| Sign-in | A Google ID token (`GOOGLE_WEB_CLIENT_ID`) for the API's own session | Same | Same when `.env` has `GOOGLE_WEB_CLIENT_ID`; otherwise **dev mode** |
 | Admins | `GRIGRI_ADMIN_EMAILS` (repository secret) | Same | `GRIGRI_ADMIN_EMAILS` in `.env` |
 | Backups | Point-in-time recovery (35 days), deletion protection | None | None |
 
@@ -25,12 +25,9 @@ who are members, or by an admin.
 ## Architecture
 
 - **One Lambda** (TypeScript, Node.js 22, arm64, 256 MB, 10 s timeout) with
-  an internal router, behind **one HTTP API**. The HTTP API's JWT
-  authorizer checks the Google ID token (issuer
-  `https://accounts.google.com`, audience the web client ID) on every
-  route but `GET /api/health`, before the function runs; the function
-  reads the verified claims. Throttled at 50 requests/s (bursts of 100),
-  which caps the bill if someone floods it.
+  an internal router, behind **one HTTP API** (no authorizer). Throttled
+  at 50 requests/s (bursts of 100), which caps the bill if someone floods
+  it.
 - The site's **CloudFront** distribution serves the API under `/api/*`
   (no caching, every viewer header but `Host`, all methods) and photos
   under `/photos/*`, so the web app calls its own origin: no CORS for the
@@ -43,21 +40,42 @@ who are members, or by an admin.
   access control. Keys are random and never reused, so photos are cached
   at the edge and in browsers for a year. The bucket allows POST uploads
   from the stage's site origin (CORS); the web app's CSP allows the
-  bucket's URL in `connect-src`. Nothing expires; only failed multipart
-  uploads are cleaned up.
-- **Identity**: a Google account (`<iss>#<sub>`) is linked to one climber
-  id (random, made by the server at the first profile save). Emails are
-  only used for the admin check and are never stored or returned.
-- **Admin**: a signed-in caller whose verified email is in the stage's
-  admin list. Admins see every open request (`GET /api/admin/requests`)
+  bucket's URL in `connect-src`. Uploads arrive tagged
+  `grigri-pending=true` (a field of the presigned POST); saving a profile
+  clears the tag of its new photos and deletes the photos it no longer
+  uses, and a lifecycle rule expires pending photos after a day, so photos
+  never saved to a profile go away. Saved photos stay until replaced;
+  failed multipart uploads are cleaned up too.
+- **Auth: the API's own sessions** ([api.md](api.md#sessions)). Sign-in
+  sends a Google ID token once to `POST /api/session`; the function
+  verifies it (with [jose](https://github.com/panva/jose): RS256 against
+  Google's keys, cached while the function stays warm; issuer, audience
+  the web client ID, expiry) and returns an opaque session token (32
+  random bytes), stored only as its SHA-256 hash. Every other route but
+  `GET /api/health` sends it as a bearer token, and the function reads
+  the session (one DynamoDB read) before routing; a missing, unknown or
+  expired one is 401 `signed out`. A session slides: used more than a day
+  after its last use, it moves forward (at most one write a day), and it
+  expires after **365 days without use** (DynamoDB's TTL deletes it). No
+  absolute limit: people stay signed in until they sign out
+  (`DELETE /api/session`, or `DELETE /api/sessions` everywhere). Google ID
+  tokens last an hour and can't be refreshed quietly on the web, which
+  had signed people out hourly.
+- **Identity**: a Google account (`https://accounts.google.com#<sub>`) is
+  linked to one climber id (random, made by the server at the first
+  profile save). Emails are only used for the admin check: kept on the
+  session (only when verified), never on a profile, never returned.
+- **Admin**: a signed-in caller whose session's verified email is in the
+  stage's current admin list, checked on every request (so removing
+  someone from the list takes effect at once). Admins see every open request (`GET /api/admin/requests`)
   and accept (they join at once, as if every member had said yes) or
   reject any.
-- **Dev mode** (local only): without a Google client, the local API has
-  no authorizer and the caller names themselves in an
-  `X-Grigri-Dev-User: <email>` header. The template refuses `DevMode`
-  unless `Stage` is `local` (a CloudFormation Rule), and the function
-  ignores the header unless its stage is `local`, so neither RC nor GA can
-  run it.
+- **Dev mode** (local only): without a Google client, the caller names
+  themselves in an `X-Grigri-Dev-User: <email>` header, or gets a session
+  from `POST /api/session` with `{"devUser": "<email>"}`. The template
+  refuses `DevMode` unless `Stage` is `local` (a CloudFormation Rule), and
+  the function ignores the header and refuses `devUser` unless its stage
+  is `local`, so neither RC nor GA can run it.
 
 ## The seed
 
@@ -87,10 +105,11 @@ and use is billed per request. Prices are us-east-1's.
 
 | Resource | Price | Idle | Why this one |
 |---|---|---|---|
-| DynamoDB, on demand | $0.625 per million writes, $0.125 per million reads, $0.25/GB-month (the first 25 GB free); point-in-time recovery $0.20/GB-month, prod only | $0 (a few cents of storage at most) | Pay per request with no minimum. **Aurora Serverless v2** costs about **$43/month** at its 0.5 ACU minimum (auto-pause to 0 ACU exists, but resuming takes seconds and storage and I/O still bill); **RDS** bills every hour (a db.t4g.micro is about $12/month plus storage) whether used or not. The access patterns (by plan, by climber, upcoming plans, open requests) fit key lookups, so a relational database buys nothing here. |
-| HTTP API | $1.00 per million requests | $0 | REST APIs cost $3.50 per million; HTTP APIs have the JWT authorizer built in, so token checks need no Lambda authorizer (and rejected tokens never invoke the function). |
+| DynamoDB, on demand | $0.625 per million writes, $0.125 per million reads, $0.25/GB-month (the first 25 GB free); point-in-time recovery $0.20/GB-month, prod only; TTL deletes free | $0 (a few cents of storage at most) | Pay per request with no minimum. **Aurora Serverless v2** costs about **$43/month** at its 0.5 ACU minimum (auto-pause to 0 ACU exists, but resuming takes seconds and storage and I/O still bill); **RDS** bills every hour (a db.t4g.micro is about $12/month plus storage) whether used or not. The access patterns (by plan, by climber, upcoming plans, open requests) fit key lookups, so a relational database buys nothing here. |
+| HTTP API | $1.00 per million requests | $0 | REST APIs cost $3.50 per million. No authorizer: the function checks sessions itself. |
+| Sessions (in the table) | One eventually consistent read per request (about $0.06 per million requests), one write per session per day of use, a write to sign in or out; the subject index is keys-only, so the daily slide doesn't write to it | $0 | An HTTP API JWT authorizer would be free per request, but it can only check Google's one-hour tokens. A Lambda authorizer would add a second invocation per request; Cognito would add a service and its own pricing beyond its free tier. |
 | One Lambda, arm64, 256 MB | $0.20 per million requests + $0.0000133 per GB-second (1 million requests and 400,000 GB-seconds a month free) | $0 | One function with an internal router: one cold start to warm, one log group, one role. arm64 is 20% cheaper than x86. 256 MB keeps a ~50 ms request at well under a cent per thousand. |
-| S3 photos bucket | $0.023/GB-month, $0.005 per 1,000 uploads | $0 when empty | Photos stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has, cached for a year. |
+| S3 photos bucket | $0.023/GB-month, $0.005 per 1,000 uploads (and per 1,000 tag clears, one per new photo saved); deletes and lifecycle expirations free | $0 when empty | Photos stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has, cached for a year. Unsaved uploads expire after a day, so they don't pile up. |
 | CloudWatch Logs | $0.50/GB ingested; 14 days kept | $0 | The function logs only errors (plus Lambda's own lines per request), and the retention keeps storage near zero. |
 | Artifact bucket (per stage) | S3 storage of each deploy's ~200 KB zip, expired after 30 days | ~$0 | Where `aws cloudformation package` uploads the code. |
 

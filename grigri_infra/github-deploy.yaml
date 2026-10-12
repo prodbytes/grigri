@@ -106,11 +106,17 @@ Resources:
                 Resource:
                   - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Prefix}-*
                   - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Prefix}-*/index/*
-              # Photo uploads (presigned POSTs), only under photos/ of the
-              # stage's photos bucket (site.yaml: <prefix>-web-photos-<account>).
-              - Sid: PhotoUploads
+              # Photos, only under photos/ of the stage's photos bucket
+              # (site.yaml: <prefix>-web-photos-<account>): uploads (presigned
+              # POSTs, tagged pending), clearing that tag when a profile saves
+              # them, and deleting the ones a profile drops. Never reads.
+              - Sid: Photos
                 Effect: Allow
-                Action: s3:PutObject
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:DeleteObjectTagging
+                  - s3:DeleteObject
                 Resource: !Sub arn:${AWS::Partition}:s3:::${Prefix}-web-photos-*/photos/*
 
       # Where scripts/deploy.sh uploads the API's code (aws cloudformation
@@ -217,6 +223,7 @@ Resources:
                   - dynamodb:DescribeContinuousBackups
                   - dynamodb:UpdateContinuousBackups
                   - dynamodb:DescribeTimeToLive
+                  - dynamodb:UpdateTimeToLive
                   - dynamodb:DescribeContributorInsights
                   - dynamodb:DescribeKinesisStreamingDestination
                   - dynamodb:GetResourcePolicy

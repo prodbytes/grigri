@@ -103,14 +103,24 @@ Resources:
             AllowedMethods: [POST]
             AllowedHeaders: ['*']
             MaxAge: 3000
-      # Nothing expires: a photo stays until its owner replaces it. Only
-      # failed multipart uploads are cleaned up.
+      # Uploads arrive tagged grigri-pending=true (the API's presigned
+      # POSTs); saving a profile clears the tag of its photos, and deletes
+      # the ones it drops. Photos never saved to a profile expire after a
+      # day. Saved photos stay until their owner replaces them. Failed
+      # multipart uploads are cleaned up too.
       LifecycleConfiguration:
         Rules:
           - Id: abort-incomplete-uploads
             Status: Enabled
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 1
+          - Id: expire-pending-photos
+            Status: Enabled
+            Prefix: photos/
+            TagFilters:
+              - Key: grigri-pending
+                Value: 'true'
+            ExpirationInDays: 1
       Tags:
         - Key: grigri:stage
           Value: !Ref Stage
@@ -368,7 +378,7 @@ Resources:
               - EventType: viewer-request
                 FunctionARN: !GetAtt AppIndexFunction.FunctionMetadata.FunctionARN
           # The API: nothing cached; every viewer header but Host is
-          # forwarded, Authorization (the Google ID token) included; all
+          # forwarded, Authorization (the session token) included; all
           # methods.
           - PathPattern: /api/*
             TargetOriginId: api

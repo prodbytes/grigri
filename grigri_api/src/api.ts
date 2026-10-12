@@ -1,14 +1,17 @@
 // The routes (specs/api.md): authorization, then the domain rules, then the
-// store. Every route but GET /api/health needs a caller; most also need
-// the caller's profile (409 "no profile" until PUT /api/me).
+// store. Every route but GET /api/health and POST /api/session needs a
+// caller (handler.ts finds it from the session token); most also need the
+// caller's profile (409 "no profile" until PUT /api/me).
 import { randomBytes } from 'node:crypto';
-import { type Caller, subjectHash } from './auth.js';
+import { type Auth, type Caller, subjectHash } from './auth.js';
 import { ApiError, badRequest, conflict, forbidden, notFound } from './domain/errors.js';
 import {
   type Climber,
   type JoinRequest,
   type Plan,
+  type PublicClimber,
   isOpen,
+  publicClimber,
   requestJson,
 } from './domain/model.js';
 import * as rules from './domain/rules.js';
@@ -20,8 +23,15 @@ import { Conflict, type LoadedPlan, type Store } from './store/store.js';
 export const MAX_OPEN_REQUESTS = 30;
 
 export interface Photos {
-  /** A presigned POST for `key` (S3 object photos/<key>). */
+  /**
+   * A presigned POST for `key` (S3 object photos/<key>). The object is
+   * tagged pending: the bucket expires it after a day unless kept.
+   */
   presign(key: string, contentType: string): Promise<{ url: string; fields: Record<string, string> }>;
+  /** Clears the pending tag of photos a profile now uses; false for one that isn't there. */
+  keep(key: string): Promise<boolean>;
+  /** Deletes photos a profile no longer uses. */
+  remove(keys: string[]): Promise<void>;
 }
 
 export interface Config {
@@ -32,6 +42,7 @@ export interface Config {
 export interface Deps {
   store: Store;
   photos: Photos;
+  auth: Pick<Auth, 'signIn' | 'signOut' | 'signOutEverywhere'>;
   config: Config;
   clock?: () => Date;
 }
@@ -43,7 +54,8 @@ export interface Request {
   body: unknown;
 }
 
-type Access = 'public' | 'caller' | 'profile' | 'admin';
+/** public: anyone; session: a caller, nothing loaded; caller: plus their profile if any; profile: must have one; admin: and be one. */
+export type Access = 'public' | 'session' | 'caller' | 'profile' | 'admin';
 
 interface Session {
   caller: Caller;
@@ -60,6 +72,10 @@ type Handler = (req: Request, s: Session) => Promise<unknown>;
 interface Route {
   access: Access;
   handler: Handler;
+}
+
+function photosOf(c: Pick<Climber, 'photo' | 'gearPhotos'>): string[] {
+  return [...(c.photo ? [c.photo] : []), ...c.gearPhotos];
 }
 
 /** A URL-safe random id (16 characters, 96 bits). */
@@ -86,6 +102,16 @@ export class Api {
     const r = (pattern: string, access: Access, handler: Handler) => this.router.add(pattern, { access, handler });
 
     r('GET /api/health', 'public', async () => ({ ok: true, stage: deps.config.stage, version: deps.config.version }));
+
+    r('POST /api/session', 'public', (req) => deps.auth.signIn(req.body));
+    r('DELETE /api/session', 'session', async (_req, s) => {
+      await deps.auth.signOut(s.caller);
+      return {};
+    });
+    r('DELETE /api/sessions', 'session', async (_req, s) => {
+      await deps.auth.signOutEverywhere(s.caller);
+      return {};
+    });
 
     r('GET /api/me', 'caller', async (_req, s) => ({ climber: s.me ?? null, admin: s.caller.admin }));
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
@@ -118,13 +144,23 @@ export class Api {
     r('POST /api/admin/requests/{planId}/{climberId}/reject', 'admin', (req, s) => this.answer(req, s, 'reject', true));
   }
 
+  /** Who may call a route (404 for no such route). */
+  access(method: string, path: string): Access {
+    return this.router.match(method, path).handler.access;
+  }
+
   /** Runs a request: the route's access rule, then its handler. */
   async handle(method: string, path: string, req: Omit<Request, 'params'>): Promise<unknown> {
     const { handler: route, params } = this.router.match(method, path);
     const full: Request = { ...req, params };
     if (route.access === 'public') return route.handler(full, undefined as never);
-    if (!req.caller) throw new ApiError(401, 'sign in first');
+    if (!req.caller) throw new ApiError(401, 'signed out');
     const now = this.clock();
+    if (route.access === 'session') {
+      const names = new Map<string, string>();
+      const ctx = { now, newId: messageIds(), name: () => 'Someone' };
+      return route.handler(full, { caller: req.caller, me: undefined as never, now, ctx, names });
+    }
     const climberId = await this.store.climberIdFor(req.caller.subject);
     const me = climberId ? await this.store.getClimber(climberId) : undefined;
     if (!me && route.access !== 'caller') throw conflict('no profile');
@@ -147,24 +183,41 @@ export class Api {
   private async saveProfile(req: Request, s: Session) {
     const owners = [subjectHash(s.caller.subject), ...(s.me ? [s.me.id] : [])];
     const input = profileInput(req.body, owners);
+    // Photos: new ones lose their pending tag before the profile points at
+    // them (else the bucket would expire them); ones it no longer uses are
+    // deleted after it's saved.
+    const before = new Set(s.me ? photosOf(s.me) : []);
+    const after = new Set(photosOf(input));
+    for (const key of after) {
+      if (before.has(key)) continue;
+      if (!(await this.deps.photos.keep(key))) throw badRequest(`photo ${key} isn't uploaded (or expired): upload it again`);
+    }
+    // Only ever my own folder's (defense in depth: saved keys were checked).
+    const unused = [...before].filter((key) => !after.has(key) && owners.includes(key.split('/')[0]!));
+    let saved: Climber;
     if (s.me) {
-      const climber: Climber = { id: s.me.id, ...input };
-      await this.store.saveProfile(climber, s.caller.subject, s.now);
-      return { climber };
+      saved = { id: s.me.id, ...input };
+      await this.store.saveProfile(saved, s.caller.subject, s.now);
+    } else {
+      saved = { id: newId(), ...input };
+      try {
+        await this.store.createProfile(s.caller.subject, saved, s.now);
+      } catch (e) {
+        if (!(e instanceof Conflict)) throw e;
+        // Created meanwhile (two first saves at once): update that one.
+        const existing = await this.store.climberIdFor(s.caller.subject);
+        if (!existing) throw e;
+        saved = { ...saved, id: existing };
+        await this.store.saveProfile(saved, s.caller.subject, s.now);
+      }
     }
-    const climber: Climber = { id: newId(), ...input };
-    try {
-      await this.store.createProfile(s.caller.subject, climber, s.now);
-    } catch (e) {
-      if (!(e instanceof Conflict)) throw e;
-      // Created meanwhile (two first saves at once): update that one.
-      const existing = await this.store.climberIdFor(s.caller.subject);
-      if (!existing) throw e;
-      const updated = { ...climber, id: existing };
-      await this.store.saveProfile(updated, s.caller.subject, s.now);
-      return { climber: updated };
+    if (unused.length > 0) {
+      // Best effort: a leftover only costs storage.
+      await this.deps.photos.remove(unused).catch((e: unknown) => {
+        console.error(JSON.stringify({ level: 'warn', msg: 'photo cleanup failed', error: String(e) }));
+      });
     }
-    return { climber };
+    return { climber: saved };
   }
 
   private async presignPhoto(req: Request, s: Session) {
@@ -185,8 +238,8 @@ export class Api {
       this.store.passedPlanIds(s.me.id),
       this.store.askedRequests(s.me.id),
     ]);
-    const plans = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
-    return { plans, climbers: await this.climbersOf(plans) };
+    const deck = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
+    return { plans: deck.plans, distanceKm: deck.distanceKm, climbers: await this.climbersOf(deck.plans) };
   }
 
   private async createPlan(req: Request, s: Session) {
@@ -346,7 +399,7 @@ export class Api {
   private async notices(s: Session) {
     const notices = await this.store.notices(s.me.id);
     const ids = notices.flatMap((n) => (n.climberId ? [n.climberId] : []));
-    return { notices, climbers: await this.store.getClimbers(ids) };
+    return { notices, climbers: await this.publicClimbers(ids) };
   }
 
   private async messages(req: Request, s: Session) {
@@ -361,7 +414,7 @@ export class Api {
       if (m.authorId) ids.add(m.authorId);
       if (m.requestId) ids.add(m.requestId.split('/')[1]!);
     }
-    return { messages, climbers: await this.store.getClimbers(ids) };
+    return { messages, climbers: await this.publicClimbers(ids) };
   }
 
   private async send(req: Request, s: Session) {
@@ -392,7 +445,7 @@ export class Api {
   }
 
   /** Every climber the plans and requests mention. */
-  private climbersOf(plans: Plan[], requests: JoinRequest[] = []): Promise<Record<string, Climber>> {
+  private climbersOf(plans: Plan[], requests: JoinRequest[] = []): Promise<Record<string, PublicClimber>> {
     const ids = new Set<string>();
     for (const p of plans) {
       ids.add(p.organizerId);
@@ -402,7 +455,13 @@ export class Api {
       ids.add(r.climberId);
       for (const a of r.acceptedBy) ids.add(a);
     }
-    return this.store.getClimbers(ids);
+    return this.publicClimbers(ids);
+  }
+
+  /** Other people's profiles, without where they are (location and areas are only mine to see). */
+  private async publicClimbers(ids: Iterable<string>): Promise<Record<string, PublicClimber>> {
+    const climbers = await this.store.getClimbers(ids);
+    return Object.fromEntries(Object.entries(climbers).map(([cid, c]) => [cid, publicClimber(c)]));
   }
 
   /** Runs a read-decide-write step again when a conditional write lost a race. */

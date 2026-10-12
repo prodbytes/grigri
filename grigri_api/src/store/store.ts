@@ -5,6 +5,7 @@
 import {
   BatchGetCommand,
   BatchWriteCommand,
+  DeleteCommand,
   type DynamoDBDocumentClient,
   GetCommand,
   PutCommand,
@@ -14,8 +15,9 @@ import {
   type TransactWriteCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Delivery, Effects } from '../domain/rules.js';
-import { type Climber, type JoinRequest, type Message, type Notice, type Plan, isOpen } from '../domain/model.js';
+import { type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, isOpen } from '../domain/model.js';
 import { index, key, prefix } from './keys.js';
 
 type Item = Record<string, unknown>;
@@ -33,11 +35,81 @@ export interface LoadedPlan extends VersionedPlan {
   requests: JoinRequest[];
 }
 
-export class Store {
+export class Store implements SessionStore {
   constructor(
     readonly doc: DynamoDBDocumentClient,
     readonly table: string,
   ) {}
+
+  // --- Sessions (src/auth.ts) -----------------------------------------------
+
+  async putSession(s: SessionRecord): Promise<void> {
+    await this.doc.send(new PutCommand({
+      TableName: this.table,
+      Item: {
+        ...key.session(s.id),
+        type: 'session',
+        subject: s.subject,
+        ...(s.email ? { email: s.email } : {}),
+        emailVerified: s.emailVerified,
+        createdAt: s.createdAt,
+        lastUsedAt: s.lastUsedAt,
+        // The table's TTL attribute: DynamoDB deletes the item after it.
+        ttl: s.ttl,
+        // Keys-only index: sliding lastUsedAt and ttl never writes to it.
+        gsi3pk: index.sessions.pk(s.subject),
+        gsi3sk: s.createdAt,
+      },
+      ConditionExpression: 'attribute_not_exists(pk)',
+    }));
+  }
+
+  async getSession(id: string): Promise<SessionRecord | undefined> {
+    const get = (consistent: boolean) =>
+      this.doc.send(new GetCommand({ TableName: this.table, Key: key.session(id), ConsistentRead: consistent }));
+    // Eventually consistent reads cost half; a session created a moment
+    // ago may not show yet, so a miss is read again, consistently.
+    const Item = (await get(false)).Item ?? (await get(true)).Item;
+    if (!Item) return undefined;
+    return {
+      id,
+      subject: Item.subject as string,
+      ...(typeof Item.email === 'string' ? { email: Item.email } : {}),
+      emailVerified: Item.emailVerified === true,
+      createdAt: Item.createdAt as string,
+      lastUsedAt: Item.lastUsedAt as string,
+      ttl: Item.ttl as number,
+    };
+  }
+
+  async touchSession(id: string, previous: string, lastUsedAt: string, ttl: number): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.session(id),
+        UpdateExpression: 'SET lastUsedAt = :now, #ttl = :ttl',
+        // Not if it was revoked meanwhile, or another request moved it.
+        ConditionExpression: 'attribute_exists(pk) AND lastUsedAt = :previous',
+        ExpressionAttributeNames: { '#ttl': 'ttl' },
+        ExpressionAttributeValues: { ':now': lastUsedAt, ':ttl': ttl, ':previous': previous },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.session(id) }));
+  }
+
+  async deleteSessions(subject: string): Promise<void> {
+    const items = await this.query({
+      IndexName: index.sessions.name,
+      KeyConditionExpression: 'gsi3pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.sessions.pk(subject) },
+    });
+    await this.batchWrite(items.map((i) => ({ DeleteRequest: { Key: { pk: i.pk, sk: i.sk } } })));
+  }
 
   // --- Identity and profiles ----------------------------------------------
 
@@ -408,6 +480,8 @@ export function climberItem(c: Climber, subject: string | undefined, now: Date):
     levels: c.levels,
     gear: c.gear,
     gearPhotos: c.gearPhotos,
+    ...(c.location ? { location: c.location } : {}),
+    areas: c.areas ?? [],
     // Who signs in as this climber (never returned); none for the seed's.
     ...(subject ? { subject } : {}),
     updatedAt: now.toISOString(),
@@ -424,6 +498,8 @@ export function toClimber(i: Item): Climber {
     levels: (i.levels as Climber['levels']) ?? {},
     gear: (i.gear as Climber['gear']) ?? [],
     gearPhotos: (i.gearPhotos as string[]) ?? [],
+    ...(i.location ? { location: i.location as Location } : {}),
+    areas: (i.areas as Location[]) ?? [],
   };
 }
 
@@ -440,6 +516,7 @@ export function planItem(p: Plan, version: number): Item {
     place: p.place,
     area: p.area,
     ...(p.sectorId ? { sectorId: p.sectorId } : {}),
+    ...(p.lat !== undefined && p.lon !== undefined ? { lat: p.lat, lon: p.lon } : {}),
     start: p.start,
     end: p.end,
     grades: p.grades,
@@ -456,6 +533,7 @@ export function toPlan(i: Item): Plan {
     place: i.place as string,
     area: (i.area as string) ?? '',
     ...(i.sectorId ? { sectorId: i.sectorId as string } : {}),
+    ...(typeof i.lat === 'number' && typeof i.lon === 'number' ? { lat: i.lat, lon: i.lon } : {}),
     start: i.start as string,
     end: i.end as string,
     grades: i.grades as Plan['grades'],

@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Api } from '../src/api.js';
-import { type Caller, subjectHash } from '../src/auth.js';
+import { Auth, type Caller, parseAdminEmails, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { FakeStore } from './fake-store.js';
 
 let now = new Date('2030-05-01T10:00:00.000Z');
 let store: FakeStore;
 let api: Api;
+let auth: Auth;
+/** S3 as the fake photos see it: key -> pending tag. */
+let objects: Map<string, boolean>;
+let removed: string[];
 
 const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
 const ada = who('ada');
@@ -39,8 +43,27 @@ const planBody = {
 beforeEach(async () => {
   now = new Date('2030-05-01T10:00:00.000Z');
   store = new FakeStore();
-  const photos = { presign: async (key: string) => ({ url: 'https://upload.example.com/', fields: { key: `photos/${key}` } }) };
-  api = new Api({ store: store.asStore(), photos, config: { stage: 'local', version: '0.1.2' }, clock: () => now });
+  objects = new Map();
+  removed = [];
+  const photos = {
+    presign: async (key: string) => ({ url: 'https://upload.example.com/', fields: { key: `photos/${key}` } }),
+    keep: async (key: string) => {
+      if (!objects.has(key)) return false;
+      objects.set(key, false);
+      return true;
+    },
+    remove: async (keys: string[]) => {
+      removed.push(...keys);
+      for (const k of keys) objects.delete(k);
+    },
+  };
+  auth = new Auth({
+    store: store.asStore(),
+    verify: async () => ({ subject: 'https://accounts.google.com#42', email: 'ada@example.com', emailVerified: true }),
+    config: { devMode: false, adminEmails: parseAdminEmails('root@example.com') },
+    clock: () => now,
+  });
+  api = new Api({ store: store.asStore(), photos, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now });
 });
 
 describe('access', () => {
@@ -75,10 +98,36 @@ describe('profile', () => {
     const { climber } = await call(ada, 'PUT', '/api/me', profile('Ada'));
     expect(climber.id).toMatch(/^[A-Za-z0-9_-]{16}$/);
     const { key } = await call(ada, 'POST', '/api/photos', { kind: 'profile', contentType: 'image/png' });
+    objects.set(key, true);
     const updated = await call(ada, 'PUT', '/api/me', { ...profile('Ada B'), photo: key });
     expect(updated.climber).toMatchObject({ id: climber.id, name: 'Ada B', photo: key });
     await call(ben, 'PUT', '/api/me', profile('Ben'));
     await fails(call(ben, 'PUT', '/api/me', { ...profile('Ben'), photo: key }), 400, /one of your photos/);
+  });
+
+  it('keeps the photos a profile saves and deletes the ones it drops', async () => {
+    const upload = async (kind: string) => {
+      const { key } = await call(ada, 'POST', '/api/photos', { kind, contentType: 'image/jpeg' });
+      objects.set(key, true);
+      return key as string;
+    };
+    const [p1, g1, g2] = [await upload('profile'), await upload('gear'), await upload('gear')];
+    await call(ada, 'PUT', '/api/me', { ...profile('Ada'), photo: p1, gearPhotos: [g1] });
+    expect(objects.get(p1)).toBe(false);
+    expect(objects.get(g1)).toBe(false);
+    expect(objects.get(g2)).toBe(true); // never saved: the bucket expires it
+    const p2 = await upload('profile');
+    await call(ada, 'PUT', '/api/me', { ...profile('Ada'), photo: p2, gearPhotos: [g1, g2] });
+    expect(removed).toEqual([p1]);
+    expect(objects.get(p2)).toBe(false);
+    expect(objects.get(g2)).toBe(false);
+    // Unchanged photos cost nothing; an upload that isn't there is refused.
+    removed = [];
+    await call(ada, 'PUT', '/api/me', { ...profile('Ada B'), photo: p2, gearPhotos: [g1, g2] });
+    expect(removed).toEqual([]);
+    const missing = `${subjectHash(ada.subject)}/gear/AAAAAAAAAAAAAAAA.jpg`;
+    await fails(call(ada, 'PUT', '/api/me', { ...profile('Ada'), photo: p2, gearPhotos: [missing] }), 400, /isn't uploaded/);
+    expect((await call(ada, 'GET', '/api/me')).climber.gearPhotos).toEqual([g1, g2]);
   });
 
   it('photos refuse other types', async () => {
@@ -156,6 +205,25 @@ describe('the matchmaking flow', () => {
     await fails(call(cy, 'GET', `/api/plans/${planId}`), 404);
   });
 
+  it('my location and areas are mine only; the deck says how far each plan is', async () => {
+    const here = { name: 'Home town', lat: 41.39, lon: 2.17 };
+    const me = await call(ben, 'PUT', '/api/me', { ...profile('Ben'), location: here, areas: [{ name: 'Crag', lat: 41.26, lon: 0.38 }] });
+    expect(me.climber).toMatchObject({ location: here, areas: [{ name: 'Crag' }] });
+    expect((await call(ben, 'GET', '/api/me')).climber.location).toEqual(here);
+
+    const near = (await call(ada, 'POST', '/api/plans', { ...planBody, place: 'Near', lat: 41.47, lon: 2.1 })).plan.id;
+    const deck = await call(ben, 'GET', '/api/discover');
+    expect(deck.plans.map((p: any) => p.id)).toEqual([near, planId]);
+    expect(deck.distanceKm).toEqual({ [near]: 11 });
+
+    // Ada sees Ben's profile (he asked to join) without where he is.
+    await call(ben, 'POST', `/api/plans/${near}/join`);
+    const { climbers } = await call(ada, 'GET', `/api/plans/${near}`);
+    expect(climbers[ids.Ben!]).toMatchObject({ name: 'Ben' });
+    expect(climbers[ids.Ben!]).not.toHaveProperty('location');
+    expect(climbers[ids.Ben!]).not.toHaveProperty('areas');
+  });
+
   it('one no: declined notice, then dismiss', async () => {
     await call(ben, 'POST', `/api/plans/${planId}/join`);
     await fails(call(cy, 'POST', `/api/requests/${planId}/${ids.Ben}/dismiss`), 403);
@@ -205,5 +273,38 @@ describe('the matchmaking flow', () => {
   it('unknown routes and bad ids', async () => {
     await fails(call(ada, 'GET', '/api/nope'), 404);
     await fails(call(ada, 'GET', '/api/plans/bad%20id'), 400);
+  });
+});
+
+describe('sessions through the API', () => {
+  // As handler.ts does: the caller from the headers, unless the route is public.
+  async function request(method: string, path: string, headers: Record<string, string> = {}, body?: unknown) {
+    const caller = api.access(method, path) === 'public' ? null : await auth.caller(headers);
+    return (await api.handle(method, path, { caller, body, query: {} })) as Record<string, any>;
+  }
+
+  it('signs in, calls with the token, signs out', async () => {
+    await fails(request('GET', '/api/me'), 401, /signed out/);
+    const { token, expiresAt } = await request('POST', '/api/session', {}, { idToken: 'a.b.c' });
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(expiresAt).toBe('2031-05-01T10:00:00.000Z');
+    const bearer = { authorization: `Bearer ${token}` };
+    expect(await request('GET', '/api/me', bearer)).toEqual({ climber: null, admin: false });
+    await request('PUT', '/api/me', bearer, profile('Ada'));
+    expect(store.subjects.has('https://accounts.google.com#42')).toBe(true);
+    expect(await request('DELETE', '/api/session', bearer)).toEqual({});
+    await fails(request('GET', '/api/me', bearer), 401, /signed out/);
+  });
+
+  it('signs out everywhere', async () => {
+    const a = (await request('POST', '/api/session', {}, { idToken: 'a.b.c' })).token;
+    const b = (await request('POST', '/api/session', {}, { idToken: 'a.b.c' })).token;
+    expect(await request('DELETE', '/api/sessions', { authorization: `Bearer ${a}` })).toEqual({});
+    await fails(request('GET', '/api/me', { authorization: `Bearer ${b}` }), 401);
+    expect(store.sessions.size).toBe(0);
+  });
+
+  it('health needs no token', async () => {
+    expect((await request('GET', '/api/health')).ok).toBe(true);
   });
 });

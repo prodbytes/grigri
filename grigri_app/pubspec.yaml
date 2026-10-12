@@ -46,6 +46,13 @@ dependencies:
       url: https://github.com/prodbytes/rbacr.git
       path: rbacr-flutter
       ref: c3cbfd1875208331f5a3df09e3116daa979c1816
+  # The session token on Android and iOS (Keystore, Keychain).
+  flutter_secure_storage: ^11.2.0
+  # Pulled in by flutter_secure_storage (path_provider, for Windows).
+  # Pinned to the last release without the objective_c native-assets hook,
+  # which can't build under devbox's Nix toolchain on macOS (so
+  # `flutter test` would fail there). The app doesn't use it.
+  path_provider_foundation: 2.5.1
 
 dev_dependencies:
   flutter_test:

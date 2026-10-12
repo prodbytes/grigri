@@ -54,10 +54,10 @@ abstract final class AppConfig {
     port: uri.hasPort ? uri.port : null,
   );
 
-  /// Whether this build signs in with the local API's dev mode (an email in
-  /// an X-Grigri-Dev-User header, no Google): only a local build (no
-  /// stage, or `local`) without a Google client ID, never one that talks to
-  /// the deployed sites. The deployed APIs ignore the header anyway.
+  /// Whether this build signs in with the local API's dev mode (an email
+  /// traded for a session, no Google): only a local build (no stage, or
+  /// `local`) without a Google client ID, never one that talks to the
+  /// deployed sites. The deployed APIs refuse dev mode anyway.
   static bool get devSignIn => isDevSignIn(
     stage: AppVersion.stage,
     webClientId: googleWebClientId,

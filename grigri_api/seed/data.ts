@@ -4,7 +4,8 @@
 // former on-device demo (lib/data/seed.dart), without its answer
 // "policies": nobody answers automatically; real testers or an admin do.
 // Ids start with `seed-`; dates are relative to `now`, so plans are always
-// upcoming.
+// upcoming. Plans carry their places' approximate points, so the deck
+// ranks by distance for a tester who sets a location.
 import { type Climber, type GradeRange, type JoinRequest, type Message, type Plan, SCALES, requestId } from '../src/domain/model.js';
 
 export interface SeedData {
@@ -124,6 +125,8 @@ export function seedData(now: Date): SeedData {
       place: 'El Pati',
       area: 'Siurana, Spain',
       sectorId: 'demo:el-pati',
+      lat: 41.2577,
+      lon: 0.9318,
       start: next(6, 8),
       end: next(6, 17),
       grades: routes('6a', '7a'),
@@ -136,6 +139,8 @@ export function seedData(now: Date): SeedData {
       discipline: 'trad',
       place: 'Montserrat',
       area: 'Catalonia',
+      lat: 41.5933,
+      lon: 1.8375,
       start: next(0, 7),
       end: next(0, 15),
       grades: routes('5c', '6b'),
@@ -148,6 +153,8 @@ export function seedData(now: Date): SeedData {
       discipline: 'sport',
       place: 'Margalef',
       area: 'Catalonia',
+      lat: 41.2853,
+      lon: 0.7536,
       start: next(5, 9),
       end: next(5, 17),
       grades: routes('7a', '7c'),
@@ -160,6 +167,8 @@ export function seedData(now: Date): SeedData {
       discipline: 'bouldering',
       place: 'Boulder gym',
       area: 'Barcelona',
+      lat: 41.3975,
+      lon: 2.1915,
       start: next(2, 19),
       end: next(2, 22),
       grades: boulders('V2', 'V5'),
@@ -171,6 +180,8 @@ export function seedData(now: Date): SeedData {
       discipline: 'gym',
       place: 'Climbing gym',
       area: 'Barcelona',
+      lat: 41.3792,
+      lon: 2.1405,
       start: next(3, 19),
       end: next(3, 21),
       grades: routes('6a', '6c+'),
@@ -183,6 +194,8 @@ export function seedData(now: Date): SeedData {
       discipline: 'sport',
       place: 'Siurana',
       area: 'Catalonia',
+      lat: 41.2577,
+      lon: 0.9318,
       start: next(0, 9, 7),
       end: next(0, 17, 7),
       grades: routes('6a', '6c'),
@@ -196,6 +209,8 @@ export function seedData(now: Date): SeedData {
       discipline: 'bouldering',
       place: 'Boulder gym',
       area: 'Barcelona',
+      lat: 41.3975,
+      lon: 2.1915,
       start: next(4, 19),
       end: next(4, 22),
       grades: boulders('V2', 'V6'),
