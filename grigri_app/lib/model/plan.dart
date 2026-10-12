@@ -159,34 +159,51 @@ class JoinRequest {
   );
 }
 
-/// What a group answered to my request to join its plan.
-enum NoticeKind { accepted, declined }
+/// What a notification is about.
+enum NoticeKind {
+  /// A group accepted my request to join its plan.
+  accepted,
 
-/// A notification for me: a group accepted or declined my request to join
-/// its plan. It keeps the plan's title, in case the plan ends.
+  /// A group declined my request.
+  declined,
+
+  /// Someone asked to join a plan I'm in.
+  request,
+}
+
+/// A notification for me: a group answered my request to join its plan,
+/// or someone asked to join a plan I'm in. It keeps the plan's title, in
+/// case the plan ends.
 class Notice {
   const Notice({
     required this.kind,
     required this.planId,
     required this.planTitle,
     required this.time,
+    this.climberId,
     this.read = false,
   });
 
   final NoticeKind kind;
+
+  /// Who asked to join, for a [NoticeKind.request].
+  final String? climberId;
   final String planId;
   final String planTitle;
   final DateTime time;
   final bool read;
 
-  /// A group answers a request once, and I can't ask again.
-  String get id => '$planId/${kind.name}';
+  /// A group answers a request once, and nobody can ask twice.
+  String get id => kind == NoticeKind.request
+      ? '$planId/request/$climberId'
+      : '$planId/${kind.name}';
 
   Notice copyWith({bool? read}) => Notice(
     kind: kind,
     planId: planId,
     planTitle: planTitle,
     time: time,
+    climberId: climberId,
     read: read ?? this.read,
   );
 
@@ -195,6 +212,7 @@ class Notice {
     'planId': planId,
     'planTitle': planTitle,
     'time': time.toIso8601String(),
+    'climberId': ?climberId,
     'read': read,
   };
 
@@ -203,18 +221,20 @@ class Notice {
     planId: json['planId']! as String,
     planTitle: json['planTitle']! as String,
     time: DateTime.parse(json['time']! as String),
+    climberId: json['climberId'] as String?,
     read: json['read'] as bool? ?? false,
   );
 }
 
 /// A message in a plan's group chat. [authorId] is null for the chat's
-/// own notes (someone joined, left).
+/// own notes (someone joined, left, asked to join).
 class Message {
   const Message({
     required this.planId,
     required this.authorId,
     required this.text,
     required this.time,
+    this.requestId,
   });
 
   final String planId;
@@ -222,11 +242,16 @@ class Message {
   final String text;
   final DateTime time;
 
+  /// For a join request's note: the [JoinRequest.id], so the chat shows it
+  /// as a card the group answers.
+  final String? requestId;
+
   Map<String, Object?> toJson() => {
     'planId': planId,
     'authorId': authorId,
     'text': text,
     'time': time.toIso8601String(),
+    'requestId': ?requestId,
   };
 
   static Message fromJson(Map<String, Object?> json) => Message(
@@ -234,5 +259,6 @@ class Message {
     authorId: json['authorId'] as String?,
     text: json['text']! as String,
     time: DateTime.parse(json['time']! as String),
+    requestId: json['requestId'] as String?,
   );
 }

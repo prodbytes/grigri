@@ -10,11 +10,11 @@ import 'common.dart';
 import 'discover_screen.dart';
 import 'match_screen.dart';
 import 'plan_editor.dart';
+import 'notices_screen.dart';
 import 'plans_screen.dart';
 import 'profile_screen.dart';
-import 'requests_screen.dart';
 
-/// The app's tabs: Discover, Requests, Plans, Chats and Profile.
+/// The app's tabs: Discover, Plans, Chats, Notifications and Profile.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -24,6 +24,27 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _tab = 0;
+
+  /// The Notifications tab's index.
+  static const _notices = 3;
+
+  /// The notifications that were unread when I opened the tab.
+  Set<String> _fresh = const {};
+
+  /// Opening Notifications marks them read, keeping which were new; so
+  /// does leaving it, for the ones that came in meanwhile.
+  void _select(int tab) {
+    final store = StoreScope.read(context);
+    if (tab == _notices && _tab != _notices) {
+      _fresh = {
+        for (final n in store.notices)
+          if (!n.read) n.id,
+      };
+    }
+    if (tab == _notices || _tab == _notices) store.readNotices();
+    setState(() => _tab = tab);
+  }
+
   Timer? _answers;
 
   @override
@@ -67,44 +88,46 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final toReview = store.toReview.length;
+    final unread = store.unreadNotices;
     final screens = [
       DiscoverScreen(onCreatePlan: _createPlan),
-      const RequestsScreen(),
       PlansScreen(onCreatePlan: _createPlan),
       const ChatsScreen(),
+      NoticesScreen(fresh: _fresh),
       const ProfileScreen(),
     ];
+    Widget badged(IconData icon, int count) => Badge(
+      isLabelVisible: count > 0,
+      label: Text('$count'),
+      backgroundColor: Mountain.sky,
+      textColor: Mountain.night,
+      child: Icon(icon),
+    );
     return Scaffold(
       body: IndexedStack(index: _tab, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
+        onDestinationSelected: _select,
         destinations: [
           const NavigationDestination(
             icon: Icon(Icons.landscape_outlined),
             selectedIcon: Icon(Icons.landscape),
             label: 'Discover',
           ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: toReview > 0,
-              label: Text('$toReview'),
-              backgroundColor: Mountain.sky,
-              textColor: Mountain.night,
-              child: const Icon(Icons.group_add_outlined),
-            ),
-            selectedIcon: const Icon(Icons.group_add),
-            label: 'Requests',
-          ),
           const NavigationDestination(
             icon: Icon(Icons.event_note_outlined),
             selectedIcon: Icon(Icons.event_note),
             label: 'Plans',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.forum_outlined),
-            selectedIcon: Icon(Icons.forum),
+          NavigationDestination(
+            icon: badged(Icons.forum_outlined, toReview),
+            selectedIcon: badged(Icons.forum, toReview),
             label: 'Chats',
+          ),
+          NavigationDestination(
+            icon: badged(Icons.notifications_outlined, unread),
+            selectedIcon: badged(Icons.notifications, unread),
+            label: 'Notifications',
           ),
           const NavigationDestination(
             icon: Icon(Icons.person_outline),

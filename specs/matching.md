@@ -21,7 +21,7 @@ person, and a plan can take a whole group.
   the grades it's for, the group size (2–12, the organizer included), and
   notes. Its members are its **group**, organizer first.
 
-## The two decks
+## The deck
 
 - **Discover**: plans to join. Upcoming plans with a spot open, that I'm
   not in and haven't swiped on: first those whose grades overlap my grades
@@ -31,17 +31,24 @@ person, and a plan can take a whole group.
   of the group.
   - Right / ✓: I ask to join (a join request).
   - Left / ✕: I pass; the plan leaves my deck.
-- **Requests**: people who asked to join a plan I'm in, that I haven't
-  answered. Each card shows the plan they want ("Wants to join"), who in
-  the group has said yes and who hasn't, then **their profile**, with
-  their grade for the plan's discipline marked when it fits.
-  - Right / ✓: I accept them. Left / ✕: I turn them down.
-  - The plan's screen lists them too, with ✓ and ✕ for each one I haven't
-    answered.
 
-Cards are dragged (they tilt, and stamp JOIN / PASS or ACCEPT / DECLINE),
+Cards are dragged (they tilt, and stamp JOIN / PASS),
 or thrown by the buttons. A drag past 28% of the width, or a quick flick,
 counts.
+
+## Join requests, in the group chat
+
+Someone asking to join a plan shows up in its **group chat** as a card
+("Asked to join" and when): their photo, name and age (tap for their
+whole profile), their grade for the plan's discipline (marked when it
+fits), and who in the group has said yes and who it's waiting for. Until
+I've answered it has **Decline** and **Accept**; then it shows "You said
+yes" and who it's still waiting for, **Joined**, or **Declined**. The
+organizer and **every member** are notified ("<name> wants to join"), and
+a newcomer is notified of the requests still open when they join. Chats
+marks each chat with how many requests wait for my answer, and the Chats
+tab's badge counts them all. The plan's screen lists them too, with
+"Answer in the chat".
 
 ## The group decides
 
@@ -73,17 +80,24 @@ time: … said no" at the bottom of the screen.
 
 ## Notifications
 
-A bell on every tab's bar opens **Notifications**, with a badge counting
-the unread ones. Each one is a group's answer to my request: **"You're
-in: <plan>"** (tap for the plan) or **"Not this time: <plan>"**, with when
-it happened, newest first. Opening the screen marks them read; the ones
-that were new stay highlighted ("New") while it's open. Only the person who
-asked is notified.
+The **Notifications** tab, with a badge counting the unread ones, lists
+newest first, with when it happened:
+
+- **"<name> wants to join"** a plan I'm in (tap for its group chat, to
+  answer);
+- **"You're in: <plan>"** when a group accepted me (tap for the chat);
+- **"Not this time: <plan>"** when one declined me (tap for the plan).
+
+Opening the tab marks them read; the ones that were new stay highlighted
+("New") until I come back to it, and so do ones that arrive while it's
+open.
 
 ## Group chat
 
 Each plan has one chat for its whole group, with the plan pinned on top.
-It notes who joined and who left. Chats lists them, most recent first.
+It notes who joined and who left, and holds the
+[join requests](#join-requests-in-the-group-chat) for the group to
+answer. Chats lists them, most recent first.
 
 ## For now: on the device
 
@@ -96,8 +110,9 @@ photos. The made-up climbers have no photos. The app starts with
 demo data ([seed.dart](../grigri_app/lib/data/seed.dart)): my profile
 ("You", to edit), eight made-up climbers with their plans, dates always in
 the coming days, two people asking to join my plan, and a bouldering group
-I'm in where Noa waits only for my yes, and the (read) notification that
-I was accepted into it. The made-up climbers answer requests by a fixed
+I'm in where Noa waits only for my yes; their request cards in the chats
+and unread notifications for the three requests, and the (read)
+notification that I was accepted into the bouldering group. The made-up climbers answer requests by a fixed
 policy: accept everyone, accept only overlapping grades, never decide (the
 request waits), or turn everyone down. They answer 10 seconds after I ask
 (the app checks every 2 seconds), so my request is pending first; tests

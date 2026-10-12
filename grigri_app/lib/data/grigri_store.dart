@@ -200,7 +200,8 @@ class GrigriStore extends ChangeNotifier {
   ];
 
   /// My notifications, newest first.
-  List<Notice> get notices => _state.notices.reversed.toList();
+  List<Notice> get notices =>
+      _state.notices.toList()..sort((a, b) => b.time.compareTo(a.time));
 
   int get unreadNotices => _state.notices.where((n) => !n.read).length;
 
@@ -221,12 +222,7 @@ class GrigriStore extends ChangeNotifier {
   /// they all accept, I join and get a [Match].
   Match? like(String planId) {
     final plan = _state.plans[planId]!;
-    final request = JoinRequest(
-      planId: planId,
-      climberId: me.id,
-      time: _clock(),
-    );
-    _state.requests[request.id] = request;
+    _ask(JoinRequest(planId: planId, climberId: me.id, time: _clock()));
     final match = _settle(plan.id);
     _changed();
     return match.where((m) => m.newcomer.id == me.id).firstOrNull;
@@ -256,6 +252,38 @@ class GrigriStore extends ChangeNotifier {
       rejected: true,
     );
     _changed();
+  }
+
+  /// Someone asks to join a plan: the request shows in its group chat, and
+  /// every member is notified.
+  void _ask(JoinRequest request) {
+    final plan = _state.plans[request.planId]!;
+    _state.requests[request.id] = request;
+    _state.messages.add(
+      Message(
+        planId: plan.id,
+        authorId: null,
+        text: '${climber(request.climberId).name} asked to join',
+        time: _clock(),
+        requestId: request.id,
+      ),
+    );
+    _tellMembers(request, plan.memberIds);
+  }
+
+  /// Tells the given members that someone asked to join their plan. Only
+  /// I am notified on this device; a backend would notify each of them.
+  void _tellMembers(JoinRequest request, Iterable<String> memberIds) {
+    if (!memberIds.contains(me.id) || request.climberId == me.id) return;
+    _state.notices.add(
+      Notice(
+        kind: NoticeKind.request,
+        planId: request.planId,
+        planTitle: _state.plans[request.planId]!.title,
+        climberId: request.climberId,
+        time: _clock(),
+      ),
+    );
   }
 
   /// I clear a group's "no" from my plans; the plan stays out of my deck.
@@ -334,6 +362,14 @@ class GrigriStore extends ChangeNotifier {
           _note(planId, '${climber(r.climberId).name} joined the plan 🎉');
           joined.add(Match(plan: grown, newcomer: climber(r.climberId)));
           _notify(NoticeKind.accepted, r);
+          // A newcomer decides on the requests still open, too.
+          for (final open in _state.requests.values) {
+            if (open.planId == planId &&
+                !open.rejected &&
+                !grown.memberIds.contains(open.climberId)) {
+              _tellMembers(open, [r.climberId]);
+            }
+          }
           _touched = true;
           changed = true;
           break;
@@ -357,7 +393,7 @@ class GrigriStore extends ChangeNotifier {
   }
 
   /// A made-up member's answer: true, false, or null (not yet). I answer
-  /// for myself, in the Requests deck or on the plan.
+  /// for myself, in the group chat.
   bool? _decide(String memberId, JoinRequest request, Plan plan) {
     if (memberId == me.id) return null;
     final asked = request.time;
