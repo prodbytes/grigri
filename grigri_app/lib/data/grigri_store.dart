@@ -95,7 +95,7 @@ class GrigriStore extends ChangeNotifier {
 
   Climber? _me;
   bool _admin = false;
-  String? _userEmail;
+  bool _signedIn = false;
 
   final _climbers = <String, Climber>{};
   final _plans = <String, Plan>{};
@@ -128,7 +128,7 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Session -----------------------------------------------------------
 
-  /// Starts signing in (quietly, when it can).
+  /// Starts: signed in at once with a kept session.
   Future<void> start() async {
     if (!auth.started) await auth.start();
     _authChanged();
@@ -144,11 +144,11 @@ class GrigriStore extends ChangeNotifier {
 
   void _authChanged() {
     if (!auth.started) return;
-    final email = auth.user?.email;
-    if (email == _userEmail && _phase != Phase.starting) return;
-    _userEmail = email;
+    final signedIn = auth.signedIn;
+    if (signedIn == _signedIn && _phase != Phase.starting) return;
+    _signedIn = signedIn;
     _clear();
-    if (email == null) {
+    if (!signedIn) {
       _loading = null;
       _phase = Phase.signedOut;
       notifyListeners();
@@ -199,7 +199,16 @@ class GrigriStore extends ChangeNotifier {
     }
   }
 
+  /// Signs out here (`DELETE /api/session`).
   Future<void> signOut() => auth.signOut();
+
+  /// Signs out on every device (`DELETE /api/sessions`); says so when the
+  /// API couldn't be told.
+  Future<void> signOutEverywhere() async {
+    if (!await auth.signOutEverywhere()) {
+      _errors.add('Couldn\'t sign out everywhere. Try again.');
+    }
+  }
 
   /// The name to start a new profile with: Google's, when there is one.
   String get suggestedName => auth.user?.name ?? '';
@@ -299,8 +308,8 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Calling the API ---------------------------------------------------
 
-  /// Calls the API; a 401 tries fresh credentials once, then signs out. A
-  /// 409 "no profile" goes back to creating one.
+  /// Calls the API; a 401 (the session ended) signs out. A 409 "no
+  /// profile" goes back to creating one.
   Future<T> _call<T>(Future<T> Function() call) async {
     final session = _session;
     try {
@@ -312,16 +321,9 @@ class GrigriStore extends ChangeNotifier {
         throw const ApiException(_stale, 'stale');
       }
       if (e.status == 401) {
-        if (await auth.refresh()) {
-          try {
-            return await call();
-          } on ApiException catch (again) {
-            if (again.status != 401) rethrow;
-          }
-        }
         _errors.add('Signed out: please sign in again.');
         // Auth notifies, and _authChanged clears everything.
-        await auth.signOut();
+        await auth.signedOut();
         rethrow;
       }
       if (e.noProfile && _phase == Phase.ready) {

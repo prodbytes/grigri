@@ -184,17 +184,50 @@ void main() {
       );
     });
 
-    test('the dev mode sends its header instead of a token', () async {
+    test(
+      'starts a session with the Google ID token, without a bearer',
+      () async {
+        final seen = <http.Request>[];
+        final api = apiWith(
+          (_) async => json({'token': 's3ssion', 'expiresAt': '2027-10-12'}),
+          seen: seen,
+        );
+        expect(await api.createSession(idToken: 'id-t0ken'), 's3ssion');
+        expect(seen.single.method, 'POST');
+        expect(seen.single.url.toString(), 'https://grigri.test/api/session');
+        expect(jsonDecode(seen.single.body), {'idToken': 'id-t0ken'});
+        expect(seen.single.headers.containsKey('Authorization'), isFalse);
+      },
+    );
+
+    test('the dev mode starts a session with an email', () async {
       final seen = <http.Request>[];
-      final api = apiWith(
-        (_) async => json({'climber': null, 'admin': false}),
-        seen: seen,
-        headers: {'X-Grigri-Dev-User': 'pat@example.com'},
+      final api = apiWith((_) async => json({'token': 's3ssion'}), seen: seen);
+      await api.createSession(devUser: 'pat@example.com');
+      expect(jsonDecode(seen.single.body), {'devUser': 'pat@example.com'});
+      expect(seen.single.headers.containsKey('X-Grigri-Dev-User'), isFalse);
+    });
+
+    test('a refused session start is a 401', () async {
+      final api = apiWith((_) async => json({'error': 'signed out'}, 401));
+      await expectLater(
+        api.createSession(idToken: 'bad'),
+        throwsA(isA<ApiException>().having((e) => e.status, 'status', 401)),
       );
-      final me = await api.me();
-      expect(me.climber, isNull);
-      expect(seen.single.headers['X-Grigri-Dev-User'], 'pat@example.com');
-      expect(seen.single.headers.containsKey('Authorization'), isFalse);
+    });
+
+    test('signs out with the session it ends', () async {
+      final seen = <http.Request>[];
+      final api = apiWith((_) async => json({}), seen: seen);
+      await api.deleteSession('s3ssion');
+      await api.deleteSessions('s3ssion');
+      expect(seen.map((r) => '${r.method} ${r.url.path}'), [
+        'DELETE /api/session',
+        'DELETE /api/sessions',
+      ]);
+      for (final r in seen) {
+        expect(r.headers['Authorization'], 'Bearer s3ssion');
+      }
     });
 
     test('photos: a presigned POST with its fields, then the file', () async {

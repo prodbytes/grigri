@@ -193,3 +193,22 @@ spec.
       travel to the API in that shape (no spots, nothing is ever full),
       and the callout's ✕ / ✓ call the API like the request cards.
     - Every tab has an [empty state](screens.md) with what to do next.
+13. **Make sign-in last as long as possible: the API's own sessions (365
+    days without use, sliding).**
+    - The app (on the web people were signed out after about an hour, when
+      the Google ID token it sent on every call expired): after Google
+      sign-in it calls `POST /api/session` once with the ID token and
+      sends the API's session token as the bearer on every call; Google
+      isn't asked again until a 401 or a sign-out. A kept session starts
+      the app signed in, straight to `GET /api/me`. Sessions last until
+      sign-out or 365 days without use ([sign-in](sign-in.md)).
+    - The token is kept in secure storage on Android and iOS
+      (flutter_secure_storage: Keystore, Keychain this-device-only) and in
+      local storage on the web (guarded by the site's CSP).
+    - A 401 forgets the token and goes back to the sign-in screen; the
+      quiet Google refresh on 401 is gone. Sign out calls
+      `DELETE /api/session`; Profile's ⋯ adds **Sign out everywhere**
+      (`DELETE /api/sessions`, after a confirmation;
+      [screens](screens.md)).
+    - The local dev sign-in starts a session with `{"devUser"}` too,
+      instead of sending `X-Grigri-Dev-User` on every call.
