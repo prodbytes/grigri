@@ -22,8 +22,8 @@ Do not commit or push code that has not passed both checks.
 - Toolchain is managed by [devbox.json](devbox.json); enter it with
   `devbox shell` and keep [devbox.lock](devbox.lock) committed.
 - `devbox services up` starts the processes in
-  [process-compose.yaml](process-compose.yaml) (the Flutter web app and the
-  index page) plus the health monitor
+  [process-compose.yaml](process-compose.yaml) (the Flutter web app, the
+  index page, and Floci as the local CloudFront over HTTP and HTTPS) plus the health monitor
   ([scripts/health-check.sh](scripts/health-check.sh)); stop with
   `devbox services stop`. In non-interactive contexts pass
   `--pcflags "--tui=false"`.

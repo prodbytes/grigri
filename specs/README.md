@@ -21,6 +21,13 @@ they're built.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.
 
+**Backend**
+
+- [Backend](backend.md): the API, its DynamoDB table and photos bucket;
+  production empty and real, RC and local seeded with made-up data;
+  admins; local dev mode; costs.
+- [API](api.md): the routes and JSON shapes the app uses.
+
 **Development and operations**
 
 - [Development environment](dev-environment.md): devbox, the dev
