@@ -1,0 +1,68 @@
+# Floci: a local AWS emulator. Here it plays CloudFront, routing /app/ to the
+# Flutter dev server, /api/* to the API, /photos/* to the photos bucket and
+# everything else to the index, as the deployed stack would
+# (grigri_infra/site.yaml), over HTTP and HTTPS. The API itself (Lambda,
+# HTTP API, DynamoDB) and the photos bucket are deployed into Floci too,
+# with the made-up test data (init/ready.d/05-api.sh).
+# Started by `devbox services up` (4-floci in process-compose.yaml).
+services:
+  floci:
+    # The compat image has the AWS CLI, which the init hook uses. A dated
+    # nightly: 2.1.0 forwards no viewer headers to custom origins. Move to the
+    # next release once it ships. Pinned by digest (the multi-arch index;
+    # `docker buildx imagetools inspect floci/floci:<tag>` shows it), so a
+    # re-pushed tag can't change what runs here with the Docker socket.
+    image: floci/floci:nightly-09242026-compat@sha256:eb725a12cd80bbbcb476a33c0a1d98382a54d5c9f39c4c31b160f7cdf9cf1a6e
+    container_name: grigri-floci
+    ports:
+      - "127.0.0.1:${FLOCI_PORT:-2114}:4566"
+      # HTTPS with the mkcert certificate (FLOCI_PORT also answers HTTPS)
+      - "127.0.0.1:${FLOCI_HTTPS_PORT:-2543}:8443"
+    extra_hosts:
+      # The origin host (see init/ready.d/10-cloudfront.sh): the Docker host
+      # in here, loopback in the browser.
+      - "${GRIGRI_ORIGIN_HOST:-dev.grigri.localhost}:host-gateway"
+    environment:
+      # Stateless: the ready hook recreates the distribution on every start.
+      FLOCI_STORAGE_MODE: memory
+      # Local HTTPS: the certificate from scripts/local-certs.sh (mkcert),
+      # served on 8443 as well as 4566. 8443 instead of the default 443
+      # avoids binding a privileged port.
+      FLOCI_TLS_ENABLED: "true"
+      FLOCI_TLS_CERT_PATH: /etc/grigri-certs/grigri.pem
+      FLOCI_TLS_KEY_PATH: /etc/grigri-certs/grigri-key.pem
+      FLOCI_TLS_AWS_HTTPS_PORT: "8443"
+      # CloudFront refuses private origins unless they're listed here: the
+      # dev servers, and the local API (its fixed ID from 05-api.sh).
+      FLOCI_SERVICES_CLOUDFRONT_ALLOWED_PRIVATE_ORIGIN_HOSTS: ${GRIGRI_ORIGIN_HOST:-dev.grigri.localhost},grigri.execute-api.localhost.floci.io
+      GRIGRI_ORIGIN_HOST: ${GRIGRI_ORIGIN_HOST:-dev.grigri.localhost}
+      GRIGRI_CDN_ALIAS: ${GRIGRI_CDN_ALIAS:-grigri.localhost}
+      GRIGRI_PUBLIC_HOST: ${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}
+      FLUTTER_WEB_PORT: ${FLUTTER_WEB_PORT:-7189}
+      INDEX_PORT: ${INDEX_PORT:-2113}
+      # Not FLOCI_PORT or FLOCI_HTTPS_PORT: Floci reads FLOCI_PORT as its own
+      # listen port. The host ports, under other names, for the photos
+      # bucket's upload URL and CORS origins (05-api.sh).
+      FLOCI_PORT_HOST: ${FLOCI_PORT:-2114}
+      FLOCI_HTTPS_PORT_HOST: ${FLOCI_HTTPS_PORT:-2543}
+      # The API's JWT authorizer accepts only ID tokens for this client
+      # (from .env; a public identifier). Empty: dev mode.
+      GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
+      # Who may approve or reject any request locally (from .env).
+      GRIGRI_ADMIN_EMAILS: ${GRIGRI_ADMIN_EMAILS:-}
+      # Lambda containers are named grigri-lambda-*, so shutdown can find
+      # them (process-compose.yaml).
+      FLOCI_SERVICES_LAMBDA_CONTAINER_NAME_PREFIX: grigri-lambda
+      # 05-api.sh deploys a stack and starts the function (pulling the
+      # Lambda image on a first run): longer than the default 30 s.
+      FLOCI_INIT_HOOKS_TIMEOUT_SECONDS: "300"
+    volumes:
+      - ./init/ready.d:/etc/floci/init/ready.d:ro
+      - ./certs:/etc/grigri-certs:ro
+      # The API's template and build (scripts/build-api.sh), deployed by
+      # 05-api.sh.
+      - ../grigri_api:/opt/grigri-api:ro
+      # Floci runs Lambda functions as sibling Docker containers. This gives
+      # the container control of the Docker daemon: local development only
+      # (Floci's ports are bound to 127.0.0.1).
+      - /var/run/docker.sock:/var/run/docker.sock

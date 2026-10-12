@@ -17,8 +17,16 @@ they're built.
 **App**
 
 - [Home screen](home-screen.md): the app's name, tagline and version.
+- [Theme](theme.md): dark, in mountain colors.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.
+
+**Backend**
+
+- [Backend](backend.md): the API, its DynamoDB table and photos bucket;
+  production empty and real, RC and local seeded with made-up data;
+  admins; local dev mode; costs.
+- [API](api.md): the routes and JSON shapes the app uses.
 
 **Development and operations**
 
