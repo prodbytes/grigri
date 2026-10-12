@@ -214,8 +214,11 @@ Resources:
                   - apigateway:POST
                   - apigateway:PUT
                   - apigateway:PATCH
-                  # Tagging is POST and DELETE on /tags/*.
+                  # Tagging is POST and DELETE on /tags/*, plus these on
+                  # creates (the HTTP API's stage).
                   - apigateway:DELETE
+                  - apigateway:TagResource
+                  - apigateway:UntagResource
                 Resource:
                   - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis
                   - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis/*

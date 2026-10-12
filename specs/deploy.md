@@ -46,7 +46,9 @@ for that tag:
 
 If a step fails, it says which version was live before and how to put it
 back (re-run the workflow for its tag, or deploy it by hand). One
-production deploy runs at a time; a newer tag waits.
+production deploy runs at a time; a newer tag waits. A stack whose first
+create failed (`ROLLBACK_COMPLETE`, empty) is deleted before the next
+deploy creates it again.
 
 ## Release candidates (rc.grigri.nu01.com)
 

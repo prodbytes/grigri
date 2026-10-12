@@ -129,6 +129,20 @@ stack_output() { # stack_output <stack> <output key>
     --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text
 }
 
+# A stack whose first create failed (ROLLBACK_COMPLETE) can't be updated,
+# only deleted; it holds nothing (its resources were rolled back, and
+# retained ones aren't in it), so it's deleted before deploying again.
+clear_failed_create() { # clear_failed_create <stack>
+  local status
+  status="$(aws cloudformation describe-stacks --stack-name "$1" \
+    --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)"
+  if [[ "$status" == ROLLBACK_COMPLETE ]]; then
+    echo "    $1 failed its first create; deleting it to create it again"
+    aws cloudformation delete-stack --stack-name "$1"
+    aws cloudformation wait stack-delete-complete --stack-name "$1"
+  fi
+}
+
 # Private settings: from the environment, else the private .env.
 if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
@@ -237,6 +251,7 @@ aws cloudformation package --template-file grigri_api/template.yaml \
   --output-template-file "$packaged" >/dev/null
 # NAMED_IAM: the function's role is named <stack>-function (the deploy
 # roles may only manage <prefix>-* roles, with the boundary).
+clear_failed_create "$API_STACK"
 aws cloudformation deploy --stack-name "$API_STACK" \
   --template-file "$packaged" --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
@@ -258,6 +273,7 @@ fi
 # 3. The site
 echo "==> deploying $SITE_STACK"
 # AUTO_EXPAND: the template's Fn::ForEach (AWS::LanguageExtensions).
+clear_failed_create "$SITE_STACK"
 aws cloudformation deploy --stack-name "$SITE_STACK" \
   --template-file grigri_infra/site.yaml --capabilities CAPABILITY_AUTO_EXPAND \
   --parameter-overrides "DomainName=$DOMAIN" "Stage=$STAGE" \
