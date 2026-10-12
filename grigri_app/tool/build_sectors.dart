@@ -73,14 +73,22 @@ out body;
 ''';
 
 /// [query]'s answer from the first of [overpassServers] that gives one.
+/// Busy servers answer 429 or 504, so it goes round them up to three
+/// times, waiting longer each round.
 Future<Map<String, Object?>> _query(HttpClient client, String query) async {
   final failures = <String>[];
-  for (final server in overpassServers) {
-    try {
-      return await _queryServer(client, Uri.parse(server), query);
-    } on Exception catch (e) {
-      failures.add('$server: $e');
-      stderr.write('(${Uri.parse(server).host} failed, next) ');
+  for (var round = 1; round <= 3; round++) {
+    if (round > 1) {
+      stderr.write('(all busy, again in ${round - 1} min) ');
+      await Future<void>.delayed(Duration(minutes: round - 1));
+    }
+    for (final server in overpassServers) {
+      try {
+        return await _queryServer(client, Uri.parse(server), query);
+      } on Exception catch (e) {
+        failures.add('$server: $e');
+        stderr.write('(${Uri.parse(server).host} failed) ');
+      }
     }
   }
   throw HttpException('no Overpass server answered:\n${failures.join('\n')}');

@@ -45,7 +45,9 @@ dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
   changes the build.
 - It asks the public Overpass servers in turn (overpass-api.de, then
   overpass.kumi.systems, then overpass.private.coffee), giving up on one
-  after 20 s without a connection or 12 minutes without an answer.
+  after 20 s without a connection or 12 minutes without an answer. When
+  all are busy (429, 504) it goes round them again, up to three times,
+  waiting a minute, then two.
 - It writes the file only when every country came through, so a failed
   run leaves the index as it was.
 - It takes the country's crags and sectors (`climbing=crag`) and climbing
