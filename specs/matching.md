@@ -10,20 +10,29 @@ person, and a plan can take a whole group.
   the person: a **photo** (or their initials), name, age (optional:
   without it, cards show just the name), a bio, and:
   - **grades per discipline** (what they climb): sport, trad and gym on
-    the French scale (4a–9a), bouldering on the V scale (VB–V13);
+    the route scale, bouldering on the boulder scale. Each scale is
+    written in my **grade system**, like Celsius and Fahrenheit:
+    **European** (French 4a–9a for routes, Fontainebleau 3–8B for
+    boulders) or **American** (YDS 5.5–5.14d, the V scale VB–V13). The
+    two write the same grades, index for index; switching changes how
+    grades read everywhere in the app, never the grades themselves;
   - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car,
     and up to 6 **photos of their gear**.
 
   When and where are only the plan's: a profile has no availability,
   places, home area or years climbing.
 - A **plan** ([Plan](../grigri_app/lib/model/plan.dart)) is one outing:
-  title, discipline, crag or gym and area, date, start time and length,
-  the grades it's for, the group size (2–12, the organizer included), and
-  notes. Its members are its **group**, organizer first.
+  discipline, where (a sector, crag or gym: picked from the
+  [sector index](sectors.md), with where it is, or typed in), the day and
+  its time range (from and to), the grades it's for, and notes. It has
+  no title: it's called by its place. Its members are its **group**,
+  organizer first, and the group has **no size limit**: it's as big as
+  the people who match. Plans saved before keep their length as the time
+  range, and lose their title and group size.
 
 ## The deck
 
-- **Discover**: plans to join. Upcoming plans with a spot open, that I'm
+- **Discover**: plans to join. Upcoming plans that I'm
   not in and haven't swiped on: first those whose grades overlap my grades
   for the plan's discipline, then the rest, each soonest first. Each card
   shows **the plan first, highlighted**, with a "Your grades" badge when
@@ -53,7 +62,7 @@ tab's badge counts them all. The plan's screen lists them too, with
 ## The group decides
 
 - A newcomer joins a plan when **every current member** has accepted
-  them, and the plan has a spot open. **One "no" turns them down.**
+  them. **One "no" turns them down.**
 - When someone joins, the members who are still to decide on other open
   requests now include them: the group as it is then decides.
 - When a member leaves, the requests stop waiting for them. The organizer

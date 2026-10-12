@@ -103,7 +103,7 @@ class _PlanTile extends StatelessWidget {
                       style: text.titleMedium?.copyWith(color: Mountain.sand),
                     ),
                     Text(
-                      '${plan.place} · ${whenLabel(plan)}',
+                      whenLabel(plan),
                       style: text.bodySmall?.copyWith(color: Mountain.granite),
                     ),
                     const SizedBox(height: 8),
@@ -115,12 +115,6 @@ class _PlanTile extends StatelessWidget {
                         AvatarRow([
                           for (final id in plan.memberIds) store.climber(id),
                         ], radius: 12),
-                        Text(
-                          '${plan.memberIds.length}/${plan.spots}',
-                          style: text.bodySmall?.copyWith(
-                            color: Mountain.granite,
-                          ),
-                        ),
                         if (plan.organizerId == store.me.id)
                           const Tag('Organizing', color: Mountain.tan)
                         else

@@ -153,12 +153,14 @@ void main() {
       expect(store.plan('my-sunday-siurana')!.memberIds, ['me']);
     });
 
-    test('a full plan takes nobody else', () {
-      final store = demo();
-      store.updatePlan(store.plan('my-sunday-siurana')!.copyWith(spots: 2));
-      store.accept('my-sunday-siurana/ines');
-      expect(store.accept('my-sunday-siurana/bruno'), isNull);
-      expect(store.plan('my-sunday-siurana')!.memberIds, ['me', 'ines']);
+    test('a group takes everyone who matches: no size limit', () {
+      final store = demo()..accept('my-sunday-siurana/ines');
+      expect(store.accept('my-sunday-siurana/bruno'), isNotNull);
+      expect(store.plan('my-sunday-siurana')!.memberIds, [
+        'me',
+        'ines',
+        'bruno',
+      ]);
     });
   });
 
@@ -166,16 +168,17 @@ void main() {
     test('a new plan is mine, and its own group', () {
       final store = demo();
       final plan = store.createPlan(
-        title: 'Gym session',
         discipline: Discipline.gym,
         place: 'Climbing gym',
-        area: 'Barcelona',
-        start: now.add(const Duration(days: 2)),
-        hours: 2,
-        grades: const GradeRange(GradeScale.french, 6, 10),
-        spots: 3,
+        area: 'Barcelona, Spain',
+        sectorId: 'demo:climbing-gym',
+        start: DateTime(2026, 10, 14, 19),
+        end: DateTime(2026, 10, 14, 21, 30),
+        grades: const GradeRange(GradeScale.routes, 6, 10),
       );
       expect(plan.organizerId, 'me');
+      expect(plan.title, 'Climbing gym');
+      expect(plan.sectorId, 'demo:climbing-gym');
       expect(store.myPlans.map((p) => p.id), contains(plan.id));
     });
 
@@ -217,7 +220,7 @@ void main() {
       time = now.add(const Duration(seconds: 10));
       final notices = store.settle();
       expect(notices.single.kind, NoticeKind.accepted);
-      expect(notices.single.planTitle, 'Siurana sport day');
+      expect(notices.single.planTitle, 'El Pati');
       expect(store.waiting, isEmpty);
       expect(store.myPlans.map((p) => p.id), contains('siurana-saturday'));
       // With the demo's three requests to join my plans.
@@ -289,7 +292,44 @@ void main() {
       clock: () => now,
     );
     expect(jsonEncode(again.state.toJson()), json);
-    expect(again.me.levels[Discipline.sport]!.label, '6a–6c+');
+    expect(again.grades(again.me.levels[Discipline.sport]!), '6a–6c+');
+  });
+
+  test('a plan saved before plans had an end keeps its length', () {
+    final old = {
+      'id': 'p',
+      'organizerId': 'me',
+      'title': 'Old plan',
+      'discipline': 'sport',
+      'place': 'Siurana',
+      'start': '2026-10-17T08:00:00.000',
+      'hours': 9,
+      'grades': {'scale': 'french', 'min': 6, 'max': 12},
+      'spots': 3,
+      'memberIds': ['me'],
+    };
+    final plan = Plan.fromJson(old);
+    expect(plan.end, DateTime(2026, 10, 17, 17));
+    expect(plan.grades, const GradeRange(GradeScale.routes, 6, 12));
+    expect(plan.sectorId, isNull);
+  });
+
+  test('the grade system only changes how grades are written', () {
+    final store = demo();
+    final sport = store.me.levels[Discipline.sport]!;
+    expect(store.grades(sport), '6a–6c+');
+    store.gradeSystem = GradeSystem.american;
+    expect(store.grades(sport), '5.10b–5.11c');
+    expect(store.me.levels[Discipline.sport], sport);
+    expect(store.grades(store.plan('thursday-bouldering')!.grades), 'V2–V6');
+    store.gradeSystem = GradeSystem.european;
+    expect(store.grades(store.plan('thursday-bouldering')!.grades), '5+–7A');
+  });
+
+  test('both systems write every grade of a scale', () {
+    for (final scale in GradeScale.values) {
+      expect(scale.american.length, scale.european.length, reason: '$scale');
+    }
   });
 
   test('a profile keeps its photos, and ignores when and where', () {

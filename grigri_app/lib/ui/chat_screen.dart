@@ -167,7 +167,7 @@ class _PinnedPlan extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            '${plan.place} · ${whenLabel(plan)} · ${plan.grades.label}',
+            '${whenLabel(plan)} · ${StoreScope.of(context).grades(plan.grades)}',
             style: const TextStyle(color: Mountain.snow),
           ),
         ),

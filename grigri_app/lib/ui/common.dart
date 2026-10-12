@@ -213,16 +213,9 @@ class PlanHighlight extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          _Line(
-            Icons.place_outlined,
-            [plan.place, plan.area].where((s) => s.isNotEmpty).join(', '),
-          ),
+          if (plan.area.isNotEmpty) _Line(Icons.place_outlined, plan.area),
           _Line(Icons.schedule, whenLabel(plan)),
-          _Line(
-            Icons.trending_up,
-            '${plan.grades.label}  ·  '
-            '${plan.isFull ? 'full' : '${plan.openSpots} of ${plan.spots} spots open'}',
-          ),
+          _Line(Icons.trending_up, StoreScope.of(context).grades(plan.grades)),
           if (showNotes && plan.notes.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
@@ -298,7 +291,7 @@ class ProfileDetails extends StatelessWidget {
             children: [
               for (final e in climber.levels.entries)
                 Tag(
-                  '${e.key.emoji} ${e.key.label} ${e.value.label}',
+                  '${e.key.emoji} ${e.key.label} ${StoreScope.of(context).grades(e.value)}',
                   color: Mountain.olive,
                 ),
             ],
@@ -515,6 +508,26 @@ class EmptyState extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// European or American grades, like Celsius or Fahrenheit: switches how
+/// grades are written everywhere in the app.
+class GradeSystemToggle extends StatelessWidget {
+  const GradeSystemToggle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    return SegmentedButton<GradeSystem>(
+      showSelectedIcon: false,
+      segments: [
+        for (final s in GradeSystem.values)
+          ButtonSegment(value: s, label: Text(s.label)),
+      ],
+      selected: {store.gradeSystem},
+      onSelectionChanged: (s) => store.gradeSystem = s.single,
     );
   }
 }

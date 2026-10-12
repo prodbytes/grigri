@@ -23,6 +23,8 @@ Each match opens the plan's group chat.
   on-device storage, for now.
 - [Screens](screens.md): the five tabs, the plan and profile editors, the
   match screen and the chat.
+- [Sectors](sectors.md): the searchable index of climbing sectors, crags
+  and gyms that a plan's "where" picks from, built from OpenStreetMap.
 - [Theme](theme.md): dark, in mountain colors.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.
