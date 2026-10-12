@@ -1,0 +1,59 @@
+version: "0.5"
+
+processes:
+  0-health-check:
+    command: bash scripts/health-check.sh
+    environment:
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-15}
+      - INDEX_PORT=${INDEX_PORT:-2113}
+      - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-2112}
+    # Start logging once every service passes its readiness probe, so the
+    # first status line reflects a fully started stack.
+    depends_on:
+      2-flutter-web:
+        condition: process_healthy
+      5-index:
+        condition: process_healthy
+    availability:
+      restart: on_failure
+      backoff_seconds: 5
+
+  2-flutter-web:
+    command: bash scripts/flutter-web.sh
+    environment:
+      - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-2112}
+    # Stopping only the script leaves flutter's dart process serving the
+    # old build on the port, and the next start then fails to bind it. Stop
+    # whatever listens on the port (flutter's wrapper exits with it).
+    shutdown:
+      command: lsof -tiTCP:${FLUTTER_WEB_PORT:-2112} -sTCP:LISTEN | xargs kill 2>/dev/null; true
+      timeout_seconds: 10
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: ${FLUTTER_WEB_PORT:-2112}
+        path: /app/
+      initial_delay_seconds: 2
+      period_seconds: 2
+      timeout_seconds: 5
+      failure_threshold: 150
+    availability:
+      restart: on_failure
+      backoff_seconds: 5
+
+  5-index:
+    # The site root (grigri_index/site), which redirects to /app/.
+    # GRIGRI_BIND_HOST: see scripts/flutter-web.sh.
+    command: python3 -m http.server ${INDEX_PORT:-2113} --bind ${GRIGRI_BIND_HOST:-127.0.0.1} --directory grigri_index/site
+    readiness_probe:
+      http_get:
+        host: localhost
+        port: ${INDEX_PORT:-2113}
+        path: /
+      initial_delay_seconds: 1
+      period_seconds: 2
+      timeout_seconds: 5
+      failure_threshold: 30
+    availability:
+      restart: on_failure
+      backoff_seconds: 5

@@ -1,0 +1,301 @@
+# Builds the app binaries with `make` (web, Android, iOS) and publishes
+# them as a GitHub release.
+#
+# - Tag pushes matching *QA or *RC* (e.g. 0.1.0-QA, 0.1.0-RC1) release that
+#   tag as a prerelease; *GA tags (e.g. 0.1.0-GA) as the latest full
+#   release. scripts/release-rc.sh and scripts/release-ga.sh push them.
+# - Manual dispatch releases the chosen tag, creating it on the dispatched
+#   commit if it doesn't exist yet (an existing tag must name that commit).
+#   Only a dispatch from main, of a commit on main, may publish a full
+#   release; from any other ref it's always a prerelease, never "latest".
+# - *GA and *RC* tags must name a commit on main (checked before building).
+# - Pull requests that change the app or the build only build and test (no
+#   release), so a broken build shows up before a tag does.
+name: Release
+
+on:
+  push:
+    tags:
+      - "*QA"
+      - "*RC*"
+      - "*GA"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag (created on this commit if missing). Empty uses the selected tag, or manual-<run number>.
+        required: false
+        type: string
+      prerelease:
+        description: Mark as a prerelease
+        required: false
+        type: boolean
+        default: true
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - Makefile
+      - grigri_app/**
+      - scripts/make.sh
+      - scripts/dart-defines.sh
+      - scripts/version.sh
+      - version.X.txt
+      - version.Y.txt
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FLUTTER_VERSION: "3.47.5"
+  # The commit that tag names: the clone is checked against it.
+  FLUTTER_COMMIT: 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+      version_z: ${{ steps.version.outputs.version_z }}
+      build_number: ${{ steps.version.outputs.build_number }}
+      prerelease: ${{ steps.trust.outputs.prerelease }}
+    steps:
+      # Full history, so the commit can be checked against main.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - id: tag
+        name: Resolve the release tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          EVENT: ${{ github.event_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          RUN_NUMBER: ${{ github.run_number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          if [[ -n "$INPUT_TAG" ]]; then
+            tag="$INPUT_TAG"
+          elif [[ "$EVENT" == pull_request ]]; then
+            tag="pr-$PR_NUMBER"
+          elif [[ "$REF_TYPE" == tag ]]; then
+            tag="$REF_NAME"
+          else
+            tag="manual-$RUN_NUMBER"
+          fi
+          if [[ ! "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            echo "::error::Invalid tag '$tag': use letters, digits, '.', '_' and '-'"
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $tag"
+
+      # Where the release may come from, and whether it's a prerelease:
+      # - a pushed *GA or *RC* tag must name a commit on main; *GA is a
+      #   full release, anything else a prerelease;
+      # - a manual run publishes a full release only when asked, from main,
+      #   of a commit on main; an existing tag must name the dispatched commit.
+      - id: trust
+        name: Check the release's commit
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          INPUT_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          commit="$(git rev-parse HEAD)"
+          on_main=false
+          if git merge-base --is-ancestor "$commit" origin/main; then on_main=true; fi
+          prerelease=true
+          case "$EVENT" in
+            pull_request) ;;
+            push)
+              if [[ "$TAG" == *GA || "$TAG" == *RC* ]] && [[ "$on_main" != true ]]; then
+                echo "::error::$TAG ($commit) isn't on main; GA and RC releases are cut only from main"
+                exit 1
+              fi
+              [[ "$TAG" == *GA ]] && prerelease=false
+              ;;
+            workflow_dispatch)
+              if existing="$(git rev-parse --verify --quiet "refs/tags/$TAG^{commit}")" && [[ "$existing" != "$commit" ]]; then
+                echo "::error::Tag $TAG is $existing, not the dispatched commit $commit; dispatch from the tag instead"
+                exit 1
+              fi
+              if [[ "$INPUT_PRERELEASE" == false ]]; then
+                if [[ "$REF" == refs/heads/main || "$REF" == refs/tags/* ]] && [[ "$on_main" == true ]]; then
+                  prerelease=false
+                else
+                  echo "::warning::$REF ($commit) isn't main: publishing $TAG as a prerelease"
+                fi
+              fi
+              ;;
+          esac
+          echo "prerelease=$prerelease" >> "$GITHUB_OUTPUT"
+          echo "Commit $commit, on main: $on_main, prerelease: $prerelease"
+
+      # One version for every platform's build. A tag that carries X.Y.Z
+      # (e.g. 0.1.202610121200-RC) keeps its Z, and its X.Y must match the
+      # version files; any other build gets Z from the current time.
+      - id: version
+        name: Resolve the version
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          if [[ "$TAG" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$ ]]; then
+            export VERSION_Z="${BASH_REMATCH[3]}"
+            tag_xy="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          fi
+          source scripts/version.sh
+          if [[ -n "${tag_xy:-}" && "$tag_xy" != "$VERSION_X.$VERSION_Y" ]]; then
+            echo "::error::Tag $TAG is version $tag_xy, but version.X.txt/version.Y.txt say $VERSION_X.$VERSION_Y"
+            exit 1
+          fi
+          {
+            echo "version=$VERSION"
+            echo "version_z=$VERSION_Z"
+            echo "build_number=$BUILD_NUMBER"
+          } >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION (build $BUILD_NUMBER)"
+
+  # flutter analyze and flutter test, before anything is built.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Flutter ${{ env.FLUTTER_VERSION }}
+        run: |
+          git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" \
+            https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          got="$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)"
+          if [[ "$got" != "$FLUTTER_COMMIT" ]]; then
+            echo "::error::Flutter $FLUTTER_VERSION is $got, not the pinned $FLUTTER_COMMIT"
+            exit 1
+          fi
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: flutter analyze
+        working-directory: grigri_app
+        run: flutter analyze
+
+      - name: flutter test
+        working-directory: grigri_app
+        run: flutter test
+
+  build:
+    needs: [prepare, test]
+    name: build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: web
+            name: web
+            os: ubuntu-latest
+          - target: android
+            name: android
+            os: ubuntu-latest
+          - target: ios
+            name: ios
+            os: macos-latest
+    env:
+      TAG: ${{ needs.prepare.outputs.tag }}
+      TARGET: ${{ matrix.target }}
+      VERSION_Z: ${{ needs.prepare.outputs.version_z }}
+      BUILD_NUMBER: ${{ needs.prepare.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - if: matrix.target == 'android'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Flutter ${{ env.FLUTTER_VERSION }}
+        run: |
+          git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" \
+            https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          got="$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)"
+          if [[ "$got" != "$FLUTTER_COMMIT" ]]; then
+            echo "::error::Flutter $FLUTTER_VERSION is $got, not the pinned $FLUTTER_COMMIT"
+            exit 1
+          fi
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Show the toolchain
+        run: flutter --version
+
+      - name: make ${{ matrix.target }}
+        run: make "$TARGET"
+
+      - name: Package
+        run: |
+          dist="$PWD/dist"
+          mkdir -p "$dist"
+          cd grigri_app/build
+          case "$TARGET" in
+            web)
+              (cd web && zip -qr "$dist/grigri-$TAG-web.zip" .)
+              ;;
+            android)
+              cp app/outputs/flutter-apk/app-release.apk "$dist/grigri-$TAG-android.apk"
+              ;;
+            ios)
+              ditto -c -k --keepParent ios/iphoneos/Runner.app "$dist/grigri-$TAG-ios-unsigned.zip"
+              ;;
+          esac
+          ls -l "$dist"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: grigri-${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: [prepare, build]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: grigri-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          # Decided (and checked against main) in prepare.
+          PRERELEASE: ${{ needs.prepare.outputs.prerelease }}
+        run: |
+          ls -l dist
+          title="grigri-$TAG"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --clobber
+            gh release edit "$TAG" --title "$title"
+          else
+            flags=(--title "$title" --generate-notes --target "$GITHUB_SHA")
+            if [[ "$PRERELEASE" == false ]]; then
+              flags+=(--latest)
+            else
+              flags+=(--prerelease --latest=false)
+            fi
+            gh release create "$TAG" "${flags[@]}" dist/*
+          fi

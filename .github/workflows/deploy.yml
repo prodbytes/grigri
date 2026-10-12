@@ -1,0 +1,103 @@
+# Deploys a *GA tag to production, https://grigri.nu01.com: the Flutter
+# web app (/app/) and the index page (/), through scripts/deploy.sh. It
+# ends by checking that the live site serves this tag's version.
+#
+# AWS access is keyless: GitHub's OIDC token is exchanged for the
+# grigri-github-deploy role (grigri_infra/github-deploy.yaml), which only
+# trusts *GA tag runs of this repository. Its ARN is the repository
+# variable AWS_DEPLOY_ROLE_ARN.
+#
+# Before anything else, it checks that the tag names a release
+# (X.Y.Z-GA) and that its commit is on main: a GA tag pushed on another
+# branch's commit is refused.
+#
+# The Release workflow runs on the same tags and publishes the binaries.
+name: Deploy
+
+on:
+  push:
+    tags:
+      - "*GA"
+
+permissions:
+  contents: read
+  id-token: write
+
+# One production deploy at a time; a newer tag waits for the running one.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: "3.47.5"
+  # The commit that tag names: the clone is checked against it.
+  FLUTTER_COMMIT: 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # No `environment:` here: it would change the OIDC subject from the tag
+    # (repo:…:ref:refs/tags/X.Y.Z-GA), which the deploy role trusts, to the
+    # environment name.
+    steps:
+      # Full history, so the tag's commit can be checked against main.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag is a release on main
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [[ ! "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+-GA$ ]]; then
+            echo "::error::$TAG isn't a release tag (X.Y.Z-GA)"
+            exit 1
+          fi
+          commit="$(git rev-parse "refs/tags/$TAG^{commit}")"
+          if ! git merge-base --is-ancestor "$commit" origin/main; then
+            echo "::error::$TAG ($commit) isn't on main; only commits on main are deployed"
+            exit 1
+          fi
+          echo "$TAG is $commit, on main"
+          # Signed tags are expected (scripts/tag-release.sh); warn only, so
+          # a key GitHub doesn't know yet can't block a release.
+          object="$(git rev-parse "refs/tags/$TAG")"
+          verified="$(gh api "repos/$GH_REPO/git/tags/$object" --jq .verification.verified 2>/dev/null || echo unknown)"
+          if [[ "$verified" != true ]]; then
+            echo "::warning::$TAG isn't a signed tag GitHub could verify ($verified)"
+          fi
+
+      - name: Install Flutter ${{ env.FLUTTER_VERSION }}
+        run: |
+          git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" \
+            https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          got="$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)"
+          if [[ "$got" != "$FLUTTER_COMMIT" ]]; then
+            echo "::error::Flutter $FLUTTER_VERSION is $got, not the pinned $FLUTTER_COMMIT"
+            exit 1
+          fi
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Show the toolchain
+        run: |
+          flutter --version
+          aws --version
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: grigri-deploy-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy ${{ github.ref_name }}
+        env:
+          TAG: ${{ github.ref_name }}
+          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
+          # Who is emailed when the site's health check fails or recovers:
+          # a secret, not a variable, so the public run logs never show it.
+          GRIGRI_HEALTH_EMAILS: ${{ secrets.GRIGRI_HEALTH_EMAILS }}
+        run: bash scripts/deploy.sh

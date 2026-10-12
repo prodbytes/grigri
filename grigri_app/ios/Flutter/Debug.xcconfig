@@ -1,0 +1,3 @@
+#include "Generated.xcconfig"
+// The developer's own signing team, from .env (scripts/dart-defines.sh); git-ignored.
+#include? "Private.xcconfig"
