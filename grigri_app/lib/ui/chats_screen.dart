@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
+import 'notices_screen.dart';
 
 /// The group chats: one per plan I'm in, most recent first.
 class ChatsScreen extends StatelessWidget {
@@ -22,7 +23,10 @@ class ChatsScreen extends StatelessWidget {
           return tb.compareTo(ta);
         });
     return Scaffold(
-      appBar: AppBar(title: const Text('Chats')),
+      appBar: AppBar(
+        title: const Text('Chats'),
+        actions: const [NoticesButton()],
+      ),
       body: chats.isEmpty
           ? const EmptyState(
               icon: Icons.forum_outlined,

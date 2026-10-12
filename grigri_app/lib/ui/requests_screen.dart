@@ -4,6 +4,7 @@ import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'notices_screen.dart';
 import 'match_screen.dart';
 import 'swipe_deck.dart';
 
@@ -44,7 +45,10 @@ class _RequestsScreenState extends State<RequestsScreen> {
     final store = StoreScope.of(context);
     final requests = store.toReview;
     return Scaffold(
-      appBar: AppBar(title: const Text('Requests')),
+      appBar: AppBar(
+        title: const Text('Requests'),
+        actions: const [NoticesButton()],
+      ),
       body: requests.isEmpty
           ? const EmptyState(
               icon: Icons.group_add_outlined,

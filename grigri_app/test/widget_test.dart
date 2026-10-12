@@ -76,6 +76,59 @@ void main() {
     expect(store.plan('thursday-bouldering')!.memberIds, ['lena', 'me', 'noa']);
   });
 
+  testWidgets('a pending request turns accepted, with a notification', (
+    tester,
+  ) async {
+    var time = now;
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final store = GrigriStore(
+      demoState(now),
+      clock: () => time,
+      answerAfter: const Duration(seconds: 10),
+    );
+    await tester.pumpWidget(GrigriApp(store: store));
+
+    await tester.tap(find.byTooltip('Ask to join'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Plans'));
+    await tester.pumpAndSettle();
+    expect(find.text('ASKED TO JOIN'), findsOneWidget);
+    expect(find.text('Pending'), findsOneWidget);
+    // The "Asked to join" note goes away.
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pumpAndSettle();
+
+    time = now.add(const Duration(seconds: 10));
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.text("It's a match!"), findsOneWidget);
+    await tester.tap(find.text('Keep swiping'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pending'), findsNothing);
+    expect(find.text('Accepted'), findsNWidgets(2));
+
+    await tester.tap(find.byTooltip('Notifications').hitTestable());
+    await tester.pumpAndSettle();
+    expect(find.text("You're in: Siurana sport day"), findsOneWidget);
+    expect(find.text('New'), findsOneWidget);
+    expect(store.unreadNotices, 0);
+  });
+
+  testWidgets('a member can decline from the plan', (tester) async {
+    final store = await pumpApp(tester);
+    await tester.tap(find.text('Plans'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Sunday at Siurana'));
+    await tester.pumpAndSettle();
+    expect(find.text('ASKING TO JOIN'), findsOneWidget);
+    await tester.tap(find.byTooltip('Decline Bruno Costa'));
+    await tester.pumpAndSettle();
+    expect(store.state.requests['my-sunday-siurana/bruno']!.rejected, isTrue);
+    expect(find.text('Bruno Costa'), findsNothing);
+  });
+
   testWidgets('a new plan shows up in Plans', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.text('Plans'));

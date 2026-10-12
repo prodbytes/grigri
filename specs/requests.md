@@ -67,3 +67,20 @@ spec.
    - No backend yet: the rules run on the device, the state is saved
      with shared_preferences, and demo data with made-up climbers (who
      answer by fixed policies) starts it.
+5. **Someone joins a plan only when every member accepts them; meanwhile
+   the plan shows as pending in their list, then as accepted. Notify people
+   when they're accepted or rejected. Let people reject, too: one
+   rejection is a rejection.**
+   - The unanimous yes and the single "no" were already the rule
+     ([matching](matching.md#the-group-decides)). New: the made-up
+     climbers answer 10 seconds after a request (instantly in tests), so
+     it shows as pending first.
+   - Plans lists my plans as **Organizing** or **Accepted**, and the ones I
+     asked to join as **Pending** (and who it's waiting for) or
+     **Declined** (dismissable) ([screens](screens.md)).
+   - [Notifications](matching.md#notifications): a bell on every tab, with
+     a badge for unread ones, opens "You're in" and "Not this time"
+     notifications. A yes that arrives later also opens "It's a match!",
+     and a no shows a note at the bottom.
+   - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
+     each person asking to join.

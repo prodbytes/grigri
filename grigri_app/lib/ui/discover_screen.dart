@@ -4,6 +4,7 @@ import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'notices_screen.dart';
 import 'match_screen.dart';
 import 'swipe_deck.dart';
 
@@ -36,7 +37,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         SnackBar(
           content: Text(
             store.waiting.any((r) => r.planId == plan.id)
-                ? 'Asked to join. $organizer${plan.memberIds.length > 1 ? ' and the group' : ''} will decide.'
+                ? 'Asked to join: pending. $organizer${plan.memberIds.length > 1 ? ' and the group' : ''} will decide; you\'ll get a notification.'
                 : 'Not this time: the group passed.',
           ),
         ),
@@ -49,7 +50,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final store = StoreScope.of(context);
     final plans = store.discover;
     return Scaffold(
-      appBar: AppBar(title: const Text('Discover plans')),
+      appBar: AppBar(
+        title: const Text('Discover plans'),
+        actions: const [NoticesButton()],
+      ),
       body: plans.isEmpty
           ? EmptyState(
               icon: Icons.landscape_outlined,

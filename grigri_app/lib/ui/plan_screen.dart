@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
+import 'match_screen.dart';
 import 'plan_editor.dart';
 
-/// One plan I'm in: the plan, its group, and what I can do with it.
+/// One plan I'm in, or asked to join: the plan, its group, who's asking to
+/// join (to accept or turn down), and what I can do with it.
 class PlanScreen extends StatelessWidget {
   const PlanScreen({super.key, required this.planId});
 
@@ -28,6 +30,7 @@ class PlanScreen extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final organizing = plan.organizerId == store.me.id;
     final member = plan.memberIds.contains(store.me.id);
+    final mine = store.state.requests['${plan.id}/${store.me.id}'];
     final pending = store.state.requests.values.where(
       (r) =>
           r.planId == plan.id &&
@@ -52,6 +55,24 @@ class PlanScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           PlanHighlight(plan),
+          if (!member && mine != null) ...[
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: mine.rejected
+                  ? const Tag(
+                      'Declined: the group said no',
+                      icon: Icons.close,
+                      color: Mountain.clay,
+                    )
+                  : Tag(
+                      'Pending: ${mine.acceptedBy.length} of '
+                      '${plan.memberIds.length} said yes',
+                      icon: Icons.hourglass_top,
+                      color: Mountain.sky,
+                    ),
+            ),
+          ],
           const SizedBox(height: 20),
           Text(
             'THE GROUP · ${plan.memberIds.length} OF ${plan.spots}',
@@ -88,10 +109,36 @@ class PlanScreen extends StatelessWidget {
                 leading: Avatar(store.climber(r.climberId)),
                 title: Text(store.climber(r.climberId).name),
                 subtitle: Text(
-                  '${r.acceptedBy.length} of ${plan.memberIds.length} said yes'
-                  '${r.acceptedBy.contains(store.me.id) ? '' : ' · review in Requests'}',
+                  '${r.acceptedBy.length} of ${plan.memberIds.length} said yes',
                   style: const TextStyle(color: Mountain.sky),
                 ),
+                trailing: r.acceptedBy.contains(store.me.id)
+                    ? const Tag('You said yes', color: Mountain.olive)
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip:
+                                'Decline ${store.climber(r.climberId).name}',
+                            icon: const Icon(Icons.close, color: Mountain.clay),
+                            onPressed: () => store.reject(r.id),
+                          ),
+                          IconButton(
+                            tooltip:
+                                'Accept ${store.climber(r.climberId).name}',
+                            icon: const Icon(
+                              Icons.check,
+                              color: Mountain.olive,
+                            ),
+                            onPressed: () {
+                              final match = store.accept(r.id);
+                              if (match != null) {
+                                MatchScreen.show(context, match);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
                 onTap: () =>
                     showProfileSheet(context, store.climber(r.climberId)),
               ),

@@ -35,7 +35,9 @@ class GrigriState {
     required this.messages,
     required this.policies,
     Set<String>? passed,
-  }) : passed = passed ?? {};
+    List<Notice>? notices,
+  }) : passed = passed ?? {},
+       notices = notices ?? [];
 
   final String meId;
   final Map<String, Climber> climbers;
@@ -48,8 +50,11 @@ class GrigriState {
   /// How each made-up climber decides; never set for [meId].
   final Map<String, Policy> policies;
 
-  /// Plans I swiped left on.
+  /// Plans I swiped left on, or whose "no" I dismissed.
   final Set<String> passed;
+
+  /// My notifications, oldest first.
+  final List<Notice> notices;
 
   Map<String, Object> toJson() => {
     'meId': meId,
@@ -59,6 +64,7 @@ class GrigriState {
     'messages': [for (final m in messages) m.toJson()],
     'policies': {for (final e in policies.entries) e.key: e.value.name},
     'passed': passed.toList(),
+    'notices': [for (final n in notices) n.toJson()],
   };
 
   static GrigriState fromJson(Map<String, Object?> json) {
@@ -80,6 +86,10 @@ class GrigriState {
           e.key as String: Policy.values.byName(e.value as String),
       },
       passed: {for (final p in json['passed'] as List? ?? []) p as String},
+      notices: [
+        for (final n in json['notices'] as List? ?? [])
+          Notice.fromJson((n as Map).cast()),
+      ],
     );
   }
 }
@@ -97,8 +107,12 @@ class Match {
 /// profile and the group chats. Matching works on the device for now
 /// (specs/matching.md); a backend would take its place behind this API.
 class GrigriStore extends ChangeNotifier {
-  GrigriStore(this._state, {this._storage, DateTime Function()? clock})
-    : _clock = clock ?? DateTime.now;
+  GrigriStore(
+    this._state, {
+    this._storage,
+    DateTime Function()? clock,
+    this.answerAfter = Duration.zero,
+  }) : _clock = clock ?? DateTime.now;
 
   /// The saved state, or the demo data when there's none (or it can't be
   /// read).
@@ -113,12 +127,23 @@ class GrigriStore extends ChangeNotifier {
         debugPrint('grigri: saved state unreadable, starting over: $e');
       }
     }
-    return GrigriStore(state ?? demoState(DateTime.now()), storage: store);
+    return GrigriStore(
+      state ?? demoState(DateTime.now()),
+      storage: store,
+      answerAfter: const Duration(seconds: 10),
+    );
   }
 
   GrigriState _state;
   final Storage? _storage;
   final DateTime Function() _clock;
+
+  /// How long the made-up climbers take to answer a request, so it shows
+  /// as pending first. [settle] applies their answers once it's up.
+  final Duration answerAfter;
+
+  /// Whether [_settle] changed anything.
+  bool _touched = false;
 
   GrigriState get state => _state;
   Climber get me => _state.climbers[_state.meId]!;
@@ -164,6 +189,21 @@ class GrigriStore extends ChangeNotifier {
         r,
   ];
 
+  /// My swipes right that a group turned down, until I dismiss them.
+  List<JoinRequest> get declined => [
+    for (final r in _state.requests.values)
+      if (r.climberId == me.id &&
+          r.rejected &&
+          _state.plans.containsKey(r.planId) &&
+          !_state.passed.contains(r.planId))
+        r,
+  ];
+
+  /// My notifications, newest first.
+  List<Notice> get notices => _state.notices.reversed.toList();
+
+  int get unreadNotices => _state.notices.where((n) => !n.read).length;
+
   /// Plans I'm in (organizing or joined), soonest first.
   List<Plan> get myPlans =>
       _state.plans.values.where((p) => p.memberIds.contains(me.id)).toList()
@@ -185,7 +225,11 @@ class GrigriStore extends ChangeNotifier {
   /// they all accept, I join and get a [Match].
   Match? like(String planId) {
     final plan = _state.plans[planId]!;
-    final request = JoinRequest(planId: planId, climberId: me.id);
+    final request = JoinRequest(
+      planId: planId,
+      climberId: me.id,
+      time: _clock(),
+    );
     _state.requests[request.id] = request;
     final match = _settle(plan.id);
     _changed();
@@ -218,6 +262,38 @@ class GrigriStore extends ChangeNotifier {
     _changed();
   }
 
+  /// I clear a group's "no" from my plans; the plan stays out of my deck.
+  void dismiss(String requestId) {
+    final request = _state.requests.remove(requestId)!;
+    _state.passed.add(request.planId);
+    _changed();
+  }
+
+  /// Marks my notifications read.
+  void readNotices() {
+    if (unreadNotices == 0) return;
+    for (final (i, n) in _state.notices.indexed) {
+      _state.notices[i] = n.copyWith(read: true);
+    }
+    _changed();
+  }
+
+  /// Applies the made-up members' answers that are due, to every plan with
+  /// open requests. Returns the notifications they made for me.
+  List<Notice> settle() {
+    final before = _state.notices.length;
+    _touched = false;
+    final planIds = {
+      for (final r in _state.requests.values)
+        if (!r.rejected && _state.plans.containsKey(r.planId)) r.planId,
+    };
+    for (final planId in planIds) {
+      _settle(planId);
+    }
+    if (_touched) _changed();
+    return _state.notices.sublist(before);
+  }
+
   /// Applies the made-up members' decisions to a plan's open requests and
   /// adds whoever every member has accepted, until nothing changes (each
   /// newcomer must then accept the requests still open). Returns who
@@ -247,7 +323,11 @@ class GrigriStore extends ChangeNotifier {
           }
           if (r.rejected) break;
         }
-        _state.requests[r.id] = r;
+        if (!identical(r, request)) {
+          _state.requests[r.id] = r;
+          _touched = true;
+          if (r.rejected) _notify(NoticeKind.declined, r);
+        }
         if (!r.rejected &&
             !plan.isFull &&
             plan.memberIds.every(r.acceptedBy.contains)) {
@@ -257,6 +337,8 @@ class GrigriStore extends ChangeNotifier {
           _state.plans[planId] = grown;
           _note(planId, '${climber(r.climberId).name} joined the plan 🎉');
           joined.add(Match(plan: grown, newcomer: climber(r.climberId)));
+          _notify(NoticeKind.accepted, r);
+          _touched = true;
           changed = true;
           break;
         }
@@ -265,10 +347,25 @@ class GrigriStore extends ChangeNotifier {
     return joined;
   }
 
+  /// Tells me when a group answered my request.
+  void _notify(NoticeKind kind, JoinRequest request) {
+    if (request.climberId != me.id) return;
+    _state.notices.add(
+      Notice(
+        kind: kind,
+        planId: request.planId,
+        planTitle: _state.plans[request.planId]!.title,
+        time: _clock(),
+      ),
+    );
+  }
+
   /// A made-up member's answer: true, false, or null (not yet). I answer
-  /// for myself, in the Requests deck.
+  /// for myself, in the Requests deck or on the plan.
   bool? _decide(String memberId, JoinRequest request, Plan plan) {
     if (memberId == me.id) return null;
+    final asked = request.time;
+    if (asked != null && _clock().difference(asked) < answerAfter) return null;
     switch (_state.policies[memberId] ?? Policy.undecided) {
       case Policy.acceptsAll:
         return true;

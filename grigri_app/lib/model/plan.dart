@@ -111,10 +111,14 @@ class JoinRequest {
     required this.climberId,
     this.acceptedBy = const {},
     this.rejected = false,
+    this.time,
   });
 
   final String planId;
   final String climberId;
+
+  /// When they asked; null when it was long enough ago not to matter.
+  final DateTime? time;
 
   /// The members who accepted.
   final Set<String> acceptedBy;
@@ -130,6 +134,7 @@ class JoinRequest {
         climberId: climberId,
         acceptedBy: acceptedBy ?? this.acceptedBy,
         rejected: rejected ?? this.rejected,
+        time: time,
       );
 
   Map<String, Object> toJson() => {
@@ -137,6 +142,7 @@ class JoinRequest {
     'climberId': climberId,
     'acceptedBy': acceptedBy.toList(),
     'rejected': rejected,
+    if (time != null) 'time': time!.toIso8601String(),
   };
 
   static JoinRequest fromJson(Map<String, Object?> json) => JoinRequest(
@@ -146,6 +152,58 @@ class JoinRequest {
       for (final m in json['acceptedBy'] as List? ?? []) m as String,
     },
     rejected: json['rejected'] as bool? ?? false,
+    time: switch (json['time']) {
+      final String t => DateTime.parse(t),
+      _ => null,
+    },
+  );
+}
+
+/// What a group answered to my request to join its plan.
+enum NoticeKind { accepted, declined }
+
+/// A notification for me: a group accepted or declined my request to join
+/// its plan. It keeps the plan's title, in case the plan ends.
+class Notice {
+  const Notice({
+    required this.kind,
+    required this.planId,
+    required this.planTitle,
+    required this.time,
+    this.read = false,
+  });
+
+  final NoticeKind kind;
+  final String planId;
+  final String planTitle;
+  final DateTime time;
+  final bool read;
+
+  /// A group answers a request once, and I can't ask again.
+  String get id => '$planId/${kind.name}';
+
+  Notice copyWith({bool? read}) => Notice(
+    kind: kind,
+    planId: planId,
+    planTitle: planTitle,
+    time: time,
+    read: read ?? this.read,
+  );
+
+  Map<String, Object> toJson() => {
+    'kind': kind.name,
+    'planId': planId,
+    'planTitle': planTitle,
+    'time': time.toIso8601String(),
+    'read': read,
+  };
+
+  static Notice fromJson(Map<String, Object?> json) => Notice(
+    kind: NoticeKind.values.byName(json['kind']! as String),
+    planId: json['planId']! as String,
+    planTitle: json['planTitle']! as String,
+    time: DateTime.parse(json['time']! as String),
+    read: json['read'] as bool? ?? false,
   );
 }
 

@@ -36,6 +36,8 @@ person, and a plan can take a whole group.
   the group has said yes and who hasn't, then **their profile**, with
   their grade for the plan's discipline marked when it fits.
   - Right / ✓: I accept them. Left / ✕: I turn them down.
+  - The plan's screen lists them too, with ✓ and ✕ for each one I haven't
+    answered.
 
 Cards are dragged (they tilt, and stamp JOIN / PASS or ACCEPT / DECLINE),
 or thrown by the buttons. A drag past 28% of the width, or a quick flick,
@@ -52,14 +54,31 @@ counts.
   the plan, its requests and its chat. A plan I left never comes back to
   my deck.
 
+## My request: pending, accepted or declined
+
+Swiping right on a plan makes it **pending** ("Asked to join: pending…").
+Plans lists it under **Asked to join**, tagged **Pending**, with who it's
+still waiting for. When the whole group has said yes, it moves up to the
+plans I'm in, tagged **Accepted**. When one member says no, it's tagged
+**Declined** until I dismiss it (✕); it doesn't come back to my deck. Its
+plan screen shows the same status.
+
 ## Matches
 
 When someone joins a plan I'm in, or I join one, **"It's a match!"** opens
 over the screen: the plan, highlighted, the group's avatars and names, and
-**Open the group chat** or **Keep swiping**. Swiping right on a plan whose
-group hasn't decided yet says so ("Asked to join… will decide") and lists
-it under Plans → Waiting for the group; a group that says no says "Not this
-time".
+**Open the group chat** or **Keep swiping**. That includes a group's yes
+that arrives while I'm doing something else. A group's no shows "Not this
+time: … said no" at the bottom of the screen.
+
+## Notifications
+
+A bell on every tab's bar opens **Notifications**, with a badge counting
+the unread ones. Each one is a group's answer to my request: **"You're
+in: <plan>"** (tap for the plan) or **"Not this time: <plan>"**, with when
+it happened, newest first. Opening the screen marks them read; the ones
+that were new stay highlighted ("New") while it's open. Only the person who
+asked is notified.
 
 ## Group chat
 
@@ -74,11 +93,15 @@ with shared_preferences: local storage on the web). The app starts with
 demo data ([seed.dart](../grigri_app/lib/data/seed.dart)): my profile
 ("You", to edit), eight made-up climbers with their plans, dates always in
 the coming days, two people asking to join my plan, and a bouldering group
-I'm in where Noa waits only for my yes. The made-up climbers answer
-requests by a fixed policy: accept everyone, accept only overlapping
-grades, never decide (the request waits), or turn everyone down. Profile →
+I'm in where Noa waits only for my yes, and the (read) notification that
+I was accepted into it. The made-up climbers answer requests by a fixed
+policy: accept everyone, accept only overlapping grades, never decide (the
+request waits), or turn everyone down. They answer 10 seconds after I ask
+(the app checks every 2 seconds), so my request is pending first; tests
+make them answer at once. Profile →
 ⋯ → **Reset the demo data** starts over.
 
 A backend would take the store's place behind the same operations (like,
-pass, accept, reject, create, update, leave, send), with real people's
-decisions instead of the policies.
+pass, accept, reject, dismiss, create, update, leave, send, the
+notifications), with real people's decisions instead of the policies, and
+push notifications instead of the 2-second check.

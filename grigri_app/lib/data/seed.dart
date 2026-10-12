@@ -325,5 +325,14 @@ GrigriState demoState(DateTime now) {
       'ines': Policy.acceptsAll,
       'bruno': Policy.acceptsAll,
     },
+    notices: [
+      Notice(
+        kind: NoticeKind.accepted,
+        planId: 'thursday-bouldering',
+        planTitle: 'Thursday bouldering',
+        time: now.subtract(const Duration(days: 2)),
+        read: true,
+      ),
+    ],
   );
 }
