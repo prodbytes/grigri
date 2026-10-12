@@ -90,7 +90,8 @@ flutter:
   # see https://flutter.dev/to/font-from-package
 
 # The app icon on every platform, from assets/icon/ (see specs/platforms.md).
-# Regenerate with: dart run flutter_launcher_icons
+# Regenerate with: uv run scripts/make-icon.py (from the repository root),
+# then flutter pub run flutter_launcher_icons
 flutter_launcher_icons:
   image_path: assets/icon/icon.png
   android: true

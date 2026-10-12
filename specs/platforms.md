@@ -10,16 +10,18 @@ The app is built with Flutter 3.47 for Android, iOS and the web.
 App IDs: `com.nu01.grigri` (Android application ID and iOS bundle ID).
 The app is named **Grigri** everywhere.
 
-**Icon**: mountain peaks with a snow cap and a moon, in a sand ring, on
-the dark of the [theme](theme.md). The sources are SVGs in
-[grigri_app/assets/icon/](../grigri_app/assets/icon):
-`icon.svg` (the whole icon) and `icon-foreground.svg` (the emblem alone,
-for Android's adaptive icon over `#1C211B`). Each is rendered to a
-1024 px PNG next to it (`rsvg-convert -w 1024 -h 1024`, from librsvg),
-and `dart run flutter_launcher_icons` in `grigri_app/` makes every size
-for Android, iOS and the web (favicon, PWA icons, and the manifest's
-colors, `#161A16`) from the `flutter_launcher_icons` settings in
-`pubspec.yaml`. It also changes
+**Icon**: an orange grigri (the belay device) over sage and slate
+mountains, on the night of the [theme](theme.md). The source art is
+[grigri_app/assets/icon/source.png](../grigri_app/assets/icon/source.png)
+(transparent background). `uv run scripts/make-icon.py` clears the stray
+yellow pixels the art has in its transparent areas and writes two 1024 px
+PNGs next to it: `icon.png` (the art filling 84% of the width, on
+`#161A16`) and `icon-foreground.png` (the art alone, transparent, kept
+inside the circle Android's adaptive icon masks may cut; shown over
+`#1C211B`). Then `flutter pub run flutter_launcher_icons` in
+`grigri_app/` makes every size for Android, iOS and the web (favicon, PWA
+icons, and the manifest's colors, `#161A16`) from the
+`flutter_launcher_icons` settings in `pubspec.yaml`. It also changes
 `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` in the iOS
 project; undo that change before committing.
 
