@@ -14,7 +14,7 @@ has no built-in demo data. The routes and JSON shapes are in
 | API stack | `grigri-api` | `grigri-rc-api` | `grigri-local-api`, in Floci |
 | Data | **Starts empty: only real people's data.** Never seeded | Made-up test data, re-seeded after each RC deploy, beside testers' real data | Made-up test data, seeded on every Floci start (Floci keeps nothing) |
 | Sign-in | A Google ID token (`GOOGLE_WEB_CLIENT_ID`) for the API's own session | Same | Same when `.env` has `GOOGLE_WEB_CLIENT_ID`; otherwise **dev mode** |
-| Admins | `GRIGRI_ADMIN_EMAILS` (repository secret) | Same | `GRIGRI_ADMIN_EMAILS` in `.env` |
+| Admins | rbacr's `grigri` `admin` role, asked with `GRIGRI_RBACR_TOKEN` (repository secret) | Same | The local rbacr's, asked with `RBACR_TOKEN` in `.env` |
 | Backups | Point-in-time recovery (35 days), deletion protection | None | None |
 
 Every environment behaves the same: nobody answers requests automatically.

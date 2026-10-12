@@ -77,7 +77,8 @@ DynamoDB's 100 items. Notices are put after the transaction.
 ## Configuration
 
 Environment (set by the template): `STAGE`, `VERSION`, `TABLE_NAME`,
-`PHOTOS_BUCKET`, `PHOTOS_UPLOAD_URL` (local only), `ADMIN_EMAILS`,
+`PHOTOS_BUCKET`, `PHOTOS_UPLOAD_URL` (local only), `RBACR_URL` and
+`RBACR_TOKEN` (who holds grigri's admin role: [src/rbacr.ts](src/rbacr.ts)),
 `GOOGLE_WEB_CLIENT_ID` (the ID tokens' audience; none: no Google sign-in),
 `DEV_MODE` (honored only when `STAGE` is `local`). Floci sets
 `AWS_ENDPOINT_URL`; S3 is then path-style.

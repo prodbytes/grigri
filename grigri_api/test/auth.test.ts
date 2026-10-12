@@ -1,7 +1,7 @@
 import type { webcrypto } from 'node:crypto';
 import { createLocalJWKSet, exportJWK, generateKeyPair, type JWK, SignJWT } from 'jose';
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { Auth, type AuthConfig, hashToken, parseAdminEmails, subjectHash } from '../src/auth.js';
+import { Auth, type AuthConfig, hashToken, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { type GoogleIdentity, googleVerifier, InvalidIdToken } from '../src/google.js';
 import { Router } from '../src/router.js';
@@ -72,7 +72,8 @@ describe('googleVerifier', () => {
   });
 });
 
-const admins = parseAdminEmails(' Admin@Example.com, ,other@example.com');
+// Stands in for rbacr: who holds grigri's admin role.
+const admins = new Set(['admin@example.com', 'other@example.com']);
 const DAY = 24 * 60 * 60 * 1000;
 
 describe('Auth sessions', () => {
@@ -86,7 +87,7 @@ describe('Auth sessions', () => {
         if (token !== 'good') throw new InvalidIdToken('bad');
         return identity;
       },
-      config: { devMode: false, adminEmails: admins, ...config },
+      config: { devMode: false, isAdmin: async (email) => admins.has(email), ...config },
       clock: () => now,
     });
   const bearer = (token: string) => ({ authorization: `Bearer ${token}` });
@@ -122,12 +123,12 @@ describe('Auth sessions', () => {
     expect(store.sessions.size).toBe(0);
   });
 
-  it('looks the caller up, admin from the verified email and the current list', async () => {
+  it('looks the caller up, admin from rbacr\'s answer for the verified email', async () => {
     const { token } = await make().signIn({ idToken: 'good' });
     const caller = await make().caller(bearer(token));
     expect(caller).toEqual({ subject: 'https://accounts.google.com#7', email: 'admin@example.com', admin: true, sessionId: hashToken(token) });
-    // Off the list now: no longer admin, same session.
-    expect((await make({ adminEmails: new Set() }).caller(bearer(token))).admin).toBe(false);
+    // rbacr says no now: no longer admin, same session.
+    expect((await make({ isAdmin: async () => false }).caller(bearer(token))).admin).toBe(false);
   });
 
   it('is never admin with an unverified email', async () => {

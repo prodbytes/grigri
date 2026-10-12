@@ -10,6 +10,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { ApiError, badRequest } from './domain/errors.js';
 import { type IdTokenVerifier, InvalidIdToken } from './google.js';
+import type { AdminCheck } from './rbacr.js';
 
 export const SESSION_DAYS = 365;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -17,7 +18,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface Caller {
   /** `<iss>#<sub>` (or `dev#<email>` in dev mode): the signed-in account. */
   subject: string;
-  /** Verified email, lowercased; only for the admin check, never returned. */
+  /** Verified email, lowercased; only for the admin check (rbacr), never returned. */
   email?: string;
   admin: boolean;
   /** The session's id (its token's hash); none for the dev header. */
@@ -51,7 +52,8 @@ export interface SessionStore {
 export interface AuthConfig {
   /** Local dev mode (template: DevMode, allowed only for Stage local). */
   devMode: boolean;
-  adminEmails: ReadonlySet<string>;
+  /** Whether a verified email is a Grigri admin: rbacr's answer (rbacr.ts). */
+  isAdmin: AdminCheck;
 }
 
 export interface AuthDeps {
@@ -59,15 +61,6 @@ export interface AuthDeps {
   verify: IdTokenVerifier;
   config: AuthConfig;
   clock?: () => Date;
-}
-
-export function parseAdminEmails(value: string | undefined): Set<string> {
-  return new Set(
-    (value ?? '')
-      .split(',')
-      .map((e) => e.trim().toLowerCase())
-      .filter((e) => e.length > 0),
-  );
 }
 
 const EMAIL = /^[^\s@,]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}$/;
@@ -133,7 +126,7 @@ export class Auth {
     }
     if (this.deps.config.devMode) {
       const dev = headers['x-grigri-dev-user']?.trim().toLowerCase();
-      if (dev && EMAIL.test(dev)) return { subject: `dev#${dev}`, email: dev, admin: this.isAdmin(dev) };
+      if (dev && EMAIL.test(dev)) return { subject: `dev#${dev}`, email: dev, admin: await this.deps.config.isAdmin(dev) };
     }
     throw signedOut();
   }
@@ -164,13 +157,9 @@ export class Auth {
     return {
       subject: session.subject,
       ...(email ? { email } : {}),
-      admin: email !== undefined && this.isAdmin(email),
+      admin: email !== undefined && (await this.deps.config.isAdmin(email)),
       sessionId: id,
     };
-  }
-
-  private isAdmin(email: string): boolean {
-    return this.deps.config.adminEmails.has(email);
   }
 }
 

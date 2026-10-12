@@ -26,15 +26,21 @@ Parameters:
       The Google web OAuth client; the ID tokens POST /api/session takes
       must be issued for it (their aud). Required outside local (see
       Rules). A public identifier, not a secret.
-  AdminEmails:
+  RbacrUrl:
+    Type: String
+    Default: https://rbacr.nu01.com
+    AllowedPattern: 'https?://[A-Za-z0-9.:-]+'
+    Description: >
+      rbacr, prodbytes' role manager, which says who holds grigri's admin
+      role (who may approve or reject any join request).
+  RbacrToken:
     Type: String
     Default: ''
     NoEcho: true
-    AllowedPattern: '[A-Za-z0-9._%+@,-]*'
+    AllowedPattern: '[A-Za-z0-9_-]*'
     Description: >
-      Who may approve or reject any join request, comma-separated verified
-      Google emails (the GRIGRI_ADMIN_EMAILS secret). NoEcho: people's
-      emails stay out of the console and logs.
+      An rbacr API token owned by an rbacr root (the RBACR_TOKEN secret),
+      to ask rbacr about callers' roles. Empty: nobody is an admin.
   PhotosBucket:
     Type: String
     AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
@@ -265,7 +271,8 @@ Resources:
           TABLE_NAME: !Ref Table
           PHOTOS_BUCKET: !Ref PhotosBucket
           PHOTOS_UPLOAD_URL: !Ref PhotosUploadUrl
-          ADMIN_EMAILS: !Ref AdminEmails
+          RBACR_URL: !Ref RbacrUrl
+          RBACR_TOKEN: !Ref RbacrToken
           GOOGLE_WEB_CLIENT_ID: !Ref GoogleWebClientId
           DEV_MODE: !Ref DevMode
           # Reuse TCP connections to DynamoDB between invocations.

@@ -397,3 +397,15 @@ spec.
       Release of non-GA tags use the repository variables
       `GOOGLE_WEB_CLIENT_ID_RC` and `GOOGLE_IOS_CLIENT_ID_RC`; Deploy and
       GA releases keep `GOOGLE_WEB_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID`.
+26. **Health alarms to julio+health@nu01.com; let rbacr handle roles.**
+    - [Roles](roles.md), [API](api.md): who is an admin is rbacr's
+      answer (`POST /api/check`, system `grigri`, role `admin`; roots
+      too), asked with an rbacr root's API token, kept 60 s, failing
+      closed. The `GRIGRI_ADMIN_EMAILS` list (secret, template parameter
+      `AdminEmails`, `.env`) is gone.
+    - [Deploy](deploy.md), [backend](backend.md): deploys take the
+      optional secret `GRIGRI_RBACR_TOKEN` (template parameter
+      `RbacrToken`); without it they warn and nobody is an admin. Locally
+      the API asks the local rbacr with `.env`'s `RBACR_TOKEN`.
+    - The repository secret `GRIGRI_HEALTH_EMAILS` is set (not in the
+      repository).

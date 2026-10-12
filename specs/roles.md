@@ -39,5 +39,9 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
 - **Tests**: widget tests cover the roles shown, nobody signed in, and the
   failure with Retry, with a fake rbacr (no network).
 
-Grigri's **admin** (the Admin tab, [api.md](api.md)) doesn't come from
-rbacr yet: the API decides it from the stage's `GRIGRI_ADMIN_EMAILS`.
+Grigri's **admin** (the Admin tab, [api.md](api.md)) is rbacr's too:
+the API asks rbacr whether the caller's verified email holds the `admin`
+role of the `grigri` system (roots do), with an rbacr root's API token
+(`GRIGRI_RBACR_TOKEN` when deployed, the local rbacr's `RBACR_TOKEN`
+locally). rbacr needs the `grigri` system and its `admin` role for anyone
+but roots to be one. There's no admin list in Grigri any more.
