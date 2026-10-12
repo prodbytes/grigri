@@ -2,16 +2,18 @@
 # Continuous health monitor: every HEALTH_CHECK_INTERVAL seconds (15 by
 # default), one line per run: the time, then each dependency as its icon,
 # a short label and ✅/❌, e.g.
-#   2026-10-10 14:02:10 🏠 index ✅  🧗 web ✅  🔑 rbacr ✅
+#   2026-10-10 14:02:10  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅  🔑 rbacr ✅
 # On start it prints, once, where to open the app locally.
 # Runs via `devbox services up` (see process-compose.yaml) or standalone.
 set -uo pipefail
 
 INTERVAL="${HEALTH_CHECK_INTERVAL:-15}"
 
-# get <timeout> <url>: succeeds on a 2xx answer.
+# get <timeout> <curl args...>: succeeds on a 2xx answer.
 get() {
-    curl -fs -o /dev/null --max-time "$1" "$2"
+    local timeout=$1
+    shift
+    curl -fs -o /dev/null --max-time "$timeout" "$@"
 }
 
 # status <icon> <label> <command...>: "icon label ✅" when the command
@@ -22,12 +24,39 @@ status() {
     if "$@"; then printf '%s %s ✅' "$icon" "$label"; else printf '%s %s ❌' "$icon" "$label"; fi
 }
 
-WEB_URL="http://localhost:${FLUTTER_WEB_PORT:-2112}/app/"
+WEB_URL="http://localhost:${FLUTTER_WEB_PORT:-7189}/app/"
 INDEX_URL="http://localhost:${INDEX_PORT:-2113}/"
 RBACR_HEALTH_URL="http://localhost:${RBACR_PORT:-2115}/health"
+FLOCI="http://localhost:${FLOCI_PORT:-2114}"
+CDN_ALIAS="${GRIGRI_CDN_ALIAS:-grigri.localhost}"
+PUBLIC_HOST="${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}"
+HTTPS_PORT="${FLOCI_HTTPS_PORT:-2543}"
+HTTPS_URL="https://$PUBLIC_HOST:$HTTPS_PORT/app/"
+MKCERT_CA="$(mkcert -CAROOT 2>/dev/null)/rootCA.pem"
+
+# The CloudFront distribution in Floci, addressed by its alias in the Host
+# header (so it works where *.localhost doesn't resolve).
+cdn() { get 10 -H "Host: $CDN_ALIAS" "$FLOCI/app/"; }
+
+# HTTPS through the CDN on the public local name, validating the certificate
+# against mkcert's CA (not the system trust store, so it passes before
+# `mkcert -install` too). --resolve pins the name to loopback, so it doesn't
+# depend on DNS either.
+https() {
+    get 10 --cacert "$MKCERT_CA" \
+        --resolve "$PUBLIC_HOST:$HTTPS_PORT:127.0.0.1" "$HTTPS_URL"
+}
+
+# The API through the CDN (Floci's CloudFront to the local HTTP API and
+# Lambda): GET /api/health must answer ok for the local stage.
+api() {
+    curl -fs --max-time 10 -H "Host: $CDN_ALIAS" "$FLOCI/api/health" | grep -q '"ok":true,"stage":"local"'
+}
 
 echo "🧗 Grigri: $WEB_URL"
 echo "🏠 index:  $INDEX_URL (redirects to the app)"
+echo "🔒 HTTPS:  $HTTPS_URL (through Floci's CloudFront)"
+echo "🔌 API:    https://$PUBLIC_HOST:$HTTPS_PORT/api/health (dev mode without GOOGLE_WEB_CLIENT_ID: X-Grigri-Dev-User)"
 echo "🔑 rbacr:  ${RBACR_HEALTH_URL%/health}/ (the roles; local dev server)"
 
 while true; do
@@ -35,6 +64,9 @@ while true; do
     checks=(
         "$(status 🏠 index get 5 "$INDEX_URL")"
         "$(status 🧗 web get 5 "$WEB_URL")"
+        "$(status 🚚 cdn cdn)"
+        "$(status 🔒 https https)"
+        "$(status 🔌 api api)"
         "$(status 🔑 rbacr get 5 "$RBACR_HEALTH_URL")"
     )
     line="$(date '+%Y-%m-%d %H:%M:%S')"

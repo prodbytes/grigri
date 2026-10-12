@@ -1,0 +1,45 @@
+import { describe, expect, it } from 'vitest';
+import { planInput, profileInput } from '../src/domain/validate.js';
+import { seedData } from '../seed/data.js';
+import { assertSeedable } from '../seed/seed.js';
+
+describe('seed data', () => {
+  const now = new Date('2030-05-01T10:00:00.000Z');
+  const data = seedData(now);
+
+  it('only seed- ids', () => {
+    for (const c of data.climbers) expect(c.id).toMatch(/^seed-/);
+    for (const p of data.plans) expect(p.id).toMatch(/^seed-/);
+    for (const m of data.messages) expect(m.id).toMatch(/^seed-/);
+  });
+
+  it('passes the same validation as real input, with upcoming dates', () => {
+    for (const { id: _id, ...c } of data.climbers) expect(() => profileInput(c, [])).not.toThrow();
+    for (const { id: _id, organizerId: _o, memberIds: _m, ...p } of data.plans) {
+      expect(() => planInput(p, now)).not.toThrow();
+      expect(planInput(p, now)).toEqual(p);
+    }
+  });
+
+  it('references only seed climbers and plans, with open requests', () => {
+    const climbers = new Set(data.climbers.map((c) => c.id));
+    const plans = new Map(data.plans.map((p) => [p.id, p]));
+    for (const p of data.plans) for (const m of p.memberIds) expect(climbers.has(m)).toBe(true);
+    for (const r of data.requests) {
+      const plan = plans.get(r.planId)!;
+      expect(plan.memberIds).not.toContain(r.climberId);
+      // Not already accepted by everyone (nobody answers automatically).
+      expect(plan.memberIds.every((m) => r.acceptedBy.includes(m))).toBe(false);
+    }
+  });
+});
+
+describe('assertSeedable', () => {
+  it('refuses prod by stage and by table', () => {
+    expect(() => assertSeedable('prod', 'grigri-api')).toThrow(/stage 'prod'/);
+    expect(() => assertSeedable('rc', 'grigri-api')).toThrow(/table 'grigri-api'/);
+    expect(() => assertSeedable('local', 'something-else')).toThrow(/table/);
+    expect(() => assertSeedable('rc', 'grigri-rc-api')).not.toThrow();
+    expect(() => assertSeedable('local', 'grigri-local-api')).not.toThrow();
+  });
+});

@@ -1,0 +1,157 @@
+# grigri_floci
+
+Runs [Floci](https://floci.io/), a local AWS emulator, as the Grigri
+**CloudFront** distribution, over HTTP and HTTPS, and as the local AWS the
+**API** runs in: the same template as in AWS
+([grigri_api/template.yaml](../grigri_api/template.yaml): Lambda, HTTP API,
+DynamoDB) plus the photos bucket, seeded with the made-up test data. Like
+the deployed CloudFront ([grigri_infra/site.yaml](../grigri_infra/site.yaml)),
+the distribution only routes. The index and the app keep running on their
+own dev servers:
+
+| Path | Origin |
+|------|--------|
+| default (`/`, anything else) | `grigri_index`, Python `http.server` (`INDEX_PORT`, 2113): `/` redirects to `/app/` |
+| `/app*` | Flutter dev server, `flutter run -d web-server --base-href /app/` (`FLUTTER_WEB_PORT`, 7189) |
+| `/api/*` | The local API: Floci's HTTP API `grigri` (`grigri.execute-api.localhost.floci.io`), its Lambda and table |
+| `/photos/*` | Floci's S3 bucket `grigri-local-photos` (objects under `photos/`) |
+
+Open **https://local.grigri.nu01.com:2543/app/**, or over HTTP
+**http://grigri.localhost:2114/app/**. Browsers and curl resolve
+`*.localhost` to loopback, so no hosts-file edit is needed.
+
+CloudFront forwards paths as is (it can't strip a prefix), so each origin
+serves its own prefix: the app has the `/app/` base href.
+
+## Files
+
+| Path | Holds |
+|------|-------|
+| [compose.yaml](compose.yaml) | The `grigri-floci` container, bound to 127.0.0.1 |
+| [init/ready.d/05-api.sh](init/ready.d/05-api.sh) | Ready hook: deploys the API stack `grigri-local-api` (from the host's build, mounted at `/opt/grigri-api`), the photos bucket with CORS for the local origins, and seeds it |
+| [init/ready.d/10-cloudfront.sh](init/ready.d/10-cloudfront.sh) | Ready hook: creates the cache policy, origin request policy and distribution |
+| `certs/` (git-ignored) | The local HTTPS certificate and key, from [scripts/local-certs.sh](../scripts/local-certs.sh) |
+
+## How it works
+
+- `devbox services up` starts it as `4-floci`. The process is ready once
+  Floci reports its `ready` hooks done (`/_floci/init`).
+- Storage is `memory`, so every start is clean and the hook recreates the
+  distribution. The distribution ID changes each time; use the alias.
+- Nothing is cached (all TTLs are 0). Every viewer header except `Host`, plus
+  all cookies and query strings, is forwarded, matching AWS's managed
+  `AllViewerExceptHostHeader` policy. Floci doesn't model AWS managed
+  policies, so the hook creates an equivalent. All methods are allowed.
+- **Hot reload works through the CDN URL.** The Flutter dev server writes
+  the `Host` it receives into its debug-channel WebSocket URL. Floci can't
+  carry WebSockets (it drops `Upgrade`), so that channel mustn't go through
+  it. Both origins are therefore named `dev.grigri.localhost`:
+  - Inside the container, compose maps it to the Docker host
+    (`host-gateway`), and it's allowlisted as a private origin
+    (`FLOCI_SERVICES_CLOUDFRONT_ALLOWED_PRIVATE_ORIGIN_HOSTS`).
+  - In the browser, it's loopback, so the page's
+    `ws://dev.grigri.localhost:7189/app/$dwdsSseHandler` goes straight to
+    the dev server.
+- The image is a dated nightly (`nightly-09242026-compat`), pinned by
+  digest in `compose.yaml`, the same one presence uses: Floci 2.1.0 forwards
+  no viewer headers at all to custom origins. Move to the next release once
+  it ships, with its digest
+  (`docker buildx imagetools inspect floci/floci:<tag>`).
+- Inside the container Floci listens on 4566 (HTTP and HTTPS) and 8443
+  (HTTPS); compose maps them to `FLOCI_PORT` (2114) and `FLOCI_HTTPS_PORT`
+  (2543) on the host. Don't pass `FLOCI_PORT` into the container: Floci
+  reads it as its own listen port, and the hook then can't reach it.
+- The health monitor's `🚚 cdn` check requests `/app/` with the alias as
+  the `Host` header.
+
+## The API
+
+- `scripts/build-api.sh` runs before Floci starts: `npm ci` when the
+  lockfile changed, and the esbuild bundle when the sources did.
+  compose mounts `grigri_api/` read-only; `05-api.sh` packages and deploys
+  the template as `grigri-local-api` (Stage `local`, the host's CPU
+  architecture), then invokes the function with `{"grigriSeed": true}`.
+- Floci runs the function in a sibling Docker container (named
+  `grigri-lambda-*`), so compose mounts the Docker socket. That gives the
+  container control of the Docker daemon: local development only, with
+  Floci's ports bound to 127.0.0.1 and the image pinned by digest. Stopping
+  `4-floci` also removes those containers.
+- The HTTP API gets the fixed ID `grigri` (the template's
+  `floci:override-id` tag, local only), allowlisted as a private origin.
+- **Dev mode**: without `GOOGLE_WEB_CLIENT_ID` in `.env`, the API has no
+  authorizer, and the caller is whoever `X-Grigri-Dev-User: <email>`
+  names. With it, the JWT authorizer checks Google ID tokens as in AWS.
+  `GRIGRI_ADMIN_EMAILS` in `.env` names the local admins. For example:
+
+  ```bash
+  curl -H 'X-Grigri-Dev-User: alex@example.com' https://local.grigri.nu01.com:2543/api/discover
+  ```
+
+- Photo uploads go to `https://localhost:2543/grigri-local-photos` (Floci's
+  S3, path-style; the bucket allows POSTs from the local origins), and
+  photos come back through the CDN at `/photos/<key>`.
+- Floci doesn't enforce CloudFormation Rules (the template's refusal of
+  dev mode outside `local` is checked by AWS, and the function ignores the
+  header outside `local` too), and a stack update can't change the HTTP
+  API's fixed ID: the stack is always created fresh (memory storage).
+- The health monitor's `🔌 api` check asks `/api/health` through the CDN.
+
+## HTTPS
+
+`local.grigri.nu01.com` is meant to resolve to `127.0.0.1` and `::1` (A
+and AAAA records, TTL 300, in the Route 53 zone `grigri.nu01.com`; see
+[grigri_infra/README.md](../grigri_infra/README.md)). It is the
+distribution's second alias, for origins that need a public top-level
+domain, such as Google sign-in's JavaScript origins. Until the records
+exist, browse https://grigri.localhost:2543/app/ (the same certificate
+covers it), or map the name to 127.0.0.1 in your hosts file.
+
+- [scripts/local-certs.sh](../scripts/local-certs.sh) runs before Floci
+  starts. It uses [mkcert](https://github.com/FiloSottile/mkcert) from
+  devbox to write `certs/grigri.pem` and `certs/grigri-key.pem` for
+  `local.grigri.nu01.com`, `grigri.localhost`, `*.grigri.localhost`,
+  `localhost`, `127.0.0.1` and `::1`. It regenerates them only when one of
+  these is true:
+  - they're missing;
+  - they expire within 30 days;
+  - they don't cover every name;
+  - they weren't signed by this machine's mkcert CA.
+
+  `certs/` is git-ignored.
+- compose mounts `certs/` read-only and sets `FLOCI_TLS_ENABLED`,
+  `FLOCI_TLS_CERT_PATH`, `FLOCI_TLS_KEY_PATH` and
+  `FLOCI_TLS_AWS_HTTPS_PORT=8443`. 2543 on the host, rather than 443,
+  avoids binding a privileged port.
+- The certificate is signed by mkcert's local CA (`mkcert -CAROOT`). Each
+  machine has one CA, shared by every project that uses mkcert. **To have
+  browsers trust it, run once:** `devbox run mkcert -install`. It asks for
+  your password, because it adds the CA to the system trust store. Until
+  then, curl and the health check validate against the CA file directly,
+  and browsers show a certificate warning.
+- Hot reload still works over HTTPS. The dev server's `ws://` channel to
+  `dev.grigri.localhost` is allowed from an HTTPS page, because browsers
+  treat `*.localhost` as a secure origin.
+- The health monitor's `🔒 https` check fetches `/app/` over HTTPS and
+  validates the certificate against mkcert's CA.
+
+## Settings
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `FLOCI_PORT` | `2114` | Host port for Floci (HTTP and HTTPS) |
+| `FLOCI_HTTPS_PORT` | `2543` | Host port for Floci's HTTPS-only listener |
+| `GRIGRI_CDN_ALIAS` | `grigri.localhost` | Distribution alias (host name to browse) |
+| `GRIGRI_PUBLIC_HOST` | `local.grigri.nu01.com` | Second alias, with a public TLD; also in the certificate |
+| `GRIGRI_ORIGIN_HOST` | `dev.grigri.localhost` | Origin host name: the Docker host inside the container, and loopback in the browser |
+| `GOOGLE_WEB_CLIENT_ID` | (none: dev mode) | From `.env`: the Google web client the local API's authorizer accepts |
+| `GRIGRI_ADMIN_EMAILS` | (none) | From `.env`: the local admins |
+
+## Limitations
+
+- **Linux outside the dev container:** the Flutter dev server and the
+  index bind to 127.0.0.1. On plain Docker, `host-gateway` is the bridge
+  address, which can't reach them (Docker Desktop on macOS forwards it to
+  the host's loopback). Set `GRIGRI_BIND_HOST=0.0.0.0`, as the dev
+  container does, to have them listen on every interface.
+- There's no edge caching (see the
+  [Floci CloudFront docs](https://github.com/floci-io/floci/blob/main/docs/services/cloudfront.md)).

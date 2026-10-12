@@ -17,7 +17,7 @@ and settings (`GRIGRI_VERSION`, `GRIGRI_STAGE`, `GRIGRI_API_URL`,
 [specs/sign-in.md](../specs/sign-in.md)):
 
 ```bash
-devbox services up        # web, on http://localhost:2112/app/
+devbox services up        # web, on http://localhost:7189/app/
 devbox run android        # the Android phone attached by USB
 make web|android|ios      # release builds (see the Makefile)
 ```
