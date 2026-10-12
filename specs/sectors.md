@@ -33,9 +33,12 @@ file from OpenStreetMap through the public Overpass API, per country:
 
 ```sh
 cd grigri_app
-dart run tool/build_sectors.dart ES FR IT PT > assets/sectors.json
+flutter pub get  # dart run needs the Flutter packages resolved
+dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
 ```
 
+- It writes the file only when every country came through, so a failed
+  run leaves the index as it was.
 - It takes the country's crags and sectors (`climbing=crag`) and climbing
   gyms (`climbing=gym`, or `leisure=sports_centre` with `sport=climbing`).
 - A sector's area is the climbing area (a `climbing=area` relation) it's a
