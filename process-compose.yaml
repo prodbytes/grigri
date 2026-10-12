@@ -6,12 +6,18 @@ processes:
     environment:
       - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-15}
       - INDEX_PORT=${INDEX_PORT:-2113}
-      - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-2112}
+      - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-7189}
+      - FLOCI_PORT=${FLOCI_PORT:-2114}
+      - FLOCI_HTTPS_PORT=${FLOCI_HTTPS_PORT:-2543}
+      - GRIGRI_CDN_ALIAS=${GRIGRI_CDN_ALIAS:-grigri.localhost}
+      - GRIGRI_PUBLIC_HOST=${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}
       - RBACR_PORT=${RBACR_PORT:-2115}
     # Start logging once every service passes its readiness probe, so the
     # first status line reflects a fully started stack.
     depends_on:
       2-flutter-web:
+        condition: process_healthy
+      4-floci:
         condition: process_healthy
       5-index:
         condition: process_healthy
@@ -25,12 +31,13 @@ processes:
     # RBACR_TOKEN from .env (process-compose loads it), the same token the
     # app sends; without one it generates a token and logs it, to copy into
     # .env. Roots: dev@rbacr.local. Its own container and volume, so it runs
-    # beside presence's. The web app's origin may call it (CORS).
+    # beside presence's. The web app's origins, direct and through Floci's
+    # HTTPS, may call it (CORS).
     command: >-
       docker run --rm --name grigri-rbacr
       -p "127.0.0.1:${RBACR_PORT:-2115}:8686"
       -e "RBACR_TOKEN=${RBACR_TOKEN:-}"
-      -e "RBACR_CORS_ORIGINS=http://localhost:${FLUTTER_WEB_PORT:-2112}"
+      -e "RBACR_CORS_ORIGINS=http://localhost:${FLUTTER_WEB_PORT:-7189},https://${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}:${FLOCI_HTTPS_PORT:-2543}"
       -v grigri-rbacr-data:/data
       prodbytes/rbacr-local:latest
     shutdown:
@@ -51,7 +58,7 @@ processes:
   2-flutter-web:
     command: bash scripts/flutter-web.sh
     environment:
-      - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-2112}
+      - FLUTTER_WEB_PORT=${FLUTTER_WEB_PORT:-7189}
       # The roles on the profile come from the local rbacr (1-rbacr), with
       # .env's RBACR_TOKEN (scripts/dart-defines.sh).
       - RBACR_URL=${RBACR_URL:-http://localhost:${RBACR_PORT:-2115}}
@@ -59,12 +66,12 @@ processes:
     # old build on the port, and the next start then fails to bind it. Stop
     # whatever listens on the port (flutter's wrapper exits with it).
     shutdown:
-      command: lsof -tiTCP:${FLUTTER_WEB_PORT:-2112} -sTCP:LISTEN | xargs kill 2>/dev/null; true
+      command: lsof -tiTCP:${FLUTTER_WEB_PORT:-7189} -sTCP:LISTEN | xargs kill 2>/dev/null; true
       timeout_seconds: 10
     readiness_probe:
       http_get:
         host: localhost
-        port: ${FLUTTER_WEB_PORT:-2112}
+        port: ${FLUTTER_WEB_PORT:-7189}
         path: /app/
       initial_delay_seconds: 2
       period_seconds: 2
@@ -74,8 +81,39 @@ processes:
       restart: on_failure
       backoff_seconds: 5
 
+  4-floci:
+    # Floci as the local CloudFront, over HTTP and HTTPS, and the local AWS
+    # the API runs in (grigri_floci/). The mkcert certificate is generated
+    # first, when missing or stale, and so is the API build, which Floci
+    # deploys and seeds (05-api.sh), with GOOGLE_WEB_CLIENT_ID (none: dev
+    # mode) and GRIGRI_ADMIN_EMAILS from .env.
+    command: bash scripts/local-certs.sh && bash scripts/build-api.sh && GOOGLE_WEB_CLIENT_ID="$(sed -n 's/^GOOGLE_WEB_CLIENT_ID=//p' .env 2>/dev/null | tail -1)" GRIGRI_ADMIN_EMAILS="$(sed -n 's/^GRIGRI_ADMIN_EMAILS=//p' .env 2>/dev/null | tail -1)" docker compose -f grigri_floci/compose.yaml up floci
+    environment:
+      - FLOCI_PORT=${FLOCI_PORT:-2114}
+      - FLOCI_HTTPS_PORT=${FLOCI_HTTPS_PORT:-2543}
+    shutdown:
+      # Also removes the API's Lambda containers, which Floci starts beside
+      # itself.
+      command: docker compose -f grigri_floci/compose.yaml down; docker ps -aq --filter label=io.floci.service=lambda --filter name=grigri-lambda | xargs docker rm -f >/dev/null 2>&1; true
+      timeout_seconds: 30
+    readiness_probe:
+      exec:
+        command: curl -fs http://localhost:${FLOCI_PORT:-2114}/_floci/init | grep -q '"ready":true'
+      initial_delay_seconds: 1
+      period_seconds: 2
+      timeout_seconds: 5
+      # Up to 6 minutes: the first run pulls the images and builds the API.
+      failure_threshold: 180
+    availability:
+      # Always, not on_failure: when the container is stopped from outside
+      # (a `docker compose down`), `compose up` exits 0, and the CDN and
+      # HTTPS would stay down until a manual restart.
+      restart: always
+      backoff_seconds: 5
+
   5-index:
-    # The site root (grigri_index/site), which redirects to /app/.
+    # The site root (grigri_index/site), which redirects to /app/. Floci's
+    # distribution uses it as the default origin.
     # GRIGRI_BIND_HOST: see scripts/flutter-web.sh.
     command: python3 -m http.server ${INDEX_PORT:-2113} --bind ${GRIGRI_BIND_HOST:-127.0.0.1} --directory grigri_index/site
     readiness_probe:

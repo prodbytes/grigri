@@ -48,93 +48,162 @@ spec.
      `.env` as `GOOGLE_ANDROID_CLIENT_ID_GA` (named in `.env.example`).
      Still to make: web (both sites' origins and `localhost:2112`), iOS,
      and RC Android if the RC gets its own package.
-3. **Theme in mountain colors (olive, light brown, sand, gray, other greens
+3. **Add the local address so that local HTTPS works, like presence.**
+   Floci runs as the local CloudFront ([grigri_floci/](../grigri_floci),
+   `4-floci` in `devbox services up`), over HTTP on port 2114 and HTTPS on
+   2543 at https://local.grigri.nu01.com:2543/app/, with an mkcert
+   certificate made by `scripts/local-certs.sh`; devbox gains mkcert and
+   OpenSSL, the dev container forwards the new ports and binds the dev
+   servers on every interface, and the health monitor checks `🚚 cdn` and
+   `🔒 https` ([development environment](dev-environment.md)).
+   `local.grigri.nu01.com` needs A (127.0.0.1) and AAAA (::1) records in
+   the `grigri.nu01.com` zone ([grigri_infra/README.md](../grigri_infra/README.md)).
+4. **Serve the web app on port 7189.** The Flutter dev server's port
+   (`FLUTTER_WEB_PORT`) defaults to 7189 instead of 2112, in
+   `process-compose.yaml`, the run and health scripts, Floci's CloudFront
+   origin, and the dev container's forwarded ports
+   ([development environment](dev-environment.md)).
+5. **Remove the static fake data; everything from a cheap database
+   (DynamoDB); GA empty and real, fake data in RC and local; an admin can
+   approve/reject any request.**
+   - A backend, [grigri_api/](../grigri_api) ([backend](backend.md),
+     [API](api.md)): one TypeScript Lambda (Node.js 22, arm64, 256 MB)
+     with an internal router behind one HTTP API, whose JWT authorizer
+     checks Google ID tokens (`GOOGLE_WEB_CLIENT_ID`) on every route but
+     `GET /api/health`; one on-demand DynamoDB table (single-table design;
+     point-in-time recovery and deletion protection in prod only);
+     photos in a private bucket of the site stack, uploaded with presigned
+     POSTs and served under `/photos/*`. The matchmaking rules (deck,
+     unanimous yes, one no, leaving and organizer handover, notices, chat
+     notes) moved from the app to pure, unit-tested modules, without the
+     auto-answering made-up climbers. Admins (`GRIGRI_ADMIN_EMAILS`) see
+     and accept or reject any open request. Plans follow the app's new
+     shape (place, area, sector, start and end; no title or group size;
+     grade scales `routes` and `boulders`).
+   - Environments: production starts empty and is never seeded; the RC is
+     seeded with made-up test data after each deploy, and the local stack
+     on every start (`scripts/seed.sh`, idempotent, refuses prod).
+   - Deploys ([deploy](deploy.md)): `scripts/deploy.sh` tests, builds and
+     deploys the `<prefix>-api` stack before the site, whose CloudFront
+     routes `/api/*` to it, and checks `/api/health`; the workflows set up
+     Node.js and pass `GOOGLE_WEB_CLIENT_ID` and `GRIGRI_ADMIN_EMAILS`.
+     The deploy roles gain the API's resources, scoped by name, with a
+     permissions boundary on every role they create, and an artifact
+     bucket per stage ([grigri_infra/README.md](../grigri_infra/README.md):
+     redeploy `github-deploy.yaml`, set the new variable and secret). The
+     web app's CSP allows photo uploads to the bucket and Google Identity
+     Services.
+   - Local ([development environment](dev-environment.md)): devbox gains
+     Node.js 22; Floci deploys the same template (Lambda, HTTP API,
+     DynamoDB, S3) and seeds it, routes `/api/*` and `/photos/*`, and runs
+     in dev mode (`X-Grigri-Dev-User`) without a Google client; the health
+     monitor checks `🔌 api`.
+   - Cost ([backend](backend.md#cost)): nothing new costs anything while
+     idle; DynamoDB on demand rather than Aurora Serverless v2 (about
+     $43/month minimum) or RDS (hourly), an HTTP API ($1 per million)
+     rather than a REST API ($3.50), one Lambda, S3 for photos.
+6. **Theme in mountain colors (olive, light brown, sand, gray, other greens
    and a sky blue), harmonious, dark for now.** The app is dark only, with
    an explicit color scheme ([theme](theme.md)) instead of one derived from
    a seed color; every text color passes WCAG AA.
-4. **Begin the app: matchmaking like Tinder or Happn, for sports.** Swipe
-   left / right or the buttons; profiles with climbing details (grades,
-   when, where); plans separate from profiles and highlighted on the match
-   screen; mutual yes makes a match and opens a chat; several people can
-   match the same plan, which becomes a group; a newcomer joins only when
-   every current member accepts.
-   - [Matching](matching.md): the Discover deck of plans (best fits first)
-     and the Requests deck of people; unanimous acceptance, one "no" is
-     enough; matches; one group chat per plan.
-   - [Screens](screens.md): Discover, Requests, Plans, Chats and Profile;
-     the plan and profile editors; the match screen. The static home
-     screen is gone.
-   - No backend yet: the rules run on the device, the state is saved
-     with shared_preferences, and demo data with made-up climbers (who
-     answer by fixed policies) starts it.
-5. **Someone joins a plan only when every member accepts them; meanwhile
-   the plan shows as pending in their list, then as accepted. Notify people
-   when they're accepted or rejected. Let people reject, too: one
-   rejection is a rejection.**
-   - The unanimous yes and the single "no" were already the rule
-     ([matching](matching.md#the-group-decides)). New: the made-up
-     climbers answer 10 seconds after a request (instantly in tests), so
-     it shows as pending first.
-   - Plans lists my plans as **Organizing** or **Accepted**, and the ones I
-     asked to join as **Pending** (and who it's waiting for) or
-     **Declined** (dismissable) ([screens](screens.md)).
-   - [Notifications](matching.md#notifications): a bell on every tab, with
-     a badge for unread ones, opens "You're in" and "Not this time"
-     notifications. A yes that arrives later also opens "It's a match!",
-     and a no shows a note at the bottom.
-   - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
-     each person asking to join.
-6. **Make the age optional in the profile; don't show it when it's left
-   empty.** The profile editor's Age (optional) can be blank. A profile
-   without an age shows just the name ("Name" instead of "Name, 30") on
-   the decks, profile sheets and Profile.
-7. **In the profile: a photo, a description, the climbs; no when or where
-   (that's for plans), and nothing under the picture (no home area or years
-   climbing); the gear, with photos of it.**
-   - [Profiles](matching.md#profiles-and-plans-are-separate) gain a photo
-     (shown wherever their avatar is, initials otherwise) and up to 6 gear
-     photos, and lose availability, places, home area and years climbing;
-     profiles saved before are read without them.
-   - Discover ranks by grades alone, then the soonest, and its only badge
-     is "Your grades". The demo deck now opens on Tuesday's bouldering.
-   - The [profile editor](screens.md) takes or picks the photos
-     (image_picker, downsized as picked, kept on the device); iOS gains the
-     camera and photo library usage strings ([platforms](platforms.md)).
-8. **No Requests tab: the tabs are Discover, Plans, Chats, Notifications
-   and Profile. Accepting or declining a join request happens inside the
-   group chat; when someone asks to join, notify the organizer and
-   everyone already in.**
-   - The Requests tab and its people deck are gone. Each request is a
-     card in the plan's group chat, with Accept / Decline and who has said
-     yes ([matching](matching.md#join-requests-in-the-group-chat)); one
-     decline still turns them down. Chats shows "N to answer", and its tab
-     badge counts them.
-   - Notifications is a tab (the bell on each tab's bar is gone). It adds
-     "<name> wants to join" for every member of the plan, which opens the
-     chat. A newcomer also hears of the requests still open.
-   - The plan screen no longer has ✓ / ✕; it points to the chat.
-   - Fixed: long chat notes overflowed their label instead of wrapping.
-9. **A searchable database of climbing sectors, the cheapest way; then in
-   the new plan screen: no title; where is one search field; when is the
-   date and a time range (from, to) instead of a start and a length; a
-   European / American grade system switch above the grades, like Celsius
-   and Fahrenheit; no group size (the group is whoever matches); notes;
-   publish.**
-   - [Sectors](sectors.md): a static index searched on the device (no
-     server), built from OpenStreetMap by `tool/build_sectors.dart`.
-     OpenBeta was set aside: it barely covers Europe. The bundled index is
-     a placeholder until the build runs.
-   - [Plans](matching.md#profiles-and-plans-are-separate) lose their title
-     (they're called by their place), length and group size, and gain an
-     end time and the sector's id; plans saved before are read with their
-     length as the time range. Discover no longer skips full plans: none
-     are.
-   - The grade system is my setting, everywhere: grades on cards, chats,
-     profiles and the editors read in it. The scales are now routes and
-     boulders, each written both ways.
-   - The [plan editor](screens.md) is as asked; the profile editor gains
-     the same grade switch.
-10. **When someone likes the plan but doesn't match yet, call it out at
+7. **A better icon instead of Flutter's default.** Mountain peaks with a
+   snow cap and a moon, in a sand ring, on the theme's dark background,
+   for Android (with an adaptive icon), iOS and the web (favicon, PWA
+   icons, and the manifest's colors in the theme's instead of Flutter
+   blue). How to regenerate the icons is in [platforms](platforms.md).
+8. **Use this icon** (a grigri over mountains, shared as a
+   PNG). It replaces the mountains-in-a-ring icon on every platform; its
+   SVG sources are gone. The shared art is kept as the icon's source, and
+   [scripts/make-icon.py](../scripts/make-icon.py) cleans its stray yellow
+   pixels and makes the full and the adaptive-foreground PNGs
+   ([platforms](platforms.md)).
+9. **Make cost the most important perspective in design.** CLAUDE.md now
+   says: serverless services with minimal cost; between services or
+   libraries, the least costly one that meets the requirements; and say
+   what a new cloud resource costs.
+10. **Begin the app: matchmaking like Tinder or Happn, for sports.** Swipe
+    left / right or the buttons; profiles with climbing details (grades,
+    when, where); plans separate from profiles and highlighted on the match
+    screen; mutual yes makes a match and opens a chat; several people can
+    match the same plan, which becomes a group; a newcomer joins only when
+    every current member accepts.
+    - [Matching](matching.md): the Discover deck of plans (best fits first)
+      and the Requests deck of people; unanimous acceptance, one "no" is
+      enough; matches; one group chat per plan.
+    - [Screens](screens.md): Discover, Requests, Plans, Chats and Profile;
+      the plan and profile editors; the match screen. The static home
+      screen is gone.
+    - No backend yet: the rules run on the device, the state is saved
+      with shared_preferences, and demo data with made-up climbers (who
+      answer by fixed policies) starts it.
+11. **Someone joins a plan only when every member accepts them; meanwhile
+    the plan shows as pending in their list, then as accepted. Notify people
+    when they're accepted or rejected. Let people reject, too: one
+    rejection is a rejection.**
+    - The unanimous yes and the single "no" were already the rule
+      ([matching](matching.md#the-group-decides)). New: the made-up
+      climbers answer 10 seconds after a request (instantly in tests), so
+      it shows as pending first.
+    - Plans lists my plans as **Organizing** or **Accepted**, and the ones I
+      asked to join as **Pending** (and who it's waiting for) or
+      **Declined** (dismissable) ([screens](screens.md)).
+    - [Notifications](matching.md#notifications): a bell on every tab, with
+      a badge for unread ones, opens "You're in" and "Not this time"
+      notifications. A yes that arrives later also opens "It's a match!",
+      and a no shows a note at the bottom.
+    - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
+      each person asking to join.
+12. **Make the age optional in the profile; don't show it when it's left
+    empty.** The profile editor's Age (optional) can be blank. A profile
+    without an age shows just the name ("Name" instead of "Name, 30") on
+    the decks, profile sheets and Profile.
+13. **In the profile: a photo, a description, the climbs; no when or where
+    (that's for plans), and nothing under the picture (no home area or years
+    climbing); the gear, with photos of it.**
+    - [Profiles](matching.md#profiles-and-plans-are-separate) gain a photo
+      (shown wherever their avatar is, initials otherwise) and up to 6 gear
+      photos, and lose availability, places, home area and years climbing;
+      profiles saved before are read without them.
+    - Discover ranks by grades alone, then the soonest, and its only badge
+      is "Your grades". The demo deck now opens on Tuesday's bouldering.
+    - The [profile editor](screens.md) takes or picks the photos
+      (image_picker, downsized as picked, kept on the device); iOS gains the
+      camera and photo library usage strings ([platforms](platforms.md)).
+14. **No Requests tab: the tabs are Discover, Plans, Chats, Notifications
+    and Profile. Accepting or declining a join request happens inside the
+    group chat; when someone asks to join, notify the organizer and
+    everyone already in.**
+    - The Requests tab and its people deck are gone. Each request is a
+      card in the plan's group chat, with Accept / Decline and who has said
+      yes ([matching](matching.md#join-requests-in-the-group-chat)); one
+      decline still turns them down. Chats shows "N to answer", and its tab
+      badge counts them.
+    - Notifications is a tab (the bell on each tab's bar is gone). It adds
+      "<name> wants to join" for every member of the plan, which opens the
+      chat. A newcomer also hears of the requests still open.
+    - The plan screen no longer has ✓ / ✕; it points to the chat.
+    - Fixed: long chat notes overflowed their label instead of wrapping.
+15. **A searchable database of climbing sectors, the cheapest way; then in
+    the new plan screen: no title; where is one search field; when is the
+    date and a time range (from, to) instead of a start and a length; a
+    European / American grade system switch above the grades, like Celsius
+    and Fahrenheit; no group size (the group is whoever matches); notes;
+    publish.**
+    - [Sectors](sectors.md): a static index searched on the device (no
+      server), built from OpenStreetMap by `tool/build_sectors.dart`.
+      OpenBeta was set aside: it barely covers Europe. The bundled index is
+      a placeholder until the build runs.
+    - [Plans](matching.md#profiles-and-plans-are-separate) lose their title
+      (they're called by their place), length and group size, and gain an
+      end time and the sector's id; plans saved before are read with their
+      length as the time range. Discover no longer skips full plans: none
+      are.
+    - The grade system is my setting, everywhere: grades on cards, chats,
+      profiles and the editors read in it. The scales are now routes and
+      boulders, each written both ways.
+    - The [plan editor](screens.md) is as asked; the profile editor gains
+      the same grade switch.
+16. **When someone likes the plan but doesn't match yet, call it out at
     the top of the chat, so people know they need to approve or reject
     the new person.**
     - The [group chat](matching.md#join-requests-in-the-group-chat) pins
@@ -142,7 +211,7 @@ spec.
       answer: avatar, name, how many said yes, and ✕ / ✓ (the same accept
       and decline as the request's card). After I answer, it leaves the
       callout; the card in the messages stays as the record.
-11. **Add the rbacr integration; at the end of the profile view, show the
+17. **Add the rbacr integration; at the end of the profile view, show the
     user's roles.**
     - New feature: [Roles](roles.md). The app depends on rbacr's Dart
       client (pinned to a commit) and asks rbacr's `/api/me`; the
@@ -159,7 +228,7 @@ spec.
       app), the health line gains 🔑 rbacr, debug Android builds allow
       plain http and `devbox run android` sets up `adb reverse` for it;
       `.env.example` lists `RBACR_URL` and `RBACR_TOKEN`.
-12. **Remove the static fake data; everything from the database; GA empty
+18. **Remove the static fake data; everything from the database; GA empty
     and real, fake data in RC and local; an admin can approve/reject any
     request; Google sign-in.**
     - The app's data all comes from the backend API ([api.md](api.md)):

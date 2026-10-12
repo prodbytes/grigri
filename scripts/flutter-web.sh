@@ -6,7 +6,7 @@
 # Uses the web-server device, so no Chrome is needed; open the URL in any browser.
 set -euo pipefail
 
-PORT="${FLUTTER_WEB_PORT:-2112}"
+PORT="${FLUTTER_WEB_PORT:-7189}"
 # 127.0.0.1, not localhost: Dart binds "localhost" to IPv6 [::1] only.
 # GRIGRI_BIND_HOST=0.0.0.0 serves other devices on the network (a phone's
 # browser, say).

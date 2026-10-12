@@ -3,6 +3,10 @@
 The web app is served at https://grigri.nu01.com/app/ (production) and
 https://rc.grigri.nu01.com/app/ (release candidate), from a private S3
 bucket behind CloudFront ([grigri_infra/site.yaml](../grigri_infra/site.yaml)).
+The same distribution serves the [API](api.md) under `/api/*` (the
+`<prefix>-api` stack's HTTP API, [grigri_api/template.yaml](../grigri_api/template.yaml))
+and people's photos under `/photos/*` (a private bucket); see
+[backend.md](backend.md).
 Both names live in the `grigri.nu01.com` Route 53 zone, delegated from
 `nu01.com`. `/` is the [index page](../grigri_index), which redirects to
 `/app/`.
@@ -16,13 +20,22 @@ for that tag:
 
 1. builds the web app for `/app/` with the tag's version
    (`GRIGRI_STAGE=prod`);
-2. deploys the `grigri-web` stack: certificate, bucket, CloudFront, DNS
-   records, and a Route 53 health check of `/app/version.json` (it must
-   name `grigri_app`) whose alarm emails `GRIGRI_HEALTH_EMAILS`;
-3. uploads the index page and the web build (`Cache-Control: no-cache`,
+2. type-checks, tests and builds the API (`grigri_api`: `npm ci`,
+   `npm run typecheck`, `npm test`, `npm run build`), uploads it to the
+   stage's artifact bucket (`aws cloudformation package`) and deploys the
+   `grigri-api` stack (function, HTTP API with the Google JWT authorizer
+   for `GOOGLE_WEB_CLIENT_ID`, DynamoDB table; admins from
+   `GRIGRI_ADMIN_EMAILS`), with the stage's permissions boundary on the
+   function's role. Production is **never seeded**: it starts empty;
+3. deploys the `grigri-web` stack: certificate, site and photos buckets,
+   CloudFront (with `/api/*` to the API's domain), DNS records, and a
+   Route 53 health check of `/app/version.json` (it must name
+   `grigri_app`) whose alarm emails `GRIGRI_HEALTH_EMAILS`;
+4. uploads the index page and the web build (`Cache-Control: no-cache`,
    Flutter's files aren't content-hashed) and invalidates `/*`;
-4. checks, for up to 10 minutes, that `/app/version.json` reports the
-   version, `/` is the index page and `/app/` answers.
+5. checks, for up to 10 minutes, that `/app/version.json` reports the
+   version, `/` is the index page, `/app/` answers, and `/api/health`
+   reports the stage and version.
 
 If a step fails, it says which version was live before and how to put it
 back (re-run the workflow for its tag, or deploy it by hand). One
@@ -32,7 +45,9 @@ production deploy runs at a time; a newer tag waits.
 
 A pushed `*RC*` tag, or a manual run, runs the
 [Deploy RC workflow](../.github/workflows/deploy-rc.yml): the same script
-with `STAGE=rc`, into its own stack, `grigri-rc-web`. A tag must be
+with `STAGE=rc`, into its own stacks, `grigri-rc-api` and
+`grigri-rc-web`. After deploying `grigri-rc-api` it loads the made-up
+test data ([scripts/seed.sh](../scripts/seed.sh), idempotent). A tag must be
 `X.Y.Z-RC` or `X.Y.Z-RC<n>` on `main`; a manual run deploys an RC tag, or
 with none, `main`'s commit. The RC's title is "🧪 Grigri RC" in the
 browser and the app, so it never passes for production.
@@ -45,11 +60,14 @@ and a Content Security Policy:
 - `/app*`: scripts from the site and CanvasKit
   (`www.gstatic.com/flutter-canvaskit/`) with `'wasm-unsafe-eval'`, inline
   styles (Flutter injects them), fonts from `fonts.gstatic.com`, Google
-  sign-in (Google Identity Services' script, stylesheet, iframe and calls
-  under `accounts.google.com/gsi/`, and its button's account picture from
-  `lh3.googleusercontent.com`), and no framing. `Permissions-Policy` denies the camera, microphone and
+  Identity Services (`accounts.google.com/gsi/`: script, style, frame and
+  calls) and Google account pictures (`lh3.googleusercontent.com`), the
+  API and photos from the site itself (`'self'`), photo uploads to the
+  photos bucket (`https://<bucket>.s3.us-east-1.amazonaws.com`), and no
+  framing. `Permissions-Policy` denies the camera, microphone and
   location until a feature needs them.
 - `/`: only the index page's redirect script, by its hash.
+- `/api/*` and `/photos/*`: AWS's managed security headers policy.
 
 ## Access
 
@@ -59,12 +77,22 @@ AWS access is keyless: GitHub's OIDC token is exchanged for
 ([grigri_infra/github-deploy.yaml](../grigri_infra/github-deploy.yaml)).
 Each may only touch its stage's `<prefix>-*` stacks, buckets, alarms and
 topics, CloudFront distributions and ACM certificates tagged with its
-`grigri:stage`, and DNS records under its domain. Origin access controls
-and response headers policies take no tags, so they can't be separated by
-stage. Repository variables: `AWS_DEPLOY_ROLE_ARN`,
-`AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`; repository secret:
-`GRIGRI_HEALTH_EMAILS` (a secret because the repository is public and run
-logs show variables). One-time setup:
+`grigri:stage`, and DNS records under its domain; for the API, its
+`<prefix>-*` Lambda functions, DynamoDB tables (create and update only:
+never delete, never read or write items), `/aws/lambda/<prefix>-*` log
+groups, and `<prefix>-*` IAM roles, which it may only create or change
+with the stage's permissions boundary (`<prefix>-app-boundary`: the
+stage's tables' items, its function logs and photo uploads) on them, so a
+deploy can't make a role more powerful than that. It can't remove a
+boundary, change the artifact buckets' settings, or touch the photos
+buckets' objects. Origin access controls, response headers policies and
+HTTP APIs have only IDs (no names or tags to scope by), so they can't be
+separated by stage. The RC seed is the only invoke allowed
+(`grigri-rc-api`). Repository variables: `AWS_DEPLOY_ROLE_ARN`,
+`AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`;
+repository secrets: `GRIGRI_HEALTH_EMAILS` and `GRIGRI_ADMIN_EMAILS`
+(secrets because the repository is public and run logs show
+variables). One-time setup:
 [grigri_infra/README.md](../grigri_infra/README.md).
 
 By hand, with admin credentials: `TAG=0.1.<Z>-GA bash scripts/deploy.sh`
