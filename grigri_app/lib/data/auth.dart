@@ -46,8 +46,9 @@ abstract class Auth extends ChangeNotifier {
   /// Whether [start] is done (until then, nobody is known to be signed in).
   bool get started;
 
-  /// The last sign-in failure to show, if any.
-  String? get error;
+  /// The last sign-in failure to show, if any (the sign-in screen words
+  /// it in the user's language).
+  SignInError? get error;
 
   /// Initializes: signed in at once when a session was kept.
   Future<void> start();
@@ -69,6 +70,15 @@ abstract class Auth extends ChangeNotifier {
   /// Ends all my sessions (`DELETE /api/sessions`), then forgets this one.
   /// False when the API couldn't be told (still signed in).
   Future<bool> signOutEverywhere();
+}
+
+/// Why signing in failed.
+enum SignInError {
+  /// The API didn't start a session for the credential.
+  session,
+
+  /// Google's sign-in failed.
+  google,
 }
 
 /// The API's session routes: the only calls made without a session, or
@@ -136,7 +146,7 @@ class SessionAuth extends Auth {
   AuthUser? _user;
   bool _started = false;
   bool _signingIn = false;
-  String? _error;
+  SignInError? _error;
 
   @override
   bool get signedIn => _token != null;
@@ -151,7 +161,7 @@ class SessionAuth extends Auth {
   bool get started => _started;
 
   @override
-  String? get error => _error;
+  SignInError? get error => _error;
 
   @override
   Future<void> start() async {
@@ -199,7 +209,7 @@ class SessionAuth extends Auth {
       _error = null;
     } on Object {
       // Never log the details: they may carry account data.
-      _error = 'Couldn\'t sign in. Try again.';
+      _error = SignInError.session;
       unawaited(_quietly(method.signOut));
     } finally {
       _signingIn = false;
@@ -208,7 +218,7 @@ class SessionAuth extends Auth {
   }
 
   void _fail(Object error) {
-    _error = 'Couldn\'t sign in with Google. Try again.';
+    _error = SignInError.google;
     notifyListeners();
   }
 

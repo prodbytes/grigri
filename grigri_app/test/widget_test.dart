@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
+import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/sector_index.dart';
 import 'package:grigri_app/data/roles.dart';
 import 'package:grigri_app/main.dart';
@@ -12,6 +13,8 @@ import 'package:grigri_app/model/location.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
 import 'package:rbacr/rbacr.dart' as rbacr;
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 import 'support/fakes.dart';
 
@@ -607,6 +610,8 @@ void main() {
         StoreScope(
           store: store,
           child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: ProfileEditor(
               pick: (source, maxSide) async {
                 asked.add(maxSide);
@@ -673,7 +678,11 @@ void main() {
       await tester.pumpWidget(
         StoreScope(
           store: store,
-          child: const MaterialApp(home: ProfileEditor()),
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ProfileEditor(),
+          ),
         ),
       );
       expect(find.byTooltip('Add a gear photo'), findsNothing);
@@ -735,6 +744,81 @@ void main() {
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
       expect(find.text('No roles in Grigri yet.'), findsOneWidget);
+    });
+  });
+
+  group('language', () {
+    testWidgets(
+      'follows the device, in English when the app lacks its language',
+      (tester) async {
+        tester.platformDispatcher.localesTestValue = const [Locale('de', 'DE')];
+        addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+        await pumpApp(tester, sampleApi());
+        expect(find.text('Entdecken'), findsOneWidget);
+        expect(find.text('Pläne entdecken'), findsOneWidget);
+
+        tester.platformDispatcher.localesTestValue = const [Locale('ja')];
+        await tester.pumpAndSettle();
+        expect(find.text('Discover plans'), findsOneWidget);
+      },
+    );
+
+    testWidgets('picked in the profile, it switches the app at once', (
+      tester,
+    ) async {
+      final store = await pumpApp(tester, sampleApi());
+      await tapTab(tester, 'Profile');
+      await tester.scrollUntilVisible(find.text('System default'), 200);
+      await tester.tap(find.text('System default'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Español').last);
+      await tester.pumpAndSettle();
+
+      expect(store.locale, const Locale('es'));
+      expect(find.text('Editar perfil'), findsOneWidget);
+      expect(find.text('Idioma'), findsOneWidget);
+      expect(find.text('Español'), findsOneWidget);
+      await tapTab(tester, 'Descubrir');
+      expect(find.text('Descubre planes'), findsOneWidget);
+      expect(find.text('EL PLAN'), findsWidgets);
+
+      await tapTab(tester, 'Perfil');
+      await tester.scrollUntilVisible(find.text('Español'), 200);
+      await tester.tap(find.text('Español'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Idioma del sistema').last);
+      await tester.pumpAndSettle();
+      expect(store.locale, isNull);
+      expect(find.text('Edit profile'), findsOneWidget);
+    });
+
+    testWidgets('texts the store words itself follow the language shown', (
+      tester,
+    ) async {
+      final store = await pumpApp(tester, sampleApi());
+      store.locale = const Locale('fr');
+      await tester.pumpAndSettle();
+      expect(store.climber('nobody').name, "Quelqu'un");
+    });
+
+    test('the pick is kept on the device', () async {
+      SharedPreferencesAsyncPlatform.instance =
+          InMemorySharedPreferencesAsync.empty();
+      final preferences = await Preferences.open();
+      expect(preferences.language, isNull);
+      GrigriStore open(Preferences p) => storeFor(sampleApi(), preferences: p);
+
+      open(preferences).locale = const Locale('ca');
+      await pumpEventQueue();
+      expect(open(await Preferences.open()).locale, const Locale('ca'));
+
+      open(preferences).locale = null;
+      await pumpEventQueue();
+      expect(open(await Preferences.open()).locale, isNull);
+
+      // A language this version doesn't speak follows the device.
+      await preferences.setLanguage('xx');
+      expect(open(await Preferences.open()).locale, isNull);
     });
   });
 }

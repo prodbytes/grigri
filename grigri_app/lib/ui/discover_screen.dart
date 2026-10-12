@@ -32,14 +32,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       return;
     }
     final messenger = ScaffoldMessenger.of(context);
+    final l = context.l10n;
     if (!await store.like(plan.id)) return;
     final organizer = store.climber(plan.organizerId).firstName;
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          'Asked to join: pending. $organizer'
-          '${plan.memberIds.length > 1 ? ' and the group' : ''} will decide; '
-          'you\'ll get a notification.',
+          plan.memberIds.length > 1
+              ? l.askedToJoinPendingGroup(organizer)
+              : l.askedToJoinPending(organizer),
         ),
       ),
     );
@@ -49,12 +50,13 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final plans = store.discover;
+    final l = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Discover plans'),
+        title: Text(l.discoverTitle),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: l.refresh,
             icon: const Icon(Icons.refresh),
             onPressed: store.refreshDiscover,
           ),
@@ -65,13 +67,11 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           : plans.isEmpty
           ? EmptyState(
               icon: Icons.landscape_outlined,
-              title: 'No plans to join right now',
-              message:
-                  'Nobody has a plan open for you yet. Make your own: '
-                  'climbers who fit will ask to join.',
+              title: l.noPlansToJoinTitle,
+              message: l.noPlansToJoinMessage,
               action: FilledButton.icon(
                 icon: const Icon(Icons.add),
-                label: const Text('New plan'),
+                label: Text(l.newPlan),
                 onPressed: widget.onCreatePlan,
               ),
             )
@@ -88,10 +88,10 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           color: Mountain.sky,
                         ),
                         const SizedBox(width: 8),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'Set where you climb to see plans near you first.',
-                            style: TextStyle(color: Mountain.snow),
+                            l.setWhereYouClimbHint,
+                            style: const TextStyle(color: Mountain.snow),
                           ),
                         ),
                         TextButton(
@@ -100,7 +100,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                               builder: (_) => const ProfileEditor(),
                             ),
                           ),
-                          child: const Text('Set'),
+                          child: Text(l.setAction),
                         ),
                       ],
                     ),
@@ -115,8 +115,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           items: plans,
                           keyOf: (p) => p.id,
                           controller: _controller,
-                          yesLabel: 'JOIN',
-                          noLabel: 'PASS',
+                          yesLabel: l.swipeJoin.toUpperCase(),
+                          noLabel: l.swipePass.toUpperCase(),
                           onSwiped: (plan, {required right}) =>
                               _swiped(store, plan, right: right),
                           builder: (context, plan) => _PlanCard(plan: plan),
@@ -133,7 +133,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       DeckButton(
                         icon: Icons.close,
                         color: Mountain.clay,
-                        tooltip: 'Pass',
+                        tooltip: l.pass,
                         onPressed: () => _controller.swipe(right: false),
                       ),
                       const SizedBox(width: 40),
@@ -141,7 +141,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         icon: Icons.check,
                         color: Mountain.olive,
                         filled: true,
-                        tooltip: 'Ask to join',
+                        tooltip: l.askToJoin,
                         onPressed: () => _controller.swipe(right: true),
                       ),
                     ],
@@ -163,6 +163,7 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     final organizer = store.climber(plan.organizerId);
     final others = [
       for (final id in plan.memberIds)
@@ -188,7 +189,7 @@ class _PlanCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'ORGANIZED BY',
+                    l.organizedBy.toUpperCase(),
                     style: text.labelSmall?.copyWith(
                       color: Mountain.granite,
                       letterSpacing: 1.2,
@@ -205,7 +206,7 @@ class _PlanCard extends StatelessWidget {
                   if (others.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Text(
-                      'ALSO IN THE GROUP',
+                      l.alsoInGroup.toUpperCase(),
                       style: text.labelSmall?.copyWith(
                         color: Mountain.granite,
                         letterSpacing: 1.2,
@@ -221,7 +222,7 @@ class _PlanCard extends StatelessWidget {
                           c.levels.entries
                               .map(
                                 (e) =>
-                                    '${e.key.label} ${StoreScope.of(context).grades(e.value)}',
+                                    '${e.key.label(l)} ${StoreScope.of(context).grades(e.value)}',
                               )
                               .join(' · '),
                           style: const TextStyle(color: Mountain.granite),

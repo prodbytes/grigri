@@ -4,6 +4,7 @@ import '../data/sector_index.dart';
 import '../model/location.dart';
 import '../model/sector.dart';
 import '../theme.dart';
+import 'l10n.dart';
 
 /// Picks a place from the sector index (a crag, sector or gym near where
 /// I am or want to climb), for my profile's location or areas. Null when
@@ -46,6 +47,7 @@ class _LocationPickerState extends State<_LocationPicker> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     // Only places with a point: distance needs one.
     final List<Sector> found = [
       for (final s
@@ -63,13 +65,12 @@ class _LocationPickerState extends State<_LocationPicker> {
               controller: _query,
               autofocus: true,
               decoration: InputDecoration(
-                labelText: 'A crag or gym near there',
-                hintText: 'Search',
+                labelText: l.locationSearchLabel,
+                hintText: l.search,
                 prefixIcon: const Icon(Icons.search),
                 helperText: attribution.isEmpty
-                    ? 'Kept to about 1 km, and only you see it.'
-                    : 'Kept to about 1 km, and only you see it. '
-                          'Places: $attribution',
+                    ? l.locationPrivacy
+                    : '${l.locationPrivacy} ${l.placesAttribution(attribution)}',
                 helperMaxLines: 2,
               ),
               textCapitalization: TextCapitalization.words,
@@ -83,7 +84,7 @@ class _LocationPickerState extends State<_LocationPicker> {
                 ? Padding(
                     padding: const EdgeInsets.all(24),
                     child: Text(
-                      _index == null ? 'Loading places…' : 'No places found',
+                      _index == null ? l.loadingPlaces : l.noPlacesFound,
                       style: text.bodyMedium?.copyWith(color: Mountain.granite),
                     ),
                   )

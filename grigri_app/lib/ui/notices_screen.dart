@@ -20,17 +20,16 @@ class NoticesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final notices = store.notices;
+    final l = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(title: Text(l.notificationsTitle)),
       body: !store.isLoaded(Section.notices)
           ? const Center(child: CircularProgressIndicator())
           : notices.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.notifications_none,
-              title: 'Nothing yet',
-              message:
-                  'When someone asks to join a plan you\'re in, or a group '
-                  'answers your request, you\'ll hear about it here.',
+              title: l.nothingYetTitle,
+              message: l.nothingYetMessage,
             )
           : ListView(
               padding: const EdgeInsets.all(16),
@@ -55,24 +54,25 @@ class _NoticeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = context.l10n;
     final (icon, color, title, body) = switch (notice.kind) {
       NoticeKind.request => (
         Icons.group_add,
         Mountain.sky,
-        '${store.climber(notice.climberId ?? '').name} wants to join',
-        '${notice.planTitle} · answer in the group chat',
+        l.noticeWantsToJoin(store.climber(notice.climberId ?? '').name),
+        l.noticeAnswerInChat(notice.planTitle),
       ),
       NoticeKind.accepted => (
         Icons.check_circle,
         Mountain.olive,
-        'You\'re in: ${notice.planTitle}',
-        'The group accepted you. Say hi in the chat.',
+        l.noticeYoureIn(notice.planTitle),
+        l.noticeAcceptedBody,
       ),
       NoticeKind.declined => (
         Icons.cancel,
         Mountain.clay,
-        'Not this time: ${notice.planTitle}',
-        'The group declined your request.',
+        l.noticeNotThisTime(notice.planTitle),
+        l.noticeDeclinedBody,
       ),
     };
     final Widget open = switch (notice.kind) {
@@ -93,11 +93,11 @@ class _NoticeTile extends StatelessWidget {
         leading: Icon(icon, color: color, size: 30),
         title: Text(title),
         subtitle: Text(
-          '$body\n${dayLabel(notice.time)}, ${clock(notice.time)}',
+          '$body\n${dayAndTime(context, notice.time)}',
           style: const TextStyle(color: Mountain.granite),
         ),
         isThreeLine: true,
-        trailing: isNew ? const Tag('New', color: Mountain.sky) : null,
+        trailing: isNew ? Tag(l.newTag, color: Mountain.sky) : null,
         onTap: () =>
             Navigator.of(context)
                 .push(MaterialPageRoute<void>(builder: (_) => open)),

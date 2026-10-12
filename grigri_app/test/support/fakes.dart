@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
+import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
@@ -685,6 +686,7 @@ GrigriStore storeFor(
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
   MemorySessionStorage? storage,
+  Preferences? preferences,
 }) {
   final auth = SessionAuth(
     method: mode == SignInMode.dev ? DevSignInMethod() : FakeGoogle(mode: mode),
@@ -696,7 +698,12 @@ GrigriStore storeFor(
         ),
   );
   api.headers = auth.headers;
-  return GrigriStore(api: api, auth: auth, image: (_) => MemoryImage(png));
+  return GrigriStore(
+    api: api,
+    auth: auth,
+    image: (_) => MemoryImage(png),
+    preferences: preferences,
+  );
 }
 
 /// The session token kept on [store]'s device.

@@ -29,6 +29,9 @@ Each match opens the plan's group chat.
   and gyms that a plan's "where" picks from, built from OpenStreetMap.
 - [Roles](roles.md): my roles in Grigri, from rbacr, at the end of the
   profile.
+- [Languages](i18n.md): English, Spanish, German, French, Portuguese and
+  Catalan; the language picker in the profile, kept on the device; the
+  translation bundles and the test that keeps them complete.
 - [Theme](theme.md): dark, in mountain colors.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.
