@@ -54,3 +54,8 @@ spec.
    `🔒 https` ([development environment](dev-environment.md)).
    `local.grigri.nu01.com` needs A (127.0.0.1) and AAAA (::1) records in
    the `grigri.nu01.com` zone ([grigri_infra/README.md](../grigri_infra/README.md)).
+3. **Serve the web app on port 7189.** The Flutter dev server's port
+   (`FLUTTER_WEB_PORT`) defaults to 7189 instead of 2112, in
+   `process-compose.yaml`, the run and health scripts, Floci's CloudFront
+   origin, and the dev container's forwarded ports
+   ([development environment](dev-environment.md)).

@@ -8,7 +8,7 @@ routes. The index and the app keep running on their own dev servers:
 | Path | Origin |
 |------|--------|
 | default (`/`, anything else) | `grigri_index`, Python `http.server` (`INDEX_PORT`, 2113): `/` redirects to `/app/` |
-| `/app*` | Flutter dev server, `flutter run -d web-server --base-href /app/` (`FLUTTER_WEB_PORT`, 2112) |
+| `/app*` | Flutter dev server, `flutter run -d web-server --base-href /app/` (`FLUTTER_WEB_PORT`, 7189) |
 
 Open **https://local.grigri.nu01.com:2543/app/**, or over HTTP
 **http://grigri.localhost:2114/app/**. Browsers and curl resolve
@@ -43,7 +43,7 @@ serves its own prefix: the app has the `/app/` base href.
     (`host-gateway`), and it's allowlisted as a private origin
     (`FLOCI_SERVICES_CLOUDFRONT_ALLOWED_PRIVATE_ORIGIN_HOSTS`).
   - In the browser, it's loopback, so the page's
-    `ws://dev.grigri.localhost:2112/app/$dwdsSseHandler` goes straight to
+    `ws://dev.grigri.localhost:7189/app/$dwdsSseHandler` goes straight to
     the dev server.
 - The image is a dated nightly (`nightly-09242026-compat`), pinned by
   digest in `compose.yaml`, the same one presence uses: Floci 2.1.0 forwards

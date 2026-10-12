@@ -9,12 +9,12 @@
   locked Nix store paths from `cache.nixos.org`, then runs
   `devbox install`, handing Codespaces' `GITHUB_TOKEN` to Nix against
   GitHub API rate limits. Docker-in-Docker (for Floci), the Dart,
-  Flutter, Python, Docker and YAML extensions, ports 2112, 2113, 2114 and
+  Flutter, Python, Docker and YAML extensions, ports 7189, 2113, 2114 and
   2543 forwarded, and `GRIGRI_BIND_HOST=0.0.0.0` so Floci can reach the
   dev servers.
   Codespaces ask for 4 CPUs and 8 GB.
 - **Services** (`devbox services up`, [process-compose.yaml](../process-compose.yaml)):
-  - `2-flutter-web`: the app on http://localhost:2112/app/ (the `/app/`
+  - `2-flutter-web`: the app on http://localhost:7189/app/ (the `/app/`
     base href production uses), on Flutter's `web-server` device, through
     `scripts/flutter-web.sh` (also `devbox run web`). Ready when `/app/`
     answers. Stopping it also stops whatever listens on the port.
@@ -42,7 +42,7 @@
     `🚚 cdn` asks Floci with the alias as `Host`; `🔒 https` validates the
     certificate against mkcert's CA and pins the name to 127.0.0.1, so
     neither needs DNS or `mkcert -install`.
-  - The ports (2112, 2113, 2114, 2543) differ from presence's and TabScan's, so the
+  - The ports (7189, 2113, 2114, 2543) differ from presence's and TabScan's, so the
     projects can run side by side. Servers bind to 127.0.0.1;
     `GRIGRI_BIND_HOST=0.0.0.0` serves other devices (a phone's browser).
 - **Android** (USB, debugging on; `ANDROID_SERIAL` picks one of several):

@@ -24,7 +24,7 @@ status() {
     if "$@"; then printf '%s %s ✅' "$icon" "$label"; else printf '%s %s ❌' "$icon" "$label"; fi
 }
 
-WEB_URL="http://localhost:${FLUTTER_WEB_PORT:-2112}/app/"
+WEB_URL="http://localhost:${FLUTTER_WEB_PORT:-7189}/app/"
 INDEX_URL="http://localhost:${INDEX_PORT:-2113}/"
 FLOCI="http://localhost:${FLOCI_PORT:-2114}"
 CDN_ALIAS="${GRIGRI_CDN_ALIAS:-grigri.localhost}"

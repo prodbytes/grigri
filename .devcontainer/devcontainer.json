@@ -33,9 +33,9 @@
       ]
     }
   },
-  "forwardPorts": [2112, 2113, 2114, 2543],
+  "forwardPorts": [7189, 2113, 2114, 2543],
   "portsAttributes": {
-    "2112": { "label": "Flutter web" },
+    "7189": { "label": "Flutter web" },
     "2113": { "label": "Index (redirect to /app/)" },
     "2114": { "label": "Floci (CloudFront)" },
     "2543": { "label": "Floci HTTPS" }
