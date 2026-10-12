@@ -52,5 +52,10 @@ spec.
    snow cap and a moon, in a sand ring, on the theme's dark background,
    for Android (with an adaptive icon), iOS and the web (favicon, PWA
    icons, and the manifest's colors in the theme's instead of Flutter
-   blue). The SVG sources and how to regenerate the icons are in
-   [platforms](platforms.md).
+   blue). How to regenerate the icons is in [platforms](platforms.md).
+5. **Use this icon** (a grigri over mountains, shared as a
+   PNG). It replaces the mountains-in-a-ring icon on every platform; its
+   SVG sources are gone. The shared art is kept as the icon's source, and
+   [scripts/make-icon.py](../scripts/make-icon.py) cleans its stray yellow
+   pixels and makes the full and the adaptive-foreground PNGs
+   ([platforms](platforms.md)).
