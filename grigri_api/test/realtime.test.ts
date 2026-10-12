@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { Api } from '../src/api.js';
-import { Auth, type Caller, parseAdminEmails } from '../src/auth.js';
+import { Auth, type Caller } from '../src/auth.js';
 import { InvalidIdToken } from '../src/google.js';
 import { connectPacket, DISCONNECT, publishPacket } from '../src/publishers.js';
 import {
@@ -32,7 +32,7 @@ describe('the authorizer', () => {
       verify: async () => {
         throw new InvalidIdToken('unused');
       },
-      config: { devMode: true, adminEmails: new Set() },
+      config: { devMode: true, isAdmin: async () => false },
     });
     token = (await auth.signIn({ devUser: 'ada@example.com' })).token;
     store.subjects.set('dev#ada@example.com', ADA);
@@ -206,7 +206,7 @@ describe('hints from the API', () => {
     const auth = new Auth({
       store: store.asStore(),
       verify: async () => ({ subject: 'x', emailVerified: false }),
-      config: { devMode: false, adminEmails: parseAdminEmails('root@example.com') },
+      config: { devMode: false, isAdmin: async (email) => email === 'root@example.com' },
     });
     const photos = { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} };
     api = new Api({

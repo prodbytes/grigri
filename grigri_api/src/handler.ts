@@ -8,7 +8,8 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { Api, type Photos } from './api.js';
-import { Auth, type AuthConfig, parseAdminEmails } from './auth.js';
+import { Auth, type AuthConfig } from './auth.js';
+import { rbacrAdminCheck } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
 import { googleVerifier } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
@@ -76,7 +77,8 @@ const photos: Photos = {
 const authConfig: AuthConfig = {
   // The template refuses DevMode unless Stage is local; checked here too.
   devMode: env.DEV_MODE === 'true' && stage === 'local',
-  adminEmails: parseAdminEmails(env.ADMIN_EMAILS),
+  // Admins are whoever rbacr says holds grigri's admin role.
+  isAdmin: rbacrAdminCheck({ url: env.RBACR_URL ?? '', token: env.RBACR_TOKEN ?? '' }),
 };
 const auth = new Auth({ store, verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? ''), config: authConfig });
 // Live updates: hints to IoT Core in AWS; locally, over MQTT to Floci's

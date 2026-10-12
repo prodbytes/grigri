@@ -136,6 +136,11 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    # Secrets, not variables: the repository is public, and run logs show
    # variables.
    gh secret set GRIGRI_HEALTH_EMAILS --body "<who gets health alarms>"
-   # Who may approve or reject any join request (verified Google emails).
-   gh secret set GRIGRI_ADMIN_EMAILS --body "<admin emails, comma-separated>"
+   # An API token owned by an rbacr root (rbacr.nu01.com > Global > API
+   # tokens), with which the API asks rbacr who holds grigri's admin role.
+   gh secret set GRIGRI_RBACR_TOKEN
    ```
+
+   In rbacr, a root creates the `grigri` system with an `admin` role and
+   grants it to whoever may approve or reject any join request (rbacr's
+   roots are admins already).

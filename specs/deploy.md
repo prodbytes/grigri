@@ -25,10 +25,11 @@ for that tag:
    stage's artifact bucket (`aws cloudformation package`) and deploys the
    `grigri-api` stack (function, which verifies Google ID tokens for
    `GOOGLE_WEB_CLIENT_ID` and issues sessions; HTTP API; DynamoDB table
-   with TTL; admins from
-   `GRIGRI_ADMIN_EMAILS`; the live updates' IoT custom authorizer and its
-   function), with the stage's permissions boundary on the functions'
-   roles, and the account's IoT Data-ATS endpoint, looked up with
+   with TTL; admins from rbacr, asked with `GRIGRI_RBACR_TOKEN`, optional:
+   without it the deploy warns and nobody is an admin; the live updates'
+   IoT custom authorizer and its function), with the stage's permissions
+   boundary on the functions' roles, and the account's IoT Data-ATS
+   endpoint, looked up with
    `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
    both stacks. Production is **never seeded**: it starts empty;
 3. deploys the `grigri-web` stack: certificate, site and photos buckets,
@@ -100,7 +101,7 @@ separated by stage. The RC seed is the only invoke allowed
 `AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
 (production's Google web client) and `GOOGLE_WEB_CLIENT_ID_RC` (the
 RC's);
-repository secrets: `GRIGRI_HEALTH_EMAILS` and `GRIGRI_ADMIN_EMAILS`
+repository secrets: `GRIGRI_HEALTH_EMAILS` and `GRIGRI_RBACR_TOKEN`
 (secrets because the repository is public and run logs show
 variables). One-time setup:
 [grigri_infra/README.md](../grigri_infra/README.md).

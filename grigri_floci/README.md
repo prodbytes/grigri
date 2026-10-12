@@ -85,8 +85,9 @@ serves its own prefix: the app has the `/app/` base href.
 - **Dev mode**: without `GOOGLE_WEB_CLIENT_ID` in `.env`, the caller is
   whoever `X-Grigri-Dev-User: <email>` names, and `POST /api/session`
   also takes `{"devUser": "<email>"}`. With it, only Google ID tokens
-  sign in, as in AWS. `GRIGRI_ADMIN_EMAILS` in `.env` names the local
-  admins. For example:
+  sign in, as in AWS. Admins are whoever the local rbacr (port
+  `RBACR_PORT`, reached as `host.docker.internal`) says holds `grigri`'s
+  `admin` role, asked with `RBACR_TOKEN` from `.env`. For example:
 
   ```bash
   curl -H 'X-Grigri-Dev-User: alex@example.com' https://local.grigri.nu01.com:2543/api/discover
@@ -164,7 +165,8 @@ covers it), or map the name to 127.0.0.1 in your hosts file.
 | `GRIGRI_PUBLIC_HOST` | `local.grigri.nu01.com` | Second alias, with a public TLD; also in the certificate |
 | `GRIGRI_ORIGIN_HOST` | `dev.grigri.localhost` | Origin host name: the Docker host inside the container, and loopback in the browser |
 | `GOOGLE_WEB_CLIENT_ID` | (none: dev mode) | From `.env`: the Google web client whose ID tokens the local API's `POST /api/session` accepts |
-| `GRIGRI_ADMIN_EMAILS` | (none) | From `.env`: the local admins |
+| `RBACR_TOKEN` | (none: no admins) | From `.env`: the local rbacr's root token, with which the API asks who holds `grigri`'s `admin` role |
+| `RBACR_PORT` | `2115` | The local rbacr's port on the host |
 
 ## Limitations
 

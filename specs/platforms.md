@@ -23,7 +23,9 @@ inside the circle Android's adaptive icon masks may cut; shown over
 icons, and the manifest's colors, `#161A16`) from the
 `flutter_launcher_icons` settings in `pubspec.yaml`. It also changes
 `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` in the iOS
-project; undo that change before committing.
+project; undo that change before committing. Finally, copy
+`grigri_app/web/favicon.png` to `grigri_index/site/favicon.png`, the
+favicon of the site root's redirect page.
 
 **iOS signing**: automatic, with each developer's own team:
 `IOS_DEVELOPMENT_TEAM` in `.env` (a free Personal Team works) is written by

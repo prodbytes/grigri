@@ -42,8 +42,9 @@
     MQTT broker is the local IoT Core for [live updates](#live-updates). Without `GOOGLE_WEB_CLIENT_ID` in `.env` the API
     runs in dev mode: callers name themselves with
     `X-Grigri-Dev-User: <email>`, or get a session from `POST /api/session`
-    with `{"devUser": "<email>"}`; `GRIGRI_ADMIN_EMAILS` in `.env` lists
-    the local admins ([backend.md](backend.md)).
+    with `{"devUser": "<email>"}`. Admins are whoever the local rbacr says
+    holds `grigri`'s `admin` role, asked with `RBACR_TOKEN` from `.env`
+    through `host.docker.internal` ([backend.md](backend.md)).
     HTTP on http://grigri.localhost:2114/app/ (`FLOCI_PORT`), HTTPS on
     **https://local.grigri.nu01.com:2543/app/** (`FLOCI_HTTPS_PORT`) and
     https://grigri.localhost:2543/app/. Hot reload works through it.

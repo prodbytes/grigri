@@ -397,7 +397,26 @@ spec.
       Release of non-GA tags use the repository variables
       `GOOGLE_WEB_CLIENT_ID_RC` and `GOOGLE_IOS_CLIENT_ID_RC`; Deploy and
       GA releases keep `GOOGLE_WEB_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID`.
-26. **Live updates: push over MQTT (AWS IoT Core) instead of polling.**
+26. **The web favicon.** The site root's redirect page
+    (`grigri_index/site/index.html`) had no favicon, so `/` showed the
+    browser's default until it reached `/app/`.
+    - [Platforms](platforms.md): the root page now links
+      `grigri_index/site/favicon.png`, a copy of the app's favicon (the
+      grigri icon); regenerating the icon includes copying it there. The
+      root's CSP already allows images from the site.
+27. **Health alarms to julio+health@nu01.com; let rbacr handle roles.**
+    - [Roles](roles.md), [API](api.md): who is an admin is rbacr's
+      answer (`POST /api/check`, system `grigri`, role `admin`; roots
+      too), asked with an rbacr root's API token, kept 60 s, failing
+      closed. The `GRIGRI_ADMIN_EMAILS` list (secret, template parameter
+      `AdminEmails`, `.env`) is gone.
+    - [Deploy](deploy.md), [backend](backend.md): deploys take the
+      optional secret `GRIGRI_RBACR_TOKEN` (template parameter
+      `RbacrToken`); without it they warn and nobody is an admin. Locally
+      the API asks the local rbacr with `.env`'s `RBACR_TOKEN`.
+    - The repository secret `GRIGRI_HEALTH_EMAILS` is set (not in the
+      repository).
+28. **Live updates: push over MQTT (AWS IoT Core) instead of polling.**
     - New feature, [Live updates](live-updates.md): after each change the
       API publishes a tiny hint (`{"kind", "planId"}`, never data) to each
       affected climber's topic, `grigri/<stage>/climbers/<id>/hint`

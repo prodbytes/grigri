@@ -18,7 +18,8 @@ const auth = new Auth({
   verify: async () => {
     throw new InvalidIdToken('not here');
   },
-  config: { devMode: false, adminEmails: new Set() },
+  // Admin doesn't matter here: never asks rbacr.
+  config: { devMode: false, isAdmin: async () => false },
 });
 
 export async function handler(event: AuthorizerEvent, context: Context): Promise<AuthorizerResponse> {
