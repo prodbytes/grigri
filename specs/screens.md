@@ -10,7 +10,7 @@ notifications bell, with a badge for unread ones.
 | **Requests** | The people deck: who asked to join plans I'm in. The tab's badge counts them. Empty: what it's for. |
 | **Plans** | The plans I'm in, soonest first (discipline, place, date, the group's avatars and size, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message. |
-| **Profile** | My profile as others see it, **Edit profile**, and, in ⋯, Reset the demo data. The version at the bottom. |
+| **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; in ⋯, Reset the demo data. The version at the bottom. |
 
 - **Plan** (from Plans, a notification, or a chat's title): the plan
   highlighted, my request's status when I'm not in it yet (Pending, N of
@@ -25,9 +25,11 @@ notifications bell, with a badge for unread ones.
   time, length (1–12 h), grades (a range on the discipline's scale,
   starting at my own grades), group size, notes. Title and place are
   required.
-- **Profile editor**: name, age (optional, 16–99 when given), years climbing, home area, about,
-  per discipline a switch and a grade range, a weekday × part-of-day grid
-  for when, places to add and remove, and gear.
+- **Profile editor**: my photo (tap it: take a photo, where the device has
+  a camera, choose one, or remove it), name, age (optional, 16–99
+  when given), about, per
+  discipline a switch and a grade range, and gear: the gear chips, then
+  its photos (✕ removes one, + adds one, up to 6).
 - **Match**: see [matching](matching.md#matches).
 - **Chat**: the group's avatars, the plan's title and date, the plan pinned
   under the bar, messages (mine on the right in pine, others' on the left

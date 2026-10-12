@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/seed.dart';
+import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/plan.dart';
 
@@ -18,10 +20,15 @@ void main() {
       final ids = store.discover.map((p) => p.id).toList();
       expect(ids, isNot(contains('my-sunday-siurana')));
       expect(ids, isNot(contains('thursday-bouldering')));
-      // Siurana: my grades, my weekend time and my place.
-      expect(ids.first, 'siurana-saturday');
-      // Margalef's 7a–7c doesn't overlap my 6a–6c+: the worst fit.
-      expect(ids.last, 'margalef-project');
+      // My grades first, soonest first: Tuesday's bouldering (V2–V5).
+      expect(ids, [
+        'tuesday-bouldering',
+        'after-work-leads',
+        'siurana-saturday',
+        'montserrat-multipitch',
+        // Margalef's 7a–7c doesn't overlap my 6a–6c+: the worst fit.
+        'margalef-project',
+      ]);
     });
 
     test('a pass takes the plan out of the deck', () {
@@ -251,5 +258,37 @@ void main() {
     );
     expect(jsonEncode(again.state.toJson()), json);
     expect(again.me.levels[Discipline.sport]!.label, '6a–6c+');
+  });
+
+  test('a profile keeps its photos, and ignores when and where', () {
+    final photo = Uint8List.fromList([0xff, 0xd8, 0xff, 0xd9]);
+    final me = Climber(
+      id: 'me',
+      name: 'You',
+      age: 30,
+      photo: photo,
+      gearPhotos: [photo, photo],
+    );
+    final again = Climber.fromJson(
+      (jsonDecode(jsonEncode(me.toJson())) as Map).cast(),
+    );
+    expect(again.photo, photo);
+    expect(again.gearPhotos, [photo, photo]);
+    expect(again.copyWith(clearPhoto: true).photo, isNull);
+
+    // Saved by an older version, with home area, availability and places.
+    final old = Climber.fromJson({
+      'id': 'me',
+      'name': 'You',
+      'age': 30,
+      'homeArea': 'Barcelona',
+      'yearsClimbing': 4,
+      'availability': ['6:morning'],
+      'places': ['Siurana'],
+      'gear': ['rope'],
+    });
+    expect(old.photo, isNull);
+    expect(old.gear, {Gear.rope});
+    expect(old.toJson().keys, isNot(contains('places')));
   });
 }

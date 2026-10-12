@@ -55,7 +55,14 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          Center(child: Avatar(me, radius: 52)),
+          Center(
+            child: me.photo == null
+                ? Avatar(me, radius: 52)
+                : GestureDetector(
+                    onTap: () => showPhoto(context, me.photo!),
+                    child: Avatar(me, radius: 52),
+                  ),
+          ),
           const SizedBox(height: 12),
           Center(
             child: Text(
@@ -64,15 +71,6 @@ class ProfileScreen extends StatelessWidget {
                 color: Mountain.sand,
                 fontWeight: FontWeight.w700,
               ),
-            ),
-          ),
-          Center(
-            child: Text(
-              [
-                if (me.homeArea.isNotEmpty) me.homeArea,
-                if (me.yearsClimbing > 0) '${me.yearsClimbing} years climbing',
-              ].join(' · '),
-              style: text.bodyMedium?.copyWith(color: Mountain.granite),
             ),
           ),
           const SizedBox(height: 16),
@@ -94,8 +92,8 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Your profile is about you: how, when and where you like to climb. '
-            'Each outing is a plan, made separately in Plans.',
+            'Your profile is about you: what you climb and the gear you have. '
+            'When and where are for plans, made separately in Plans.',
             style: text.bodySmall?.copyWith(color: Mountain.granite),
           ),
           if (AppVersion.version.isNotEmpty) ...[
