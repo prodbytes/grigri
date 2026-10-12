@@ -51,6 +51,13 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   intl: ^0.20.3
+  # The session token on Android and iOS (Keystore, Keychain).
+  flutter_secure_storage: ^11.2.0
+  # Pulled in by flutter_secure_storage (path_provider, for Windows).
+  # Pinned to the last release without the objective_c native-assets hook,
+  # which can't build under devbox's Nix toolchain on macOS (so
+  # `flutter test` would fail there). The app doesn't use it.
+  path_provider_foundation: 2.5.1
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +71,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   # In-memory device preferences, for the tests that keep choices on it.
   shared_preferences_platform_interface: ^2.4.2
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -113,3 +121,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# The app icon on every platform, from assets/icon/ (see specs/platforms.md).
+# Regenerate with: uv run scripts/make-icon.py (from the repository root),
+# then flutter pub run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: assets/icon/icon.png
+  android: true
+  adaptive_icon_background: "#1C211B"
+  adaptive_icon_foreground: assets/icon/icon-foreground.png
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    background_color: "#161A16"
+    theme_color: "#161A16"

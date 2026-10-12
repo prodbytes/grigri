@@ -7,14 +7,16 @@ import 'package:http/http.dart' as http;
 import '../model/climber.dart';
 import '../model/plan.dart';
 import 'api.dart';
+import 'auth.dart';
 
-/// The headers that say who's calling: a Google ID token as a bearer
-/// token, or the local dev mode's X-Grigri-Dev-User. Empty when signed out.
+/// The headers that say who's calling: the API's session token as a
+/// bearer token. Empty when signed out.
 typedef AuthHeaders = Future<Map<String, String>> Function();
 
-/// [GrigriApi] over HTTP, against `<origin>/api`. Errors come back as an
-/// [ApiException] with the server's message; nothing here logs a token.
-class HttpGrigriApi implements GrigriApi {
+/// [GrigriApi] and the [SessionApi] over HTTP, against `<origin>/api`.
+/// Errors come back as an [ApiException] with the server's message;
+/// nothing here logs a token or puts one in a URL.
+class HttpGrigriApi implements GrigriApi, SessionApi {
   HttpGrigriApi({
     required this.origin,
     required this.headers,
@@ -43,9 +45,10 @@ class HttpGrigriApi implements GrigriApi {
     List<String> segments, {
     Object? body,
     Map<String, String>? query,
+    Map<String, String>? auth,
   }) async {
     final request = http.Request(method, _url(segments, query))
-      ..headers.addAll(await headers())
+      ..headers.addAll(auth ?? await headers())
       ..headers['Accept'] = 'application/json';
     if (body != null) {
       request
@@ -102,6 +105,33 @@ class HttpGrigriApi implements GrigriApi {
 
   Future<Map<String, Object?>> _put(List<String> segments, Object body) =>
       _send('PUT', segments, body: body);
+
+  static Map<String, String> _bearer(String token) => {
+    'Authorization': 'Bearer $token',
+  };
+
+  @override
+  Future<String> createSession({String? idToken, String? devUser}) async {
+    final json = await _send(
+      'POST',
+      ['session'],
+      body: {'idToken': ?idToken, 'devUser': ?devUser},
+      auth: const {},
+    );
+    final token = json['token'];
+    if (token is! String || token.isEmpty) {
+      throw const ApiException(0, 'The server didn\'t start a session.');
+    }
+    return token;
+  }
+
+  @override
+  Future<void> deleteSession(String token) =>
+      _send('DELETE', ['session'], auth: _bearer(token));
+
+  @override
+  Future<void> deleteSessions(String token) =>
+      _send('DELETE', ['sessions'], auth: _bearer(token));
 
   @override
   Future<Me> me() async => ApiJson.me(await _get(['me']));

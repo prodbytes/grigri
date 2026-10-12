@@ -1,0 +1,353 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  grigri-api (and grigri-rc-api; grigri-local-api in Floci): Grigri's
+  backend. One Node.js Lambda with an internal router behind one HTTP API,
+  and one on-demand DynamoDB table (single-table design,
+  grigri_api/README.md). The function authenticates every request itself:
+  POST /api/session verifies a Google ID token and issues the API's own
+  session (365 days without use, sliding), which every other route but
+  GET /api/health takes as a bearer token. Photos live in the site stack's bucket
+  (PhotosBucket), uploaded with presigned POSTs. The site's CloudFront
+  serves the HTTP API under /api/*. Nothing here costs anything while idle.
+  Package with `aws cloudformation package` (Code: dist, from npm run build).
+
+Parameters:
+  Stage:
+    Type: String
+    AllowedValues: [prod, rc, local]
+    Description: >
+      The grigri:stage tag, and what GET /api/health reports. The seed
+      (made-up test data) refuses prod.
+  GoogleWebClientId:
+    Type: String
+    Default: ''
+    AllowedPattern: '([0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com)?'
+    Description: >
+      The Google web OAuth client; the ID tokens POST /api/session takes
+      must be issued for it (their aud). Required outside local (see
+      Rules). A public identifier, not a secret.
+  AdminEmails:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '[A-Za-z0-9._%+@,-]*'
+    Description: >
+      Who may approve or reject any join request, comma-separated verified
+      Google emails (the GRIGRI_ADMIN_EMAILS secret). NoEcho: people's
+      emails stay out of the console and logs.
+  PhotosBucket:
+    Type: String
+    AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
+    Description: >
+      The private photos bucket (the site stack's PhotosBucket,
+      <site stack>-photos-<account>); the function presigns uploads to its
+      photos/ prefix only.
+  PhotosUploadUrl:
+    Type: String
+    Default: ''
+    Description: >
+      Local only: where the browser posts photo uploads (Floci's S3, which
+      the function reaches at another address). Empty in AWS: the S3
+      bucket's own URL.
+  DevMode:
+    Type: String
+    Default: 'false'
+    AllowedValues: ['false', 'true']
+    Description: >
+      Local only (see Rules): the caller may be whoever the
+      X-Grigri-Dev-User header names, and POST /api/session takes
+      {"devUser": "<email>"}. For local development without a Google
+      client.
+  Version:
+    Type: String
+    Default: dev
+    AllowedPattern: '[0-9A-Za-z.+-]{1,40}'
+    Description: The release (X.Y.Z), reported by GET /api/health
+  PermissionsBoundary:
+    Type: String
+    Default: ''
+    AllowedPattern: '(arn:aws[a-z-]*:iam::[0-9]{12}:policy/[A-Za-z0-9+=,.@_/-]+)?'
+    Description: >
+      The permissions boundary of the function's role (the stage's
+      <prefix>-app-boundary from grigri_infra/github-deploy.yaml; passed by
+      scripts/deploy.sh, and required by the deploy roles). Empty locally.
+  Architecture:
+    Type: String
+    Default: arm64
+    AllowedValues: [arm64, x86_64]
+    Description: >
+      The Lambda's CPU: arm64 in AWS (cheaper per GB-second); the local
+      Floci deploy passes the host's, so it runs without emulation.
+
+Rules:
+  # Dev mode trusts a header for who's calling: never in RC or prod.
+  DevModeIsLocalOnly:
+    RuleCondition: !Equals [!Ref DevMode, 'true']
+    Assertions:
+      - Assert: !Equals [!Ref Stage, local]
+        AssertDescription: DevMode is only allowed when Stage is local
+  # Outside local, a Google client is required (no client: nobody signs in).
+  GoogleClientOutsideLocal:
+    RuleCondition: !Not [!Equals [!Ref Stage, local]]
+    Assertions:
+      - Assert: !Not [!Equals [!Ref GoogleWebClientId, '']]
+        AssertDescription: GoogleWebClientId is required outside local
+      - Assert: !Not [!Equals [!Ref PermissionsBoundary, '']]
+        AssertDescription: PermissionsBoundary is required outside local
+
+Conditions:
+  IsProd: !Equals [!Ref Stage, prod]
+  IsLocal: !Equals [!Ref Stage, local]
+  HasBoundary: !Not [!Equals [!Ref PermissionsBoundary, '']]
+
+Resources:
+  # Everything Grigri keeps, in one table (grigri_api/README.md, "Data
+  # model"). On demand: billed per request and per GB stored, nothing
+  # while idle. Kept when the stack goes (Retain); prod also keeps 35 days
+  # of point-in-time recovery and refuses deletion.
+  Table:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Ref AWS::StackName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsi1pk
+          AttributeType: S
+        - AttributeName: gsi1sk
+          AttributeType: S
+        - AttributeName: gsi2pk
+          AttributeType: S
+        - AttributeName: gsi2sk
+          AttributeType: S
+        - AttributeName: gsi3pk
+          AttributeType: S
+        - AttributeName: gsi3sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        # Plans by start (PLANS), and open requests (OPENREQ, sparse).
+        - IndexName: gsi1
+          KeySchema:
+            - AttributeName: gsi1pk
+              KeyType: HASH
+            - AttributeName: gsi1sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        # A climber's own requests (ASKED#<climberId>).
+        - IndexName: gsi2
+          KeySchema:
+            - AttributeName: gsi2pk
+              KeyType: HASH
+            - AttributeName: gsi2sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        # An account's sessions (SESSIONS#<subject>), for sign-out
+        # everywhere. Keys only: sliding a session (lastUsedAt, ttl) never
+        # writes to it.
+        - IndexName: gsi3
+          KeySchema:
+            - AttributeName: gsi3pk
+              KeyType: HASH
+            - AttributeName: gsi3sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      # Sessions carry ttl (epoch seconds): DynamoDB deletes them, for free,
+      # once unused for 365 days. Nothing else has the attribute.
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: !If [IsProd, true, false]
+      DeletionProtectionEnabled: !If [IsProd, true, false]
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  # Two weeks of logs: enough to debug, cheap to keep.
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}
+      RetentionInDays: 14
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  # Only what the function does: its table, its logs, and under the photos
+  # bucket's photos/ prefix: uploads (presigned POSTs, tagged pending),
+  # clearing the pending tag of photos a profile saves, and deleting the
+  # ones it drops. Its name is
+  # <stack>-function, inside the deploy role's <prefix>-* scope, and it
+  # carries the stage's permissions boundary.
+  FunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-function
+      Description: !Sub Grigri API function (${AWS::StackName})
+      PermissionsBoundary: !If [HasBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: api
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub ${LogGroup.Arn}
+              - Sid: Table
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:ConditionCheckItem
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt Table.Arn
+                  - !Sub ${Table.Arn}/index/*
+              - Sid: Photos
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:DeleteObjectTagging
+                  - s3:DeleteObject
+                Resource: !Sub arn:${AWS::Partition}:s3:::${PhotosBucket}/photos/*
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref AWS::StackName
+      Description: Grigri API (specs/api.md)
+      Runtime: nodejs22.x
+      Handler: index.handler
+      # npm run build's bundle; `aws cloudformation package` uploads it.
+      Code: dist
+      Architectures:
+        - !Ref Architecture
+      MemorySize: 256
+      Timeout: 10
+      Role: !GetAtt FunctionRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref LogGroup
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          VERSION: !Ref Version
+          TABLE_NAME: !Ref Table
+          PHOTOS_BUCKET: !Ref PhotosBucket
+          PHOTOS_UPLOAD_URL: !Ref PhotosUploadUrl
+          ADMIN_EMAILS: !Ref AdminEmails
+          GOOGLE_WEB_CLIENT_ID: !Ref GoogleWebClientId
+          DEV_MODE: !Ref DevMode
+          # Reuse TCP connections to DynamoDB between invocations.
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+          NODE_OPTIONS: --enable-source-maps
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  # An HTTP API: $1 per million requests (REST APIs are $3.50). No
+  # authorizer: the function checks the session token (one DynamoDB read).
+  HttpApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Ref AWS::StackName
+      ProtocolType: HTTP
+      Description: Grigri API, served under /api/* by the site's CloudFront
+      Tags: !If
+        - IsLocal
+        # Floci: a fixed ID, so its CloudFront can allowlist the origin
+        # host (grigri_floci/compose.yaml).
+        - grigri:stage: !Ref Stage
+          floci:override-id: grigri
+        - grigri:stage: !Ref Stage
+
+  Integration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref HttpApi
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt Function.Arn
+      PayloadFormatVersion: '2.0'
+      TimeoutInMillis: 10000
+
+  # Public: what's deployed (stage and version).
+  HealthRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: GET /api/health
+      AuthorizationType: NONE
+      Target: !Sub integrations/${Integration}
+
+  # Everything else; the function routes it and authenticates it:
+  # POST /api/session is public, the rest take a session token.
+  ApiRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref HttpApi
+      RouteKey: ANY /api/{proxy+}
+      AuthorizationType: NONE
+      Target: !Sub integrations/${Integration}
+
+  # Throttling caps the bill if someone floods it (every route together).
+  DefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref HttpApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 100
+        ThrottlingRateLimit: 50
+      Tags:
+        grigri:stage: !Ref Stage
+
+  InvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref Function
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${HttpApi}/*
+
+Outputs:
+  ApiDomain:
+    Description: The HTTP API's host name (the site distribution's /api/* origin; site.yaml ApiDomainName)
+    Value: !Sub ${HttpApi}.execute-api.${AWS::URLSuffix}
+  ApiId:
+    Value: !Ref HttpApi
+  TableName:
+    Value: !Ref Table
+  FunctionName:
+    Description: Invoked with {"grigriSeed":true} to seed RC (scripts/seed.sh)
+    Value: !Ref Function

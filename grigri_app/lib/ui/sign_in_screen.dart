@@ -75,10 +75,13 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 40),
                       ..._buttons(auth, text),
-                      if (auth.failed) ...[
+                      if (auth.error case final error?) ...[
                         const SizedBox(height: 16),
                         Text(
-                          l.errorSignIn,
+                          switch (error) {
+                            SignInError.session => l.errorSession,
+                            SignInError.google => l.errorSignIn,
+                          },
                           style: const TextStyle(color: Mountain.clay),
                           textAlign: TextAlign.center,
                         ),

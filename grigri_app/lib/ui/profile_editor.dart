@@ -6,8 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import '../data/grigri_store.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
+import '../model/location.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'location_picker.dart';
 
 /// Picks a photo from the camera or the library, downsized so its longer
 /// side is at most [maxSide] pixels; null when cancelled.
@@ -29,7 +31,8 @@ Future<Uint8List?> pickPhoto(ImageSource source, double maxSide) async {
 }
 
 /// Edits my profile: my photo, about me, the grades I climb per
-/// discipline, and my gear with its photos. When and where are for plans.
+/// discipline, my gear with its photos, and where I climb (my location and
+/// other areas, private, which rank the Discover deck). When is for plans.
 /// With [create], it's the "Create your profile" step after the first
 /// sign-in, before the tabs.
 class ProfileEditor extends StatefulWidget {
@@ -62,6 +65,8 @@ class _ProfileEditorState extends State<ProfileEditor> {
   late final List<EditablePhoto> _gearPhotos = [
     for (final key in _me.gearPhotos) EditablePhoto.saved(key),
   ];
+  late Location? _location = _me.location;
+  late final List<Location> _areas = [..._me.areas];
 
   @override
   void dispose() {
@@ -138,6 +143,21 @@ class _ProfileEditorState extends State<ProfileEditor> {
     }
   }
 
+  Future<void> _pickLocation() async {
+    final picked = await pickLocation(
+      context,
+      title: context.l10n.yourLocation,
+    );
+    if (picked != null) setState(() => _location = picked);
+  }
+
+  Future<void> _addArea() async {
+    final picked = await pickLocation(context, title: context.l10n.addArea);
+    if (picked != null && !_areas.contains(picked)) {
+      setState(() => _areas.add(picked));
+    }
+  }
+
   /// A photo's image: the picked bytes, or the saved one.
   ImageProvider _image(EditablePhoto photo) => photo.bytes != null
       ? MemoryImage(photo.bytes!)
@@ -161,6 +181,8 @@ class _ProfileEditorState extends State<ProfileEditor> {
             ),
         },
         gear: _gear,
+        location: _location,
+        areas: _areas,
       ),
       photo: _photo,
       gearPhotos: _gearPhotos,
@@ -267,6 +289,44 @@ class _ProfileEditorState extends State<ProfileEditor> {
               maxLines: 5,
               decoration: InputDecoration(labelText: l.bioLabel),
               textCapitalization: TextCapitalization.sentences,
+            ),
+            label(l.whereYouClimb, l.whereYouClimbHint),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.my_location, color: Mountain.sky),
+              title: Text(_location?.name ?? l.setYourLocation),
+              subtitle: Text(
+                l.yourLocation,
+                style: const TextStyle(color: Mountain.granite),
+              ),
+              trailing: _location == null
+                  ? const Icon(Icons.chevron_right)
+                  : IconButton(
+                      tooltip: l.clearYourLocation,
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() => _location = null),
+                    ),
+              onTap: _pickLocation,
+            ),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final (i, a) in _areas.indexed)
+                  InputChip(
+                    avatar: const Icon(Icons.place_outlined, size: 18),
+                    label: Text(a.name),
+                    deleteButtonTooltipMessage: l.removeArea(a.name),
+                    onDeleted: () => setState(() => _areas.removeAt(i)),
+                  ),
+                if (_areas.length < Climber.maxAreas)
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 18),
+                    label: Text(l.addArea),
+                    onPressed: _addArea,
+                  ),
+              ],
             ),
             label(l.whatYouClimb, l.whatYouClimbHint),
             const GradeSystemToggle(),

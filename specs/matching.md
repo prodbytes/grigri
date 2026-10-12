@@ -22,11 +22,20 @@ person, and a plan can take a whole group.
   - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car,
     and up to 6 **photos of their gear**.
 
-  When and where are only the plan's: a profile has no availability,
-  places, home area or years climbing.
+  - **where I climb**: my **location** and up to 5 other **areas** I'd
+    climb near, each a place picked from the [sector index](sectors.md)
+    (a crag, sector or gym, with its point). They're **private**: the
+    server keeps them to about 1 km and only my own profile has them;
+    everyone else's comes without (the app keeps mine when a refresh
+    brings my profile back without them). They rank my
+    [deck](#the-deck).
+
+  When is only the plan's: a profile has no availability or years
+  climbing.
 - A **plan** ([Plan](../grigri_app/lib/model/plan.dart)) is one outing:
   discipline, where (a sector, crag or gym: picked from the
-  [sector index](sectors.md), with where it is, or typed in), the day and
+  [sector index](sectors.md), with where it is and its point on the
+  map, or typed in), the day and
   its time range (from and to), the grades it's for, and notes. It has
   no title: it's called by its place. Its members are its **group**,
   organizer first, and the group has **no size limit**: it's as big as
@@ -35,11 +44,16 @@ person, and a plan can take a whole group.
 ## The deck
 
 - **Discover**: plans to join. Upcoming plans that I'm
-  not in and haven't swiped on: first those whose grades overlap my grades
-  for the plan's discipline, then the rest, each soonest first. Each card
-  shows **the plan first, highlighted**, with a "Your grades" badge when
-  they fit, then the organizer's profile (without the gear) and the rest
-  of the group.
+  not in and haven't swiped on, **ranked by how well they match my
+  profile plus how close they are** to the nearest of my location and
+  areas ([the score](api.md#the-decks-ranking)): a plan in my grades
+  nearby first; one in my grades far away still before one next door
+  that I don't climb; ties soonest first. A plan typed in by hand (no
+  point), or a deck without my location or areas, counts as about 70 km
+  away. Each card shows **the plan first, highlighted**, with a "Your
+  grades" badge when they fit and how far it is from me ("12 km from
+  you") when known, then the organizer's profile (without the gear) and
+  the rest of the group.
   - Right / ✓: I ask to join (a join request).
   - Left / ✕: I pass; the plan leaves my deck.
 

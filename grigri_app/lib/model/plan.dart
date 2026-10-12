@@ -21,6 +21,8 @@ class Plan {
     required this.grades,
     required this.memberIds,
     this.sectorId,
+    this.lat,
+    this.lon,
     this.area = '',
     this.notes = '',
   });
@@ -40,6 +42,11 @@ class Plan {
   /// The [Sector.id] of [place] in the sector index; null for a place
   /// typed in by hand.
   final String? sectorId;
+
+  /// Where [place] is on the map, from the sector index; null for a place
+  /// typed in by hand (or a sector without a point).
+  final double? lat;
+  final double? lon;
   final DateTime start;
   final DateTime end;
   final GradeRange grades;
@@ -56,6 +63,7 @@ class Plan {
     String? place,
     String? area,
     String? Function()? sectorId,
+    ({double lat, double lon})? Function()? point,
     DateTime? start,
     DateTime? end,
     GradeRange? grades,
@@ -69,6 +77,8 @@ class Plan {
     place: place ?? this.place,
     area: area ?? this.area,
     sectorId: sectorId != null ? sectorId() : this.sectorId,
+    lat: point != null ? point()?.lat : lat,
+    lon: point != null ? point()?.lon : lon,
     start: start ?? this.start,
     end: end ?? this.end,
     grades: grades ?? this.grades,
@@ -84,6 +94,8 @@ class Plan {
     'place': place,
     'area': area,
     'sectorId': ?sectorId,
+    'lat': ?lat,
+    'lon': ?lon,
     'start': apiTime(start),
     'end': apiTime(end),
     'grades': grades.toJson(),
@@ -97,6 +109,8 @@ class Plan {
     place: json['place']! as String,
     area: json['area'] as String? ?? '',
     sectorId: json['sectorId'] as String?,
+    lat: (json['lat'] as num?)?.toDouble(),
+    lon: (json['lon'] as num?)?.toDouble(),
     start: _time(json['start']),
     end: _time(json['end']),
     grades: GradeRange.fromJson((json['grades']! as Map).cast()),

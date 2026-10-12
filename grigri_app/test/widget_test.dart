@@ -4,10 +4,12 @@ import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/preferences.dart';
+import 'package:grigri_app/data/sector_index.dart';
 import 'package:grigri_app/data/roles.dart';
 import 'package:grigri_app/main.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
+import 'package:grigri_app/model/location.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
 import 'package:rbacr/rbacr.dart' as rbacr;
@@ -139,6 +141,34 @@ void main() {
       expect(find.text('Block Hall'), findsOneWidget);
       expect(find.text('Kit Marlow'), findsOneWidget);
       expect(find.text('Your grades'), findsWidgets);
+    });
+
+    testWidgets('cards say how far the plan is; no location, a hint', (
+      tester,
+    ) async {
+      final api = sampleApi()..distanceKm['boulder-night'] = 12;
+      await pumpApp(tester, api);
+      expect(find.text('12 km from you'), findsOneWidget);
+      expect(
+        find.text('Set where you climb to see plans near you first.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Set'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit profile'), findsOneWidget);
+      expect(find.text('Set your location'), findsOneWidget);
+    });
+
+    testWidgets('with a location, no hint', (tester) async {
+      final api = sampleApi();
+      api.climbers['me'] = api.climbers['me']!.copyWith(
+        location: const Location(name: 'Home crag', lat: 1, lon: 2),
+      );
+      await pumpApp(tester, api);
+      expect(
+        find.text('Set where you climb to see plans near you first.'),
+        findsNothing,
+      );
     });
 
     testWidgets('asking to join makes a pending request', (tester) async {
@@ -335,6 +365,7 @@ void main() {
       final plan = api.plans.values.firstWhere((p) => p.place == 'El Pati');
       expect(plan.sectorId, 'demo:el-pati');
       expect(plan.area, isNotEmpty);
+      expect((plan.lat, plan.lon), (41.2577, 0.9318));
       expect(plan.start.hour, 9);
       expect(plan.end.hour, 17);
       expect(find.text('El Pati'), findsOneWidget);
@@ -518,6 +549,51 @@ void main() {
       expect(store.me.age, isNull);
       expect(api.climbers['me']!.age, isNull);
       expect(find.text('Pat Quill, 30'), findsNothing);
+    });
+
+    testWidgets('where I climb: a location and areas, kept private', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      await tapTab(tester, 'Profile');
+      await tester.tap(find.text('Edit profile'));
+      await tester.pumpAndSettle();
+      final picker = find.widgetWithText(TextField, 'A crag or gym near there');
+      // The index loads from the asset bundle, which needs real time.
+      await tester.runAsync(SectorIndex.load);
+
+      await tester.tap(find.text('Set your location'));
+      await tester.pumpAndSettle();
+      await tester.enterText(picker, 'boulder');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Boulder gym'));
+      await tester.pumpAndSettle();
+      expect(find.text('Boulder gym, Barcelona, Spain'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Add an area'));
+      await tester.tap(find.text('Add an area'));
+      await tester.pumpAndSettle();
+      await tester.enterText(picker, 'margalef');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Margalef'));
+      await tester.pumpAndSettle();
+      expect(find.text('Margalef, Catalonia, Spain'), findsOneWidget);
+
+      await tester.tap(find.text('Save').first);
+      await tester.pumpAndSettle();
+      final saved = api.climbers['me']!;
+      expect(saved.location?.name, 'Boulder gym, Barcelona, Spain');
+      expect(saved.location?.lat, 41.3975);
+      expect(saved.areas.map((a) => a.name), ['Margalef, Catalonia, Spain']);
+      expect(api.calls.last, 'GET /api/discover');
+
+      // Refreshes bring my profile back without them (they're private):
+      // the app keeps mine.
+      await store.refreshAll();
+      await tester.pumpAndSettle();
+      expect(store.me.location, saved.location);
+      expect(store.me.areas, saved.areas);
     });
 
     testWidgets('photos are uploaded, then saved with the profile', (
@@ -730,8 +806,7 @@ void main() {
           InMemorySharedPreferencesAsync.empty();
       final preferences = await Preferences.open();
       expect(preferences.language, isNull);
-      GrigriStore open(Preferences p) =>
-          GrigriStore(api: sampleApi(), auth: FakeAuth(), preferences: p);
+      GrigriStore open(Preferences p) => storeFor(sampleApi(), preferences: p);
 
       open(preferences).locale = const Locale('ca');
       await pumpEventQueue();

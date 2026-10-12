@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
+import 'package:grigri_app/data/preferences.dart';
+import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/plan.dart';
@@ -16,9 +18,37 @@ final png = base64Decode(
 
 /// An in-memory backend that follows the API's rules (specs/api.md) for
 /// one caller, [meId], and records every route called. Its climbers are
-/// made up, here in the tests (never in lib/).
-class FakeApi implements GrigriApi {
+/// made up, here in the tests (never in lib/). Its sessions follow
+/// specs/sign-in.md: once [headers] is set, every route but the session
+/// ones needs `Authorization: Bearer <a session token>`.
+class FakeApi implements GrigriApi, SessionApi {
   FakeApi({this.admin = false});
+
+  /// Who's calling (the app's [Auth.headers]); unchecked when null.
+  Future<Map<String, String>> Function()? headers;
+
+  /// The live sessions: token → whose.
+  final sessions = <String, String>{};
+
+  /// The bodies `POST /api/session` was called with.
+  final sessionBodies = <Map<String, String>>[];
+
+  int _sessionIds = 0;
+
+  /// A new session for [email], as `POST /api/session` makes.
+  String openSession(String email) {
+    final token = 'session-${++_sessionIds}';
+    sessions[token] = email;
+    return token;
+  }
+
+  /// The session token [headers] carry, if it's live.
+  Future<String?> _caller() async {
+    final auth = (await headers!())['Authorization'];
+    if (auth == null || !auth.startsWith('Bearer ')) return null;
+    final token = auth.substring('Bearer '.length);
+    return sessions.containsKey(token) ? token : null;
+  }
 
   /// The caller's climber id once they have a profile.
   String? meId;
@@ -31,6 +61,10 @@ class FakeApi implements GrigriApi {
   final allMessages = <Message>[];
   final passed = <String>{};
   final dismissed = <String>{};
+
+  /// What the deck says about how far each plan is (the server works it
+  /// out from my location and areas; tests set it).
+  final distanceKm = <String, int>{};
 
   /// Every call, as "METHOD /api/route".
   final calls = <String>[];
@@ -62,6 +96,9 @@ class FakeApi implements GrigriApi {
       failNext = null;
       throw fail;
     }
+    if (headers != null && await _caller() == null) {
+      throw const ApiException(401, 'signed out');
+    }
     if (meId == null &&
         !route.endsWith(' /api/me') &&
         route != 'POST /api/photos') {
@@ -70,8 +107,12 @@ class FakeApi implements GrigriApi {
     return body();
   }
 
+  /// Profiles as the server shares them: without location and areas,
+  /// which are private (mine too).
   Climbers _mention(Iterable<String> ids) => {
-    for (final id in ids) id: ?climbers[id],
+    for (final id in ids)
+      if (climbers[id] case final c?)
+        id: c.copyWith(location: null, areas: const []),
   };
 
   Iterable<String> _planPeople(Plan p) => p.memberIds;
@@ -163,6 +204,41 @@ class FakeApi implements GrigriApi {
   // --- The routes -----------------------------------------------------------
 
   @override
+  Future<String> createSession({String? idToken, String? devUser}) async {
+    calls.add('POST /api/session');
+    final fail = failNext;
+    if (fail != null) {
+      failNext = null;
+      throw fail;
+    }
+    sessionBodies.add({'idToken': ?idToken, 'devUser': ?devUser});
+    final email = idToken == 'google-id-token' ? 'pat@example.com' : devUser;
+    if (email == null) throw const ApiException(401, 'signed out');
+    return openSession(email);
+  }
+
+  @override
+  Future<void> deleteSession(String token) async {
+    calls.add('DELETE /api/session');
+    if (sessions.remove(token) == null) {
+      throw const ApiException(401, 'signed out');
+    }
+  }
+
+  @override
+  Future<void> deleteSessions(String token) async {
+    calls.add('DELETE /api/sessions');
+    final fail = failNext;
+    if (fail != null) {
+      failNext = null;
+      throw fail;
+    }
+    final email = sessions[token];
+    if (email == null) throw const ApiException(401, 'signed out');
+    sessions.removeWhere((_, owner) => owner == email);
+  }
+
+  @override
   Uri photoUrl(String key) => Uri.parse('https://grigri.test/photos/$key');
 
   @override
@@ -183,6 +259,8 @@ class FakeApi implements GrigriApi {
       levels: profile.levels,
       gear: profile.gear,
       gearPhotos: profile.gearPhotos,
+      location: profile.location,
+      areas: profile.areas,
     );
     climbers[meId!] = saved;
     return saved;
@@ -211,7 +289,11 @@ class FakeApi implements GrigriApi {
             final fit = (_fits(b) ? 1 : 0).compareTo(_fits(a) ? 1 : 0);
             return fit != 0 ? fit : a.start.compareTo(b.start);
           });
-    return PlanList(list, _mention(list.expand(_planPeople)));
+    return PlanList(
+      list,
+      _mention(list.expand(_planPeople)),
+      distanceKm: {for (final p in list) p.id: ?distanceKm[p.id]},
+    );
   });
 
   @override
@@ -223,6 +305,8 @@ class FakeApi implements GrigriApi {
       place: plan.place,
       area: plan.area,
       sectorId: plan.sectorId,
+      lat: plan.lat,
+      lon: plan.lon,
       start: plan.start,
       end: plan.end,
       grades: plan.grades,
@@ -462,49 +546,36 @@ class FakeApi implements GrigriApi {
       });
 }
 
-/// Signing in without Google: whoever [signIn] names.
-class FakeAuth extends Auth {
-  FakeAuth({this.current, this.mode = SignInMode.google});
-
-  /// Who's signed in.
-  AuthUser? current;
+/// Google, made up: its button signs Pat in with a made-up ID token that
+/// [FakeApi] takes.
+class FakeGoogle extends SignInMethod {
+  FakeGoogle({this.mode = SignInMode.google});
 
   @override
   final SignInMode mode;
 
-  @override
-  AuthUser? get user => current;
+  OnCredential? _onCredential;
+
+  /// How many times the app signed out of Google.
+  int signOuts = 0;
 
   @override
-  bool get started => true;
+  Future<void> start({
+    required OnCredential onCredential,
+    required void Function(Object error) onError,
+    required bool quietly,
+  }) async => _onCredential = onCredential;
 
   @override
-  bool get failed => false;
+  Future<void> signIn({String? devEmail}) async => _onCredential?.call(
+    const Credential(
+      user: AuthUser(email: 'pat@example.com', name: 'Pat Quill'),
+      idToken: 'google-id-token',
+    ),
+  );
 
   @override
-  Future<void> start() async {}
-
-  @override
-  Future<void> signIn({String? devEmail}) async {
-    current = AuthUser(
-      email: devEmail?.isNotEmpty ?? false ? devEmail! : 'pat@example.com',
-      name: 'Pat Quill',
-    );
-    notifyListeners();
-  }
-
-  @override
-  Future<Map<String, String>> headers() async =>
-      current == null ? const {} : {'X-Test-User': current!.email};
-
-  @override
-  Future<bool> refresh() async => false;
-
-  @override
-  Future<void> signOut() async {
-    current = null;
-    notifyListeners();
-  }
+  Future<void> signOut() async => signOuts++;
 }
 
 // --- Made-up climbers and plans -----------------------------------------------
@@ -606,17 +677,35 @@ FakeApi sampleApi({bool admin = false, bool profile = true}) {
   return api;
 }
 
-/// The store over [api], signed in (unless [signedIn] is false), with
-/// photos from memory.
+/// The store over [api], with photos from memory and the app's own
+/// sessions: signed in (unless [signedIn] is false) with a session kept on
+/// the device, or the one in [storage]. Dev mode signs in with
+/// [DevSignInMethod], the rest with [FakeGoogle].
 GrigriStore storeFor(
   FakeApi api, {
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
-}) => GrigriStore(
-  api: api,
-  auth: FakeAuth(
-    current: signedIn ? const AuthUser(email: 'pat@example.com') : null,
-    mode: mode,
-  ),
-  image: (_) => MemoryImage(png),
-);
+  MemorySessionStorage? storage,
+  Preferences? preferences,
+}) {
+  final auth = SessionAuth(
+    method: mode == SignInMode.dev ? DevSignInMethod() : FakeGoogle(mode: mode),
+    sessions: api,
+    storage:
+        storage ??
+        MemorySessionStorage(
+          signedIn ? api.openSession('pat@example.com') : null,
+        ),
+  );
+  api.headers = auth.headers;
+  return GrigriStore(
+    api: api,
+    auth: auth,
+    image: (_) => MemoryImage(png),
+    preferences: preferences,
+  );
+}
+
+/// The session token kept on [store]'s device.
+String? keptToken(GrigriStore store) =>
+    ((store.auth as SessionAuth).storage as MemorySessionStorage).token;

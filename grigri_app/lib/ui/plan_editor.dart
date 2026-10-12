@@ -43,6 +43,8 @@ class _PlanEditorState extends State<PlanEditor> {
           id: widget.plan!.sectorId!,
           name: widget.plan!.place,
           area: widget.plan!.area,
+          lat: widget.plan!.lat,
+          lon: widget.plan!.lon,
         );
   SectorIndex? _index;
 
@@ -153,6 +155,9 @@ class _PlanEditorState extends State<PlanEditor> {
       place: place,
       area: area,
       sectorId: () => sector?.id,
+      point: () => sector?.lat == null || sector?.lon == null
+          ? null
+          : (lat: sector!.lat!, lon: sector.lon!),
       start: start,
       end: end,
       grades: grades,

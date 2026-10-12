@@ -22,12 +22,19 @@ class ProfileScreen extends StatelessWidget {
         actions: [
           PopupMenuButton<String>(
             tooltip: l.more,
-            onSelected: (_) async {
+            onSelected: (choice) async {
+              final everywhere = choice == 'signOutEverywhere';
               final sure = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: Text(l.signOutQuestion),
-                  content: Text(l.signOutMessage),
+                  title: Text(
+                    everywhere
+                        ? l.signOutEverywhereQuestion
+                        : l.signOutQuestion,
+                  ),
+                  content: Text(
+                    everywhere ? l.signOutEverywhereMessage : l.signOutMessage,
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
@@ -35,15 +42,20 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: Text(l.signOut),
+                      child: Text(everywhere ? l.signOutEverywhere : l.signOut),
                     ),
                   ],
                 ),
               );
-              if (sure == true) await store.signOut();
+              if (sure != true) return;
+              await (everywhere ? store.signOutEverywhere() : store.signOut());
             },
             itemBuilder: (_) => [
               PopupMenuItem(value: 'signOut', child: Text(l.signOut)),
+              PopupMenuItem(
+                value: 'signOutEverywhere',
+                child: Text(l.signOutEverywhere),
+              ),
             ],
           ),
         ],

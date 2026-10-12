@@ -9,6 +9,7 @@ import 'data/grigri_store.dart';
 import 'data/http_api.dart';
 import 'data/preferences.dart';
 import 'data/roles.dart';
+import 'data/session_storage.dart';
 import 'theme.dart';
 import 'ui/common.dart';
 import 'ui/document_language/document_language.dart';
@@ -19,14 +20,23 @@ import 'ui/sign_in_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final Auth auth = AppConfig.devSignIn
-      ? DevAuth()
-      : GoogleAuth(
-          webClientId: AppConfig.googleWebClientId,
-          iosClientId: AppConfig.googleIosClientId,
-        );
+  late final Auth auth;
+  final api = HttpGrigriApi(
+    origin: AppConfig.origin,
+    headers: () => auth.headers(),
+  );
+  auth = SessionAuth(
+    method: AppConfig.devSignIn
+        ? DevSignInMethod()
+        : GoogleSignInMethod(
+            webClientId: AppConfig.googleWebClientId,
+            iosClientId: AppConfig.googleIosClientId,
+          ),
+    sessions: api,
+    storage: SessionStorage.device(),
+  );
   final store = GrigriStore(
-    api: HttpGrigriApi(origin: AppConfig.origin, headers: auth.headers),
+    api: api,
     auth: auth,
     preferences: await Preferences.open(),
   );

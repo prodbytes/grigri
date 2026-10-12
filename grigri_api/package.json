@@ -1,0 +1,31 @@
+{
+  "name": "grigri-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Grigri's backend: one Lambda behind an HTTP API, data in DynamoDB",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "3.1149.0",
+    "@aws-sdk/client-s3": "3.1149.0",
+    "@aws-sdk/lib-dynamodb": "3.1149.0",
+    "@aws-sdk/s3-presigned-post": "3.1149.0",
+    "jose": "6.2.12"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.164",
+    "@types/node": "22.20.5",
+    "esbuild": "0.28.2",
+    "typescript": "7.0.2",
+    "vitest": "5.0.4"
+  }
+}

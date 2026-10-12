@@ -6,7 +6,9 @@ Description: >
   grigri-web: the site at https://grigri.nu01.com (and, as grigri-rc-web,
   https://rc.grigri.nu01.com). One CloudFront distribution in front of the
   index page (/) and the Flutter web app (/app/), both from a private S3
-  bucket. A Route 53 health check polls https://DomainName/app/version.json;
+  bucket, the API (/api/*, the grigri_api stack's HTTP API) and people's
+  photos (/photos/*, a private bucket). A Route 53 health check polls
+  https://DomainName/app/version.json;
   when it fails, an alarm emails HealthNotificationEmails.
   Deploy in us-east-1 (CloudFront certificates must live there).
 
@@ -25,6 +27,13 @@ Parameters:
       The grigri:stage tag on the certificate and distribution, which the
       deploy roles (grigri_infra/github-deploy.yaml) are scoped by: prod,
       or rc for grigri-rc-web.
+  ApiDomainName:
+    Type: String
+    AllowedPattern: '[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com'
+    Description: >
+      The API's execute-api host name (the <prefix>-api stack's ApiDomain
+      output, grigri_api/template.yaml); scripts/deploy.sh deploys that
+      stack first and passes it.
   HealthNotificationEmails:
     Type: CommaDelimitedList
     Description: >
@@ -61,6 +70,87 @@ Resources:
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
+
+  # People's photos (profile and gear), uploaded by the app with presigned
+  # POSTs the API issues (under photos/), and served by this distribution
+  # under /photos/* (the path is the key, so objects live under photos/).
+  # Private: only this distribution reads it. Deterministic name, so the
+  # API stack, deployed first, can grant its function uploads to it. Kept
+  # when the stack goes (Retain): it's people's data.
+  PhotosBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-photos-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      # The web app posts uploads straight to the bucket (its own origin).
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - !Sub https://${DomainName}
+            AllowedMethods: [POST]
+            AllowedHeaders: ['*']
+            MaxAge: 3000
+      # Uploads arrive tagged grigri-pending=true (the API's presigned
+      # POSTs); saving a profile clears the tag of its photos, and deletes
+      # the ones it drops. Photos never saved to a profile expire after a
+      # day. Saved photos stay until their owner replaces them. Failed
+      # multipart uploads are cleaned up too.
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+          - Id: expire-pending-photos
+            Status: Enabled
+            Prefix: photos/
+            TagFilters:
+              - Key: grigri-pending
+                Value: 'true'
+            ExpirationInDays: 1
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  PhotosBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PhotosBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Only this distribution may read photos.
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${PhotosBucket.Arn}/photos/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+          # Uploads (presigned POSTs) and reads only over HTTPS.
+          - Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt PhotosBucket.Arn
+              - !Sub ${PhotosBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
 
   SiteOriginAccessControl:
     Type: AWS::CloudFront::OriginAccessControl
@@ -133,10 +223,12 @@ Resources:
   #   'wasm-unsafe-eval' compiles CanvasKit's WebAssembly.
   # - style-src 'unsafe-inline': Flutter's engine injects <style> elements
   #   and style attributes.
-  # - connect-src: CanvasKit and Google's fonts, which Flutter downloads.
-  # - accounts.google.com/gsi/: Google sign-in on the web (Google Identity
-  #   Services: its script, stylesheet, iframe and calls), and
-  #   lh3.googleusercontent.com its button's account picture.
+  # - connect-src: CanvasKit and Google's fonts, which Flutter downloads;
+  #   the API is 'self' (/api/*); photo uploads go to the photos bucket.
+  # - img-src: photos are 'self' (/photos/*); Google account pictures
+  #   (lh3.googleusercontent.com, the sign-in button's too).
+  # - Google Identity Services (sign-in): its script, style, frame and
+  #   calls under https://accounts.google.com/gsi/.
   # frame-ancestors 'none' (and X-Frame-Options DENY): nothing may frame it.
   AppHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
@@ -147,13 +239,13 @@ Resources:
         SecurityHeadersConfig:
           ContentSecurityPolicy:
             Override: true
-            ContentSecurityPolicy: >-
+            ContentSecurityPolicy: !Sub >-
               default-src 'self';
               script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com/flutter-canvaskit/ https://accounts.google.com/gsi/client;
               style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style;
               img-src 'self' data: blob: https://lh3.googleusercontent.com;
               font-src 'self' data: https://fonts.gstatic.com;
-              connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://accounts.google.com/gsi/;
+              connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://accounts.google.com/gsi/ https://${PhotosBucket}.s3.${AWS::Region}.amazonaws.com;
               frame-src https://accounts.google.com/gsi/;
               worker-src 'self' blob:;
               manifest-src 'self';
@@ -249,6 +341,20 @@ Resources:
             OriginAccessControlId: !GetAtt SiteOriginAccessControl.Id
             S3OriginConfig:
               OriginAccessIdentity: ''
+          # People's photos; the same origin access control signs requests.
+          - Id: photos
+            DomainName: !GetAtt PhotosBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt SiteOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
+          # The API's HTTP API, default stage: no origin path
+          # (/api/plans -> /api/plans).
+          - Id: api
+            DomainName: !Ref ApiDomainName
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
         # The index page at / (redirects to /app/)
         DefaultCacheBehavior:
           TargetOriginId: site
@@ -271,6 +377,27 @@ Resources:
             FunctionAssociations:
               - EventType: viewer-request
                 FunctionARN: !GetAtt AppIndexFunction.FunctionMetadata.FunctionARN
+          # The API: nothing cached; every viewer header but Host is
+          # forwarded, Authorization (the session token) included; all
+          # methods.
+          - PathPattern: /api/*
+            TargetOriginId: api
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # Managed-CachingDisabled
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # Managed-AllViewerExceptHostHeader
+            ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # Managed-SecurityHeadersPolicy
+          # Photos: keys are never reused, so they're cached at the edge.
+          - PathPattern: /photos/*
+            TargetOriginId: photos
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+            ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # Managed-SecurityHeadersPolicy
 
   DnsRecordA:
     Type: AWS::Route53::RecordSet
@@ -360,6 +487,9 @@ Outputs:
   SiteBucketName:
     Description: Upload index.html at the root and the web build under app/
     Value: !Ref SiteBucket
+  PhotosBucketName:
+    Description: People's photos (under photos/), served at /photos/*
+    Value: !Ref PhotosBucket
   DistributionId:
     Value: !Ref Distribution
   DistributionDomainName:

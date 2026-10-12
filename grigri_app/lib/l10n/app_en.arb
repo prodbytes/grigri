@@ -194,6 +194,14 @@
   "@errorSignIn": {
     "description": "Google sign-in failed."
   },
+  "errorSession": "Couldn't sign in. Try again.",
+  "@errorSession": {
+    "description": "The API would not start a session after signing in."
+  },
+  "errorSignOutEverywhere": "Couldn't sign out everywhere. Try again.",
+  "@errorSignOutEverywhere": {
+    "description": "Snackbar: signing out of every device failed."
+  },
   "loadFailedTitle": "Couldn't load your profile",
   "@loadFailedTitle": {
     "description": "Title of the screen shown when the profile could not be loaded."
@@ -295,6 +303,18 @@
   "signOutMessage": "Your profile, plans and chats stay saved; sign back in to see them.",
   "@signOutMessage": {
     "description": "Body of the sign-out confirmation dialog."
+  },
+  "signOutEverywhere": "Sign out everywhere",
+  "@signOutEverywhere": {
+    "description": "Menu item and button: end the sessions on every phone and browser."
+  },
+  "signOutEverywhereQuestion": "Sign out everywhere?",
+  "@signOutEverywhereQuestion": {
+    "description": "Title of the sign-out-everywhere confirmation dialog."
+  },
+  "signOutEverywhereMessage": "Signs you out on every phone and browser you signed in on, this one too. Your profile, plans and chats stay saved.",
+  "@signOutEverywhereMessage": {
+    "description": "Body of the sign-out-everywhere confirmation dialog."
   },
   "editProfile": "Edit profile",
   "@editProfile": {
@@ -409,6 +429,88 @@
   "startClimbing": "Start climbing",
   "@startClimbing": {
     "description": "Button finishing the first-time profile step."
+  },
+  "whereYouClimb": "Where you climb",
+  "@whereYouClimb": {
+    "description": "Profile editor section heading: my location and areas (shown uppercased)."
+  },
+  "whereYouClimbHint": "Plans near here come first on Discover. Only you see it.",
+  "@whereYouClimbHint": {
+    "description": "Hint under the \"Where you climb\" heading."
+  },
+  "setYourLocation": "Set your location",
+  "@setYourLocation": {
+    "description": "Location row when no location is set."
+  },
+  "yourLocation": "Your location",
+  "@yourLocation": {
+    "description": "Subtitle of the location row, and title of the location picker."
+  },
+  "clearYourLocation": "Clear your location",
+  "@clearYourLocation": {
+    "description": "Tooltip: clear my location."
+  },
+  "removeArea": "Remove {name}",
+  "@removeArea": {
+    "description": "Tooltip: remove one of my areas of interest.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Siurana"
+      }
+    }
+  },
+  "addArea": "Add an area",
+  "@addArea": {
+    "description": "Button and picker title: add an area where I like to climb."
+  },
+  "locationSearchLabel": "A crag or gym near there",
+  "@locationSearchLabel": {
+    "description": "Label of the location picker search field."
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Hint of a search field."
+  },
+  "locationPrivacy": "Kept to about 1 km, and only you see it.",
+  "@locationPrivacy": {
+    "description": "Helper under the location search: the location is rounded and private."
+  },
+  "placesAttribution": "Places: {attribution}",
+  "@placesAttribution": {
+    "description": "Credit for the place data, under the location search.",
+    "placeholders": {
+      "attribution": {
+        "type": "String",
+        "example": "© OpenStreetMap contributors"
+      }
+    }
+  },
+  "loadingPlaces": "Loading places…",
+  "@loadingPlaces": {
+    "description": "The place index is still loading."
+  },
+  "noPlacesFound": "No places found",
+  "@noPlacesFound": {
+    "description": "The location search found nothing."
+  },
+  "distanceKm": "{km, plural, =0{Under 1 km from you} other{{km} km from you}}",
+  "@distanceKm": {
+    "description": "How far a plan is from me, in kilometres (0 means under 1 km).",
+    "placeholders": {
+      "km": {
+        "type": "int",
+        "example": "12"
+      }
+    }
+  },
+  "setWhereYouClimbHint": "Set where you climb to see plans near you first.",
+  "@setWhereYouClimbHint": {
+    "description": "Discover hint when I have no location or areas."
+  },
+  "setAction": "Set",
+  "@setAction": {
+    "description": "Button next to the Discover hint: open the profile editor to set it."
   },
   "discoverTitle": "Discover plans",
   "@discoverTitle": {

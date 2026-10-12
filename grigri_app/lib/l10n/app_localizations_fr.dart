@@ -143,6 +143,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorSignIn => 'Impossible de se connecter avec Google. Réessaie.';
 
   @override
+  String get errorSession => 'Impossible de se connecter. Réessaie.';
+
+  @override
+  String get errorSignOutEverywhere =>
+      'Impossible de se déconnecter partout. Réessaie.';
+
+  @override
   String get loadFailedTitle => 'Impossible de charger ton profil';
 
   @override
@@ -215,6 +222,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get signOutMessage =>
       'Ton profil, tes plans et tes discussions restent enregistrés ; reconnecte-toi pour les voir.';
+
+  @override
+  String get signOutEverywhere => 'Se déconnecter partout';
+
+  @override
+  String get signOutEverywhereQuestion => 'Se déconnecter partout ?';
+
+  @override
+  String get signOutEverywhereMessage =>
+      'Te déconnecte de tous les téléphones et navigateurs où tu t\'es connecté, celui-ci compris. Ton profil, tes plans et tes discussions restent enregistrés.';
 
   @override
   String get editProfile => 'Modifier le profil';
@@ -293,6 +310,68 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get startClimbing => 'Commencer à grimper';
+
+  @override
+  String get whereYouClimb => 'Où tu grimpes';
+
+  @override
+  String get whereYouClimbHint =>
+      'Les plans proches apparaissent en premier dans Découvrir. Toi seul le vois.';
+
+  @override
+  String get setYourLocation => 'Indique ta position';
+
+  @override
+  String get yourLocation => 'Ta position';
+
+  @override
+  String get clearYourLocation => 'Effacer ta position';
+
+  @override
+  String removeArea(String name) {
+    return 'Retirer $name';
+  }
+
+  @override
+  String get addArea => 'Ajouter un secteur';
+
+  @override
+  String get locationSearchLabel => 'Un site ou une salle près de là';
+
+  @override
+  String get search => 'Rechercher';
+
+  @override
+  String get locationPrivacy => 'Arrondie à 1 km environ, et toi seul la vois.';
+
+  @override
+  String placesAttribution(String attribution) {
+    return 'Lieux : $attribution';
+  }
+
+  @override
+  String get loadingPlaces => 'Chargement des lieux…';
+
+  @override
+  String get noPlacesFound => 'Aucun lieu trouvé';
+
+  @override
+  String distanceKm(int km) {
+    String _temp0 = intl.Intl.pluralLogic(
+      km,
+      locale: localeName,
+      other: 'À $km km de toi',
+      zero: 'À moins de 1 km de toi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get setWhereYouClimbHint =>
+      'Indique où tu grimpes pour voir d\'abord les plans près de toi.';
+
+  @override
+  String get setAction => 'Indiquer';
 
   @override
   String get discoverTitle => 'Découvrir des plans';

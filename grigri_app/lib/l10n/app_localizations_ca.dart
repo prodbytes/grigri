@@ -144,6 +144,14 @@ class AppLocalizationsCa extends AppLocalizations {
       'No s\'ha pogut iniciar la sessió amb Google. Torna-ho a provar.';
 
   @override
+  String get errorSession =>
+      'No s\'ha pogut iniciar la sessió. Torna-ho a provar.';
+
+  @override
+  String get errorSignOutEverywhere =>
+      'No s\'ha pogut tancar la sessió a tot arreu. Torna-ho a provar.';
+
+  @override
   String get loadFailedTitle => 'No s\'ha pogut carregar el teu perfil';
 
   @override
@@ -216,6 +224,16 @@ class AppLocalizationsCa extends AppLocalizations {
   @override
   String get signOutMessage =>
       'El teu perfil, els plans i els xats es queden desats; torna a iniciar la sessió per veure-ls.';
+
+  @override
+  String get signOutEverywhere => 'Tanca la sessió a tot arreu';
+
+  @override
+  String get signOutEverywhereQuestion => 'Vols tancar la sessió a tot arreu?';
+
+  @override
+  String get signOutEverywhereMessage =>
+      'Tanca la teva sessió a tots els mòbils i navegadors on l\'has iniciada, també en aquest. El teu perfil, els plans i els xats es queden desats.';
 
   @override
   String get editProfile => 'Edita el perfil';
@@ -294,6 +312,69 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get startClimbing => 'Comença a escalar';
+
+  @override
+  String get whereYouClimb => 'On escales';
+
+  @override
+  String get whereYouClimbHint =>
+      'Els plans propers surten primer a Descobreix. Només ho veus tu.';
+
+  @override
+  String get setYourLocation => 'Indica la teva ubicació';
+
+  @override
+  String get yourLocation => 'La teva ubicació';
+
+  @override
+  String get clearYourLocation => 'Esborra la teva ubicació';
+
+  @override
+  String removeArea(String name) {
+    return 'Treu $name';
+  }
+
+  @override
+  String get addArea => 'Afegeix una zona';
+
+  @override
+  String get locationSearchLabel => 'Una escola o rocòdrom a prop d\'allà';
+
+  @override
+  String get search => 'Cerca';
+
+  @override
+  String get locationPrivacy =>
+      'Es desa amb una precisió d\'1 km i només la veus tu.';
+
+  @override
+  String placesAttribution(String attribution) {
+    return 'Llocs: $attribution';
+  }
+
+  @override
+  String get loadingPlaces => 'Carregant llocs…';
+
+  @override
+  String get noPlacesFound => 'No s\'ha trobat cap lloc';
+
+  @override
+  String distanceKm(int km) {
+    String _temp0 = intl.Intl.pluralLogic(
+      km,
+      locale: localeName,
+      other: 'A $km km de tu',
+      zero: 'A menys d\'1 km de tu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get setWhereYouClimbHint =>
+      'Indica on escales per veure primer els plans propers.';
+
+  @override
+  String get setAction => 'Indica';
 
   @override
   String get discoverTitle => 'Descobreix plans';

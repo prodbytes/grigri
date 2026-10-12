@@ -340,6 +340,18 @@ abstract class AppLocalizations {
   /// **'Couldn\'t sign in with Google. Try again.'**
   String get errorSignIn;
 
+  /// The API would not start a session after signing in.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t sign in. Try again.'**
+  String get errorSession;
+
+  /// Snackbar: signing out of every device failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t sign out everywhere. Try again.'**
+  String get errorSignOutEverywhere;
+
   /// Title of the screen shown when the profile could not be loaded.
   ///
   /// In en, this message translates to:
@@ -478,6 +490,24 @@ abstract class AppLocalizations {
   /// **'Your profile, plans and chats stay saved; sign back in to see them.'**
   String get signOutMessage;
 
+  /// Menu item and button: end the sessions on every phone and browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out everywhere'**
+  String get signOutEverywhere;
+
+  /// Title of the sign-out-everywhere confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out everywhere?'**
+  String get signOutEverywhereQuestion;
+
+  /// Body of the sign-out-everywhere confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Signs you out on every phone and browser you signed in on, this one too. Your profile, plans and chats stay saved.'**
+  String get signOutEverywhereMessage;
+
   /// Button and screen title: edit my profile.
   ///
   /// In en, this message translates to:
@@ -615,6 +645,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start climbing'**
   String get startClimbing;
+
+  /// Profile editor section heading: my location and areas (shown uppercased).
+  ///
+  /// In en, this message translates to:
+  /// **'Where you climb'**
+  String get whereYouClimb;
+
+  /// Hint under the "Where you climb" heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans near here come first on Discover. Only you see it.'**
+  String get whereYouClimbHint;
+
+  /// Location row when no location is set.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your location'**
+  String get setYourLocation;
+
+  /// Subtitle of the location row, and title of the location picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Your location'**
+  String get yourLocation;
+
+  /// Tooltip: clear my location.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear your location'**
+  String get clearYourLocation;
+
+  /// Tooltip: remove one of my areas of interest.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}'**
+  String removeArea(String name);
+
+  /// Button and picker title: add an area where I like to climb.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an area'**
+  String get addArea;
+
+  /// Label of the location picker search field.
+  ///
+  /// In en, this message translates to:
+  /// **'A crag or gym near there'**
+  String get locationSearchLabel;
+
+  /// Hint of a search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get search;
+
+  /// Helper under the location search: the location is rounded and private.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept to about 1 km, and only you see it.'**
+  String get locationPrivacy;
+
+  /// Credit for the place data, under the location search.
+  ///
+  /// In en, this message translates to:
+  /// **'Places: {attribution}'**
+  String placesAttribution(String attribution);
+
+  /// The place index is still loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading places…'**
+  String get loadingPlaces;
+
+  /// The location search found nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'No places found'**
+  String get noPlacesFound;
+
+  /// How far a plan is from me, in kilometres (0 means under 1 km).
+  ///
+  /// In en, this message translates to:
+  /// **'{km, plural, =0{Under 1 km from you} other{{km} km from you}}'**
+  String distanceKm(int km);
+
+  /// Discover hint when I have no location or areas.
+  ///
+  /// In en, this message translates to:
+  /// **'Set where you climb to see plans near you first.'**
+  String get setWhereYouClimbHint;
+
+  /// Button next to the Discover hint: open the profile editor to set it.
+  ///
+  /// In en, this message translates to:
+  /// **'Set'**
+  String get setAction;
 
   /// Title of the Discover tab.
   ///

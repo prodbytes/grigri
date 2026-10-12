@@ -6,7 +6,9 @@ Description: >
   grigri-github-deploy: lets GitHub Actions deploy Grigri. A production
   role that only *GA tag runs can assume, and a release-candidate role for
   *RC* tag runs and manual runs from main. Per stage (prod: grigri-*,
-  rc: grigri-rc-*), from one definition: the deploy policies. Both trust
+  rc: grigri-rc-*), from one definition: the deploy policies, the
+  permissions boundary every role the stage's stacks create must carry,
+  and the bucket the API's code is uploaded to. Both trust
   GitHub's OIDC identity provider, which the account already has (from
   presence-github-deploy) unless CreateOidcProvider says otherwise.
   Deployed by an administrator, by hand (see grigri_infra/README.md).
@@ -67,7 +69,271 @@ Resources:
   Fn::ForEach::Stages:
     - Prefix
     - [grigri, grigri-rc]
-    - # The stage's site stack (grigri_infra/site.yaml): CloudFormation, its
+    - # The ceiling of every IAM role the stage's stacks create (the API
+      # function's role, grigri_api/template.yaml): the deploy role can only
+      # create or change roles that carry it, so a deploy can never make a
+      # role that reaches past the stage's own table, logs and photos, or
+      # another stage's.
+      AppBoundary&{Prefix}:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          ManagedPolicyName: !Sub ${Prefix}-app-boundary
+          Description: !Sub Permissions boundary of the roles in the ${Prefix}-* stacks (grigri-github-deploy)
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: FunctionLogs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Prefix}-*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Prefix}-*:*
+              # The API's table (items only; never the table itself).
+              - Sid: Tables
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:ConditionCheckItem
+                  - dynamodb:Query
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Prefix}-*
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Prefix}-*/index/*
+              # Photos, only under photos/ of the stage's photos bucket
+              # (site.yaml: <prefix>-web-photos-<account>): uploads (presigned
+              # POSTs, tagged pending), clearing that tag when a profile saves
+              # them, and deleting the ones a profile drops. Never reads.
+              - Sid: Photos
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:DeleteObjectTagging
+                  - s3:DeleteObject
+                Resource: !Sub arn:${AWS::Partition}:s3:::${Prefix}-web-photos-*/photos/*
+
+      # Where scripts/deploy.sh uploads the API's code (aws cloudformation
+      # package --s3-bucket), one bucket per stage: the RC role can't write
+      # production's code. Its settings stay the administrator's (denied
+      # to the deploy roles below).
+      ArtifactBucket&{Prefix}:
+        Type: AWS::S3::Bucket
+        DeletionPolicy: Retain
+        UpdateReplacePolicy: Retain
+        Properties:
+          BucketName: !Sub ${Prefix}-artifacts-${AWS::AccountId}
+          BucketEncryption:
+            ServerSideEncryptionConfiguration:
+              - ServerSideEncryptionByDefault:
+                  SSEAlgorithm: AES256
+          PublicAccessBlockConfiguration:
+            BlockPublicAcls: true
+            BlockPublicPolicy: true
+            IgnorePublicAcls: true
+            RestrictPublicBuckets: true
+          OwnershipControls:
+            Rules:
+              - ObjectOwnership: BucketOwnerEnforced
+          LifecycleConfiguration:
+            Rules:
+              # A deploy only needs its own upload; old ones are clutter.
+              - Id: expire-old-artifacts
+                Status: Enabled
+                ExpirationInDays: 30
+              - Id: abort-incomplete-uploads
+                Status: Enabled
+                AbortIncompleteMultipartUpload:
+                  DaysAfterInitiation: 1
+
+      # The stage's API stack (grigri_api/template.yaml): its Lambda
+      # function, HTTP API, DynamoDB table, log group and function role. A
+      # second policy, since one managed policy holds at most 6,144
+      # characters.
+      ApiDeployPolicy&{Prefix}:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          ManagedPolicyName: !Sub ${Prefix}-github-deploy-api
+          Description: !Sub What the ${Prefix} deploy role may do to the ${Prefix}-api stack's resources
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # The function, by name (FunctionName is the stack's name).
+              - Sid: Functions
+                Effect: Allow
+                Action:
+                  - lambda:CreateFunction
+                  - lambda:DeleteFunction
+                  - lambda:GetFunction
+                  - lambda:GetFunctionConfiguration
+                  - lambda:UpdateFunctionCode
+                  - lambda:UpdateFunctionConfiguration
+                  - lambda:PublishVersion
+                  - lambda:ListVersionsByFunction
+                  - lambda:GetFunctionCodeSigningConfig
+                  - lambda:GetFunctionConcurrency
+                  - lambda:GetFunctionRecursionConfig
+                  - lambda:PutFunctionRecursionConfig
+                  - lambda:GetRuntimeManagementConfig
+                  - lambda:PutRuntimeManagementConfig
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:GetPolicy
+                  - lambda:ListTags
+                  - lambda:TagResource
+                  - lambda:UntagResource
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${Prefix}-*
+              # The RC seed (scripts/seed.sh invokes the RC function with
+              # {"grigriSeed": true}). Never production's function, which
+              # refuses to seed anyway.
+              - Sid: SeedRc
+                Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource: !Sub arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:grigri-rc-api
+              # HTTP APIs have only IDs, no names to scope by: any in the
+              # account (as in prodbytes/presence; see specs/deploy.md).
+              - Sid: HttpApis
+                Effect: Allow
+                Action:
+                  - apigateway:GET
+                  - apigateway:POST
+                  - apigateway:PUT
+                  - apigateway:PATCH
+                  # Tagging is POST and DELETE on /tags/*.
+                  - apigateway:DELETE
+                Resource:
+                  - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis
+                  - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis/*
+                  - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/tags/*
+              # The table, by name. No DeleteTable and no item access: a
+              # deploy can't drop or read people's data (the table is
+              # DeletionPolicy Retain, so CloudFormation never deletes it).
+              - Sid: Tables
+                Effect: Allow
+                Action:
+                  - dynamodb:CreateTable
+                  - dynamodb:UpdateTable
+                  - dynamodb:DescribeTable
+                  - dynamodb:DescribeContinuousBackups
+                  - dynamodb:UpdateContinuousBackups
+                  - dynamodb:DescribeTimeToLive
+                  - dynamodb:UpdateTimeToLive
+                  - dynamodb:DescribeContributorInsights
+                  - dynamodb:DescribeKinesisStreamingDestination
+                  - dynamodb:GetResourcePolicy
+                  - dynamodb:TagResource
+                  - dynamodb:UntagResource
+                  - dynamodb:ListTagsOfResource
+                Resource:
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Prefix}-*
+                  - !Sub arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${Prefix}-*/index/*
+              # The function's log group, by name.
+              - Sid: LogGroups
+                Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:DeleteLogGroup
+                  - logs:PutRetentionPolicy
+                  - logs:DeleteRetentionPolicy
+                  - logs:TagResource
+                  - logs:UntagResource
+                  - logs:ListTagsForResource
+                  - logs:TagLogGroup
+                  - logs:UntagLogGroup
+                  - logs:ListTagsLogGroup
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Prefix}-*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${Prefix}-*:*
+              - Sid: LogGroupReads
+                Effect: Allow
+                Action: logs:DescribeLogGroups
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:*
+              # IAM: the function's role (<prefix>-api-function), created
+              # and given permissions only with the stage's boundary on it,
+              # so its inline policy can never grant more than the boundary.
+              - Sid: RolesWithBoundary
+                Effect: Allow
+                Action:
+                  - iam:CreateRole
+                  - iam:PutRolePolicy
+                  - iam:PutRolePermissionsBoundary
+                  - iam:UpdateRole
+                  - iam:UpdateRoleDescription
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${Prefix}-*
+                Condition:
+                  StringEquals:
+                    iam:PermissionsBoundary: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/${Prefix}-app-boundary
+              # Reading, tagging and taking permissions away need no boundary.
+              - Sid: Roles
+                Effect: Allow
+                Action:
+                  - iam:GetRole
+                  - iam:DeleteRole
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:DeleteRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:ListRolePolicies
+                  - iam:ListAttachedRolePolicies
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${Prefix}-*
+              - Sid: PassRoles
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/${Prefix}-*
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: lambda.amazonaws.com
+              # scripts/deploy.sh checks the boundary exists before deploying.
+              - Sid: Boundary
+                Effect: Allow
+                Action: iam:GetPolicy
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/${Prefix}-app-boundary
+              # Never remove a role's boundary, or a deploy role's own.
+              - Sid: DenyRemovingBoundaries
+                Effect: Deny
+                Action: iam:DeleteRolePermissionsBoundary
+                Resource: '*'
+              - Sid: DenyDeployRoles
+                Effect: Deny
+                Action: iam:*
+                Resource: !Sub arn:${AWS::Partition}:iam::${AWS::AccountId}:role/grigri-github-deploy*
+              # The artifact buckets' settings stay the administrator's.
+              - Sid: DenyArtifactBucketSettings
+                Effect: Deny
+                Action:
+                  - s3:DeleteBucket
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucketPolicy
+                  - s3:PutBucketAcl
+                  - s3:PutBucketOwnershipControls
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutLifecycleConfiguration
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::grigri-artifacts-${AWS::AccountId}
+                  - !Sub arn:${AWS::Partition}:s3:::grigri-rc-artifacts-${AWS::AccountId}
+              # People's photos: a deploy manages the bucket (site.yaml),
+              # never its objects, and never deletes it.
+              - Sid: DenyPhotos
+                Effect: Deny
+                Action:
+                  - s3:GetObject*
+                  - s3:PutObject*
+                  - s3:DeleteObject*
+                  - s3:DeleteBucket
+                Resource:
+                  - !Sub arn:${AWS::Partition}:s3:::grigri-web-photos-${AWS::AccountId}
+                  - !Sub arn:${AWS::Partition}:s3:::grigri-web-photos-${AWS::AccountId}/*
+                  - !Sub arn:${AWS::Partition}:s3:::grigri-rc-web-photos-${AWS::AccountId}
+                  - !Sub arn:${AWS::Partition}:s3:::grigri-rc-web-photos-${AWS::AccountId}/*
+
+      # The stage's site stack (grigri_infra/site.yaml): CloudFormation, its
       # bucket, the health check's alarm and topic, its DNS records, and
       # CloudFront and ACM by the stage's grigri:stage tag.
       DeployPolicy&{Prefix}:
@@ -95,7 +361,9 @@ Resources:
                 Effect: Allow
                 Action: cloudformation:CreateChangeSet
                 Resource: !Sub arn:${AWS::Partition}:cloudformation:${AWS::Region}:aws:transform/LanguageExtensions
-              # The site bucket (named after its stack).
+              # The site and photos buckets (named after the site stack) and
+              # the stage's artifact bucket (its settings, and the photos'
+              # objects, are denied in the API policy).
               - Sid: Buckets
                 Effect: Allow
                 Action: s3:*
@@ -307,9 +575,10 @@ Resources:
                 token.actions.githubusercontent.com:sub:
                   - !Sub repo:${GitHubImmutableRepository}:ref:refs/tags/*GA
                   - !Sub repo:${GitHubRepository}:ref:refs/tags/*GA
-      # The grigri stage's policy (Fn::ForEach above).
+      # The grigri stage's policies (Fn::ForEach above).
       ManagedPolicyArns:
         - !Ref DeployPolicygrigri
+        - !Ref ApiDeployPolicygrigri
 
   RcDeployRole:
     Type: AWS::IAM::Role
@@ -335,11 +604,18 @@ Resources:
                   - !Sub repo:${GitHubImmutableRepository}:ref:refs/heads/main
                   - !Sub repo:${GitHubRepository}:ref:refs/tags/*RC*
                   - !Sub repo:${GitHubRepository}:ref:refs/heads/main
-      # The grigri-rc stage's policy (Fn::ForEach above).
+      # The grigri-rc stage's policies (Fn::ForEach above).
       ManagedPolicyArns:
         - !Ref DeployPolicygrigrirc
+        - !Ref ApiDeployPolicygrigrirc
 
 Outputs:
+  ArtifactBucket:
+    Description: Where the production deploy uploads the API's code
+    Value: !Ref ArtifactBucketgrigri
+  RcArtifactBucket:
+    Description: Where the RC deploy uploads the API's code
+    Value: !Ref ArtifactBucketgrigrirc
   DeployRoleArn:
     Description: Set as the repository variable AWS_DEPLOY_ROLE_ARN
     Value: !GetAtt DeployRole.Arn

@@ -1,7 +1,8 @@
 # Sectors
 
 A plan's **where** is a specific climbing sector, crag or gym, picked from
-a searchable index ([plan editor](screens.md)). There are many of them, so
+a searchable index ([plan editor](screens.md)), and so are a profile's
+location and areas ([location picker](screens.md)). There are many of them, so
 it's a search field, not a list.
 
 ## Cost first: no server
@@ -11,17 +12,20 @@ run:
 
 - **The file**: [assets/sectors.json](../grigri_app/assets/sectors.json),
   bundled with the app (an asset on Android, iOS and the web):
-  `{"attribution": …, "sectors": [[id, name, area, country], …]}`.
+  `{"attribution": …, "sectors": [[id, name, area, country, lat, lon], …]}`
+  (the point left out when OpenStreetMap has none).
 - **The search**
   ([SectorIndex](../grigri_app/lib/data/sector_index.dart)): loaded once,
-  when the plan editor first opens. Every word typed must start a word of
+  when the plan editor or the location picker first opens. Every word typed must start a word of
   the sector's name or of where it is, ignoring case and accents ("pique"
   finds "Can Piqué"). Names that start with the query come first, then
   names with all its words, then matches on where it is; shorter names
   first; at most 20.
 - **The plan** keeps the sector's id (`sectorId`), its name (`place`) and
   where it is (`area`, e.g. "Siurana, Spain"), so it reads the same if the
-  index changes. A place typed in by hand has no id and no area.
+  index changes, and its point (`lat`, `lon`), which places it for the
+  [deck's ranking](matching.md#the-deck). A place typed in by hand has no
+  id, area or point.
 
 A server (a database with text search) only pays off once people add
 sectors for everyone; until then a place the index lacks is typed in.
@@ -40,7 +44,9 @@ dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
 - It writes the file only when every country came through, so a failed
   run leaves the index as it was.
 - It takes the country's crags and sectors (`climbing=crag`) and climbing
-  gyms (`climbing=gym`, or `leisure=sports_centre` with `sport=climbing`).
+  gyms (`climbing=gym`, or `leisure=sports_centre` with `sport=climbing`),
+  with their points (`out center`: a node's own, a way's or relation's
+  center), kept to 5 decimals.
 - A sector's area is the climbing area (a `climbing=area` relation) it's a
   member of; a gym's is its town (`addr:city`). Ids are the OSM elements
   ("osm:n123", "osm:w45").
@@ -55,7 +61,7 @@ allow reuse.
 ## For now: a placeholder
 
 The bundled file is a placeholder with a few crags (ids
-`demo:…`, no attribution), until the build runs where Overpass can be
+`demo:…`, approximate points, no attribution), until the build runs where Overpass can be
 reached. It needs no change in the app: the build's output replaces it.
 Splitting the file per country, downloaded as needed, is the next step
 once it grows big.

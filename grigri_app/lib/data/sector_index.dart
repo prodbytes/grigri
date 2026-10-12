@@ -19,11 +19,12 @@ class SectorIndex {
 
   int get length => _entries.length;
 
-  static Future<SectorIndex>? _loading;
+  static SectorIndex? _loaded;
 
-  /// The bundled index, read once.
-  static Future<SectorIndex> load([AssetBundle? bundle]) => _loading ??=
-      (bundle ?? rootBundle).loadString(asset).then((json) => parse(json));
+  /// The bundled index, read once it has loaded (the index itself is
+  /// kept, not a pending load, so a load that never finished is retried).
+  static Future<SectorIndex> load([AssetBundle? bundle]) async =>
+      _loaded ??= parse(await (bundle ?? rootBundle).loadString(asset));
 
   /// An index file: `{"attribution": …, "sectors": [[id, name, area,
   /// country], …]}`.

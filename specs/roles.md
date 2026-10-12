@@ -20,7 +20,8 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
   app will ask as the signed-in user, with their Google ID token (rbacr accepts
   it for `/api/me` when its OAuth client is in rbacr's
   `RBACR_GOOGLE_AUDIENCES`, and on the web when the app's origin is in
-  `RBACR_CORS_ORIGINS`).
+  `RBACR_CORS_ORIGINS` and the site's CSP `connect-src` allows rbacr's
+  address).
 - **Where**: the end of the [Profile](screens.md) tab, in a Roles card:
   - my roles as tags, and "As <the email rbacr knows me by>";
   - "No roles in Grigri yet." when I hold none;

@@ -144,6 +144,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se ha podido iniciar sesión con Google. Inténtalo de nuevo.';
 
   @override
+  String get errorSession =>
+      'No se ha podido iniciar sesión. Inténtalo de nuevo.';
+
+  @override
+  String get errorSignOutEverywhere =>
+      'No se ha podido cerrar sesión en todas partes. Inténtalo de nuevo.';
+
+  @override
   String get loadFailedTitle => 'No se ha podido cargar tu perfil';
 
   @override
@@ -216,6 +224,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get signOutMessage =>
       'Tu perfil, tus planes y tus chats se quedan guardados; vuelve a iniciar sesión para verlos.';
+
+  @override
+  String get signOutEverywhere => 'Cerrar sesión en todas partes';
+
+  @override
+  String get signOutEverywhereQuestion => '¿Cerrar sesión en todas partes?';
+
+  @override
+  String get signOutEverywhereMessage =>
+      'Cierra tu sesión en todos los móviles y navegadores donde la iniciaste, también en este. Tu perfil, tus planes y tus chats se quedan guardados.';
 
   @override
   String get editProfile => 'Editar perfil';
@@ -294,6 +312,69 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get startClimbing => 'Empezar a escalar';
+
+  @override
+  String get whereYouClimb => 'Dónde escalas';
+
+  @override
+  String get whereYouClimbHint =>
+      'Los planes cercanos salen primero en Descubrir. Solo lo ves tú.';
+
+  @override
+  String get setYourLocation => 'Indica tu ubicación';
+
+  @override
+  String get yourLocation => 'Tu ubicación';
+
+  @override
+  String get clearYourLocation => 'Borrar tu ubicación';
+
+  @override
+  String removeArea(String name) {
+    return 'Quitar $name';
+  }
+
+  @override
+  String get addArea => 'Añadir una zona';
+
+  @override
+  String get locationSearchLabel => 'Una escuela o rocódromo cerca de allí';
+
+  @override
+  String get search => 'Buscar';
+
+  @override
+  String get locationPrivacy =>
+      'Se guarda con una precisión de 1 km y solo la ves tú.';
+
+  @override
+  String placesAttribution(String attribution) {
+    return 'Lugares: $attribution';
+  }
+
+  @override
+  String get loadingPlaces => 'Cargando lugares…';
+
+  @override
+  String get noPlacesFound => 'No se han encontrado lugares';
+
+  @override
+  String distanceKm(int km) {
+    String _temp0 = intl.Intl.pluralLogic(
+      km,
+      locale: localeName,
+      other: 'A $km km de ti',
+      zero: 'A menos de 1 km de ti',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get setWhereYouClimbHint =>
+      'Indica dónde escalas para ver primero los planes cercanos.';
+
+  @override
+  String get setAction => 'Indicar';
 
   @override
   String get discoverTitle => 'Descubre planes';

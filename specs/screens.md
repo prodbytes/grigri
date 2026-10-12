@@ -8,11 +8,11 @@ phone (with six tabs, only the selected one's label shows).
 
 | Tab | Shows |
 |---|---|
-| **Discover** | The plans deck ([matching](matching.md)), with ✕ and ✓ buttons, and ⟳ to refresh. Empty: "No plans to join right now" and **New plan**. |
+| **Discover** | The plans deck ([matching](matching.md#the-deck)), best first, with ✕ and ✓ buttons, and ⟳ to refresh. Each card says how far the plan is ("12 km from you") when it's known. Without a location or area on my profile, a line above the deck says "Set where you climb to see plans near you first." with **Set** (the profile editor). Empty: "No plans to join right now" and **New plan**. |
 | **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message and "N to answer" when join requests wait for my answer. The tab's badge counts those requests. Empty: "No chats yet" and **Find a plan** (to Discover). |
 | **Notifications** | Join requests for my plans, and the groups' answers to mine ([matching](matching.md#notifications)). The tab's badge counts the unread ones. Empty: "Nothing yet". |
-| **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; the **Language** picker ([languages](i18n.md)); in ⋯, **Sign out** (after a confirmation). Then my [roles](roles.md), from rbacr. The version at the bottom. |
+| **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; the **Language** picker ([languages](i18n.md)); in ⋯, **Sign out** and **Sign out everywhere** (on every phone and browser, this one too), each after a confirmation. Then my [roles](roles.md), from rbacr. The version at the bottom. |
 | **Admin** | Admins only: every open join request, anyone's: who (avatar, name and age; tap for their profile) and when they asked, the plan (discipline, place, where it is, date), how many of the group said yes, its grades, and **Approve** (they join now) and **Reject**, each after a confirmation. Its badge counts the requests. Empty: "No open requests". |
 
 - **Sign-in**: the app's name and tagline on the mountain night gradient,
@@ -46,12 +46,19 @@ phone (with six tabs, only the selected one's label shows).
   There's no title and no group size.
 - **Profile editor**: my photo (tap it: take a photo, where the device has
   a camera, choose one, or remove it), name, age (optional, 16–99
-  when given), about, the European / American grade switch, per
+  when given), about, **where you climb** ("Only you see it"): my
+  location (tap to pick, ✕ clears) and up to 5 other areas (chips: ✕
+  removes one, **Add an area** adds one), then the European / American grade switch, per
   discipline a switch and a grade range, and gear: the gear chips, then
   its photos (✕ removes one, + adds one, up to 6), then **Language**:
   System default or one of the app's six languages, each named in itself,
   switching the app at once ([languages](i18n.md)). Saving uploads the new
-  photos first.
+  photos first, and then refreshes the deck, which my grades, location
+  and areas rank.
+- **Location picker** (full screen, for the location or an area): a
+  search of the [sector index](sectors.md) ("A crag or gym near there";
+  "Kept to about 1 km, and only you see it."), listing only places with a
+  point; tap one to take it, as "name, area, country".
 - **Match**: see [matching](matching.md#matches).
 - **Chat**: the group's avatars, the plan's place and date, the plan pinned
   under the bar, then a callout for each join request still waiting for

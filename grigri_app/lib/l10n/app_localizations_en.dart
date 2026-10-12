@@ -143,6 +143,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorSignIn => 'Couldn\'t sign in with Google. Try again.';
 
   @override
+  String get errorSession => 'Couldn\'t sign in. Try again.';
+
+  @override
+  String get errorSignOutEverywhere =>
+      'Couldn\'t sign out everywhere. Try again.';
+
+  @override
   String get loadFailedTitle => 'Couldn\'t load your profile';
 
   @override
@@ -215,6 +222,16 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get signOutMessage =>
       'Your profile, plans and chats stay saved; sign back in to see them.';
+
+  @override
+  String get signOutEverywhere => 'Sign out everywhere';
+
+  @override
+  String get signOutEverywhereQuestion => 'Sign out everywhere?';
+
+  @override
+  String get signOutEverywhereMessage =>
+      'Signs you out on every phone and browser you signed in on, this one too. Your profile, plans and chats stay saved.';
 
   @override
   String get editProfile => 'Edit profile';
@@ -293,6 +310,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get startClimbing => 'Start climbing';
+
+  @override
+  String get whereYouClimb => 'Where you climb';
+
+  @override
+  String get whereYouClimbHint =>
+      'Plans near here come first on Discover. Only you see it.';
+
+  @override
+  String get setYourLocation => 'Set your location';
+
+  @override
+  String get yourLocation => 'Your location';
+
+  @override
+  String get clearYourLocation => 'Clear your location';
+
+  @override
+  String removeArea(String name) {
+    return 'Remove $name';
+  }
+
+  @override
+  String get addArea => 'Add an area';
+
+  @override
+  String get locationSearchLabel => 'A crag or gym near there';
+
+  @override
+  String get search => 'Search';
+
+  @override
+  String get locationPrivacy => 'Kept to about 1 km, and only you see it.';
+
+  @override
+  String placesAttribution(String attribution) {
+    return 'Places: $attribution';
+  }
+
+  @override
+  String get loadingPlaces => 'Loading places…';
+
+  @override
+  String get noPlacesFound => 'No places found';
+
+  @override
+  String distanceKm(int km) {
+    String _temp0 = intl.Intl.pluralLogic(
+      km,
+      locale: localeName,
+      other: '$km km from you',
+      zero: 'Under 1 km from you',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get setWhereYouClimbHint =>
+      'Set where you climb to see plans near you first.';
+
+  @override
+  String get setAction => 'Set';
 
   @override
   String get discoverTitle => 'Discover plans';

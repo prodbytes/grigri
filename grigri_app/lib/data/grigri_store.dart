@@ -130,11 +130,12 @@ class GrigriStore extends ChangeNotifier {
 
   Climber? _me;
   bool _admin = false;
-  String? _userEmail;
+  bool _signedIn = false;
 
   final _climbers = <String, Climber>{};
   final _plans = <String, Plan>{};
   List<String> _discover = [];
+  Map<String, int> _distanceKm = {};
   List<String> _mine = [];
   List<JoinRequest> _asked = [];
   List<JoinRequest> _toReview = [];
@@ -163,7 +164,7 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Session -----------------------------------------------------------
 
-  /// Starts signing in (quietly, when it can).
+  /// Starts: signed in at once with a kept session.
   Future<void> start() async {
     if (!auth.started) await auth.start();
     _authChanged();
@@ -179,11 +180,11 @@ class GrigriStore extends ChangeNotifier {
 
   void _authChanged() {
     if (!auth.started) return;
-    final email = auth.user?.email;
-    if (email == _userEmail && _phase != Phase.starting) return;
-    _userEmail = email;
+    final signedIn = auth.signedIn;
+    if (signedIn == _signedIn && _phase != Phase.starting) return;
+    _signedIn = signedIn;
     _clear();
-    if (email == null) {
+    if (!signedIn) {
       _loading = null;
       _phase = Phase.signedOut;
       notifyListeners();
@@ -199,6 +200,7 @@ class GrigriStore extends ChangeNotifier {
     _climbers.clear();
     _plans.clear();
     _discover = [];
+    _distanceKm = {};
     _mine = [];
     _asked = [];
     _toReview = [];
@@ -234,7 +236,16 @@ class GrigriStore extends ChangeNotifier {
     }
   }
 
+  /// Signs out here (`DELETE /api/session`).
   Future<void> signOut() => auth.signOut();
+
+  /// Signs out on every device (`DELETE /api/sessions`); says so when the
+  /// API couldn't be told.
+  Future<void> signOutEverywhere() async {
+    if (!await auth.signOutEverywhere()) {
+      _errors.add(l10n.errorSignOutEverywhere);
+    }
+  }
 
   /// The name to start a new profile with: Google's, when there is one.
   String get suggestedName => auth.user?.name ?? '';
@@ -267,6 +278,10 @@ class GrigriStore extends ChangeNotifier {
 
   /// Plans to swipe on, best fits first (the server's order).
   List<Plan> get discover => [for (final id in _discover) ?_plans[id]];
+
+  /// How far a plan on the deck is from my nearest location or area, in
+  /// km; null when it isn't known.
+  int? distanceKm(String planId) => _distanceKm[planId];
 
   /// Plans I'm in, soonest first.
   List<Plan> get myPlans => [for (final id in _mine) ?_plans[id]];
@@ -334,8 +349,8 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Calling the API ---------------------------------------------------
 
-  /// Calls the API; a 401 tries fresh credentials once, then signs out. A
-  /// 409 "no profile" goes back to creating one.
+  /// Calls the API; a 401 (the session ended) signs out. A 409 "no
+  /// profile" goes back to creating one.
   Future<T> _call<T>(Future<T> Function() call) async {
     final session = _session;
     try {
@@ -347,16 +362,9 @@ class GrigriStore extends ChangeNotifier {
         throw const ApiException(_stale, 'stale');
       }
       if (e.status == 401) {
-        if (await auth.refresh()) {
-          try {
-            return await call();
-          } on ApiException catch (again) {
-            if (again.status != 401) rethrow;
-          }
-        }
         _errors.add(l10n.errorSignedOut);
         // Auth notifies, and _authChanged clears everything.
-        await auth.signOut();
+        await auth.signedOut();
         rethrow;
       }
       if (e.noProfile && _phase == Phase.ready) {
@@ -408,7 +416,12 @@ class GrigriStore extends ChangeNotifier {
   void _learn(Map<String, Climber> climbers) {
     _climbers.addAll(climbers);
     final me = _me == null ? null : climbers[_me!.id];
-    if (me != null) _me = me;
+    // Others' copies of my profile come without my location and areas
+    // (they're private): keep mine.
+    if (me != null) {
+      _me = me.copyWith(location: _me!.location, areas: _me!.areas);
+      _climbers[me.id] = _me!;
+    }
   }
 
   // --- Refreshing --------------------------------------------------------
@@ -431,6 +444,7 @@ class GrigriStore extends ChangeNotifier {
       _plans[p.id] = p;
     }
     _discover = [for (final p in list.plans) p.id];
+    _distanceKm = list.distanceKm;
     _loaded.add(Section.discover);
   });
 
@@ -707,6 +721,8 @@ class GrigriStore extends ChangeNotifier {
       unawaited(refreshAll());
     } else {
       notifyListeners();
+      // My grades, location and areas rank the deck.
+      unawaited(refreshDiscover());
     }
     return true;
   }
