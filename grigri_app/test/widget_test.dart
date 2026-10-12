@@ -3,12 +3,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/grigri_store.dart';
+import 'package:grigri_app/data/roles.dart';
 import 'package:grigri_app/data/seed.dart';
 import 'package:grigri_app/main.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
+import 'package:rbacr/rbacr.dart';
 
 // The demo data (lib/data/seed.dart), on a fixed Monday.
 final now = DateTime(2026, 10, 12, 10);
@@ -16,13 +18,14 @@ final now = DateTime(2026, 10, 12, 10);
 Future<GrigriStore> pumpApp(
   WidgetTester tester, {
   bool siuranaFirst = false,
+  Roles roles = const Roles.none(),
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.6;
   addTearDown(tester.view.reset);
   final store = GrigriStore(demoState(now), clock: () => now);
   if (siuranaFirst) passToSiurana(store);
-  await tester.pumpWidget(GrigriApp(store: store));
+  await tester.pumpWidget(GrigriApp(store: store, roles: roles));
   return store;
 }
 
@@ -428,5 +431,64 @@ void main() {
       ),
     );
     expect(find.byTooltip('Add a gear photo'), findsNothing);
+  });
+
+  group('the profile ends with my roles, from rbacr', () {
+    Future<void> openProfile(WidgetTester tester, Roles roles) async {
+      await pumpApp(tester, roles: roles);
+      await tester.tap(find.text('Profile'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('ROLES'), 200);
+    }
+
+    testWidgets('as Grigri roles and global ones', (tester) async {
+      await openProfile(
+        tester,
+        Roles(
+          () async => const Me(
+            email: 'pat.example@example.com',
+            root: false,
+            globalRoles: ['staff'],
+            roles: {
+              'grigri': ['premium', 'free'],
+              'tabscan': ['owner'],
+            },
+          ),
+        ),
+      );
+      expect(find.text('free'), findsOneWidget);
+      expect(find.text('premium'), findsOneWidget);
+      expect(find.text('staff'), findsOneWidget);
+      expect(find.text('owner'), findsNothing);
+      expect(find.text('As pat.example@example.com'), findsOneWidget);
+    });
+
+    testWidgets('or that nobody is signed in', (tester) async {
+      await openProfile(tester, const Roles.none());
+      expect(
+        find.text('Not signed in: your roles show here once you sign in.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets("or that rbacr didn't answer, with Retry", (tester) async {
+      var calls = 0;
+      await openProfile(
+        tester,
+        Roles(() async {
+          if (++calls == 1) throw const RbacrException('unreachable');
+          return const Me(
+            email: 'pat.example@example.com',
+            root: false,
+            globalRoles: [],
+            roles: {},
+          );
+        }),
+      );
+      expect(find.text("Couldn't get your roles from rbacr."), findsOneWidget);
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+      expect(find.text('No roles in Grigri yet.'), findsOneWidget);
+    });
   });
 }
