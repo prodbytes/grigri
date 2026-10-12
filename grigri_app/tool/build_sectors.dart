@@ -2,7 +2,10 @@
 // the public Overpass API: the climbing crags, sectors and gyms of the
 // given countries. See specs/sectors.md.
 //
-//   dart run tool/build_sectors.dart ES FR IT PT > assets/sectors.json
+//   flutter pub get
+//   dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
+//
+// It writes the file only when every country came through.
 //
 // The data is © OpenStreetMap contributors, under the ODbL: the app shows
 // the attribution, and the index stays open.
@@ -14,10 +17,14 @@ import 'package:grigri_app/model/sector.dart';
 const overpass = 'https://overpass-api.de/api/interpreter';
 const attribution = '© OpenStreetMap contributors (ODbL)';
 
-Future<void> main(List<String> countries) async {
-  if (countries.isEmpty ||
+Future<void> main(List<String> args) async {
+  final countries = args.skip(1).toList();
+  if (args.isEmpty ||
+      countries.isEmpty ||
       countries.any((c) => !RegExp(r'^[A-Z]{2}$').hasMatch(c))) {
-    stderr.writeln('usage: dart run tool/build_sectors.dart ES FR … > out');
+    stderr.writeln(
+      'usage: dart run tool/build_sectors.dart assets/sectors.json ES FR …',
+    );
     exit(64);
   }
   final sectors = <Sector>[];
@@ -33,7 +40,8 @@ Future<void> main(List<String> countries) async {
   } finally {
     client.close();
   }
-  stdout.write(indexJson(sectors));
+  File(args.first).writeAsStringSync(indexJson(sectors));
+  stderr.writeln('${sectors.length} sectors in ${args.first}');
 }
 
 /// The Overpass query for one country (an ISO 3166-1 code): the country's
