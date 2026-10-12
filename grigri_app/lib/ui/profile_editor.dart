@@ -1,14 +1,38 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../theme.dart';
 import 'common.dart';
 
-/// Edits my profile: about me, the grades I climb per discipline, when I
-/// like to climb, where, and my gear.
+/// Picks a photo from the camera or the library, downsized so its longer
+/// side is at most [maxSide] pixels; null when cancelled.
+typedef PhotoPicker = Future<Uint8List?> Function(
+  ImageSource source,
+  double maxSide,
+);
+
+/// The device's picker. Photos are downsized and recompressed as they're
+/// picked, because they're kept on the device with the rest of the state.
+Future<Uint8List?> pickPhoto(ImageSource source, double maxSide) async {
+  final file = await ImagePicker().pickImage(
+    source: source,
+    maxWidth: maxSide,
+    maxHeight: maxSide,
+    imageQuality: 75,
+  );
+  return file?.readAsBytes();
+}
+
+/// Edits my profile: my photo, about me, the grades I climb per
+/// discipline, and my gear with its photos. When and where are for plans.
 class ProfileEditor extends StatefulWidget {
-  const ProfileEditor({super.key});
+  const ProfileEditor({super.key, this.pick = pickPhoto});
+
+  final PhotoPicker pick;
 
   @override
   State<ProfileEditor> createState() => _ProfileEditorState();
@@ -19,31 +43,86 @@ class _ProfileEditorState extends State<ProfileEditor> {
   late final Climber _me = StoreScope.read(context).me;
   late final _name = TextEditingController(text: _me.name);
   late final _age = TextEditingController(text: '${_me.age}');
-  late final _years = TextEditingController(text: '${_me.yearsClimbing}');
-  late final _home = TextEditingController(text: _me.homeArea);
   late final _bio = TextEditingController(text: _me.bio);
-  final _newPlace = TextEditingController();
+  late Uint8List? _photo = _me.photo;
   late final Map<Discipline, RangeValues> _levels = {
     for (final e in _me.levels.entries)
       e.key: RangeValues(e.value.min.toDouble(), e.value.max.toDouble()),
   };
-  late final Set<Slot> _availability = {..._me.availability};
-  late final List<String> _places = [..._me.places];
   late final Set<Gear> _gear = {..._me.gear};
+  late final List<Uint8List> _gearPhotos = [..._me.gearPhotos];
 
   @override
   void dispose() {
-    for (final c in [_name, _age, _years, _home, _bio, _newPlace]) {
+    for (final c in [_name, _age, _bio]) {
       c.dispose();
     }
     super.dispose();
   }
 
-  void _addPlace() {
-    final place = _newPlace.text.trim();
-    if (place.isEmpty || _places.contains(place)) return;
-    setState(() => _places.add(place));
-    _newPlace.clear();
+  /// Asks camera or library (and, for my photo, offers to remove it), then
+  /// picks. Null when cancelled.
+  Future<Uint8List?> _choose(double maxSide, {VoidCallback? onRemove}) async {
+    final camera = ImagePicker().supportsImageSource(ImageSource.camera);
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Mountain.surface,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (camera)
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Take a photo'),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose a photo'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            if (onRemove != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Mountain.clay),
+                title: const Text(
+                  'Remove photo',
+                  style: TextStyle(color: Mountain.clay),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  onRemove();
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return null;
+    try {
+      return await widget.pick(source, maxSide);
+    } on Exception {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Couldn\'t get that photo')),
+        );
+      }
+      return null;
+    }
+  }
+
+  Future<void> _changePhoto() async {
+    final photo = await _choose(
+      640,
+      onRemove: _photo == null ? null : () => setState(() => _photo = null),
+    );
+    if (photo != null) setState(() => _photo = photo);
+  }
+
+  Future<void> _addGearPhoto() async {
+    final photo = await _choose(1080);
+    if (photo != null) setState(() => _gearPhotos.add(photo));
   }
 
   void _save() {
@@ -52,9 +131,9 @@ class _ProfileEditorState extends State<ProfileEditor> {
       _me.copyWith(
         name: _name.text.trim(),
         age: int.parse(_age.text.trim()),
-        yearsClimbing: int.tryParse(_years.text.trim()) ?? 0,
-        homeArea: _home.text.trim(),
         bio: _bio.text.trim(),
+        photo: _photo,
+        clearPhoto: _photo == null,
         levels: {
           for (final e in _levels.entries)
             e.key: GradeRange(
@@ -63,9 +142,8 @@ class _ProfileEditorState extends State<ProfileEditor> {
               e.value.end.round(),
             ),
         },
-        availability: _availability,
-        places: _places,
         gear: _gear,
+        gearPhotos: _gearPhotos,
       ),
     );
     Navigator.of(context).pop();
@@ -104,49 +182,38 @@ class _ProfileEditorState extends State<ProfileEditor> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
+            Center(
+              child: _PhotoButton(
+                avatar: Avatar(
+                  _me.copyWith(
+                    name: _name.text,
+                    photo: _photo,
+                    clearPhoto: _photo == null,
+                  ),
+                  radius: 52,
+                ),
+                tooltip: _photo == null ? 'Add a photo' : 'Change your photo',
+                onPressed: _changePhoto,
+              ),
+            ),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _name,
               decoration: const InputDecoration(labelText: 'Name'),
               textCapitalization: TextCapitalization.words,
+              onChanged: (_) => setState(() {}),
               validator: (v) =>
                   (v ?? '').trim().isEmpty ? 'Your name, please' : null,
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _age,
-                    decoration: const InputDecoration(labelText: 'Age'),
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      final age = int.tryParse((v ?? '').trim());
-                      return age == null || age < 16 || age > 99
-                          ? '16 to 99'
-                          : null;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: TextFormField(
-                    controller: _years,
-                    decoration: const InputDecoration(
-                      labelText: 'Years climbing',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
             TextFormField(
-              controller: _home,
-              decoration: const InputDecoration(
-                labelText: 'Home area',
-                hintText: 'Barcelona',
-              ),
-              textCapitalization: TextCapitalization.words,
+              controller: _age,
+              decoration: const InputDecoration(labelText: 'Age'),
+              keyboardType: TextInputType.number,
+              validator: (v) {
+                final age = int.tryParse((v ?? '').trim());
+                return age == null || age < 16 || age > 99 ? '16 to 99' : null;
+              },
             ),
             const SizedBox(height: 10),
             TextFormField(
@@ -161,45 +228,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
               'Pick your disciplines and the grades you climb.',
             ),
             for (final d in Discipline.values) _levelEditor(d),
-            label('When you climb', 'Tap the times you\'re usually free.'),
-            _AvailabilityGrid(
-              selected: _availability,
-              onToggle: (slot) => setState(() {
-                if (!_availability.remove(slot)) _availability.add(slot);
-              }),
-            ),
-            label('Where you climb', 'Crags and gyms you like.'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final place in _places)
-                  InputChip(
-                    label: Text(place),
-                    avatar: const Icon(
-                      Icons.place_outlined,
-                      size: 16,
-                      color: Mountain.tan,
-                    ),
-                    onDeleted: () => setState(() => _places.remove(place)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _newPlace,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                hintText: 'Add a place',
-                suffixIcon: IconButton(
-                  tooltip: 'Add',
-                  icon: const Icon(Icons.add),
-                  onPressed: _addPlace,
-                ),
-              ),
-              onSubmitted: (_) => _addPlace(),
-            ),
-            label('Gear you can bring'),
+            label('Gear you can bring', 'Add photos of it, too.'),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -211,6 +240,34 @@ class _ProfileEditorState extends State<ProfileEditor> {
                     onSelected: (on) =>
                         setState(() => on ? _gear.add(g) : _gear.remove(g)),
                   ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                for (final (i, photo) in _gearPhotos.indexed)
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      PhotoThumb(photo, label: 'Gear photo ${i + 1}'),
+                      Positioned(
+                        top: -10,
+                        right: -10,
+                        child: IconButton.filledTonal(
+                          tooltip: 'Remove gear photo ${i + 1}',
+                          iconSize: 16,
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.close),
+                          onPressed: () =>
+                              setState(() => _gearPhotos.removeAt(i)),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_gearPhotos.length < Climber.maxGearPhotos)
+                  _AddPhotoTile(onPressed: _addGearPhoto),
               ],
             ),
             const SizedBox(height: 28),
@@ -266,79 +323,70 @@ class _ProfileEditorState extends State<ProfileEditor> {
   }
 }
 
-/// Days down, parts of the day across: tap to toggle.
-class _AvailabilityGrid extends StatelessWidget {
-  const _AvailabilityGrid({required this.selected, required this.onToggle});
+/// My avatar with a camera badge: tap to add, change or remove the photo.
+class _PhotoButton extends StatelessWidget {
+  const _PhotoButton({
+    required this.avatar,
+    required this.tooltip,
+    required this.onPressed,
+  });
 
-  final Set<Slot> selected;
-  final void Function(Slot slot) onToggle;
+  final Widget avatar;
+  final String tooltip;
+  final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Column(
-      children: [
-        Row(
+  Widget build(BuildContext context) => Tooltip(
+    message: tooltip,
+    child: Semantics(
+      button: true,
+      label: tooltip,
+      excludeSemantics: true,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onPressed,
+        child: Stack(
           children: [
-            const SizedBox(width: 48),
-            for (final part in DayPart.values)
-              Expanded(
-                child: Text(
-                  part.label,
-                  textAlign: TextAlign.center,
-                  style: text.labelSmall?.copyWith(color: Mountain.granite),
+            avatar,
+            const Positioned(
+              right: 0,
+              bottom: 0,
+              child: CircleAvatar(
+                radius: 17,
+                backgroundColor: Mountain.pine,
+                child: Icon(
+                  Icons.photo_camera_outlined,
+                  size: 18,
+                  color: Mountain.sand,
                 ),
               ),
+            ),
           ],
         ),
-        for (var day = 1; day <= 7; day++)
-          Padding(
-            padding: const EdgeInsets.only(top: 6),
-            child: Row(
-              children: [
-                SizedBox(width: 48, child: Text(weekdayLabels[day - 1])),
-                for (final part in DayPart.values)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
-                      child: _Cell(
-                        on: selected.contains(Slot(day, part)),
-                        label: '${weekdayLabels[day - 1]} ${part.label}',
-                        onTap: () => onToggle(Slot(day, part)),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
+      ),
+    ),
+  );
 }
 
-class _Cell extends StatelessWidget {
-  const _Cell({required this.on, required this.label, required this.onTap});
+/// The empty tile that adds a gear photo.
+class _AddPhotoTile extends StatelessWidget {
+  const _AddPhotoTile({required this.onPressed});
 
-  final bool on;
-  final String label;
-  final VoidCallback onTap;
+  final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    label: label,
-    toggled: on,
-    button: true,
+  Widget build(BuildContext context) => Tooltip(
+    message: 'Add a gear photo',
     child: Material(
-      color: on ? Mountain.pine : Mountain.surfaceHigh,
-      borderRadius: BorderRadius.circular(10),
+      color: Mountain.surfaceHigh,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: SizedBox(
-          height: 36,
-          child: on
-              ? const Icon(Icons.check, size: 18, color: Mountain.sand)
-              : null,
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPressed,
+        child: const SizedBox(
+          width: 84,
+          height: 84,
+          child: Icon(Icons.add_a_photo_outlined, color: Mountain.granite),
         ),
       ),
     ),

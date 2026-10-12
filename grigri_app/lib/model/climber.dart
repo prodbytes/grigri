@@ -1,39 +1,40 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'climbing.dart';
 
-/// A person's profile: who they are and how, when and where they like to
-/// climb. Separate from their [Plan]s, which are specific outings.
+/// A person's profile: who they are, what they climb and the gear they
+/// have. When and where they climb belongs to their [Plan]s, which are
+/// specific outings.
 class Climber {
   const Climber({
     required this.id,
     required this.name,
     required this.age,
     this.bio = '',
-    this.homeArea = '',
-    this.yearsClimbing = 0,
+    this.photo,
     this.levels = const {},
-    this.availability = const {},
-    this.places = const [],
     this.gear = const {},
+    this.gearPhotos = const [],
   });
+
+  /// The most gear photos a profile keeps (they're stored on the device).
+  static const maxGearPhotos = 6;
 
   final String id;
   final String name;
   final int age;
   final String bio;
 
-  /// Where they live or usually climb from, e.g. "Barcelona".
-  final String homeArea;
-  final int yearsClimbing;
+  /// Their picture (JPEG bytes, already downsized), or null for initials.
+  final Uint8List? photo;
 
   /// The grades they climb, per discipline they do.
   final Map<Discipline, GradeRange> levels;
-
-  /// When they like to climb.
-  final Set<Slot> availability;
-
-  /// Crags and gyms they like to climb at.
-  final List<String> places;
   final Set<Gear> gear;
+
+  /// Pictures of their gear (JPEG bytes, already downsized).
+  final List<Uint8List> gearPhotos;
 
   Set<Discipline> get disciplines => levels.keys.toSet();
 
@@ -43,27 +44,25 @@ class Climber {
     return words.take(2).map((w) => w[0].toUpperCase()).join();
   }
 
+  /// A copy with the given fields; [clearPhoto] removes the picture.
   Climber copyWith({
     String? name,
     int? age,
     String? bio,
-    String? homeArea,
-    int? yearsClimbing,
+    Uint8List? photo,
+    bool clearPhoto = false,
     Map<Discipline, GradeRange>? levels,
-    Set<Slot>? availability,
-    List<String>? places,
     Set<Gear>? gear,
+    List<Uint8List>? gearPhotos,
   }) => Climber(
     id: id,
     name: name ?? this.name,
     age: age ?? this.age,
     bio: bio ?? this.bio,
-    homeArea: homeArea ?? this.homeArea,
-    yearsClimbing: yearsClimbing ?? this.yearsClimbing,
+    photo: clearPhoto ? null : photo ?? this.photo,
     levels: levels ?? this.levels,
-    availability: availability ?? this.availability,
-    places: places ?? this.places,
     gear: gear ?? this.gear,
+    gearPhotos: gearPhotos ?? this.gearPhotos,
   );
 
   Map<String, Object> toJson() => {
@@ -71,35 +70,36 @@ class Climber {
     'name': name,
     'age': age,
     'bio': bio,
-    'homeArea': homeArea,
-    'yearsClimbing': yearsClimbing,
+    if (photo != null) 'photo': base64Encode(photo!),
     'levels': {for (final e in levels.entries) e.key.name: e.value.toJson()},
-    'availability': [for (final s in availability) s.toJson()],
-    'places': places,
     'gear': [for (final g in gear) g.name],
+    'gearPhotos': [for (final p in gearPhotos) base64Encode(p)],
   };
 
+  /// Reads a saved profile. Fields older versions saved (home area, years
+  /// climbing, availability, places) are ignored.
   static Climber fromJson(Map<String, Object?> json) => Climber(
     id: json['id']! as String,
     name: json['name']! as String,
     age: json['age']! as int,
     bio: json['bio'] as String? ?? '',
-    homeArea: json['homeArea'] as String? ?? '',
-    yearsClimbing: json['yearsClimbing'] as int? ?? 0,
+    photo: switch (json['photo']) {
+      final String p => base64Decode(p),
+      _ => null,
+    },
     levels: {
       for (final e in (json['levels'] as Map? ?? {}).entries)
         Discipline.values.byName(e.key as String): GradeRange.fromJson(
           (e.value as Map).cast(),
         ),
     },
-    availability: {
-      for (final s in json['availability'] as List? ?? [])
-        Slot.fromJson(s as String),
-    },
-    places: [for (final p in json['places'] as List? ?? []) p as String],
     gear: {
       for (final g in json['gear'] as List? ?? [])
         Gear.values.byName(g as String),
     },
+    gearPhotos: [
+      for (final p in json['gearPhotos'] as List? ?? [])
+        base64Decode(p as String),
+    ],
   );
 }

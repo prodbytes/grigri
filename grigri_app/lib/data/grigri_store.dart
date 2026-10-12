@@ -212,11 +212,7 @@ class GrigriStore extends ChangeNotifier {
   /// Why a plan suits me.
   Fit fit(Plan plan) {
     final level = me.levels[plan.discipline];
-    return Fit(
-      grades: level != null && level.overlaps(plan.grades),
-      time: me.availability.contains(Slot.at(plan.start)),
-      place: me.places.any((p) => p.toLowerCase() == plan.place.toLowerCase()),
-    );
+    return Fit(grades: level != null && level.overlaps(plan.grades));
   }
 
   // --- Swiping -----------------------------------------------------------
@@ -499,18 +495,13 @@ class GrigriStore extends ChangeNotifier {
   }
 }
 
-/// How a plan fits my profile.
+/// How a plan fits my profile. Profiles hold no time or place (those are
+/// the plan's), so it's the grades.
 class Fit {
-  const Fit({required this.grades, required this.time, required this.place});
+  const Fit({required this.grades});
 
   /// My grades for its discipline overlap its grades.
   final bool grades;
 
-  /// It's at a time I like to climb.
-  final bool time;
-
-  /// It's at one of my places.
-  final bool place;
-
-  int get score => (grades ? 2 : 0) + (time ? 1 : 0) + (place ? 1 : 0);
+  int get score => grades ? 1 : 0;
 }

@@ -84,3 +84,15 @@ spec.
      and a no shows a note at the bottom.
    - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
      each person asking to join.
+6. **In the profile: a photo, a description, the climbs; no when or where
+   (that's for plans), and nothing under the picture (no home area or years
+   climbing); the gear, with photos of it.**
+   - [Profiles](matching.md#profiles-and-plans-are-separate) gain a photo
+     (shown wherever their avatar is, initials otherwise) and up to 6 gear
+     photos, and lose availability, places, home area and years climbing;
+     profiles saved before are read without them.
+   - Discover ranks by grades alone, then the soonest, and its only badge
+     is "Your grades". The demo deck now opens on Tuesday's bouldering.
+   - The [profile editor](screens.md) takes or picks the photos
+     (image_picker, downsized as picked, kept on the device); iOS gains the
+     camera and photo library usage strings ([platforms](platforms.md)).

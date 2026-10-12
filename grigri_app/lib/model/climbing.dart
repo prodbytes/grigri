@@ -1,5 +1,5 @@
 /// Climbing vocabulary shared by profiles and plans: disciplines, grades,
-/// and when people climb.
+/// weekdays and gear.
 library;
 
 /// How people climb.
@@ -72,54 +72,8 @@ class GradeRange {
   int get hashCode => Object.hash(scale, min, max);
 }
 
-/// A part of the day people like to climb in.
-enum DayPart {
-  morning('Morning'),
-  afternoon('Afternoon'),
-  evening('Evening');
-
-  const DayPart(this.label);
-
-  final String label;
-
-  /// The part of the day an hour falls in.
-  static DayPart of(int hour) => hour < 12
-      ? morning
-      : hour < 17
-      ? afternoon
-      : evening;
-}
-
 /// Weekday names, Monday first, as DateTime.weekday numbers them (1–7).
 const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-/// A weekday (1 = Monday … 7 = Sunday) and part of the day.
-class Slot {
-  const Slot(this.weekday, this.part) : assert(weekday >= 1 && weekday <= 7);
-
-  final int weekday;
-  final DayPart part;
-
-  /// The slot a date and time falls in.
-  factory Slot.at(DateTime time) => Slot(time.weekday, DayPart.of(time.hour));
-
-  String get label =>
-      '${weekdayLabels[weekday - 1]} ${part.label.toLowerCase()}';
-
-  String toJson() => '$weekday:${part.name}';
-
-  static Slot fromJson(String json) {
-    final [day, part] = json.split(':');
-    return Slot(int.parse(day), DayPart.values.byName(part));
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is Slot && other.weekday == weekday && other.part == part;
-
-  @override
-  int get hashCode => Object.hash(weekday, part);
-}
 
 /// Gear someone can bring.
 enum Gear {

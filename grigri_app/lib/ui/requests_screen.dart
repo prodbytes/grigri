@@ -197,16 +197,6 @@ class _PersonCard extends StatelessWidget {
                 ),
               ),
             ),
-            Center(
-              child: Text(
-                [
-                  if (person.homeArea.isNotEmpty) person.homeArea,
-                  if (person.yearsClimbing > 0)
-                    '${person.yearsClimbing} years climbing',
-                ].join(' · '),
-                style: text.bodyMedium?.copyWith(color: Mountain.granite),
-              ),
-            ),
             const SizedBox(height: 10),
             Center(
               child: Tag(

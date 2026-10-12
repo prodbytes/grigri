@@ -1,20 +1,40 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/seed.dart';
 import 'package:grigri_app/main.dart';
+import 'package:grigri_app/model/climber.dart';
+import 'package:grigri_app/ui/common.dart';
+import 'package:grigri_app/ui/profile_editor.dart';
 
 // The demo data (lib/data/seed.dart), on a fixed Monday.
 final now = DateTime(2026, 10, 12, 10);
 
-Future<GrigriStore> pumpApp(WidgetTester tester) async {
+Future<GrigriStore> pumpApp(
+  WidgetTester tester, {
+  bool siuranaFirst = false,
+}) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.6;
   addTearDown(tester.view.reset);
   final store = GrigriStore(demoState(now), clock: () => now);
+  if (siuranaFirst) passToSiurana(store);
   await tester.pumpWidget(GrigriApp(store: store));
   return store;
 }
+
+/// Passes the two sooner plans, so Siurana's (whose only member, Marta,
+/// accepts) tops the Discover deck.
+void passToSiurana(GrigriStore store) => store
+  ..pass('tuesday-bouldering')
+  ..pass('after-work-leads');
+
+/// A tiny valid PNG, standing in for a picked photo.
+final photo = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==',
+);
 
 void main() {
   testWidgets('Discover shows the best-fitting plan first, highlighted', (
@@ -22,14 +42,15 @@ void main() {
   ) async {
     await pumpApp(tester);
     expect(find.text('THE PLAN'), findsWidgets);
-    expect(find.text('Siurana sport day'), findsOneWidget);
-    expect(find.text('Marta Soler, 29'), findsOneWidget);
+    expect(find.text('Evening bouldering session'), findsOneWidget);
+    expect(find.text('Lena Vogel, 26'), findsOneWidget);
+    expect(find.text('Your grades'), findsWidgets);
   });
 
   testWidgets(
     'joining a plan whose group accepts shows the match, then the chat',
     (tester) async {
-      final store = await pumpApp(tester);
+      final store = await pumpApp(tester, siuranaFirst: true);
       await tester.tap(find.byTooltip('Ask to join'));
       await tester.pumpAndSettle();
       expect(find.text("It's a match!"), findsOneWidget);
@@ -46,7 +67,7 @@ void main() {
   );
 
   testWidgets('dragging a card left passes on the plan', (tester) async {
-    final store = await pumpApp(tester);
+    final store = await pumpApp(tester, siuranaFirst: true);
     await tester.timedDrag(
       find.text('Siurana sport day'),
       const Offset(-600, 0),
@@ -88,6 +109,7 @@ void main() {
       clock: () => time,
       answerAfter: const Duration(seconds: 10),
     );
+    passToSiurana(store);
     await tester.pumpWidget(GrigriApp(store: store));
 
     await tester.tap(find.byTooltip('Ask to join'));
@@ -146,5 +168,91 @@ void main() {
     await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
     expect(find.text('Gym night'), findsOneWidget);
+  });
+
+  testWidgets('the profile has no when or where, and shows the gear', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('You, 30'), findsOneWidget);
+    expect(find.text('CLIMBS'), findsOneWidget);
+    expect(find.text('GEAR'), findsOneWidget);
+    expect(find.text('WHEN'), findsNothing);
+    expect(find.text('WHERE'), findsNothing);
+    expect(find.textContaining('years climbing'), findsNothing);
+  });
+
+  testWidgets('a profile photo and gear photos are saved with the profile', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final store = GrigriStore(demoState(now), clock: () => now);
+    final asked = <double>[];
+    await tester.pumpWidget(
+      StoreScope(
+        store: store,
+        child: MaterialApp(
+          home: ProfileEditor(
+            pick: (source, maxSide) async {
+              asked.add(maxSide);
+              return photo;
+            },
+          ),
+        ),
+      ),
+    );
+    expect(find.text('Home area'), findsNothing);
+    expect(find.text('Years climbing'), findsNothing);
+    expect(find.text('WHEN YOU CLIMB'), findsNothing);
+    expect(find.text('WHERE YOU CLIMB'), findsNothing);
+
+    await tester.tap(find.byTooltip('Add a photo'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose a photo'));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('Change your photo'), findsOneWidget);
+
+    await tester.scrollUntilVisible(
+      find.byTooltip('Add a gear photo'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    for (var i = 0; i < 2; i++) {
+      await tester.ensureVisible(find.byTooltip('Add a gear photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Add a gear photo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose a photo'));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.byTooltip('Remove gear photo 1'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save').first);
+    await tester.pumpAndSettle();
+
+    expect(asked, [640, 1080, 1080]);
+    expect(store.me.photo, photo);
+    expect(store.me.gearPhotos, [photo]);
+  });
+
+  testWidgets('gear photos stop at the most a profile keeps', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final store = GrigriStore(demoState(now), clock: () => now);
+    store.updateProfile(
+      store.me.copyWith(gearPhotos: List.filled(Climber.maxGearPhotos, photo)),
+    );
+    await tester.pumpWidget(
+      StoreScope(
+        store: store,
+        child: const MaterialApp(home: ProfileEditor()),
+      ),
+    );
+    expect(find.byTooltip('Add a gear photo'), findsNothing);
   });
 }

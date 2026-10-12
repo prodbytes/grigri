@@ -20,3 +20,10 @@ are unsigned (CI's are). `bash scripts/flutter-run.sh -d <iPhone id>
 
 The Android release APK is signed with the debug key until a release key
 is set up.
+
+**Photos** (profile and gear) come from
+[image_picker](https://pub.dev/packages/image_picker): Android's photo
+picker and camera app (no permissions to declare), iOS's with
+`NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` in
+`Info.plist`, and a file chooser on the web (the site's CSP already allows
+`data:` and `blob:` images).
