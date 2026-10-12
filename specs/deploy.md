@@ -26,8 +26,11 @@ for that tag:
    `grigri-api` stack (function, which verifies Google ID tokens for
    `GOOGLE_WEB_CLIENT_ID` and issues sessions; HTTP API; DynamoDB table
    with TTL; admins from
-   `GRIGRI_ADMIN_EMAILS`), with the stage's permissions boundary on the
-   function's role. Production is **never seeded**: it starts empty;
+   `GRIGRI_ADMIN_EMAILS`; the live updates' IoT custom authorizer and its
+   function), with the stage's permissions boundary on the functions'
+   roles, and the account's IoT Data-ATS endpoint, looked up with
+   `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
+   both stacks. Production is **never seeded**: it starts empty;
 3. deploys the `grigri-web` stack: certificate, site and photos buckets,
    CloudFront (with `/api/*` to the API's domain), DNS records, and a
    Route 53 health check of `/app/version.json` (it must name
@@ -64,8 +67,10 @@ and a Content Security Policy:
   Identity Services (`accounts.google.com/gsi/`: script, style, frame and
   calls) and Google account pictures (`lh3.googleusercontent.com`), the
   API and photos from the site itself (`'self'`), photo uploads to the
-  photos bucket (`https://<bucket>.s3.us-east-1.amazonaws.com`), and no
-  framing. `Permissions-Policy` denies the camera, microphone and
+  photos bucket (`https://<bucket>.s3.us-east-1.amazonaws.com`), [live
+  updates](live-updates.md) over WebSocket to the account's IoT endpoint
+  (`wss://<id>-ats.iot.us-east-1.amazonaws.com`, the `IotEndpoint`
+  parameter), and no framing. `Permissions-Policy` denies the camera, microphone and
   location until a feature needs them.
 - `/`: only the index page's redirect script, by its hash.
 - `/api/*` and `/photos/*`: AWS's managed security headers policy.

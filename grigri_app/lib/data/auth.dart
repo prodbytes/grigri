@@ -59,6 +59,17 @@ abstract class Auth extends ChangeNotifier {
   /// Who's calling, for every API request. Empty when signed out.
   Future<Map<String, String>> headers();
 
+  /// The API session token itself, for live updates' connection (the
+  /// MQTT authorizer takes it); null when signed out. Never log it.
+  Future<String?> sessionToken() async {
+    final authorization = (await headers())['Authorization'];
+    const bearer = 'Bearer ';
+    if (authorization == null || !authorization.startsWith(bearer)) {
+      return null;
+    }
+    return authorization.substring(bearer.length);
+  }
+
   /// The API said 401: the session is gone. Forgets it, without telling
   /// the API.
   Future<void> signedOut();
@@ -215,6 +226,9 @@ class SessionAuth extends Auth {
   @override
   Future<Map<String, String>> headers() async =>
       _token == null ? const {} : {'Authorization': 'Bearer $_token'};
+
+  @override
+  Future<String?> sessionToken() async => _token;
 
   /// Forgets the session: in memory at once (notifying), then on the
   /// device and with Google.

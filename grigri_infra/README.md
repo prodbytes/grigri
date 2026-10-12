@@ -90,16 +90,21 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    APIs (they have only IDs, so any in the account, as in presence), and
    `<prefix>-*` IAM roles, which it can create or give permissions only
    with the stage's permissions boundary, `<prefix>-app-boundary`, on
-   them. The boundary allows only the stage's tables' items, its
-   function logs and uploads under its photos bucket's `photos/`, so
+   them; for live updates, IoT custom authorizers named `<prefix>-*`
+   (create, update, delete, describe, tags) and `iot:DescribeEndpoint`
+   (the deploy looks the endpoint up). The boundary allows only the
+   stage's tables' items, its function logs, uploads under its photos
+   bucket's `photos/`, and publishing to its own climbers' MQTT topics
+   (`grigri/<stage>/climbers/*`), so
    whatever a deploy writes into a role's policy, the role can't do more;
    removing a boundary is denied. Also denied: the artifact buckets'
    settings, and the photos buckets' objects (a deploy never reads or
    deletes people's photos). The only function a deploy role may invoke
    is `grigri-rc-api` (the RC seed). Run the same command again whenever
-   `github-deploy.yaml` changes, before the next deploy. **This change
-   (the API) needs it**: the deploy scripts check that the boundary and
-   the artifact bucket exist.
+   `github-deploy.yaml` changes, before the next deploy. **Live updates
+   need it** (the IoT permissions above): without it, the next deploy
+   fails at the endpoint lookup or the authorizer. The deploy scripts
+   also check that the boundary and the artifact bucket exist.
 
 2. Add the local development name, `local.grigri.nu01.com`, pointing at
    this machine (`127.0.0.1` and `::1`), for local HTTPS through Floci

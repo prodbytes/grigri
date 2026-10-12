@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../model/climber.dart';
 import '../model/plan.dart';
+import 'realtime.dart';
 
 /// The Grigri backend, one method per route of its contract
 /// (specs/api.md). [HttpGrigriApi](http_api.dart) calls the real one;
@@ -13,6 +14,10 @@ abstract interface class GrigriApi {
   /// `GET /api/me`: my profile (null until I save one) and whether I'm an
   /// admin.
   Future<Me> me();
+
+  /// `GET /api/realtime`: where live updates come from; null when they're
+  /// off (specs/live-updates.md).
+  Future<RealtimeInfo?> realtime();
 
   /// `PUT /api/me`: creates or updates my profile.
   Future<Climber> saveMe(Climber profile);

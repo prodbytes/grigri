@@ -8,7 +8,11 @@ Description: >
   session (365 days without use, sliding), which every other route but
   GET /api/health takes as a bearer token. Photos live in the site stack's bucket
   (PhotosBucket), uploaded with presigned POSTs. The site's CloudFront
-  serves the HTTP API under /api/*. Nothing here costs anything while idle.
+  serves the HTTP API under /api/*. Live updates: the function publishes
+  hints to IoT Core MQTT topics, and a second small function is the IoT
+  custom authorizer that lets the app subscribe to its own topic with its
+  session token (specs/live-updates.md). Nothing here costs anything while
+  idle.
   Package with `aws cloudformation package` (Code: dist, from npm run build).
 
 Parameters:
@@ -71,6 +75,16 @@ Parameters:
       The permissions boundary of the function's role (the stage's
       <prefix>-app-boundary from grigri_infra/github-deploy.yaml; passed by
       scripts/deploy.sh, and required by the deploy roles). Empty locally.
+  IotEndpoint:
+    Type: String
+    Default: ''
+    AllowedPattern: '([a-z0-9][a-z0-9.-]{0,252}(:[0-9]{1,5})?)?'
+    Description: >
+      Live updates: where the app connects for MQTT over WebSocket,
+      host[:port]. In AWS the account's IoT Data-ATS endpoint
+      (scripts/deploy.sh: aws iot describe-endpoint --endpoint-type
+      iot:Data-ATS); locally Floci's HTTPS host and port. Empty: live
+      updates off (the app keeps polling).
   Architecture:
     Type: String
     Default: arm64
@@ -99,6 +113,10 @@ Conditions:
   IsProd: !Equals [!Ref Stage, prod]
   IsLocal: !Equals [!Ref Stage, local]
   HasBoundary: !Not [!Equals [!Ref PermissionsBoundary, '']]
+  HasIot: !Not [!Equals [!Ref IotEndpoint, '']]
+  # Floci has no IoT custom authorizers (specs/dev-environment.md): its
+  # broker is open locally, like dev mode.
+  CreateIotAuthorizer: !And [!Condition HasIot, !Not [!Condition IsLocal]]
 
 Resources:
   # Everything Grigri keeps, in one table (grigri_api/README.md, "Data
@@ -238,6 +256,11 @@ Resources:
                   - s3:DeleteObjectTagging
                   - s3:DeleteObject
                 Resource: !Sub arn:${AWS::Partition}:s3:::${PhotosBucket}/photos/*
+              # Live updates: hints to climbers' topics only (QoS 0).
+              - Sid: Hints
+                Effect: Allow
+                Action: iot:Publish
+                Resource: !Sub arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:topic/grigri/${Stage}/climbers/*
       Tags:
         - Key: grigri:stage
           Value: !Ref Stage
@@ -268,12 +291,126 @@ Resources:
           ADMIN_EMAILS: !Ref AdminEmails
           GOOGLE_WEB_CLIENT_ID: !Ref GoogleWebClientId
           DEV_MODE: !Ref DevMode
+          IOT_ENDPOINT: !Ref IotEndpoint
+          IOT_AUTHORIZER: !If [CreateIotAuthorizer, !Sub '${AWS::StackName}-realtime', '']
           # Reuse TCP connections to DynamoDB between invocations.
           AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
           NODE_OPTIONS: --enable-source-maps
       Tags:
         - Key: grigri:stage
           Value: !Ref Stage
+
+  # --- Live updates: the IoT custom authorizer ------------------------------
+  # Its own small function and role: it reads sessions and the subject's
+  # climber id from the table (and slides a session, as any use does), and
+  # nothing else. Invoked by IoT Core when the app connects, then once an
+  # hour per connection (refreshAfterInSeconds), so it costs a few cents
+  # per thousand people-hours online at most (specs/backend.md, Cost).
+  AuthorizerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-realtime-auth
+      RetentionInDays: 14
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  AuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-realtime-auth
+      Description: !Sub Grigri live updates' IoT authorizer (${AWS::StackName})
+      PermissionsBoundary: !If [HasBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: authorizer
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub ${AuthorizerLogGroup.Arn}
+              # Only sessions (SESSION#<hash>) and sign-in links
+              # (SUB#<subject>, for the climber id), and the daily slide of
+              # a session: never profiles, plans or chats.
+              - Sid: Sessions
+                Effect: Allow
+                Action: dynamodb:GetItem
+                Resource: !GetAtt Table.Arn
+                Condition:
+                  ForAllValues:StringLike:
+                    dynamodb:LeadingKeys:
+                      - SESSION#*
+                      - SUB#*
+              - Sid: SlideSessions
+                Effect: Allow
+                Action: dynamodb:UpdateItem
+                Resource: !GetAtt Table.Arn
+                Condition:
+                  ForAllValues:StringLike:
+                    dynamodb:LeadingKeys:
+                      - SESSION#*
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  AuthorizerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-realtime-auth
+      Description: Grigri live updates' IoT custom authorizer (specs/live-updates.md)
+      Runtime: nodejs22.x
+      Handler: authorizer.handler
+      Code: dist
+      Architectures:
+        - !Ref Architecture
+      MemorySize: 128
+      Timeout: 5
+      Role: !GetAtt AuthorizerRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref AuthorizerLogGroup
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          TABLE_NAME: !Ref Table
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+          NODE_OPTIONS: --enable-source-maps
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  # Unsigned: the session token is the secret (sent in the WebSocket URL's
+  # query, which browsers allow; they can't set headers on a WebSocket).
+  IotAuthorizer:
+    Type: AWS::IoT::Authorizer
+    Condition: CreateIotAuthorizer
+    Properties:
+      AuthorizerName: !Sub ${AWS::StackName}-realtime
+      AuthorizerFunctionArn: !GetAtt AuthorizerFunction.Arn
+      SigningDisabled: true
+      Status: ACTIVE
+      EnableCachingForHttp: false
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  AuthorizerInvokePermission:
+    Type: AWS::Lambda::Permission
+    Condition: CreateIotAuthorizer
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref AuthorizerFunction
+      Principal: iot.amazonaws.com
+      SourceArn: !GetAtt IotAuthorizer.Arn
 
   # An HTTP API: $1 per million requests (REST APIs are $3.50). No
   # authorizer: the function checks the session token (one DynamoDB read).
@@ -351,3 +488,9 @@ Outputs:
   FunctionName:
     Description: Invoked with {"grigriSeed":true} to seed RC (scripts/seed.sh)
     Value: !Ref Function
+  AuthorizerFunctionName:
+    Description: The live updates' IoT custom authorizer function
+    Value: !Ref AuthorizerFunction
+  RealtimeAuthorizer:
+    Description: The IoT custom authorizer the app names when it connects (none locally)
+    Value: !If [CreateIotAuthorizer, !Ref IotAuthorizer, '']

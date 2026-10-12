@@ -5,7 +5,8 @@
 #   1. builds the Flutter web app for /app/ (make web, WEB_BASE_HREF=/app/)
 #   2. tests, builds and deploys the API (grigri_api/template.yaml, stack
 #      grigri-api / grigri-rc-api: the Lambda, its HTTP API and the
-#      DynamoDB table). Production starts empty and is never seeded; the
+#      DynamoDB table, and the live updates' IoT custom authorizer, with the
+#      account's IoT Data-ATS endpoint). Production starts empty and is never seeded; the
 #      RC is seeded with made-up test data after each deploy
 #      (scripts/seed.sh)
 #   3. deploys the site (CloudFormation grigri_infra/site.yaml:
@@ -171,6 +172,15 @@ if ! aws s3api head-bucket --bucket "$ARTIFACT_BUCKET" >/dev/null 2>&1; then
   echo "  Redeploy grigri_infra/github-deploy.yaml (grigri_infra/README.md, one-time setup)." >&2
   exit 1
 fi
+# Live updates: the account's IoT Data-ATS endpoint, where the app connects
+# (MQTT over WebSocket). The API tells the app (GET /api/realtime) and the
+# site's CSP allows it (connect-src).
+IOT_ENDPOINT="$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --query endpointAddress --output text)"
+if [[ ! "$IOT_ENDPOINT" =~ ^[a-z0-9-]+\.iot\.[a-z0-9-]+\.amazonaws\.com$ ]]; then
+  echo "error: unexpected IoT endpoint '$IOT_ENDPOINT'" >&2
+  exit 1
+fi
+echo "    IoT endpoint: $IOT_ENDPOINT"
 # The site stack's photos bucket (site.yaml names it so), which the API,
 # deployed first, presigns uploads to.
 PHOTOS_BUCKET="$SITE_STACK-photos-$account"
@@ -224,6 +234,7 @@ aws cloudformation deploy --stack-name "$API_STACK" \
     "AdminEmails=$GRIGRI_ADMIN_EMAILS" "PhotosBucket=$PHOTOS_BUCKET" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
+    "IotEndpoint=$IOT_ENDPOINT" \
   --no-fail-on-empty-changeset
 rm -f "$packaged"
 api_domain="$(stack_output "$API_STACK" ApiDomain)"
@@ -242,7 +253,7 @@ aws cloudformation deploy --stack-name "$SITE_STACK" \
   --template-file grigri_infra/site.yaml --capabilities CAPABILITY_AUTO_EXPAND \
   --parameter-overrides "DomainName=$DOMAIN" "Stage=$STAGE" \
     "HostedZoneId=$HOSTED_ZONE_ID" "ApiDomainName=$api_domain" \
-    "HealthNotificationEmails=$GRIGRI_HEALTH_EMAILS" \
+    "HealthNotificationEmails=$GRIGRI_HEALTH_EMAILS" "IotEndpoint=$IOT_ENDPOINT" \
   --no-fail-on-empty-changeset
 bucket="$(stack_output "$SITE_STACK" SiteBucketName)"
 distribution="$(stack_output "$SITE_STACK" DistributionId)"

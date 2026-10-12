@@ -11,6 +11,8 @@ import { Api, type Photos } from './api.js';
 import { Auth, type AuthConfig, parseAdminEmails } from './auth.js';
 import { ApiError } from './domain/errors.js';
 import { googleVerifier } from './google.js';
+import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
+import { Realtime } from './realtime.js';
 import { Store } from './store/store.js';
 import { assertSeedable, seed } from '../seed/seed.js';
 
@@ -77,7 +79,17 @@ const authConfig: AuthConfig = {
   adminEmails: parseAdminEmails(env.ADMIN_EMAILS),
 };
 const auth = new Auth({ store, verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? ''), config: authConfig });
-const api = new Api({ store, photos, auth, config: { stage, version: env.VERSION ?? 'dev' } });
+// Live updates: hints to IoT Core in AWS; locally, over MQTT to Floci's
+// broker (its HTTP Publish doesn't reach subscribers). IOT_ENDPOINT is
+// where the app connects; empty: live updates off.
+const iotEndpoint = env.IOT_ENDPOINT ?? '';
+const publisher = !iotEndpoint
+  ? null
+  : local
+    ? mqttWebSocketPublisher(`${env.AWS_ENDPOINT_URL!.replace(/^http/, 'ws').replace(/\/+$/, '')}/mqtt`)
+    : iotDataPublisher(iotEndpoint);
+const realtime = new Realtime({ stage, endpoint: iotEndpoint, authorizer: env.IOT_AUTHORIZER ?? '' }, publisher);
+const api = new Api({ store, photos, auth, realtime, config: { stage, version: env.VERSION ?? 'dev' } });
 
 type Event = APIGatewayProxyEventV2 | { grigriSeed?: boolean };
 

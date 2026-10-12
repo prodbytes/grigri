@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:math' show max;
 
 import 'package:flutter/material.dart';
 
+import '../data/realtime.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
@@ -17,12 +19,17 @@ class ChatScreen extends StatefulWidget {
     super.key,
     required this.planId,
     this.pollEvery = const Duration(seconds: 3),
+    this.livePollEvery = const Duration(minutes: 1),
   });
 
   final String planId;
 
   /// How often it checks for new messages while it's open.
   final Duration pollEvery;
+
+  /// How often instead while live updates are connected (their hints bring
+  /// new messages; this is a safety net).
+  final Duration livePollEvery;
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -32,6 +39,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final _input = TextEditingController();
   Timer? _poll;
   bool _sending = false;
+  late final Cadence _cadence = Cadence(
+    liveEvery: max(
+      1,
+      widget.livePollEvery.inMilliseconds ~/ widget.pollEvery.inMilliseconds,
+    ),
+  );
 
   @override
   void initState() {
@@ -49,7 +62,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted || (state != null && state != AppLifecycleState.resumed)) {
         return;
       }
-      StoreScope.read(context).pollMessages(widget.planId);
+      final store = StoreScope.read(context);
+      if (_cadence.tick(live: store.live)) store.pollMessages(widget.planId);
     });
   }
 

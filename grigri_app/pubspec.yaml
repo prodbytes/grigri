@@ -53,6 +53,7 @@ dependencies:
   # which can't build under devbox's Nix toolchain on macOS (so
   # `flutter test` would fail there). The app doesn't use it.
   path_provider_foundation: 2.5.1
+  mqtt_client: 10.11.11
 
 dev_dependencies:
   flutter_test:

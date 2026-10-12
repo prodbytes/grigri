@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:math' show max;
 
 import 'package:flutter/material.dart';
 
 import '../data/grigri_store.dart';
+import '../data/realtime.dart';
 import '../theme.dart';
 import 'admin_screen.dart';
 import 'chats_screen.dart';
@@ -15,13 +17,20 @@ import 'plans_screen.dart';
 import 'profile_screen.dart';
 
 /// The app's tabs: Discover, Plans, Chats, Notifications and Profile, and
-/// Admin for admins. While the app is in the foreground it refreshes from
-/// the API: the tab I open, and every [refreshEvery] my plans, requests,
-/// notifications and the open tab.
+/// Admin for admins. While the app is in the foreground it keeps a live
+/// connection (specs/live-updates.md), whose hints refresh what changed,
+/// and refreshes from the API: the tab I open, and every [refreshEvery]
+/// my plans, requests, notifications and the open tab; only every
+/// [liveRefreshEvery] while the live connection is up (a safety net).
 class HomeShell extends StatefulWidget {
-  const HomeShell({super.key, this.refreshEvery = const Duration(seconds: 15)});
+  const HomeShell({
+    super.key,
+    this.refreshEvery = const Duration(seconds: 15),
+    this.liveRefreshEvery = const Duration(minutes: 2),
+  });
 
   final Duration refreshEvery;
+  final Duration liveRefreshEvery;
 
   @override
   State<HomeShell> createState() => _HomeShellState();
@@ -41,15 +50,25 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   Timer? _timer;
   StreamSubscription<Match>? _matches;
+  late final GrigriStore _store;
+  late final Cadence _cadence = Cadence(
+    liveEvery: max(
+      1,
+      widget.liveRefreshEvery.inMilliseconds ~/
+          widget.refreshEvery.inMilliseconds,
+    ),
+  );
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _matches = StoreScope.read(context).matches.listen((match) {
+    _store = StoreScope.read(context);
+    _matches = _store.matches.listen((match) {
       if (mounted) MatchScreen.show(context, match);
     });
     _startTimer();
+    _store.goLive();
   }
 
   @override
@@ -57,6 +76,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _matches?.cancel();
+    _store.goQuiet();
     super.dispose();
   }
 
@@ -64,17 +84,22 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _startTimer();
+      _store.goLive();
       _tick();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _timer?.cancel();
       _timer = null;
+      _store.goQuiet();
     }
   }
 
   void _startTimer() {
     _timer?.cancel();
-    _timer = Timer.periodic(widget.refreshEvery, (_) => _tick());
+    _cadence.reset();
+    _timer = Timer.periodic(widget.refreshEvery, (_) {
+      if (_cadence.tick(live: _store.live)) _tick();
+    });
   }
 
   /// The regular refresh: what every tab's badges need, and the open tab.
