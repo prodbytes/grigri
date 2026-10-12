@@ -383,8 +383,17 @@ spec.
       language, the English fallback, switching to Spanish and back, and
       the pick kept on the device.
 24. **Check the running health checks; add them if not yet done.** The
-    health checks' half of entry 23.
+    health checks' half of entry 25.
     - [Deploy](deploy.md): each stage's site stack also has a Route 53
       health check of `/api/health` (it must say `"ok":true`), with its
       own alarm (`<stack>-api-health`) on the same topic, so the API is
       watched like the web app.
+25. **Check the data works as expected: GA with no data, RC with made-up
+    data; push the tags, check the workflows and the health checks.**
+    The deploy configuration's half; the health checks' is entry 24.
+    - [Sign-in](sign-in.md), [deploy](deploy.md): each stage has its own
+      Google web client (its JavaScript origin is its own site), so the
+      RC's sign-in works on https://rc.grigri.nu01.com: Deploy RC and the
+      Release of non-GA tags use the repository variables
+      `GOOGLE_WEB_CLIENT_ID_RC` and `GOOGLE_IOS_CLIENT_ID_RC`; Deploy and
+      GA releases keep `GOOGLE_WEB_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID`.
