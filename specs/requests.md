@@ -98,3 +98,35 @@ spec.
      idle; DynamoDB on demand rather than Aurora Serverless v2 (about
      $43/month minimum) or RDS (hourly), an HTTP API ($1 per million)
      rather than a REST API ($3.50), one Lambda, S3 for photos.
+5. **Make sign-in last as long as possible: the API's own sessions (365
+   days without use, sliding); clean up photos never saved to a
+   profile.** (Asked as "make sign out longer, max time": Google ID tokens
+   last an hour and can't be refreshed quietly on the web, so people were
+   signed out hourly.)
+   - Sessions ([API](api.md#sessions), [backend](backend.md)):
+     `POST /api/session` trades a Google ID token, now verified by the
+     function (jose, Google's keys cached; issuer, audience, expiry), for
+     an opaque session token stored only as its SHA-256 hash. Every other
+     route but `GET /api/health` takes it as a bearer token (401
+     `signed out` otherwise). It slides (at most one write per session per
+     day) and expires after 365 days without use (DynamoDB TTL, checked by
+     the function too); no absolute limit. `DELETE /api/session` signs
+     out, `DELETE /api/sessions` everywhere (a new keys-only index, gsi3,
+     by subject). Admin is decided per request from the session's
+     verified email and the current list. The HTTP API's JWT authorizer
+     is gone. Dev mode (local only) keeps `X-Grigri-Dev-User` and also
+     takes `{"devUser"}` at `POST /api/session`.
+   - Photos: presigned uploads are tagged `grigri-pending=true`, a
+     lifecycle rule on the photos bucket expires pending photos after a
+     day, and saving a profile clears the tag of its new photos (400 if
+     one isn't uploaded) and deletes the ones it drops. The function may
+     now tag, untag and delete under `photos/` (still no reads); the
+     permissions boundary allows the same, and the deploy roles may turn
+     on TTL. Administrators redeploy `github-deploy.yaml` before the next
+     API deploy.
+   - Cost ([backend](backend.md#cost)): one DynamoDB read per request
+     (about $0.06 per million), a write per active session per day, and
+     one S3 request per new photo saved; nothing while idle.
+   - Local ([Floci](../grigri_floci/README.md)): the same; Floci ignores
+     the upload's tag field and skips the template's TTL setting (the
+     ready hook turns TTL on itself).

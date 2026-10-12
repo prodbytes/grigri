@@ -55,7 +55,7 @@ api() {
 echo "🧗 Grigri: $WEB_URL"
 echo "🏠 index:  $INDEX_URL (redirects to the app)"
 echo "🔒 HTTPS:  $HTTPS_URL (through Floci's CloudFront)"
-echo "🔌 API:    https://$PUBLIC_HOST:$HTTPS_PORT/api/health (dev mode without GOOGLE_WEB_CLIENT_ID: X-Grigri-Dev-User)"
+echo "🔌 API:    https://$PUBLIC_HOST:$HTTPS_PORT/api/health (dev mode without GOOGLE_WEB_CLIENT_ID: X-Grigri-Dev-User, or POST /api/session {\"devUser\"})"
 
 while true; do
     # Add more dependencies here, one status call each.

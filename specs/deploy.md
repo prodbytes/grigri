@@ -23,8 +23,9 @@ for that tag:
 2. type-checks, tests and builds the API (`grigri_api`: `npm ci`,
    `npm run typecheck`, `npm test`, `npm run build`), uploads it to the
    stage's artifact bucket (`aws cloudformation package`) and deploys the
-   `grigri-api` stack (function, HTTP API with the Google JWT authorizer
-   for `GOOGLE_WEB_CLIENT_ID`, DynamoDB table; admins from
+   `grigri-api` stack (function, which verifies Google ID tokens for
+   `GOOGLE_WEB_CLIENT_ID` and issues sessions; HTTP API; DynamoDB table
+   with TTL; admins from
    `GRIGRI_ADMIN_EMAILS`), with the stage's permissions boundary on the
    function's role. Production is **never seeded**: it starts empty;
 3. deploys the `grigri-web` stack: certificate, site and photos buckets,

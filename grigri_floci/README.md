@@ -78,18 +78,38 @@ serves its own prefix: the app has the `/app/` base href.
   `4-floci` also removes those containers.
 - The HTTP API gets the fixed ID `grigri` (the template's
   `floci:override-id` tag, local only), allowlisted as a private origin.
-- **Dev mode**: without `GOOGLE_WEB_CLIENT_ID` in `.env`, the API has no
-  authorizer, and the caller is whoever `X-Grigri-Dev-User: <email>`
-  names. With it, the JWT authorizer checks Google ID tokens as in AWS.
-  `GRIGRI_ADMIN_EMAILS` in `.env` names the local admins. For example:
+- **Sessions**: as in AWS, `POST /api/session` trades a Google ID token
+  for the API's own session token (the function verifies the token
+  against Google's keys, so its container needs the internet), sent as
+  `Authorization: Bearer <token>` on every other call.
+- **Dev mode**: without `GOOGLE_WEB_CLIENT_ID` in `.env`, the caller is
+  whoever `X-Grigri-Dev-User: <email>` names, and `POST /api/session`
+  also takes `{"devUser": "<email>"}`. With it, only Google ID tokens
+  sign in, as in AWS. `GRIGRI_ADMIN_EMAILS` in `.env` names the local
+  admins. For example:
 
   ```bash
   curl -H 'X-Grigri-Dev-User: alex@example.com' https://local.grigri.nu01.com:2543/api/discover
+  # or a session, as the app does:
+  TOKEN=$(curl -s -X POST -H 'content-type: application/json' \
+    -d '{"devUser": "alex@example.com"}' https://local.grigri.nu01.com:2543/api/session \
+    | python3 -c 'import json, sys; print(json.load(sys.stdin)["token"])')
+  curl -H "Authorization: Bearer $TOKEN" https://local.grigri.nu01.com:2543/api/discover
+  curl -X DELETE -H "Authorization: Bearer $TOKEN" https://local.grigri.nu01.com:2543/api/session
   ```
 
 - Photo uploads go to `https://localhost:2543/grigri-local-photos` (Floci's
   S3, path-style; the bucket allows POSTs from the local origins), and
-  photos come back through the CDN at `/photos/<key>`.
+  photos come back through the CDN at `/photos/<key>`. The bucket gets
+  the same lifecycle rule as in AWS (pending photos expire after a day),
+  but Floci ignores the presigned POST's `tagging` field, so local uploads
+  aren't tagged pending and never expire (and Floci keeps nothing between
+  starts anyway). Saving a profile still clears tags and deletes the
+  photos it drops; the tagging itself is covered by unit tests and AWS.
+- Floci's CloudFormation skips the table's `TimeToLiveSpecification`, so
+  `05-api.sh` turns TTL on with its own call. The function checks a
+  session's expiry itself either way. Floci doesn't enforce IAM, so the
+  function role's permissions are only exercised in AWS.
 - Floci doesn't enforce CloudFormation Rules (the template's refusal of
   dev mode outside `local` is checked by AWS, and the function ignores the
   header outside `local` too), and a stack update can't change the HTTP
@@ -143,7 +163,7 @@ covers it), or map the name to 127.0.0.1 in your hosts file.
 | `GRIGRI_CDN_ALIAS` | `grigri.localhost` | Distribution alias (host name to browse) |
 | `GRIGRI_PUBLIC_HOST` | `local.grigri.nu01.com` | Second alias, with a public TLD; also in the certificate |
 | `GRIGRI_ORIGIN_HOST` | `dev.grigri.localhost` | Origin host name: the Docker host inside the container, and loopback in the browser |
-| `GOOGLE_WEB_CLIENT_ID` | (none: dev mode) | From `.env`: the Google web client the local API's authorizer accepts |
+| `GOOGLE_WEB_CLIENT_ID` | (none: dev mode) | From `.env`: the Google web client whose ID tokens the local API's `POST /api/session` accepts |
 | `GRIGRI_ADMIN_EMAILS` | (none) | From `.env`: the local admins |
 
 ## Limitations
