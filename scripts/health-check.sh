@@ -2,7 +2,7 @@
 # Continuous health monitor: every HEALTH_CHECK_INTERVAL seconds (15 by
 # default), one line per run: the time, then each dependency as its icon,
 # a short label and ✅/❌, e.g.
-#   2026-10-10 14:02:10  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅  🔑 rbacr ✅
+#   2026-10-10 14:02:10  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅  📡 mqtt ✅  🔑 rbacr ✅
 # On start it prints, once, where to open the app locally.
 # Runs via `devbox services up` (see process-compose.yaml) or standalone.
 set -uo pipefail
@@ -53,10 +53,23 @@ api() {
     curl -fs --max-time 10 -H "Host: $CDN_ALIAS" "$FLOCI/api/health" | grep -q '"ok":true,"stage":"local"'
 }
 
+# Live updates: Floci's MQTT broker must accept a WebSocket upgrade (101,
+# subprotocol mqtt) at /mqtt on the HTTPS port, where the app connects.
+mqtt() {
+    local code
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 --http1.1 \
+        --cacert "$MKCERT_CA" --resolve "$PUBLIC_HOST:$HTTPS_PORT:127.0.0.1" \
+        -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
+        -H 'Sec-WebSocket-Key: Z3JpZ3JpLWhlYWx0aC1jaGs=' -H 'Sec-WebSocket-Protocol: mqtt' \
+        "https://$PUBLIC_HOST:$HTTPS_PORT/mqtt")"
+    [[ "$code" == 101 ]]
+}
+
 echo "🧗 Grigri: $WEB_URL"
 echo "🏠 index:  $INDEX_URL (redirects to the app)"
 echo "🔒 HTTPS:  $HTTPS_URL (through Floci's CloudFront)"
 echo "🔌 API:    https://$PUBLIC_HOST:$HTTPS_PORT/api/health (dev mode without GOOGLE_WEB_CLIENT_ID: X-Grigri-Dev-User, or POST /api/session {\"devUser\"})"
+echo "📡 MQTT:   wss://$PUBLIC_HOST:$HTTPS_PORT/mqtt (live updates; Floci's broker)"
 echo "🔑 rbacr:  ${RBACR_HEALTH_URL%/health}/ (the roles; local dev server)"
 
 while true; do
@@ -67,6 +80,7 @@ while true; do
         "$(status 🚚 cdn cdn)"
         "$(status 🔒 https https)"
         "$(status 🔌 api api)"
+        "$(status 📡 mqtt mqtt)"
         "$(status 🔑 rbacr get 5 "$RBACR_HEALTH_URL")"
     )
     line="$(date '+%Y-%m-%d %H:%M:%S')"

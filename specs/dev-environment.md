@@ -37,8 +37,9 @@
     `/photos/*` to the local photos bucket, everything else to the index,
     as in production. Before it starts, `scripts/build-api.sh` builds the
     API when its sources changed; its ready hook deploys the API's
-    template into Floci (Lambda, HTTP API, DynamoDB, S3) and loads the
-    made-up test data. Without `GOOGLE_WEB_CLIENT_ID` in `.env` the API
+    template into Floci (Lambda, HTTP API, DynamoDB, S3, and the live
+    updates' authorizer function) and loads the made-up test data. Floci's
+    MQTT broker is the local IoT Core for [live updates](#live-updates). Without `GOOGLE_WEB_CLIENT_ID` in `.env` the API
     runs in dev mode: callers name themselves with
     `X-Grigri-Dev-User: <email>`, or get a session from `POST /api/session`
     with `{"devUser": "<email>"}`. Admins are whoever the local rbacr says
@@ -56,20 +57,50 @@
     `local.grigri.nu01.com` is a public name for 127.0.0.1 and ::1 (Route
     53), so it works as an OAuth origin.
   - `0-health-check`: once all are ready, it prints the local URLs once
-    (🧗 the app, 🏠 the index, 🔒 HTTPS, 🔌 the API), then every 15 s
+    (🧗 the app, 🏠 the index, 🔒 HTTPS, 🔌 the API, 📡 MQTT), then every 15 s
     (`HEALTH_CHECK_INTERVAL`) one line for the whole check: the time, then
     each dependency as its icon, a short label and ✅ or ❌, e.g.
-    `2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅  🔑 rbacr ✅`.
+    `2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅  📡 mqtt ✅  🔑 rbacr ✅`.
     `🚚 cdn` asks Floci with the alias as `Host`; `🔒 https` validates the
     certificate against mkcert's CA and pins the name to 127.0.0.1, so
     neither needs DNS or `mkcert -install`; `🔌 api` asks
-    `/api/health` through the CDN and expects the `local` stage; `🔑 rbacr`
+    `/api/health` through the CDN and expects the `local` stage; `📡 mqtt`
+    asks for a WebSocket upgrade (subprotocol `mqtt`) at
+    `wss://local.grigri.nu01.com:2543/mqtt` and expects 101; `🔑 rbacr`
     asks the local rbacr's `/health`.
   - `2-flutter-web` gets `RBACR_URL=http://localhost:2115` (unless `.env`
     sets it), so the web app asks the local rbacr.
   - The ports (7189, 2113, 2114, 2115, 2543) differ from presence's and TabScan's, so the
     projects can run side by side. Servers bind to 127.0.0.1;
     `GRIGRI_BIND_HOST=0.0.0.0` serves other devices (a phone's browser).
+- **Live updates** ([live-updates.md](live-updates.md)) run locally on
+  Floci's built-in MQTT broker, which serves MQTT over WebSocket at
+  `/mqtt` on Floci's ports (`FLOCI_SERVICES_IOT_MQTT_AUTO_START` starts
+  it with Floci): `GET /api/realtime` answers
+  `wss://local.grigri.nu01.com:2543/mqtt` (the HTTPS port and mkcert
+  certificate the site uses) with no authorizer. Floci (the pinned
+  nightly) emulates IoT Core only in part, so two things differ from AWS:
+  - **No custom authorizer**: this Floci has no `CreateAuthorizer` (a
+    newer nightly checks one at connect, but still doesn't enforce
+    Subscribe or Receive policies), so the template creates the
+    `AWS::IoT::Authorizer` only outside `local`, and the local broker
+    lets anyone connect and subscribe to anything, like dev mode trusts
+    a header. The authorizer's function is still deployed locally
+    (`grigri-local-api-realtime-auth`), so it can be invoked directly
+    with an IoT-style event against the real local table; its policies
+    are covered by the API's tests.
+  - **Publishing over MQTT**: Floci's HTTP `iot-data` Publish returns 200
+    but doesn't reach MQTT subscribers, so the local function (it sees
+    `AWS_ENDPOINT_URL`) publishes with a minimal MQTT 3.1.1 client over
+    WebSocket to `ws://<Floci>/mqtt` (Node's built-in WebSocket, no
+    library) instead of `iot-data:Publish`.
+
+  Why not something else: a separate broker container (Mosquitto or EMQX
+  with an HTTP auth hook calling the authorizer) would enforce topic
+  scoping locally, but adds a service, an image and an auth bridge to
+  keep in step, for a check the tests already make; polling only would
+  leave the live path untested until RC. Floci's broker costs nothing
+  more and exercises the same app code, URL shape, hints and API path.
 - **Android** (USB, debugging on; `ANDROID_SERIAL` picks one of several):
   `devbox run android` runs a debug build attached
   (`scripts/flutter-android.sh`), with `adb reverse` so the phone's

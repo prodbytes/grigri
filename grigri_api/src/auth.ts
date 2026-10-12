@@ -127,8 +127,8 @@ export class Auth {
     if (authorization) {
       const match = /^Bearer\s+(\S+)$/i.exec(authorization);
       // Not a session token's shape (an old Google ID token, say): no read.
-      if (!match || !TOKEN.test(match[1]!)) throw signedOut();
-      return this.fromSession(hashToken(match[1]!));
+      if (!match) throw signedOut();
+      return this.callerOfToken(match[1]!);
     }
     if (this.deps.config.devMode) {
       const dev = headers['x-grigri-dev-user']?.trim().toLowerCase();
@@ -138,6 +138,15 @@ export class Auth {
       }
     }
     throw signedOut();
+  }
+
+  /**
+   * The caller of a bare session token (the live updates' authorizer,
+   * realtime-auth.ts), or 401 "signed out". Never the dev header.
+   */
+  async callerOfToken(token: string): Promise<Caller> {
+    if (!TOKEN.test(token)) throw signedOut();
+    return this.fromSession(hashToken(token));
   }
 
   /** DELETE /api/session: this session ends. */

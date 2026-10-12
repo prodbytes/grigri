@@ -26,6 +26,10 @@ An admin can approve or reject any join request.
   until sign-out, or 365 days without use. The HTTP API has no
   authorizer: the function authenticates every request (one DynamoDB
   read).
+- Live updates: after a change the function publishes a hint to each
+  affected climber's MQTT topic on AWS IoT Core; the app subscribes with
+  its session token through an IoT custom authorizer (see
+  [Live updates](#live-updates) and [live-updates.md](live-updates.md)).
 - Stacks per stage: `<prefix>-api` (prefix `grigri` for prod, `grigri-rc`
   for RC), next to the existing `<prefix>-web`.
 - Local: the same CloudFormation template (`grigri_api/template.yaml`) deployed into Floci (Lambda, HTTP API,
@@ -162,6 +166,7 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `DELETE /api/session` | sign out: this session ends. → `{}` |
 | `DELETE /api/sessions` | sign out everywhere: all my sessions end. → `{}` |
 | `GET /api/me` | `{"climber": Climber, "admin": bool}`. The first time, it creates my profile from my Google account: the session's name (`Climber` when the session has none, as sessions from before names were kept), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
+| `GET /api/realtime` | where [live updates](#live-updates) come from: `{"url": "wss://<IoT endpoint>/mqtt", "authorizer": "<prefix>-api-realtime" (empty locally), "topic": "grigri/<stage>/climbers/<my climber id>/#", "clientIdPrefix": "<my climber id>-"}`, or `{"url": null}` when they're off |
 | `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars, age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
 | `GET /api/discover` | plans to swipe on: upcoming (start > now), I'm not in, I haven't passed or asked; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known) |
 | `POST /api/plans` | new plan, I organize it; body: Plan without id, organizerId, memberIds. Validates: place required (≤ 80), area ≤ 120, sectorId ≤ 64 when given, start in the future, end after start and at most 24 h later, notes ≤ 1000, grades on the discipline's scale. → `{"plan"}` |
@@ -201,6 +206,33 @@ soonest:
 
 So a plan in my grades nearby comes first, and a plan in my grades
 150 km away still comes before one next door that I don't climb.
+
+## Live updates
+
+Details: [live-updates.md](live-updates.md).
+
+- **Topics**: `grigri/<stage>/climbers/<climberId>/hint`, one per
+  climber; the app subscribes to `grigri/<stage>/climbers/<me>/#`.
+- **Connecting**: `<url>?x-amz-customauthorizer-name=<authorizer>&token=<session token>`
+  (MQTT 3.1.1 over WebSocket, subprotocol `mqtt`), client id
+  `<clientIdPrefix>…`. The authorizer accepts a live session of an
+  account with a profile and allows only connecting with that prefix and
+  subscribing to and receiving that climber's own topics; anything else
+  is refused. Locally (Floci) there's no authorizer.
+- **Hints** (QoS 0, JSON): `{"kind": "message"|"request"|"notice"|"plan"|"match", "planId"?}`.
+  Never data: the app refetches through the routes above.
+
+| Change | Hint, to whom (never the one who made it) |
+|---|---|
+| `POST /api/plans/{id}/messages` | `message` to the members |
+| `POST /api/plans/{id}/join` | `request` to the members |
+| accept (member or admin), not everyone yet | `request` to the members |
+| accept, everyone said yes (or an admin) | `match` to the newcomer, `plan` to the other members |
+| reject (member or admin) | `notice` to the requester, `request` to the members |
+| `PUT /api/plans/{id}`, `POST /api/plans/{id}/leave` | `plan` to the (remaining) members |
+
+Publishing is best effort: it waits at most 1.5 s and never fails the
+request.
 
 ## Seed (RC and local only)
 

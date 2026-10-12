@@ -423,7 +423,50 @@ spec.
       `UntagResource` on HTTP APIs; `scripts/deploy.sh` deletes a stack
       left in `ROLLBACK_COMPLETE` (a failed first create, holding nothing)
       before deploying it again.
-29. **Create the profile from the Google account at sign-in, then let it
+29. **Live updates: push over MQTT (AWS IoT Core) instead of polling.**
+    - New feature, [Live updates](live-updates.md): after each change the
+      API publishes a tiny hint (`{"kind", "planId"}`, never data) to each
+      affected climber's topic, `grigri/<stage>/climbers/<id>/hint`
+      (members for messages, requests, joins, leaves and plan edits; the
+      requester for a no; the newcomer for a match; never the one who
+      acted), best effort and never failing a request. The app keeps one
+      MQTT-over-WebSocket connection in the foreground (mqtt_client,
+      pinned), connects with its session token, refetches just what a
+      hint names through the API, and reconnects with backoff (1 s up to a
+      minute, jittered).
+    - An IoT Core custom authorizer (`<prefix>-api-realtime`, unsigned)
+      and its function (`<prefix>-api-realtime-auth`) look the session up
+      as the API does and allow only connecting as `<climberId>-…` and
+      subscribing to and receiving that climber's own topics; they fail
+      closed, re-check every hour and disconnect within a day.
+    - [API](api.md): `GET /api/realtime` says where to connect; the hint
+      table. [Matching](matching.md#refreshing): polling stays as a
+      safety net, slowed while connected (2 minutes; an open chat every
+      minute) and back to 15 s / 3 s when the connection drops.
+      [Sign-in](sign-in.md): the session token also opens the live
+      connection (the only URL that carries it).
+    - Infra ([backend](backend.md), [deploy](deploy.md)): the API role
+      may publish only to `topic/grigri/<stage>/climbers/*`; the
+      permissions boundary and the deploy policy cover exactly that, the
+      `<prefix>-*` IoT authorizers and `iot:DescribeEndpoint`
+      (**redeploy `grigri_infra/github-deploy.yaml` once**);
+      `scripts/deploy.sh` looks up the IoT Data-ATS endpoint and passes
+      it to the API (for `GET /api/realtime`) and the site (CSP
+      `connect-src wss://<endpoint>`).
+    - Cost ([backend](backend.md#live-updates-cost)): IoT Core
+      connectivity ($0.08 per million connection-minutes) and messages
+      ($1 per million; about $2 per million hints), an authorizer call
+      per connect and per open hour; about half a cent per thousand
+      person-hours online, versus $2–4 for the polling it replaces;
+      cheaper than API Gateway WebSockets (3× the connection-minutes plus
+      a connection table) and no second platform (Cloudflare Durable
+      Objects). $0 idle.
+    - [Local](dev-environment.md#live-updates): Floci's own MQTT broker
+      over WSS on the HTTPS port; Floci has no custom authorizers and its
+      HTTP Publish doesn't reach subscribers, so locally the broker is
+      open (like dev mode) and the function publishes over MQTT. The
+      health check gains `📡 mqtt`.
+30. **Create the profile from the Google account at sign-in, then let it
     be edited: no "Create your profile" screen; just signing in should
     be fine.**
     - [API](api.md), [backend](backend.md): `POST /api/session` keeps the
