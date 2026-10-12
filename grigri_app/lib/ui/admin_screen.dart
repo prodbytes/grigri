@@ -14,12 +14,13 @@ class AdminScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final requests = store.adminRequests;
+    final l = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin: join requests'),
+        title: Text(l.adminTitle),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: l.refresh,
             icon: const Icon(Icons.refresh),
             onPressed: store.refreshAdmin,
           ),
@@ -28,12 +29,10 @@ class AdminScreen extends StatelessWidget {
       body: !store.isLoaded(Section.admin)
           ? const Center(child: CircularProgressIndicator())
           : requests.isEmpty
-          ? const EmptyState(
+          ? EmptyState(
               icon: Icons.verified_outlined,
-              title: 'No open requests',
-              message:
-                  'When anyone asks to join a plan, their request shows up '
-                  'here for you to approve or reject.',
+              title: l.noOpenRequestsTitle,
+              message: l.noOpenRequestsMessage,
             )
           : RefreshIndicator(
               onRefresh: store.refreshAdmin,
@@ -68,7 +67,7 @@ class _AdminRequestTile extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.l10n.cancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
@@ -89,7 +88,8 @@ class _AdminRequestTile extends StatelessWidget {
     final yes = plan == null
         ? request.acceptedBy.length
         : plan.memberIds.where(request.acceptedBy.contains).length;
-    final planTitle = plan?.title ?? 'a plan';
+    final l = context.l10n;
+    final planTitle = plan?.title ?? l.aPlan;
     return Card(
       key: ValueKey('admin ${request.id}'),
       margin: const EdgeInsets.only(bottom: 10),
@@ -106,7 +106,10 @@ class _AdminRequestTile extends StatelessWidget {
                 radius: 22,
                 subtitle: request.time == null
                     ? null
-                    : 'Asked ${dayLabel(request.time!)}, ${clock(request.time!)}',
+                    : l.askedAt(
+                        dayLabel(context, request.time!),
+                        clock(request.time!),
+                      ),
               ),
             ),
             const SizedBox(height: 10),
@@ -116,7 +119,7 @@ class _AdminRequestTile extends StatelessWidget {
                   : [
                       '${plan.discipline.emoji} ${plan.place}',
                       if (plan.area.isNotEmpty) plan.area,
-                      dayLabel(plan.start),
+                      dayLabel(context, plan.start),
                     ].join(' · '),
               style: text.bodyMedium?.copyWith(color: Mountain.snow),
             ),
@@ -126,7 +129,7 @@ class _AdminRequestTile extends StatelessWidget {
               runSpacing: 6,
               children: [
                 Tag(
-                  '$yes of $members said yes',
+                  l.saidYesCount(yes, members),
                   icon: Icons.how_to_vote_outlined,
                   color: Mountain.sky,
                 ),
@@ -144,9 +147,9 @@ class _AdminRequestTile extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.close, color: Mountain.clay),
-                    label: const Text(
-                      'Reject',
-                      style: TextStyle(color: Mountain.clay),
+                    label: Text(
+                      l.reject,
+                      style: const TextStyle(color: Mountain.clay),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Mountain.clay),
@@ -154,11 +157,9 @@ class _AdminRequestTile extends StatelessWidget {
                     onPressed: () async {
                       if (!await _confirm(
                         context,
-                        title: 'Reject ${person.name}?',
-                        message:
-                            'They won\'t join $planTitle, and they\'ll be told '
-                            'the group declined.',
-                        action: 'Reject',
+                        title: l.rejectNameQuestion(person.name),
+                        message: l.rejectMessage(planTitle),
+                        action: l.reject,
                         color: Mountain.clay,
                       )) {
                         return;
@@ -171,16 +172,14 @@ class _AdminRequestTile extends StatelessWidget {
                 Expanded(
                   child: FilledButton.icon(
                     icon: const Icon(Icons.check),
-                    label: const Text('Approve'),
+                    label: Text(l.approve),
                     onPressed: () async {
                       final messenger = ScaffoldMessenger.of(context);
                       if (!await _confirm(
                         context,
-                        title: 'Approve ${person.name}?',
-                        message:
-                            'They join $planTitle now, as if everyone '
-                            'in the group had said yes.',
-                        action: 'Approve',
+                        title: l.approveNameQuestion(person.name),
+                        message: l.approveMessage(planTitle),
+                        action: l.approve,
                       )) {
                         return;
                       }
@@ -189,8 +188,10 @@ class _AdminRequestTile extends StatelessWidget {
                         messenger.showSnackBar(
                           SnackBar(
                             content: Text(
-                              '${match.newcomer.name} joined '
-                              '${match.plan.title}.',
+                              l.adminJoined(
+                                match.newcomer.name,
+                                match.plan.title,
+                              ),
                             ),
                           ),
                         );

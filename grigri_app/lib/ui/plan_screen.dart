@@ -29,16 +29,17 @@ class _PlanScreenState extends State<PlanScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = context.l10n;
     final plan = store.isGone(widget.planId) ? null : store.plan(widget.planId);
     if (plan == null) {
       return Scaffold(
         appBar: AppBar(),
         body: store.isLoadingPlan(widget.planId)
             ? const Center(child: CircularProgressIndicator())
-            : const EmptyState(
+            : EmptyState(
                 icon: Icons.landscape_outlined,
-                title: 'Plan gone',
-                message: 'Everyone left this plan, or it\'s no longer open.',
+                title: l.planGoneTitle,
+                message: l.planGoneMessage,
               ),
       );
     }
@@ -51,11 +52,11 @@ class _PlanScreenState extends State<PlanScreen> {
         .where((r) => !r.rejected && !plan.memberIds.contains(r.climberId));
     return Scaffold(
       appBar: AppBar(
-        title: Text(organizing ? 'Your plan' : 'Plan'),
+        title: Text(organizing ? l.yourPlan : l.planTitle),
         actions: [
           if (organizing)
             IconButton(
-              tooltip: 'Edit',
+              tooltip: l.edit,
               icon: const Icon(Icons.edit_outlined),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => PlanEditor(plan: plan)),
@@ -72,14 +73,16 @@ class _PlanScreenState extends State<PlanScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: mine.rejected
-                  ? const Tag(
-                      'Declined: the group said no',
+                  ? Tag(
+                      l.declinedGroupSaidNo,
                       icon: Icons.close,
                       color: Mountain.clay,
                     )
                   : Tag(
-                      'Pending: ${mine.acceptedBy.length} of '
-                      '${plan.memberIds.length} said yes',
+                      l.pendingSaidYes(
+                        mine.acceptedBy.length,
+                        plan.memberIds.length,
+                      ),
                       icon: Icons.hourglass_top,
                       color: Mountain.sky,
                     ),
@@ -87,7 +90,7 @@ class _PlanScreenState extends State<PlanScreen> {
           ],
           const SizedBox(height: 20),
           Text(
-            'THE GROUP · ${plan.memberIds.length}',
+            l.theGroupCount(plan.memberIds.length).toUpperCase(),
             style: text.labelSmall?.copyWith(
               color: Mountain.granite,
               letterSpacing: 1.2,
@@ -98,9 +101,9 @@ class _PlanScreenState extends State<PlanScreen> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Avatar(store.climber(id)),
-              title: Text(id == store.me.id ? 'You' : store.climber(id).name),
+              title: Text(id == store.me.id ? l.you : store.climber(id).name),
               subtitle: Text(
-                id == plan.organizerId ? 'Organizer' : 'Member',
+                id == plan.organizerId ? l.organizer : l.member,
                 style: const TextStyle(color: Mountain.granite),
               ),
               onTap: () => showProfileSheet(context, store.climber(id)),
@@ -108,7 +111,7 @@ class _PlanScreenState extends State<PlanScreen> {
           if (member && pending.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              'ASKING TO JOIN',
+              l.askingToJoin.toUpperCase(),
               style: text.labelSmall?.copyWith(
                 color: Mountain.granite,
                 letterSpacing: 1.2,
@@ -121,12 +124,12 @@ class _PlanScreenState extends State<PlanScreen> {
                 leading: Avatar(store.climber(r.climberId)),
                 title: Text(store.climber(r.climberId).name),
                 subtitle: Text(
-                  '${r.acceptedBy.length} of ${plan.memberIds.length} said yes',
+                  l.saidYesCount(r.acceptedBy.length, plan.memberIds.length),
                   style: const TextStyle(color: Mountain.sky),
                 ),
                 trailing: r.acceptedBy.contains(store.me.id)
-                    ? const Tag('You said yes', color: Mountain.olive)
-                    : const Tag('Answer in the chat', color: Mountain.sky),
+                    ? Tag(l.youSaidYes, color: Mountain.olive)
+                    : Tag(l.answerInChat, color: Mountain.sky),
                 onTap: () =>
                     showProfileSheet(context, store.climber(r.climberId)),
               ),
@@ -135,7 +138,7 @@ class _PlanScreenState extends State<PlanScreen> {
           if (member) ...[
             FilledButton.icon(
               icon: const Icon(Icons.forum_outlined),
-              label: const Text('Group chat'),
+              label: Text(l.groupChat),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(
                   builder: (_) => ChatScreen(planId: plan.id),
@@ -146,9 +149,7 @@ class _PlanScreenState extends State<PlanScreen> {
             OutlinedButton.icon(
               icon: const Icon(Icons.logout, color: Mountain.clay),
               label: Text(
-                plan.memberIds.length == 1
-                    ? 'Cancel the plan'
-                    : 'Leave the plan',
+                plan.memberIds.length == 1 ? l.cancelPlan : l.leavePlan,
                 style: const TextStyle(color: Mountain.clay),
               ),
               style: OutlinedButton.styleFrom(
@@ -160,26 +161,28 @@ class _PlanScreenState extends State<PlanScreen> {
                   builder: (context) => AlertDialog(
                     title: Text(
                       plan.memberIds.length == 1
-                          ? 'Cancel the plan?'
-                          : 'Leave the plan?',
+                          ? l.cancelPlanQuestion
+                          : l.leavePlanQuestion,
                     ),
                     content: Text(
                       plan.memberIds.length == 1
-                          ? 'It and its chat will be gone.'
+                          ? l.cancelPlanMessage
                           : organizing
-                          ? '${store.climber(plan.memberIds[1]).name} will organize it.'
-                          : 'You can\'t rejoin it later.',
+                          ? l.leaveOrganizerMessage(
+                              store.climber(plan.memberIds[1]).name,
+                            )
+                          : l.leaveMessage,
                     ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Stay'),
+                        child: Text(l.stay),
                       ),
                       TextButton(
                         onPressed: () => Navigator.pop(context, true),
-                        child: const Text(
-                          'Leave',
-                          style: TextStyle(color: Mountain.clay),
+                        child: Text(
+                          l.leave,
+                          style: const TextStyle(color: Mountain.clay),
                         ),
                       ),
                     ],

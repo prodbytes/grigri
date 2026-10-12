@@ -5,6 +5,9 @@ import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/plan.dart';
 import '../theme.dart';
+import 'l10n.dart';
+
+export 'l10n.dart';
 
 /// Gives the widgets below it the [GrigriStore], rebuilding them when it
 /// changes.
@@ -23,24 +26,6 @@ class StoreScope extends InheritedNotifier<GrigriStore> {
   static GrigriStore read(BuildContext context) =>
       context.getInheritedWidgetOfExactType<StoreScope>()!.notifier!;
 }
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', //
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-
-String _two(int n) => n.toString().padLeft(2, '0');
-
-/// "18:30".
-String clock(DateTime t) => '${_two(t.hour)}:${_two(t.minute)}';
-
-/// "Sat 17 Oct".
-String dayLabel(DateTime t) =>
-    '${weekdayLabels[t.weekday - 1]} ${t.day} ${_months[t.month - 1]}';
-
-/// "Sat 17 Oct · 08:00–17:00".
-String whenLabel(Plan plan) =>
-    '${dayLabel(plan.start)} · ${clock(plan.start)}–${clock(plan.end)}';
 
 /// A climber's photo, or their initials on a color of the palette, always
 /// the same one for the same person.
@@ -189,6 +174,7 @@ class PlanHighlight extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -207,7 +193,7 @@ class PlanHighlight extends StatelessWidget {
           Row(
             children: [
               Text(
-                'THE PLAN',
+                l.thePlan.toUpperCase(),
                 style: text.labelSmall?.copyWith(
                   color: Mountain.sky,
                   letterSpacing: 1.6,
@@ -216,7 +202,7 @@ class PlanHighlight extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                '${plan.discipline.emoji} ${plan.discipline.label}',
+                '${plan.discipline.emoji} ${plan.discipline.label(l)}',
                 style: text.labelMedium?.copyWith(color: Mountain.sand),
               ),
             ],
@@ -232,8 +218,8 @@ class PlanHighlight extends StatelessWidget {
           const SizedBox(height: 10),
           if (plan.area.isNotEmpty) _Line(Icons.place_outlined, plan.area),
           if (distanceKm != null)
-            _Line(Icons.near_me_outlined, distanceLabel(distanceKm!)),
-          _Line(Icons.schedule, whenLabel(plan)),
+            _Line(Icons.near_me_outlined, distanceLabel(context, distanceKm!)),
+          _Line(Icons.schedule, whenLabel(context, plan)),
           _Line(Icons.trending_up, StoreScope.of(context).grades(plan.grades)),
           if (showNotes && plan.notes.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -244,7 +230,7 @@ class PlanHighlight extends StatelessWidget {
           ],
           if (fit?.grades ?? false) ...[
             const SizedBox(height: 12),
-            const Tag('Your grades', icon: Icons.check, color: Mountain.sand),
+            Tag(l.yourGrades, icon: Icons.check, color: Mountain.sand),
           ],
         ],
       ),
@@ -253,8 +239,8 @@ class PlanHighlight extends StatelessWidget {
 }
 
 /// "12 km from you", or "Under 1 km from you".
-String distanceLabel(int km) =>
-    km < 1 ? 'Under 1 km from you' : '$km km from you';
+String distanceLabel(BuildContext context, int km) =>
+    context.l10n.distanceKm(km < 1 ? 0 : km);
 
 class _Line extends StatelessWidget {
   const _Line(this.icon, this.text);
@@ -290,6 +276,7 @@ class ProfileDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     Widget heading(String label) => Padding(
       padding: const EdgeInsets.only(top: 14, bottom: 6),
       child: Text(
@@ -307,25 +294,25 @@ class ProfileDetails extends StatelessWidget {
       children: [
         if (climber.bio.isNotEmpty) Text(climber.bio, style: text.bodyMedium),
         if (climber.levels.isNotEmpty) ...[
-          heading('Climbs'),
+          heading(l.profileClimbs),
           Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
               for (final e in climber.levels.entries)
                 Tag(
-                  '${e.key.emoji} ${e.key.label} ${StoreScope.of(context).grades(e.value)}',
+                  '${e.key.emoji} ${e.key.label(l)} ${StoreScope.of(context).grades(e.value)}',
                   color: Mountain.olive,
                 ),
             ],
           ),
         ],
         if (showGear) ...[
-          heading('Gear'),
+          heading(l.profileGear),
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: [for (final g in climber.gear) Tag(g.label)],
+            children: [for (final g in climber.gear) Tag(g.label(l))],
           ),
           if (climber.gearPhotos.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -336,7 +323,7 @@ class ProfileDetails extends StatelessWidget {
                 for (final (i, key) in climber.gearPhotos.indexed)
                   PhotoThumb(
                     StoreScope.of(context).photo(key),
-                    label: '${climber.name}\'s gear, photo ${i + 1}',
+                    label: l.gearPhotoOf(climber.name, i + 1),
                   ),
               ],
             ),
@@ -558,10 +545,48 @@ class GradeSystemToggle extends StatelessWidget {
       showSelectedIcon: false,
       segments: [
         for (final s in GradeSystem.values)
-          ButtonSegment(value: s, label: Text(s.label)),
+          ButtonSegment(value: s, label: Text(s.label(context.l10n))),
       ],
       selected: {store.gradeSystem},
       onSelectionChanged: (s) => store.gradeSystem = s.single,
+    );
+  }
+}
+
+/// The app's language: the device's (System default), or one picked here,
+/// each named in itself. Switches the whole app at once and is kept on the
+/// device, like the grade system.
+class LanguagePicker extends StatelessWidget {
+  const LanguagePicker({super.key});
+
+  /// The System default option.
+  static const _system = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final l = context.l10n;
+    return InputDecorator(
+      decoration: InputDecoration(
+        labelText: l.language,
+        prefixIcon: const Icon(Icons.language),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: store.locale?.languageCode ?? _system,
+          items: [
+            DropdownMenuItem(value: _system, child: Text(l.languageSystem)),
+            for (final MapEntry(key: code, value: name)
+                in languageNames.entries)
+              DropdownMenuItem(value: code, child: Text(name)),
+          ],
+          onChanged: (code) => store.locale = code == null || code == _system
+              ? null
+              : Locale(code),
+        ),
+      ),
     );
   }
 }
