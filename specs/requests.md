@@ -134,3 +134,11 @@ spec.
      boulders, each written both ways.
    - The [plan editor](screens.md) is as asked; the profile editor gains
      the same grade switch.
+10. **When someone likes the plan but doesn't match yet, call it out at
+    the top of the chat, so people know they need to approve or reject
+    the new person.**
+    - The [group chat](matching.md#join-requests-in-the-group-chat) pins
+      a callout under the plan for each request still waiting for my
+      answer: avatar, name, how many said yes, and ✕ / ✓ (the same accept
+      and decline as the request's card). After I answer, it leaves the
+      callout; the card in the messages stays as the record.

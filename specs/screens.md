@@ -39,8 +39,11 @@ Notifications and Profile. The labels fit a 360 dp wide phone.
   its photos (✕ removes one, + adds one, up to 6).
 - **Match**: see [matching](matching.md#matches).
 - **Chat**: the group's avatars, the plan's place and date, the plan pinned
-  under the bar, messages (mine on the right in pine, others' on the left
-  with their name), the join and leave notes, and a message box.
+  under the bar, then a callout for each join request still waiting for
+  my answer ("Wants to join · your answer", their avatar and name, N of M
+  said yes, ✕ / ✓; tap them for their profile), then the messages (mine on
+  the right in pine, others' on the left with their name), the join and
+  leave notes, the join request cards, and a message box.
 - Tapping a person anywhere opens their whole profile in a sheet.
 
 The browser tab's title is **Grigri** (**🧪 Grigri RC** on the RC site).

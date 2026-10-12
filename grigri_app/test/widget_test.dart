@@ -186,6 +186,85 @@ void main() {
     );
   });
 
+  testWidgets('the chat calls out on top who still needs my answer', (
+    tester,
+  ) async {
+    final store = await pumpApp(tester);
+    await tester.tap(find.text('Chats'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Siurana'));
+    await tester.pumpAndSettle();
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNWidgets(2));
+    // The request cards show the newcomers' grades, written as grades.
+    expect(find.textContaining(RegExp(r'^Sport \d')), findsWidgets);
+    expect(find.textContaining('Closure'), findsNothing);
+
+    await tester.tap(find.byTooltip('Decline Bruno Costa'));
+    await tester.pumpAndSettle();
+    expect(store.state.requests['my-sunday-siurana/bruno']!.rejected, isTrue);
+    expect(
+      find.byKey(const ValueKey('callout my-sunday-siurana/bruno')),
+      findsNothing,
+    );
+    // The card in the messages stays, as the record.
+    final card = find.byKey(const ValueKey('request my-sunday-siurana/bruno'));
+    expect(
+      find.descendant(of: card, matching: find.text('Declined')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.byTooltip('Accept Inés Prado'));
+    await tester.pumpAndSettle();
+    expect(find.text("It's a match!"), findsOneWidget);
+    await tester.tap(find.text('Keep swiping'));
+    await tester.pumpAndSettle();
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    expect(store.plan('my-sunday-siurana')!.memberIds, ['me', 'ines']);
+  });
+
+  testWidgets('after my yes the callout goes, the card waits for the rest', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 2.6;
+    addTearDown(tester.view.reset);
+    final demo = demoState(now);
+    final store = GrigriStore(
+      GrigriState(
+        meId: demo.meId,
+        climbers: demo.climbers,
+        plans: demo.plans,
+        requests: demo.requests,
+        messages: demo.messages,
+        // Inés joins my plan, then doesn't answer Bruno.
+        policies: {...demo.policies, 'ines': Policy.undecided},
+        passed: demo.passed,
+        notices: demo.notices,
+      ),
+      clock: () => now,
+    )..accept('my-sunday-siurana/ines');
+    await tester.pumpWidget(GrigriApp(store: store));
+    await tester.tap(find.text('Chats'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Siurana'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 2 said yes'), findsNothing);
+    expect(find.text('0 of 2 said yes'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Accept Bruno Costa'));
+    await tester.pumpAndSettle();
+    expect(find.text("It's a match!"), findsNothing);
+    expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    final card = find.byKey(const ValueKey('request my-sunday-siurana/bruno'));
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('You said yes · waiting for Inés'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('the age can be left out of the profile', (tester) async {
     final store = await pumpApp(tester);
     await tester.tap(find.text('Profile'));

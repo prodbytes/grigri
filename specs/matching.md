@@ -59,6 +59,12 @@ marks each chat with how many requests wait for my answer, and the Chats
 tab's badge counts them all. The plan's screen lists them too, with
 "Answer in the chat".
 
+So the group doesn't miss them, the requests still waiting for **my**
+answer are also **called out at the top of the chat**, under the pinned
+plan: their avatar and name, how many have said yes, and ✕ / ✓ (the same
+answer as the card's). Once I've answered, the request leaves the
+callout; its card in the messages stays as the record.
+
 ## The group decides
 
 - A newcomer joins a plan when **every current member** has accepted
