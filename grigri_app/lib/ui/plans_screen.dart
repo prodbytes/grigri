@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'notices_screen.dart';
 import 'plan_screen.dart';
 
-/// My plans: the ones I'm in (organizing or joined), and the ones I asked
-/// to join that are still waiting for the group.
+/// My plans: the ones I'm in (organizing, or accepted into), and the ones
+/// I asked to join: pending while the group decides, or declined.
 class PlansScreen extends StatelessWidget {
   const PlansScreen({super.key, required this.onCreatePlan});
 
@@ -18,6 +19,7 @@ class PlansScreen extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final mine = store.myPlans;
     final waiting = store.waiting;
+    final declined = store.declined;
     Widget heading(String s) => Padding(
       padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
       child: Text(
@@ -29,13 +31,16 @@ class PlansScreen extends StatelessWidget {
       ),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Your plans')),
+      appBar: AppBar(
+        title: const Text('Your plans'),
+        actions: const [NoticesButton()],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
         label: const Text('New plan'),
         onPressed: onCreatePlan,
       ),
-      body: mine.isEmpty && waiting.isEmpty
+      body: mine.isEmpty && waiting.isEmpty && declined.isEmpty
           ? const EmptyState(
               icon: Icons.event_note_outlined,
               title: 'No plans yet',
@@ -48,8 +53,10 @@ class PlansScreen extends StatelessWidget {
               children: [
                 if (mine.isNotEmpty) heading('Climbing'),
                 for (final plan in mine) _PlanTile(plan: plan),
-                if (waiting.isNotEmpty) heading('Waiting for the group'),
-                for (final r in waiting) _WaitingTile(request: r),
+                if (waiting.isNotEmpty || declined.isNotEmpty)
+                  heading('Asked to join'),
+                for (final r in waiting) _RequestTile(request: r),
+                for (final r in declined) _RequestTile(request: r),
               ],
             ),
     );
@@ -119,7 +126,13 @@ class _PlanTile extends StatelessWidget {
                           ),
                         ),
                         if (plan.organizerId == store.me.id)
-                          const Tag('Organizing', color: Mountain.tan),
+                          const Tag('Organizing', color: Mountain.tan)
+                        else
+                          const Tag(
+                            'Accepted',
+                            icon: Icons.check,
+                            color: Mountain.olive,
+                          ),
                         if (toReview > 0)
                           Tag('$toReview to review', color: Mountain.sky),
                       ],
@@ -135,14 +148,17 @@ class _PlanTile extends StatelessWidget {
   }
 }
 
-class _WaitingTile extends StatelessWidget {
-  const _WaitingTile({required this.request});
+/// A plan I asked to join: pending, and who it's waiting for, or
+/// declined, which I can dismiss.
+class _RequestTile extends StatelessWidget {
+  const _RequestTile({required this.request});
 
   final JoinRequest request;
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final text = Theme.of(context).textTheme;
     final plan = store.plan(request.planId)!;
     final pending = [
       for (final id in plan.memberIds)
@@ -158,12 +174,35 @@ class _WaitingTile extends StatelessWidget {
           style: const TextStyle(fontSize: 24),
         ),
         title: Text(plan.title),
-        subtitle: Text(
-          '${plan.place} · ${dayLabel(plan.start)}\nWaiting for ${pending.join(', ')}',
-          style: const TextStyle(color: Mountain.granite),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              request.rejected
+                  ? '${plan.place} · ${dayLabel(plan.start)}\nThe group said no'
+                  : '${plan.place} · ${dayLabel(plan.start)}\nWaiting for ${pending.join(', ')}',
+              style: text.bodyMedium?.copyWith(color: Mountain.granite),
+            ),
+            const SizedBox(height: 6),
+            request.rejected
+                ? const Tag('Declined', icon: Icons.close, color: Mountain.clay)
+                : const Tag(
+                    'Pending',
+                    icon: Icons.hourglass_top,
+                    color: Mountain.sky,
+                  ),
+          ],
         ),
-        isThreeLine: true,
-        trailing: const Icon(Icons.hourglass_top, color: Mountain.sky),
+        trailing: request.rejected
+            ? IconButton(
+                tooltip: 'Dismiss',
+                icon: const Icon(Icons.close, color: Mountain.granite),
+                onPressed: () => store.dismiss(request.id),
+              )
+            : null,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute<void>(builder: (_) => PlanScreen(planId: plan.id)),
+        ),
       ),
     );
   }

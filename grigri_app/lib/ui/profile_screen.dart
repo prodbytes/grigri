@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_version.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'notices_screen.dart';
 import 'profile_editor.dart';
 
 /// My profile, as others see it on the Requests deck, with Edit.
@@ -18,6 +19,7 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Profile'),
         actions: [
+          const NoticesButton(),
           PopupMenuButton<String>(
             onSelected: (_) async {
               final sure = await showDialog<bool>(

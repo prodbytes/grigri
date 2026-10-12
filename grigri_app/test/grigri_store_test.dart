@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/seed.dart';
 import 'package:grigri_app/model/climbing.dart';
+import 'package:grigri_app/model/plan.dart';
 
 // The demo data's made-up climbers (lib/data/seed.dart), on a fixed Monday.
 final now = DateTime(2026, 10, 12, 10);
@@ -160,6 +161,65 @@ void main() {
     });
   });
 
+  group('answers that take a while', () {
+    late DateTime time;
+    GrigriStore slow() {
+      time = now;
+      return GrigriStore(
+        demoState(now),
+        clock: () => time,
+        answerAfter: const Duration(seconds: 10),
+      );
+    }
+
+    test('a request is pending, then accepted, with a notification', () {
+      final store = slow();
+      expect(store.like('siurana-saturday'), isNull);
+      expect(store.waiting.map((r) => r.planId), ['siurana-saturday']);
+      expect(store.settle(), isEmpty);
+
+      time = now.add(const Duration(seconds: 10));
+      final notices = store.settle();
+      expect(notices.single.kind, NoticeKind.accepted);
+      expect(notices.single.planTitle, 'Siurana sport day');
+      expect(store.waiting, isEmpty);
+      expect(store.myPlans.map((p) => p.id), contains('siurana-saturday'));
+      expect(store.unreadNotices, 1);
+      // The seeded one, from two days ago, comes last.
+      expect(store.notices.first.planId, 'siurana-saturday');
+
+      store.readNotices();
+      expect(store.unreadNotices, 0);
+    });
+
+    test('one member\'s no declines it, with a notification', () {
+      final store = slow();
+      store.updateProfile(
+        store.me.copyWith(
+          levels: {...store.me.levels}..remove(Discipline.trad),
+        ),
+      );
+      store.like('montserrat-multipitch');
+      time = now.add(const Duration(minutes: 1));
+      expect(store.settle().single.kind, NoticeKind.declined);
+      expect(store.waiting, isEmpty);
+      expect(store.declined.map((r) => r.planId), ['montserrat-multipitch']);
+
+      store.dismiss('montserrat-multipitch/me');
+      expect(store.declined, isEmpty);
+      expect(
+        store.discover.map((p) => p.id),
+        isNot(contains('montserrat-multipitch')),
+      );
+    });
+
+    test('nobody is notified of answers to others\' requests', () {
+      final store = slow()..reject('my-sunday-siurana/bruno');
+      store.accept('thursday-bouldering/noa');
+      expect(store.unreadNotices, 0);
+    });
+  });
+
   test('chat messages are kept in order, blank ones dropped', () {
     final store = demo()
       ..send('thursday-bouldering', '  See you there  ')
@@ -170,7 +230,10 @@ void main() {
   });
 
   test('the state survives a round trip through JSON', () {
-    final store = demo()..like('siurana-saturday');
+    final store = demo()
+      ..like('siurana-saturday')
+      ..like('margalef-project');
+    expect(store.unreadNotices, 1);
     final json = jsonEncode(store.state.toJson());
     final again = GrigriStore(
       GrigriState.fromJson((jsonDecode(json) as Map).cast()),

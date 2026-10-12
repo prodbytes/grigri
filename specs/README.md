@@ -18,8 +18,9 @@ Each match opens the plan's group chat.
 **App**
 
 - [Matching](matching.md): profiles and plans, the Discover and Requests
-  decks, the group's unanimous yes, matches and group chats; the demo data
-  and on-device storage, for now.
+  decks, the group's unanimous yes, my requests' status (pending, accepted,
+  declined), matches, notifications and group chats; the demo data and
+  on-device storage, for now.
 - [Screens](screens.md): the five tabs, the plan and profile editors, the
   match screen and the chat.
 - [Theme](theme.md): dark, in mountain colors.
