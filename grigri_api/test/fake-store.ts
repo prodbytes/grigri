@@ -1,6 +1,7 @@
 // An in-memory stand-in for Store with the same behavior the routes rely
 // on (version checks included), so the API's authorization and flows can be
 // tested without DynamoDB. The real Store is exercised against Floci.
+import type { SessionRecord } from '../src/auth.js';
 import type { Effects, Delivery } from '../src/domain/rules.js';
 import { type Climber, type JoinRequest, type Message, type Notice, isOpen } from '../src/domain/model.js';
 import { Conflict, type LoadedPlan, type Store, type VersionedPlan } from '../src/store/store.js';
@@ -13,9 +14,32 @@ export class FakeStore {
   passes = new Set<string>();
   noticeMap = new Map<string, Map<string, Notice>>();
   msgs: Message[] = [];
+  sessions = new Map<string, SessionRecord>();
+  /** Session writes (puts and slides), to check there's at most one a day. */
+  sessionWrites = 0;
 
   asStore(): Store {
     return this as unknown as Store;
+  }
+
+  async putSession(s: SessionRecord) {
+    if (this.sessions.has(s.id)) throw new Conflict('exists');
+    this.sessions.set(s.id, { ...s });
+    this.sessionWrites++;
+  }
+  async getSession(id: string) {
+    const s = this.sessions.get(id);
+    return s ? { ...s } : undefined;
+  }
+  async touchSession(id: string, previous: string, lastUsedAt: string, ttl: number) {
+    const s = this.sessions.get(id);
+    if (!s || s.lastUsedAt !== previous) return;
+    this.sessions.set(id, { ...s, lastUsedAt, ttl });
+    this.sessionWrites++;
+  }
+  async deleteSession(id: string) { this.sessions.delete(id); }
+  async deleteSessions(subject: string) {
+    for (const [id, s] of this.sessions) if (s.subject === subject) this.sessions.delete(id);
   }
 
   async climberIdFor(subject: string) { return this.subjects.get(subject); }

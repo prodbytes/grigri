@@ -30,7 +30,8 @@
     template into Floci (Lambda, HTTP API, DynamoDB, S3) and loads the
     made-up test data. Without `GOOGLE_WEB_CLIENT_ID` in `.env` the API
     runs in dev mode: callers name themselves with
-    `X-Grigri-Dev-User: <email>`; `GRIGRI_ADMIN_EMAILS` in `.env` lists
+    `X-Grigri-Dev-User: <email>`, or get a session from `POST /api/session`
+    with `{"devUser": "<email>"}`; `GRIGRI_ADMIN_EMAILS` in `.env` lists
     the local admins ([backend.md](backend.md)).
     HTTP on http://grigri.localhost:2114/app/ (`FLOCI_PORT`), HTTPS on
     **https://local.grigri.nu01.com:2543/app/** (`FLOCI_HTTPS_PORT`) and
