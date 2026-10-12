@@ -84,7 +84,11 @@ spec.
      and a no shows a note at the bottom.
    - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
      each person asking to join.
-6. **In the profile: a photo, a description, the climbs; no when or where
+6. **Make the age optional in the profile; don't show it when it's left
+   empty.** The profile editor's Age (optional) can be blank. A profile
+   without an age shows just the name ("Name" instead of "Name, 30") on
+   the decks, profile sheets and Profile.
+7. **In the profile: a photo, a description, the climbs; no when or where
    (that's for plans), and nothing under the picture (no home area or years
    climbing); the gear, with photos of it.**
    - [Profiles](matching.md#profiles-and-plans-are-separate) gain a photo

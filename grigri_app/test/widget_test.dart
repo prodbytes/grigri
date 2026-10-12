@@ -151,6 +151,24 @@ void main() {
     expect(find.text('Bruno Costa'), findsNothing);
   });
 
+  testWidgets('the age can be left out of the profile', (tester) async {
+    final store = await pumpApp(tester);
+    await tester.tap(find.text('Profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('You, 30'), findsOneWidget);
+    await tester.tap(find.text('Edit profile'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Age (optional)'),
+      '',
+    );
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    expect(store.me.age, isNull);
+    expect(find.text('You'), findsWidgets);
+    expect(find.text('You, 30'), findsNothing);
+  });
+
   testWidgets('a new plan shows up in Plans', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.text('Plans'));

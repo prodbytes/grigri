@@ -7,7 +7,8 @@ person, and a plan can take a whole group.
 ## Profiles and plans are separate
 
 - A **profile** ([Climber](../grigri_app/lib/model/climber.dart)) is about
-  the person: a **photo** (or their initials), name, age, a bio, and:
+  the person: a **photo** (or their initials), name, age (optional:
+  without it, cards show just the name), a bio, and:
   - **grades per discipline** (what they climb): sport, trad and gym on
     the French scale (4a–9a), bouldering on the V scale (VB–V13);
   - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car,

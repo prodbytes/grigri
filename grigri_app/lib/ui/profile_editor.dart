@@ -42,7 +42,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
   final _form = GlobalKey<FormState>();
   late final Climber _me = StoreScope.read(context).me;
   late final _name = TextEditingController(text: _me.name);
-  late final _age = TextEditingController(text: '${_me.age}');
+  late final _age = TextEditingController(text: '${_me.age ?? ''}');
   late final _bio = TextEditingController(text: _me.bio);
   late Uint8List? _photo = _me.photo;
   late final Map<Discipline, RangeValues> _levels = {
@@ -130,7 +130,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
     StoreScope.read(context).updateProfile(
       _me.copyWith(
         name: _name.text.trim(),
-        age: int.parse(_age.text.trim()),
+        age: int.tryParse(_age.text.trim()),
         bio: _bio.text.trim(),
         photo: _photo,
         clearPhoto: _photo == null,
@@ -208,10 +208,12 @@ class _ProfileEditorState extends State<ProfileEditor> {
             const SizedBox(height: 10),
             TextFormField(
               controller: _age,
-              decoration: const InputDecoration(labelText: 'Age'),
+              decoration: const InputDecoration(labelText: 'Age (optional)'),
               keyboardType: TextInputType.number,
               validator: (v) {
-                final age = int.tryParse((v ?? '').trim());
+                final text = (v ?? '').trim();
+                if (text.isEmpty) return null;
+                final age = int.tryParse(text);
                 return age == null || age < 16 || age > 99 ? '16 to 99' : null;
               },
             ),

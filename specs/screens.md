@@ -26,7 +26,8 @@ notifications bell, with a badge for unread ones.
   starting at my own grades), group size, notes. Title and place are
   required.
 - **Profile editor**: my photo (tap it: take a photo, where the device has
-  a camera, choose one, or remove it), name, age (16–99), about, per
+  a camera, choose one, or remove it), name, age (optional, 16–99
+  when given), about, per
   discipline a switch and a grade range, and gear: the gear chips, then
   its photos (✕ removes one, + adds one, up to 6).
 - **Match**: see [matching](matching.md#matches).

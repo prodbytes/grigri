@@ -236,6 +236,16 @@ void main() {
     expect(last.authorId, 'me');
   });
 
+  test('age is optional', () {
+    final store = demo()..updateProfile(demo().me.copyWith(age: null));
+    expect(store.me.age, isNull);
+    expect(store.me.nameAndAge, 'You');
+    final json = jsonEncode(store.state.toJson());
+    final again = GrigriState.fromJson((jsonDecode(json) as Map).cast());
+    expect(again.climbers['me']!.age, isNull);
+    expect(store.me.copyWith(age: 30).nameAndAge, 'You, 30');
+  });
+
   test('the state survives a round trip through JSON', () {
     final store = demo()
       ..like('siurana-saturday')

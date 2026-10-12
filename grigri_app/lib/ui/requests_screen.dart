@@ -190,7 +190,7 @@ class _PersonCard extends StatelessWidget {
             const SizedBox(height: 12),
             Center(
               child: Text(
-                '${person.name}, ${person.age}',
+                person.nameAndAge,
                 style: text.headlineSmall?.copyWith(
                   color: Mountain.sand,
                   fontWeight: FontWeight.w700,
