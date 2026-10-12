@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
-import 'match_screen.dart';
 import 'plan_editor.dart';
 
 /// One plan I'm in, or asked to join: the plan, its group, who's asking to
-/// join (to accept or turn down), and what I can do with it.
+/// join (answered in the group chat), and what I can do with it.
 class PlanScreen extends StatelessWidget {
   const PlanScreen({super.key, required this.planId});
 
@@ -114,31 +113,7 @@ class PlanScreen extends StatelessWidget {
                 ),
                 trailing: r.acceptedBy.contains(store.me.id)
                     ? const Tag('You said yes', color: Mountain.olive)
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            tooltip:
-                                'Decline ${store.climber(r.climberId).name}',
-                            icon: const Icon(Icons.close, color: Mountain.clay),
-                            onPressed: () => store.reject(r.id),
-                          ),
-                          IconButton(
-                            tooltip:
-                                'Accept ${store.climber(r.climberId).name}',
-                            icon: const Icon(
-                              Icons.check,
-                              color: Mountain.olive,
-                            ),
-                            onPressed: () {
-                              final match = store.accept(r.id);
-                              if (match != null) {
-                                MatchScreen.show(context, match);
-                              }
-                            },
-                          ),
-                        ],
-                      ),
+                    : const Tag('Answer in the chat', color: Mountain.sky),
                 onTap: () =>
                     showProfileSheet(context, store.climber(r.climberId)),
               ),

@@ -100,3 +100,17 @@ spec.
    - The [profile editor](screens.md) takes or picks the photos
      (image_picker, downsized as picked, kept on the device); iOS gains the
      camera and photo library usage strings ([platforms](platforms.md)).
+8. **No Requests tab: the tabs are Discover, Plans, Chats, Notifications
+   and Profile. Accepting or declining a join request happens inside the
+   group chat; when someone asks to join, notify the organizer and
+   everyone already in.**
+   - The Requests tab and its people deck are gone. Each request is a
+     card in the plan's group chat, with Accept / Decline and who has said
+     yes ([matching](matching.md#join-requests-in-the-group-chat)); one
+     decline still turns them down. Chats shows "N to answer", and its tab
+     badge counts them.
+   - Notifications is a tab (the bell on each tab's bar is gone). It adds
+     "<name> wants to join" for every member of the plan, which opens the
+     chat. A newcomer also hears of the requests still open.
+   - The plan screen no longer has ✓ / ✕; it points to the chat.
+   - Fixed: long chat notes overflowed their label instead of wrapping.

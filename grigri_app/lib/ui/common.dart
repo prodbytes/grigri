@@ -148,7 +148,10 @@ class Tag extends StatelessWidget {
             Icon(icon, size: 14, color: c),
             const SizedBox(width: 5),
           ],
-          Text(label, style: TextStyle(color: c, fontSize: 12.5)),
+          // Long labels (the chat's notes) wrap instead of overflowing.
+          Flexible(
+            child: Text(label, style: TextStyle(color: c, fontSize: 12.5)),
+          ),
         ],
       ),
     );

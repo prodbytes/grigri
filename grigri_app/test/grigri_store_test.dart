@@ -86,6 +86,35 @@ void main() {
   });
 
   group('reviewing requests', () {
+    test('each request is in its chat, and notifies the members', () {
+      final store = demo();
+      final card = store
+          .messages('thursday-bouldering')
+          .singleWhere((m) => m.requestId != null);
+      expect(card.requestId, 'thursday-bouldering/noa');
+      expect(card.text, 'Noa Levi asked to join');
+      expect(
+        store.notices
+            .where((n) => n.kind == NoticeKind.request)
+            .map((n) => n.id),
+        [
+          'my-sunday-siurana/request/bruno',
+          'thursday-bouldering/request/noa',
+          'my-sunday-siurana/request/ines',
+        ],
+      );
+      expect(store.unreadNotices, 3);
+    });
+
+    test('my own request goes in the group\'s chat, not my notifications', () {
+      final store = demo()..like('margalef-project');
+      expect(
+        store.messages('margalef-project').last.requestId,
+        'margalef-project/me',
+      );
+      expect(store.unreadNotices, 3);
+    });
+
     test('lists people asking to join plans I am in', () {
       final store = demo();
       expect(store.toReview.map((r) => r.id), [
@@ -191,8 +220,8 @@ void main() {
       expect(notices.single.planTitle, 'Siurana sport day');
       expect(store.waiting, isEmpty);
       expect(store.myPlans.map((p) => p.id), contains('siurana-saturday'));
-      expect(store.unreadNotices, 1);
-      // The seeded one, from two days ago, comes last.
+      // With the demo's three requests to join my plans.
+      expect(store.unreadNotices, 4);
       expect(store.notices.first.planId, 'siurana-saturday');
 
       store.readNotices();
@@ -223,7 +252,10 @@ void main() {
     test('nobody is notified of answers to others\' requests', () {
       final store = slow()..reject('my-sunday-siurana/bruno');
       store.accept('thursday-bouldering/noa');
-      expect(store.unreadNotices, 0);
+      expect(
+        store.notices.where((n) => n.kind != NoticeKind.request).length,
+        1,
+      );
     });
   });
 
@@ -250,7 +282,7 @@ void main() {
     final store = demo()
       ..like('siurana-saturday')
       ..like('margalef-project');
-    expect(store.unreadNotices, 1);
+    expect(store.unreadNotices, 4);
     final json = jsonEncode(store.state.toJson());
     final again = GrigriStore(
       GrigriState.fromJson((jsonDecode(json) as Map).cast()),

@@ -78,20 +78,43 @@ void main() {
     expect(find.text('Siurana sport day'), findsNothing);
   });
 
-  testWidgets('accepting the last missing yes in Requests matches the group', (
+  testWidgets('the tabs are Discover, Plans, Chats, Notifications, Profile', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    // They fit a narrow phone (an overflow fails the test).
+    tester.view.physicalSize = const Size(1080, 2280);
+    tester.view.devicePixelRatio = 3;
+    await tester.pumpAndSettle();
+    final labels = tester
+        .widgetList<NavigationDestination>(find.byType(NavigationDestination))
+        .map((d) => d.label);
+    expect(labels, ['Discover', 'Plans', 'Chats', 'Notifications', 'Profile']);
+  });
+
+  testWidgets('a request notification opens the chat, to accept there', (
     tester,
   ) async {
     final store = await pumpApp(tester);
-    await tester.tap(find.text('Requests'));
+    await tester.tap(find.text('Notifications'));
     await tester.pumpAndSettle();
-    expect(find.text('WANTS TO JOIN'), findsWidgets);
-    // Ines and Bruno for my plan first, then Noa for Thursday's.
-    await tester.tap(find.byTooltip('Decline'));
+    expect(find.text('Noa Levi wants to join'), findsOneWidget);
+    expect(store.unreadNotices, 0);
+    await tester.tap(find.text('Noa Levi wants to join'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Decline'));
-    await tester.pumpAndSettle();
-    expect(find.text('Noa Levi, 24'), findsOneWidget);
-    await tester.tap(find.byTooltip('Accept'));
+    final card = find.byKey(const ValueKey('request thursday-bouldering/noa'));
+    expect(
+      find.descendant(of: card, matching: find.text('Lena said yes')),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: card,
+        matching: find.text('Lena said yes · waiting for You'),
+      ),
+      findsOneWidget,
+    );
+    await tester.tap(find.descendant(of: card, matching: find.text('Accept')));
     await tester.pumpAndSettle();
     expect(find.text("It's a match!"), findsOneWidget);
     expect(store.plan('thursday-bouldering')!.memberIds, ['lena', 'me', 'noa']);
@@ -131,24 +154,35 @@ void main() {
     expect(find.text('Pending'), findsNothing);
     expect(find.text('Accepted'), findsNWidgets(2));
 
-    await tester.tap(find.byTooltip('Notifications').hitTestable());
+    await tester.tap(find.text('Notifications'));
     await tester.pumpAndSettle();
     expect(find.text("You're in: Siurana sport day"), findsOneWidget);
-    expect(find.text('New'), findsOneWidget);
+    // Mine, and the demo's three requests to join my plans.
+    expect(find.text('New'), findsNWidgets(4));
     expect(store.unreadNotices, 0);
   });
 
-  testWidgets('a member can decline from the plan', (tester) async {
+  testWidgets('one member declining in the chat turns them down', (
+    tester,
+  ) async {
     final store = await pumpApp(tester);
-    await tester.tap(find.text('Plans'));
+    await tester.tap(find.text('Chats'));
     await tester.pumpAndSettle();
+    expect(find.text('2 to answer'), findsOneWidget);
     await tester.tap(find.text('Sunday at Siurana'));
     await tester.pumpAndSettle();
-    expect(find.text('ASKING TO JOIN'), findsOneWidget);
-    await tester.tap(find.byTooltip('Decline Bruno Costa'));
+    final card = find.byKey(const ValueKey('request my-sunday-siurana/bruno'));
+    await tester.tap(find.descendant(of: card, matching: find.text('Decline')));
     await tester.pumpAndSettle();
     expect(store.state.requests['my-sunday-siurana/bruno']!.rejected, isTrue);
-    expect(find.text('Bruno Costa'), findsNothing);
+    expect(
+      find.descendant(of: card, matching: find.text('Declined')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: card, matching: find.text('Accept')),
+      findsNothing,
+    );
   });
 
   testWidgets('the age can be left out of the profile', (tester) async {

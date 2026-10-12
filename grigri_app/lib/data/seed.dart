@@ -232,6 +232,14 @@ GrigriState demoState(DateTime now) {
       acceptedBy: {'lena'},
     ),
   ];
+  // When each asked: their card in the chat, and my notification.
+  final asked = {
+    'my-sunday-siurana/ines': now.subtract(const Duration(hours: 20)),
+    'my-sunday-siurana/bruno': now.subtract(const Duration(hours: 3)),
+    'thursday-bouldering/noa': now.subtract(const Duration(hours: 6)),
+  };
+  String name(String id) => climbers.firstWhere((c) => c.id == id).name;
+  String title(String id) => plans.firstWhere((p) => p.id == id).title;
 
   final thursday = plans.last.start;
   final messages = [
@@ -252,7 +260,7 @@ GrigriState demoState(DateTime now) {
       authorId: 'lena',
       text:
           'Meet at the entrance at ${thursday.hour}:00? '
-          'Noa asked to join too, have a look in Requests.',
+          'Noa asked to join too, say yes if you\'re in.',
       time: now.subtract(const Duration(hours: 5)),
     ),
     Message(
@@ -261,6 +269,14 @@ GrigriState demoState(DateTime now) {
       text: 'You created the plan. People who match will show up here.',
       time: now.subtract(const Duration(days: 1)),
     ),
+    for (final r in requests)
+      Message(
+        planId: r.planId,
+        authorId: null,
+        text: '${name(r.climberId)} asked to join',
+        time: asked[r.id]!,
+        requestId: r.id,
+      ),
   ];
 
   return GrigriState(
@@ -287,6 +303,14 @@ GrigriState demoState(DateTime now) {
         time: now.subtract(const Duration(days: 2)),
         read: true,
       ),
+      for (final r in requests)
+        Notice(
+          kind: NoticeKind.request,
+          planId: r.planId,
+          planTitle: title(r.planId),
+          climberId: r.climberId,
+          time: asked[r.id]!,
+        ),
     ],
   );
 }

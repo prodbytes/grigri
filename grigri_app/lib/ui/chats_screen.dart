@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
-import 'notices_screen.dart';
 
-/// The group chats: one per plan I'm in, most recent first.
+/// The group chats: one per plan I'm in, most recent first, with how many
+/// join requests in each wait for my answer.
 class ChatsScreen extends StatelessWidget {
   const ChatsScreen({super.key});
 
@@ -22,11 +22,10 @@ class ChatsScreen extends StatelessWidget {
           final tb = b.last?.time ?? b.plan.start;
           return tb.compareTo(ta);
         });
+    int toAnswer(String planId) =>
+        store.toReview.where((r) => r.planId == planId).length;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Chats'),
-        actions: const [NoticesButton()],
-      ),
+      appBar: AppBar(title: const Text('Chats')),
       body: chats.isEmpty
           ? const EmptyState(
               icon: Icons.forum_outlined,
@@ -70,9 +69,25 @@ class ChatsScreen extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Mountain.granite),
                   ),
-                  trailing: Text(
-                    dayLabel(plan.start),
-                    style: text.labelSmall?.copyWith(color: Mountain.granite),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        dayLabel(plan.start),
+                        style: text.labelSmall?.copyWith(
+                          color: Mountain.granite,
+                        ),
+                      ),
+                      if (toAnswer(plan.id) > 0) ...[
+                        const SizedBox(height: 4),
+                        Badge(
+                          label: Text('${toAnswer(plan.id)} to answer'),
+                          backgroundColor: Mountain.sky,
+                          textColor: Mountain.night,
+                        ),
+                      ],
+                    ],
                   ),
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute<void>(
