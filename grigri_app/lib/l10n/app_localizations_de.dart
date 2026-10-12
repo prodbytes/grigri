@@ -164,19 +164,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signInWithGoogle => 'Mit Google anmelden';
 
   @override
-  String get devSignInHeading => 'Dev-Anmeldung · nur lokale API';
-
-  @override
-  String get emailLabel => 'E-Mail';
-
-  @override
-  String get devSignIn => 'Dev-Anmeldung';
-
-  @override
-  String get signInUnconfigured =>
-      'Die Anmeldung ist in diesem Build nicht eingerichtet (keine Google-Client-ID).';
-
-  @override
   String get tabDiscover => 'Entdecken';
 
   @override

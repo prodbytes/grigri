@@ -370,30 +370,6 @@ abstract class AppLocalizations {
   /// **'Sign in with Google'**
   String get signInWithGoogle;
 
-  /// Heading over the developer sign-in form (local builds only).
-  ///
-  /// In en, this message translates to:
-  /// **'Dev sign-in · local API only'**
-  String get devSignInHeading;
-
-  /// Label of the email field.
-  ///
-  /// In en, this message translates to:
-  /// **'Email'**
-  String get emailLabel;
-
-  /// Button: developer sign-in (local builds only).
-  ///
-  /// In en, this message translates to:
-  /// **'Dev sign-in'**
-  String get devSignIn;
-
-  /// Shown when the build has no Google client ID.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign-in isn\'t set up in this build (no Google client ID).'**
-  String get signInUnconfigured;
-
   /// Bottom tab: the deck of plans to join.
   ///
   /// In en, this message translates to:

@@ -6,9 +6,7 @@ import '../theme.dart';
 import 'common.dart';
 import 'google_button/google_button.dart';
 
-/// The sign-in screen: Google only (Google's own button on the web), or,
-/// in a local build without a Google client ID, the local API's dev
-/// sign-in with an email.
+/// The sign-in screen: Google only (Google's own button on the web).
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -17,18 +15,11 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  final _email = TextEditingController();
   bool _busy = false;
-
-  @override
-  void dispose() {
-    _email.dispose();
-    super.dispose();
-  }
 
   Future<void> _signIn(Auth auth) async {
     setState(() => _busy = true);
-    await auth.signIn(devEmail: _email.text);
+    await auth.signIn();
     if (mounted) setState(() => _busy = false);
   }
 
@@ -74,7 +65,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 40),
-                      ..._buttons(auth, text),
+                      ..._buttons(auth),
                       if (auth.error case final error?) ...[
                         const SizedBox(height: 16),
                         Text(
@@ -97,7 +88,7 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  List<Widget> _buttons(Auth auth, TextTheme text) {
+  List<Widget> _buttons(Auth auth) {
     final l = context.l10n;
     return switch (auth.mode) {
       SignInMode.google => [
@@ -115,41 +106,6 @@ class _SignInScreenState extends State<SignInScreen> {
       ],
       SignInMode.googleWebButton => [
         SizedBox(height: 50, child: googleWebButton()),
-      ],
-      SignInMode.dev => [
-        Text(
-          l.devSignInHeading.toUpperCase(),
-          style: text.labelSmall?.copyWith(
-            color: Mountain.tan,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _email,
-          keyboardType: TextInputType.emailAddress,
-          autocorrect: false,
-          decoration: InputDecoration(
-            labelText: l.emailLabel,
-            hintText: 'someone@example.com',
-          ),
-          onSubmitted: (_) => _signIn(auth),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: _busy ? null : () => _signIn(auth),
-            child: Text(l.devSignIn),
-          ),
-        ),
-      ],
-      SignInMode.unconfigured => [
-        Text(
-          l.signInUnconfigured,
-          style: const TextStyle(color: Mountain.clay),
-          textAlign: TextAlign.center,
-        ),
       ],
     };
   }

@@ -26,12 +26,10 @@ Future<void> main() async {
     headers: () => auth.headers(),
   );
   auth = SessionAuth(
-    method: AppConfig.devSignIn
-        ? DevSignInMethod()
-        : GoogleSignInMethod(
-            webClientId: AppConfig.googleWebClientId,
-            iosClientId: AppConfig.googleIosClientId,
-          ),
+    method: GoogleSignInMethod(
+      webClientId: AppConfig.googleWebClientId,
+      iosClientId: AppConfig.googleIosClientId,
+    ),
     sessions: api,
     storage: SessionStorage.device(),
   );

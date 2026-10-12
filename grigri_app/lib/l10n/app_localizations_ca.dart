@@ -162,19 +162,6 @@ class AppLocalizationsCa extends AppLocalizations {
   String get signInWithGoogle => 'Inicia la sessió amb Google';
 
   @override
-  String get devSignInHeading => 'Accés de desenvolupament · només API local';
-
-  @override
-  String get emailLabel => 'Correu electrònic';
-
-  @override
-  String get devSignIn => 'Accés de desenvolupament';
-
-  @override
-  String get signInUnconfigured =>
-      'L\'inici de sessió no està configurat en aquesta versió (no hi ha ID de client de Google).';
-
-  @override
   String get tabDiscover => 'Descobreix';
 
   @override

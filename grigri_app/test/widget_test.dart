@@ -57,36 +57,7 @@ void main() {
     ) async {
       await pumpApp(tester, sampleApi(), signedIn: false);
       expect(find.text('Sign in with Google'), findsOneWidget);
-      expect(find.text('Dev sign-in'), findsNothing);
       expect(find.byType(NavigationBar), findsNothing);
-    });
-
-    testWidgets('a build without a client ID says sign-in is not set up', (
-      tester,
-    ) async {
-      await pumpApp(
-        tester,
-        sampleApi(),
-        signedIn: false,
-        mode: SignInMode.unconfigured,
-      );
-      expect(find.textContaining('Sign-in isn\'t set up'), findsOneWidget);
-      expect(find.text('Sign in with Google'), findsNothing);
-    });
-
-    testWidgets('the local dev sign-in takes an email', (tester) async {
-      final api = sampleApi();
-      final store = await pumpApp(
-        tester,
-        api,
-        signedIn: false,
-        mode: SignInMode.dev,
-      );
-      await tester.enterText(find.byType(TextField), 'pat@example.com');
-      await tester.tap(find.text('Dev sign-in'));
-      await tester.pumpAndSettle();
-      expect(store.auth.user!.email, 'pat@example.com');
-      expect(find.text('Discover plans'), findsOneWidget);
     });
 
     testWidgets('the first sign-in creates the profile before the tabs', (

@@ -161,19 +161,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get signInWithGoogle => 'Iniciar sessão com o Google';
 
   @override
-  String get devSignInHeading => 'Acesso de desenvolvimento · só API local';
-
-  @override
-  String get emailLabel => 'E-mail';
-
-  @override
-  String get devSignIn => 'Acesso de desenvolvimento';
-
-  @override
-  String get signInUnconfigured =>
-      'O início de sessão não está configurado nesta versão (sem ID de cliente Google).';
-
-  @override
   String get tabDiscover => 'Descobrir';
 
   @override

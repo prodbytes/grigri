@@ -160,19 +160,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get signInWithGoogle => 'Se connecter avec Google';
 
   @override
-  String get devSignInHeading => 'Connexion dev · API locale uniquement';
-
-  @override
-  String get emailLabel => 'E-mail';
-
-  @override
-  String get devSignIn => 'Connexion dev';
-
-  @override
-  String get signInUnconfigured =>
-      'La connexion n\'est pas configurée dans cette version (pas d\'identifiant client Google).';
-
-  @override
   String get tabDiscover => 'Découvrir';
 
   @override

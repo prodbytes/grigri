@@ -111,11 +111,11 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   };
 
   @override
-  Future<String> createSession({String? idToken, String? devUser}) async {
+  Future<String> createSession({required String idToken}) async {
     final json = await _send(
       'POST',
       ['session'],
-      body: {'idToken': ?idToken, 'devUser': ?devUser},
+      body: {'idToken': idToken},
       auth: const {},
     );
     final token = json['token'];
