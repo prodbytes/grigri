@@ -34,7 +34,7 @@ services:
       GRIGRI_ORIGIN_HOST: ${GRIGRI_ORIGIN_HOST:-dev.grigri.localhost}
       GRIGRI_CDN_ALIAS: ${GRIGRI_CDN_ALIAS:-grigri.localhost}
       GRIGRI_PUBLIC_HOST: ${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}
-      FLUTTER_WEB_PORT: ${FLUTTER_WEB_PORT:-2112}
+      FLUTTER_WEB_PORT: ${FLUTTER_WEB_PORT:-7189}
       INDEX_PORT: ${INDEX_PORT:-2113}
       # Not FLOCI_PORT or FLOCI_HTTPS_PORT: Floci reads FLOCI_PORT as its own
       # listen port. The host ports are only in the port mappings above.

@@ -23,7 +23,7 @@ ALIAS="${GRIGRI_CDN_ALIAS:-grigri.localhost}"
 # A public name for the same machine (A record to 127.0.0.1 in Route 53), for
 # origins that must end in a public TLD, such as Google sign-in's.
 PUBLIC_HOST="${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}"
-WEB_PORT="${FLUTTER_WEB_PORT:-2112}"
+WEB_PORT="${FLUTTER_WEB_PORT:-7189}"
 INDEX_PORT="${INDEX_PORT:-2113}"
 
 cache_policy=$(aws cloudfront create-cache-policy \

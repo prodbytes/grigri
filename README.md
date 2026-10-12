@@ -36,7 +36,7 @@ Inside the container (or any machine with [Devbox](https://www.jetify.com/devbox
 
 ```bash
 devbox shell              # enter the environment
-devbox services up        # web app on http://localhost:2112/app/, HTTPS on https://local.grigri.nu01.com:2543/app/
+devbox services up        # web app on http://localhost:7189/app/, HTTPS on https://local.grigri.nu01.com:2543/app/
 devbox run android        # run on the Android phone attached by USB
 make                      # build every platform this host can (see the Makefile)
 ```
@@ -61,7 +61,7 @@ Private settings (deploy targets) live in the private
   with its icon, label and status:
 
 ```
-🧗 Grigri: http://localhost:2112/app/
+🧗 Grigri: http://localhost:7189/app/
 🏠 index:  http://localhost:2113/ (redirects to the app)
 🔒 HTTPS:  https://local.grigri.nu01.com:2543/app/ (through Floci's CloudFront)
 2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅
