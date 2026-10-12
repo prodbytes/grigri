@@ -262,3 +262,16 @@ spec.
       travel to the API in that shape (no spots, nothing is ever full),
       and the callout's ✕ / ✓ call the API like the request cards.
     - Every tab has an [empty state](screens.md) with what to do next.
+19. **Merge it all to main; publish a new rbacr image.**
+    - The open stack merged into `main`: the scaffold, local HTTPS with
+      the backend API, the mountain theme and icons, cost first, and
+      matchmaking (the app on the API, with sign-in and the roles card).
+      Merged together: the deploy workflows pass `GOOGLE_WEB_CLIENT_ID`
+      (to the app and the API) and `GRIGRI_ADMIN_EMAILS`; the CSP keeps
+      sign-in, the API and photo uploads; `devbox services up` runs Floci,
+      the API and the local rbacr side by side (web on 7189), and rbacr's
+      CORS allows the web app directly and through Floci's HTTPS
+      ([development environment](dev-environment.md)).
+    - `prodbytes/rbacr-local` republished (amd64 and arm64,
+      `0.1.202610121814` and `latest`) from rbacr's main, so the local
+      rbacr answers the web app's CORS preflights.
