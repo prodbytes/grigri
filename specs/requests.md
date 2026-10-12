@@ -44,3 +44,7 @@ spec.
      ([grigri_infra/README.md](../grigri_infra/README.md)). Google sign-in
      clients have no API, so they're made in the Google Cloud console; the
      app doesn't sign in yet.
+5. **Make cost the most important perspective in design.** CLAUDE.md now
+   says: serverless services with minimal cost; between services or
+   libraries, the least costly one that meets the requirements; and say
+   what a new cloud resource costs.
