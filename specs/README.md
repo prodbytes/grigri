@@ -20,7 +20,11 @@ Each match opens the plan's group chat.
 - [Matching](matching.md): profiles and plans, the Discover deck,
   join requests answered in the group chat, the group's unanimous yes, my requests' status (pending, accepted,
   declined), matches, notifications and group chats; the data, all from
-  the backend API (GA starts empty), and polling.
+  the backend API (GA starts empty), and refreshing it.
+- [Live updates](live-updates.md): push over MQTT (AWS IoT Core) while the
+  app is open: the API's hints, the custom authorizer that keeps each
+  climber to their own topic, reconnecting, and polling as a slow safety
+  net.
 - [Sign-in](sign-in.md): Google only, per platform; creating the profile
   after the first sign-in; the local dev sign-in; admins.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
@@ -40,7 +44,8 @@ Each match opens the plan's group chat.
 
 - [Backend](backend.md): the API, its DynamoDB table and photos bucket;
   production empty and real, RC and local seeded with made-up data;
-  sign-in sessions (365 days without use); admins; local dev mode; costs.
+  sign-in sessions (365 days without use); admins; local dev mode; live
+  updates' IoT Core pieces; costs.
 - [API](api.md): the routes and JSON shapes the app uses, and sessions.
 
 **Development and operations**

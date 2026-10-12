@@ -8,6 +8,7 @@ import '../model/climber.dart';
 import '../model/plan.dart';
 import 'api.dart';
 import 'auth.dart';
+import 'realtime.dart';
 
 /// The headers that say who's calling: the API's session token as a
 /// bearer token. Empty when signed out.
@@ -135,6 +136,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
 
   @override
   Future<Me> me() async => ApiJson.me(await _get(['me']));
+
+  @override
+  Future<RealtimeInfo?> realtime() async =>
+      RealtimeInfo.fromJson(await _get(['realtime']));
 
   @override
   Future<Climber> saveMe(Climber profile) async =>

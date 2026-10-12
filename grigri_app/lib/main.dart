@@ -7,6 +7,7 @@ import 'config.dart';
 import 'data/auth.dart';
 import 'data/grigri_store.dart';
 import 'data/http_api.dart';
+import 'data/mqtt_transport.dart';
 import 'data/preferences.dart';
 import 'data/roles.dart';
 import 'data/session_storage.dart';
@@ -39,6 +40,7 @@ Future<void> main() async {
     api: api,
     auth: auth,
     preferences: await Preferences.open(),
+    realtime: const MqttRealtimeTransport(),
   );
   runApp(GrigriApp(store: store, roles: Roles.fromSettings()));
   unawaited(store.start());
