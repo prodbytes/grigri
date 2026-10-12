@@ -397,7 +397,14 @@ spec.
       Release of non-GA tags use the repository variables
       `GOOGLE_WEB_CLIENT_ID_RC` and `GOOGLE_IOS_CLIENT_ID_RC`; Deploy and
       GA releases keep `GOOGLE_WEB_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID`.
-26. **Health alarms to julio+health@nu01.com; let rbacr handle roles.**
+26. **The web favicon.** The site root's redirect page
+    (`grigri_index/site/index.html`) had no favicon, so `/` showed the
+    browser's default until it reached `/app/`.
+    - [Platforms](platforms.md): the root page now links
+      `grigri_index/site/favicon.png`, a copy of the app's favicon (the
+      grigri icon); regenerating the icon includes copying it there. The
+      root's CSP already allows images from the site.
+27. **Health alarms to julio+health@nu01.com; let rbacr handle roles.**
     - [Roles](roles.md), [API](api.md): who is an admin is rbacr's
       answer (`POST /api/check`, system `grigri`, role `admin`; roots
       too), asked with an rbacr root's API token, kept 60 s, failing

@@ -3,7 +3,9 @@
 The site root. Its only page, [site/index.html](site/index.html), sends
 visitors to the app at `/app/`: a script redirect (`location.replace`,
 keeping any query string), a `meta refresh` for browsers without
-JavaScript, and a plain link as a last resort.
+JavaScript, and a plain link as a last resort. Its favicon,
+[site/favicon.png](site/favicon.png), is a copy of the app's
+(`grigri_app/web/favicon.png`); copy it again when the icon changes.
 
 Only [site/](site) is served, so this README isn't.
 
