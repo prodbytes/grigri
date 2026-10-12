@@ -21,14 +21,21 @@ class ProfileScreen extends StatelessWidget {
         actions: [
           PopupMenuButton<String>(
             tooltip: 'More',
-            onSelected: (_) async {
+            onSelected: (choice) async {
+              final everywhere = choice == 'signOutEverywhere';
               final sure = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Sign out?'),
-                  content: const Text(
-                    'Your profile, plans and chats stay saved; sign back in '
-                    'to see them.',
+                  title: Text(
+                    everywhere ? 'Sign out everywhere?' : 'Sign out?',
+                  ),
+                  content: Text(
+                    everywhere
+                        ? 'Signs you out on every phone and browser you '
+                              'signed in on, this one too. Your profile, '
+                              'plans and chats stay saved.'
+                        : 'Your profile, plans and chats stay saved; sign '
+                              'back in to see them.',
                   ),
                   actions: [
                     TextButton(
@@ -37,15 +44,22 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Sign out'),
+                      child: Text(
+                        everywhere ? 'Sign out everywhere' : 'Sign out',
+                      ),
                     ),
                   ],
                 ),
               );
-              if (sure == true) await store.signOut();
+              if (sure != true) return;
+              await (everywhere ? store.signOutEverywhere() : store.signOut());
             },
             itemBuilder: (_) => const [
               PopupMenuItem(value: 'signOut', child: Text('Sign out')),
+              PopupMenuItem(
+                value: 'signOutEverywhere',
+                child: Text('Sign out everywhere'),
+              ),
             ],
           ),
         ],

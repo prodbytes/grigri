@@ -1,24 +1,65 @@
 # Sign-in
 
-People sign in with **Google only**. The app sends the Google **ID token**
-with every API call (`Authorization: Bearer <token>`), and the API checks
-it: issuer `https://accounts.google.com`, audience the Google **web**
-client ID, on every platform ([api.md](api.md)). The app never logs a
-token.
+People sign in with **Google only**, then stay signed in with the API's
+own **session**: the Google ID token is used once, to start it.
+
+- After Google sign-in (Google's button on the web, the app's on Android
+  and iOS), the app calls `POST /api/session` with `{"idToken"}`. The API
+  checks the token (issuer `https://accounts.google.com`, audience the
+  Google **web** client ID, on every platform; [api.md](api.md)) and
+  answers a session token.
+- The app keeps the session token on the device and sends
+  `Authorization: Bearer <session token>` on every API call. It doesn't
+  ask Google again until the API says 401 or the person signs out.
+- A session lasts **until sign-out, or 365 days without use**. It slides:
+  each day it's used pushes the 365 days forward; there's no absolute
+  limit.
+- The app never logs a token, and never puts one in a URL.
+
+## Where the session is kept
+
+Behind a small interface (`SessionStorage`,
+[session_storage.dart](../grigri_app/lib/data/session_storage.dart);
+tests use an in-memory one):
+
+| | Android | iOS | Web |
+|---|---|---|---|
+| Storage | flutter_secure_storage: encrypted with a Keystore key | flutter_secure_storage: the Keychain, readable after first unlock, this device only (never synced or restored elsewhere) | the site's local storage (shared_preferences) |
+
+On the web, any script running on the page could read local storage, so
+an XSS bug could steal a session (until it's signed out everywhere, or
+unused for a year). The site's strict CSP (scripts only from the site, Flutter's
+CanvasKit and Google Identity Services) is what guards it.
 
 ## The flow
 
-1. **Sign-in screen** ([sign_in_screen.dart](../grigri_app/lib/ui/sign_in_screen.dart)):
-   the app's name and tagline, and the sign-in button. At start the app
-   signs back in quietly when it can (google_sign_in's lightweight
-   authentication).
+1. **Start**: with a kept session the app goes straight to step 2, with
+   no Google round-trip. Without one, the **sign-in screen**
+   ([sign_in_screen.dart](../grigri_app/lib/ui/sign_in_screen.dart)):
+   the app's name and tagline, and the sign-in button. (Without a kept
+   session, the app also tries google_sign_in's lightweight
+   authentication at start, and starts a session if Google answers.)
 2. `GET /api/me`: my profile, or none yet, and whether I'm an admin.
 3. No profile yet: **Create your profile** (the profile editor) before
    the tabs; saving it (`PUT /api/me`) opens the tabs.
-4. The tabs. **Sign out** is in the Profile tab's ⋯ menu (and in Create
-   your profile's). Signing out, or a 401 the app can't recover from
-   (on Android and iOS it first tries a fresh token quietly), goes back
-   to the sign-in screen and forgets everything loaded.
+4. The tabs.
+
+## Signing out
+
+- **Sign out**, in the Profile tab's ⋯ menu (and in Create your
+  profile's), after a confirmation: `DELETE /api/session` (best effort:
+  signed out on the device even when the API can't be told), the kept
+  token is forgotten, and the app signs out of Google.
+- **Sign out everywhere**, in the Profile tab's ⋯ menu, after a
+  confirmation: `DELETE /api/sessions` ends all my sessions, on every
+  phone and browser, then this device signs out as above. If the API
+  can't be told, the app stays signed in and says so.
+- **A 401** from any call (`{"error": "signed out"}`: the session ended,
+  was signed out everywhere, or went a year unused): the token is
+  forgotten, the app signs out of Google, says "Signed out: please sign
+  in again." and goes back to the sign-in screen.
+
+Signing out forgets everything loaded.
 
 ## Per platform
 
@@ -55,8 +96,9 @@ sign-in isn't set up.
 
 A **local** build (`GRIGRI_STAGE` empty or `local`) **without**
 `GOOGLE_WEB_CLIENT_ID`, whose API isn't one of the deployed sites, shows
-**Dev sign-in** instead: an email, sent as `X-Grigri-Dev-User: <email>`
-instead of a token, for the local API's dev mode. RC and production
+**Dev sign-in** instead: an email, sent once as
+`POST /api/session` `{"devUser": "<email>"}` for the local API's dev
+mode, then the session token like everyone else. RC and production
 builds can't show it (they have a stage), and the deployed APIs refuse
 dev mode anyway.
 
