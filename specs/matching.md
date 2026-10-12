@@ -147,7 +147,7 @@ update, leave, send, save the profile, and the admin's approve and
 reject), which call the API and update the cache with the answers. A
 failed action shows the server's message at the bottom of the screen; a
 401 tries fresh credentials once, then signs out; a 409 "no profile"
-goes back to creating one.
+loads my profile again (`GET /api/me`, which makes a new one).
 
 - **Production (GA) starts empty**: only real people's profiles and plans.
   RC and local get made-up climbers and plans from the backend's seed

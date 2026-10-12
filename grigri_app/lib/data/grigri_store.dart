@@ -31,9 +31,6 @@ enum Phase {
   /// Signed in, loading my profile.
   loading,
 
-  /// Signed in without a profile: "Create your profile" first.
-  needsProfile,
-
   /// The tabs.
   ready,
 
@@ -215,19 +212,22 @@ class GrigriStore extends ChangeNotifier {
     _announced.clear();
   }
 
-  /// Loads my profile (`GET /api/me`), then everything else.
+  /// Loads my profile (`GET /api/me`, which creates it from my Google
+  /// account the first time), then everything else.
   Future<void> loadMe() async {
     _phase = Phase.loading;
     loadError = null;
     notifyListeners();
     try {
       final me = await _call(api.me);
+      final climber = me.climber;
+      if (climber == null) throw const ApiException(409, 'no profile');
       _admin = me.admin;
-      _me = me.climber;
-      if (me.climber case final c?) _climbers[c.id] = c;
-      _phase = me.climber == null ? Phase.needsProfile : Phase.ready;
+      _me = climber;
+      _climbers[climber.id] = climber;
+      _phase = Phase.ready;
       notifyListeners();
-      if (_phase == Phase.ready) await refreshAll();
+      await refreshAll();
     } on ApiException catch (e) {
       if (_phase == Phase.signedOut || e.status == _stale) return;
       loadError = _describe(e);
@@ -247,9 +247,6 @@ class GrigriStore extends ChangeNotifier {
     }
   }
 
-  /// The name to start a new profile with: Google's, when there is one.
-  String get suggestedName => auth.user?.name ?? '';
-
   // --- Reading -----------------------------------------------------------
 
   bool get admin => _admin;
@@ -258,7 +255,6 @@ class GrigriStore extends ChangeNotifier {
   /// out after a sign-out still build).
   Climber get me => _me ?? const Climber(id: '', name: '');
 
-  Climber? get meOrNull => _me;
 
   /// Someone, as far as the app knows them.
   Climber climber(String id) =>
@@ -367,11 +363,8 @@ class GrigriStore extends ChangeNotifier {
         await auth.signedOut();
         rethrow;
       }
-      if (e.noProfile && _phase == Phase.ready) {
-        _me = null;
-        _phase = Phase.needsProfile;
-        notifyListeners();
-      }
+      // My profile went missing: loading it again makes a new one.
+      if (e.noProfile && _phase == Phase.ready) unawaited(loadMe());
       rethrow;
     }
   }
@@ -715,15 +708,9 @@ class GrigriStore extends ChangeNotifier {
     if (saved == null) return false;
     _me = saved;
     _climbers[saved.id] = saved;
-    if (_phase == Phase.needsProfile) {
-      _phase = Phase.ready;
-      notifyListeners();
-      unawaited(refreshAll());
-    } else {
-      notifyListeners();
-      // My grades, location and areas rank the deck.
-      unawaited(refreshDiscover());
-    }
+    notifyListeners();
+    // My grades, location and areas rank the deck.
+    unawaited(refreshDiscover());
     return true;
   }
 

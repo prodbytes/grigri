@@ -39,15 +39,16 @@ CanvasKit and Google Identity Services) is what guards it.
    the app's name and tagline, and the sign-in button. (Without a kept
    session, the app also tries google_sign_in's lightweight
    authentication at start, and starts a session if Google answers.)
-2. `GET /api/me`: my profile, or none yet, and whether I'm an admin.
-3. No profile yet: **Create your profile** (the profile editor) before
-   the tabs; saving it (`PUT /api/me`) opens the tabs.
-4. The tabs.
+2. `GET /api/me`: my profile, and whether I'm an admin. The first time,
+   the API creates the profile from my Google account: its name (as the
+   session kept it from the ID token), the rest empty. No step to fill it
+   in: signing in is enough.
+3. The tabs. I fill in the rest (photo, age, about, grades, gear, where I
+   climb) when I like, with **Edit profile** on the Profile tab.
 
 ## Signing out
 
-- **Sign out**, in the Profile tab's ⋯ menu (and in Create your
-  profile's), after a confirmation: `DELETE /api/session` (best effort:
+- **Sign out**, in the Profile tab's ⋯ menu, after a confirmation: `DELETE /api/session` (best effort:
   signed out on the device even when the API can't be told), the kept
   token is forgotten, and the app signs out of Google.
 - **Sign out everywhere**, in the Profile tab's ⋯ menu, after a

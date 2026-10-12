@@ -21,8 +21,9 @@ Each match opens the plan's group chat.
   join requests answered in the group chat, the group's unanimous yes, my requests' status (pending, accepted,
   declined), matches, notifications and group chats; the data, all from
   the backend API (GA starts empty), and polling.
-- [Sign-in](sign-in.md): Google only, per platform; creating the profile
-  after the first sign-in; the local dev sign-in; admins.
+- [Sign-in](sign-in.md): Google only, per platform; the profile made
+  from the Google account at the first sign-in; the local dev sign-in;
+  admins.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
 - [Sectors](sectors.md): the searchable index of climbing sectors, crags

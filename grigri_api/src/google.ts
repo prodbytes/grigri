@@ -16,6 +16,8 @@ export interface GoogleIdentity {
   /** Lowercased; only when Google says it's verified. */
   email?: string;
   emailVerified: boolean;
+  /** The account's name (the `name` claim), when Google gives one: a new profile starts with it. */
+  name?: string;
 }
 
 export type IdTokenVerifier = (idToken: string) => Promise<GoogleIdentity>;
@@ -58,12 +60,20 @@ export function googleVerifier(audience: string, keys: JWTVerifyGetKey = googleK
     }
     const verified = payload.email_verified === true || payload.email_verified === 'true';
     const email = verified && typeof payload.email === 'string' ? payload.email.toLowerCase() : undefined;
+    const name = typeof payload.name === 'string' ? profileName(payload.name) : undefined;
     return {
       // One spelling, the one the HTTP API's authorizer used before, so
       // existing sign-in links (SUB#<subject>) still match.
       subject: `https://accounts.google.com#${payload.sub}`,
       ...(email ? { email } : {}),
       emailVerified: email !== undefined,
+      ...(name ? { name } : {}),
     };
   };
+}
+
+/** A name fit for a profile (1 to 60 characters, as PUT /api/me takes), or undefined. */
+export function profileName(raw: string): string | undefined {
+  const name = [...raw.replace(/\s+/g, ' ').trim()].slice(0, 60).join('').trim();
+  return name.length > 0 ? name : undefined;
 }

@@ -44,6 +44,14 @@ describe('googleVerifier', () => {
     expect(await verify(await idToken({}, { iss: 'accounts.google.com' }))).toEqual(expected);
   });
 
+  it('keeps the account name, tidied, for a new profile', async () => {
+    const verify = googleVerifier(AUD, jwks);
+    expect((await verify(await idToken({ name: '  Ada   Example ' }))).name).toBe('Ada Example');
+    expect((await verify(await idToken({ name: 'x'.repeat(80) }))).name).toBe('x'.repeat(60));
+    expect(await verify(await idToken({ name: '   ' }))).not.toHaveProperty('name');
+    expect(await verify(await idToken({ name: 42 }))).not.toHaveProperty('name');
+  });
+
   it('drops an unverified email', async () => {
     const verify = googleVerifier(AUD, jwks);
     expect(await verify(await idToken({ email_verified: false }))).toEqual({
@@ -131,6 +139,12 @@ describe('Auth sessions', () => {
     expect((await make({ isAdmin: async () => false }).caller(bearer(token))).admin).toBe(false);
   });
 
+  it('keeps the Google name with the session, for the caller', async () => {
+    identity = { ...identity, name: 'Ada Example' };
+    const { token } = await make().signIn({ idToken: 'good' });
+    expect((await make().caller(bearer(token))).name).toBe('Ada Example');
+  });
+
   it('is never admin with an unverified email', async () => {
     identity = { subject: 'https://accounts.google.com#8', emailVerified: false };
     const { token } = await make().signIn({ idToken: 'good' });
@@ -187,10 +201,10 @@ describe('Auth sessions', () => {
 
   it('dev mode: the header, and devUser sign-in; refused outside dev mode', async () => {
     const dev = make({ devMode: true });
-    expect(await dev.caller({ 'x-grigri-dev-user': 'Admin@Example.com' })).toEqual({ subject: 'dev#admin@example.com', email: 'admin@example.com', admin: true });
+    expect(await dev.caller({ 'x-grigri-dev-user': 'Admin@Example.com' })).toEqual({ subject: 'dev#admin@example.com', email: 'admin@example.com', admin: true, name: 'admin' });
     expect(await status(dev.caller({ 'x-grigri-dev-user': 'not an email' }))).toBe(401);
     const { token } = await dev.signIn({ devUser: 'Admin@Example.com' });
-    expect(await dev.caller(bearer(token))).toMatchObject({ subject: 'dev#admin@example.com', admin: true });
+    expect(await dev.caller(bearer(token))).toMatchObject({ subject: 'dev#admin@example.com', admin: true, name: 'admin' });
     expect(await status(dev.signIn({ devUser: 'nope' }))).toBe(400);
 
     const prod = make();

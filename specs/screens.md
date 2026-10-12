@@ -1,7 +1,8 @@
 # Screens
 
-Before the tabs: **sign-in**, then, the first time, **Create your
-profile** ([sign-in](sign-in.md)). Then five tabs, in a bottom navigation
+Before the tabs: **sign-in** (the first one makes my profile from my
+Google account, with no screen of its own; [sign-in](sign-in.md)). Then
+five tabs, in a bottom navigation
 bar: Discover, Plans, Chats, Notifications and Profile, and a sixth,
 **Admin**, for [admins](sign-in.md#admins). The labels fit a 360 dp wide
 phone (with six tabs, only the selected one's label shows).
@@ -18,9 +19,6 @@ phone (with six tabs, only the selected one's label shows).
 - **Sign-in**: the app's name and tagline on the mountain night gradient,
   and **Sign in with Google** (Google's own button on the web). See
   [sign-in](sign-in.md).
-- **Create your profile**: the profile editor, after the first sign-in,
-  with a welcome line, the name from Google filled in, **Start climbing**
-  to save, and ⋯ → Sign out.
 - **Plan** (from Plans, a notification, or a chat's title): the plan
   highlighted, my request's status when I'm not in it yet (Pending, N of
   M said yes, or Declined), the group (tap someone for their profile),
