@@ -156,6 +156,25 @@ describe('the matchmaking flow', () => {
     await fails(call(cy, 'GET', `/api/plans/${planId}`), 404);
   });
 
+  it('my location and areas are mine only; the deck says how far each plan is', async () => {
+    const here = { name: 'Home town', lat: 41.39, lon: 2.17 };
+    const me = await call(ben, 'PUT', '/api/me', { ...profile('Ben'), location: here, areas: [{ name: 'Crag', lat: 41.26, lon: 0.38 }] });
+    expect(me.climber).toMatchObject({ location: here, areas: [{ name: 'Crag' }] });
+    expect((await call(ben, 'GET', '/api/me')).climber.location).toEqual(here);
+
+    const near = (await call(ada, 'POST', '/api/plans', { ...planBody, place: 'Near', lat: 41.47, lon: 2.1 })).plan.id;
+    const deck = await call(ben, 'GET', '/api/discover');
+    expect(deck.plans.map((p: any) => p.id)).toEqual([near, planId]);
+    expect(deck.distanceKm).toEqual({ [near]: 11 });
+
+    // Ada sees Ben's profile (he asked to join) without where he is.
+    await call(ben, 'POST', `/api/plans/${near}/join`);
+    const { climbers } = await call(ada, 'GET', `/api/plans/${near}`);
+    expect(climbers[ids.Ben!]).toMatchObject({ name: 'Ben' });
+    expect(climbers[ids.Ben!]).not.toHaveProperty('location');
+    expect(climbers[ids.Ben!]).not.toHaveProperty('areas');
+  });
+
   it('one no: declined notice, then dismiss', async () => {
     await call(ben, 'POST', `/api/plans/${planId}/join`);
     await fails(call(cy, 'POST', `/api/requests/${planId}/${ids.Ben}/dismiss`), 403);

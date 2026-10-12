@@ -27,6 +27,7 @@ describe('profileInput', () => {
       levels: valid.levels,
       gear: ['rope', 'car'],
       gearPhotos: valid.gearPhotos,
+      areas: [],
     });
     expect(out).not.toHaveProperty('id');
     expect(out).not.toHaveProperty('email');
@@ -35,6 +36,15 @@ describe('profileInput', () => {
   it('reads the old scale names as the new ones', () => {
     const out = profileInput({ ...valid, levels: { sport: { scale: 'french', min: 1, max: 2 }, bouldering: { scale: 'vScale', min: 3, max: 4 } } }, [owner]);
     expect(out.levels).toEqual({ sport: { scale: 'routes', min: 1, max: 2 }, bouldering: { scale: 'boulders', min: 3, max: 4 } });
+  });
+
+  it('takes a location and up to 5 areas, rounded to ~1 km', () => {
+    const out = profileInput(
+      { ...valid, location: { name: ' Home town ', lat: 41.38879, lon: 2.15899 }, areas: [{ name: 'Crag', lat: -33.123, lon: 151.987 }] },
+      [owner],
+    );
+    expect(out.location).toEqual({ name: 'Home town', lat: 41.39, lon: 2.16 });
+    expect(out.areas).toEqual([{ name: 'Crag', lat: -33.12, lon: 151.99 }]);
   });
 
   it('age is optional', () => {
@@ -55,6 +65,12 @@ describe('profileInput', () => {
     [{ levels: { sport: { scale: 'routes', min: 5, max: 25 } } }, /max/],
     [{ levels: { sport: { scale: 'routes', min: 9, max: 5 } } }, /above/],
     [{ gear: ['rope', 'jetpack'] }, /gear/],
+    [{ location: { name: 'X', lat: 91, lon: 0 } }, /location.lat/],
+    [{ location: { name: 'X', lat: 0, lon: '2' } }, /location.lon/],
+    [{ location: { name: '', lat: 0, lon: 0 } }, /location.name is required/],
+    [{ areas: { name: 'X', lat: 0, lon: 0 } }, /areas must be a list/],
+    [{ areas: Array(6).fill({ name: 'X', lat: 0, lon: 0 }) }, /at most 5 areas/],
+    [{ areas: [{ name: 'X', lat: 0, lon: -181 }] }, /areas\[0\].lon/],
     [{ gearPhotos: Array(7).fill(`${owner}/gear/abcdefgh12345678.png`) }, /at most 6/],
     [{ photo: `${'b'.repeat(32)}/profile/abcdefgh12345678.jpg` }, /isn't one of your photos/],
     [{ photo: `${owner}/profile/../../etc.jpg` }, /isn't a photo key/],
@@ -101,6 +117,11 @@ describe('planInput', () => {
 
   it('sectorId is optional', () => {
     expect(planInput({ ...valid, sectorId: undefined }, now)).not.toHaveProperty('sectorId');
+    const point = planInput({ ...valid, lat: 41.257712, lon: 0.931849 }, now);
+    expect([point.lat, point.lon]).toEqual([41.2577, 0.9318]);
+    expect(planInput(valid, now)).not.toHaveProperty('lat');
+    expect(() => planInput({ ...valid, lat: 41 }, now)).toThrow(/lon/);
+    expect(() => planInput({ ...valid, lat: 'x', lon: 1 }, now)).toThrow(/lat/);
     expect(planInput({ ...valid, sectorId: '' }, now)).not.toHaveProperty('sectorId');
   });
 

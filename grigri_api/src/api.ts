@@ -8,7 +8,9 @@ import {
   type Climber,
   type JoinRequest,
   type Plan,
+  type PublicClimber,
   isOpen,
+  publicClimber,
   requestJson,
 } from './domain/model.js';
 import * as rules from './domain/rules.js';
@@ -185,8 +187,8 @@ export class Api {
       this.store.passedPlanIds(s.me.id),
       this.store.askedRequests(s.me.id),
     ]);
-    const plans = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
-    return { plans, climbers: await this.climbersOf(plans) };
+    const deck = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
+    return { plans: deck.plans, distanceKm: deck.distanceKm, climbers: await this.climbersOf(deck.plans) };
   }
 
   private async createPlan(req: Request, s: Session) {
@@ -346,7 +348,7 @@ export class Api {
   private async notices(s: Session) {
     const notices = await this.store.notices(s.me.id);
     const ids = notices.flatMap((n) => (n.climberId ? [n.climberId] : []));
-    return { notices, climbers: await this.store.getClimbers(ids) };
+    return { notices, climbers: await this.publicClimbers(ids) };
   }
 
   private async messages(req: Request, s: Session) {
@@ -361,7 +363,7 @@ export class Api {
       if (m.authorId) ids.add(m.authorId);
       if (m.requestId) ids.add(m.requestId.split('/')[1]!);
     }
-    return { messages, climbers: await this.store.getClimbers(ids) };
+    return { messages, climbers: await this.publicClimbers(ids) };
   }
 
   private async send(req: Request, s: Session) {
@@ -392,7 +394,7 @@ export class Api {
   }
 
   /** Every climber the plans and requests mention. */
-  private climbersOf(plans: Plan[], requests: JoinRequest[] = []): Promise<Record<string, Climber>> {
+  private climbersOf(plans: Plan[], requests: JoinRequest[] = []): Promise<Record<string, PublicClimber>> {
     const ids = new Set<string>();
     for (const p of plans) {
       ids.add(p.organizerId);
@@ -402,7 +404,13 @@ export class Api {
       ids.add(r.climberId);
       for (const a of r.acceptedBy) ids.add(a);
     }
-    return this.store.getClimbers(ids);
+    return this.publicClimbers(ids);
+  }
+
+  /** Other people's profiles, without where they are (location and areas are only mine to see). */
+  private async publicClimbers(ids: Iterable<string>): Promise<Record<string, PublicClimber>> {
+    const climbers = await this.store.getClimbers(ids);
+    return Object.fromEntries(Object.entries(climbers).map(([cid, c]) => [cid, publicClimber(c)]));
   }
 
   /** Runs a read-decide-write step again when a conditional write lost a race. */

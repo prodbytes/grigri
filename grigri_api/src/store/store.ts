@@ -15,7 +15,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type { Delivery, Effects } from '../domain/rules.js';
-import { type Climber, type JoinRequest, type Message, type Notice, type Plan, isOpen } from '../domain/model.js';
+import { type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, isOpen } from '../domain/model.js';
 import { index, key, prefix } from './keys.js';
 
 type Item = Record<string, unknown>;
@@ -408,6 +408,8 @@ export function climberItem(c: Climber, subject: string | undefined, now: Date):
     levels: c.levels,
     gear: c.gear,
     gearPhotos: c.gearPhotos,
+    ...(c.location ? { location: c.location } : {}),
+    areas: c.areas ?? [],
     // Who signs in as this climber (never returned); none for the seed's.
     ...(subject ? { subject } : {}),
     updatedAt: now.toISOString(),
@@ -424,6 +426,8 @@ export function toClimber(i: Item): Climber {
     levels: (i.levels as Climber['levels']) ?? {},
     gear: (i.gear as Climber['gear']) ?? [],
     gearPhotos: (i.gearPhotos as string[]) ?? [],
+    ...(i.location ? { location: i.location as Location } : {}),
+    areas: (i.areas as Location[]) ?? [],
   };
 }
 
@@ -440,6 +444,7 @@ export function planItem(p: Plan, version: number): Item {
     place: p.place,
     area: p.area,
     ...(p.sectorId ? { sectorId: p.sectorId } : {}),
+    ...(p.lat !== undefined && p.lon !== undefined ? { lat: p.lat, lon: p.lon } : {}),
     start: p.start,
     end: p.end,
     grades: p.grades,
@@ -456,6 +461,7 @@ export function toPlan(i: Item): Plan {
     place: i.place as string,
     area: (i.area as string) ?? '',
     ...(i.sectorId ? { sectorId: i.sectorId as string } : {}),
+    ...(typeof i.lat === 'number' && typeof i.lon === 'number' ? { lat: i.lat, lon: i.lon } : {}),
     start: i.start as string,
     end: i.end as string,
     grades: i.grades as Plan['grades'],

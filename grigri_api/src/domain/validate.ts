@@ -8,6 +8,8 @@ import {
   GEAR,
   type Gear,
   type GradeRange,
+  type Location,
+  MAX_AREAS,
   type Plan,
   LEGACY_SCALES,
   SCALES,
@@ -81,6 +83,29 @@ export function photoKey(value: unknown, field: string, owners: string[]): strin
 }
 const PHOTO_KEY = /^[A-Za-z0-9_-]{8,64}\/(profile|gear)\/[A-Za-z0-9_-]{8,64}\.(jpg|png|webp)$/;
 
+function coordinate(value: unknown, field: string, limit: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < -limit || value > limit) {
+    throw badRequest(`${field} must be a number from -${limit} to ${limit}`);
+  }
+  return value;
+}
+
+/** Rounds a coordinate to `places` decimals (2 is about 1 km). */
+export function round(value: number, places: number): number {
+  const f = 10 ** places;
+  return Math.round(value * f) / f;
+}
+
+/** A named point. A climber's are rounded to ~1 km, so they never say exactly where someone lives. */
+export function location(value: unknown, field: string): Location {
+  const o = asObject(value, field);
+  return {
+    name: text(o.name, `${field}.name`, { min: 1, max: 120 }),
+    lat: round(coordinate(o.lat, `${field}.lat`, 90), 2),
+    lon: round(coordinate(o.lon, `${field}.lon`, 180), 2),
+  };
+}
+
 /** A profile from PUT /api/me (a Climber without its id). */
 export function profileInput(body: unknown, photoOwners: string[]): Omit<Climber, 'id'> {
   const o = asObject(body);
@@ -117,7 +142,26 @@ export function profileInput(body: unknown, photoOwners: string[]): Omit<Climber
     for (const [i, p] of o.gearPhotos.entries()) gearPhotos.push(photoKey(p, `gearPhotos[${i}]`, photoOwners));
   }
 
-  return { name, ...(age === undefined ? {} : { age }), bio, ...(photo ? { photo } : {}), levels, gear, gearPhotos };
+  let home: Location | undefined;
+  if (o.location !== undefined && o.location !== null) home = location(o.location, 'location');
+  const areas: Location[] = [];
+  if (o.areas !== undefined && o.areas !== null) {
+    if (!Array.isArray(o.areas)) throw badRequest('areas must be a list');
+    if (o.areas.length > MAX_AREAS) throw badRequest(`at most ${MAX_AREAS} areas`);
+    for (const [i, a] of o.areas.entries()) areas.push(location(a, `areas[${i}]`));
+  }
+
+  return {
+    name,
+    ...(age === undefined ? {} : { age }),
+    bio,
+    ...(photo ? { photo } : {}),
+    levels,
+    gear,
+    gearPhotos,
+    ...(home ? { location: home } : {}),
+    areas,
+  };
 }
 
 export type PlanInput = Omit<Plan, 'id' | 'organizerId' | 'memberIds'>;
@@ -141,11 +185,17 @@ export function planInput(body: unknown, now: Date): PlanInput {
   if (end.getTime() > start.getTime() + 24 * HOUR) throw badRequest('end must be at most 24 hours after start');
   const grades = gradeRange(o.grades, 'grades', scaleOf(d));
   const notes = text(o.notes, 'notes', { max: 1000 });
+  // Both or neither: a crag's point (public, so kept to ~10 m).
+  let point: { lat: number; lon: number } | undefined;
+  if ((o.lat !== undefined && o.lat !== null) || (o.lon !== undefined && o.lon !== null)) {
+    point = { lat: round(coordinate(o.lat, 'lat', 90), 4), lon: round(coordinate(o.lon, 'lon', 180), 4) };
+  }
   return {
     discipline: d,
     place,
     area,
     ...(sectorId ? { sectorId } : {}),
+    ...point,
     start: start.toISOString(),
     end: end.toISOString(),
     grades,

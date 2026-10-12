@@ -117,3 +117,18 @@ spec.
    says: serverless services with minimal cost; between services or
    libraries, the least costly one that meets the requirements; and say
    what a new cloud resource costs.
+10. **On the Discover view, rank the suggestions by how much they match my
+    profile and how close they are to me; let people set their location on
+    their profile and add other locations of interest.** This entry is the
+    backend's half; the app's is on the app's branch.
+    - [API](api.md): a profile takes a `location` and up to 5 `areas`
+      (named points), rounded to about 1 km and **private**: only my own
+      profile carries them, never anyone else's `climbers`. Plans take
+      their place's point (`lat`, `lon`), from the sector index.
+    - The deck is ranked by [fit + nearness](api.md#the-decks-ranking):
+      how well its grades suit mine (0–1) plus how close it is to my
+      nearest location or area (0–1, e^(−km/50)), then soonest; it
+      returns each plan's distance in km. The old "fits first" rule is
+      gone.
+    - The seed's plans carry their places' approximate points.
+    - Cost: none; it's computed in the same request, over the same reads.
