@@ -117,7 +117,6 @@ spec.
    says: serverless services with minimal cost; between services or
    libraries, the least costly one that meets the requirements; and say
    what a new cloud resource costs.
-
 10. **On the Discover view, rank the suggestions by how much they match my
     profile and how close they are to me; let people set their location on
     their profile and add other locations of interest.** This entry is the
