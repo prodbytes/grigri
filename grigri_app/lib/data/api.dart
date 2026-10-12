@@ -83,13 +83,40 @@ abstract interface class GrigriApi {
   Future<void> adminReject(String planId, String climberId);
 }
 
+/// A failure the app itself describes (no server message to show): the
+/// store words it in the user's language.
+enum ClientError {
+  /// The server took too long to answer.
+  timeout,
+
+  /// The server couldn't be reached.
+  unreachable,
+
+  /// The server failed without a message of its own.
+  failed,
+  photoTimeout,
+  photoUnreachable,
+
+  /// A photo upload failed.
+  photoFailed,
+
+  /// A photo the app can't upload (not JPEG, PNG or WebP).
+  photoType,
+}
+
 /// An error answer from the API: its status and the server's message.
 class ApiException implements Exception {
-  const ApiException(this.status, this.message);
+  const ApiException(this.status, this.message, {this.client});
 
   /// The HTTP status; 0 when the server couldn't be reached.
   final int status;
+
+  /// The server's message (shown as is), or, for a [client] error, an
+  /// English one for logs.
   final String message;
+
+  /// Set when the app, not the server, describes the failure.
+  final ClientError? client;
 
   /// 409 `{"error": "no profile"}`: signed in, but no profile saved yet.
   bool get noProfile => status == 409 && message == 'no profile';

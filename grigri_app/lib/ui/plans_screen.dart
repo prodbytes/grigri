@@ -20,6 +20,7 @@ class PlansScreen extends StatelessWidget {
     final mine = store.myPlans;
     final waiting = store.waiting;
     final declined = store.declined;
+    final l = context.l10n;
     Widget heading(String s) => Padding(
       padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
       child: Text(
@@ -31,10 +32,10 @@ class PlansScreen extends StatelessWidget {
       ),
     );
     return Scaffold(
-      appBar: AppBar(title: const Text('Your plans')),
+      appBar: AppBar(title: Text(l.yourPlans)),
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
-        label: const Text('New plan'),
+        label: Text(l.newPlan),
         onPressed: onCreatePlan,
       ),
       body: !store.isLoaded(Section.plans)
@@ -42,13 +43,11 @@ class PlansScreen extends StatelessWidget {
           : mine.isEmpty && waiting.isEmpty && declined.isEmpty
           ? EmptyState(
               icon: Icons.event_note_outlined,
-              title: 'No plans yet',
-              message:
-                  'Make a plan (what, where, when) and climbers who fit will '
-                  'ask to join. Or swipe right on one in Discover.',
+              title: l.noPlansYetTitle,
+              message: l.noPlansYetMessage,
               action: FilledButton.icon(
                 icon: const Icon(Icons.add),
-                label: const Text('New plan'),
+                label: Text(l.newPlan),
                 onPressed: onCreatePlan,
               ),
             )
@@ -57,10 +56,10 @@ class PlansScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
                 children: [
-                  if (mine.isNotEmpty) heading('Climbing'),
+                  if (mine.isNotEmpty) heading(l.plansClimbing),
                   for (final plan in mine) _PlanTile(plan: plan),
                   if (waiting.isNotEmpty || declined.isNotEmpty)
-                    heading('Asked to join'),
+                    heading(l.plansAskedToJoin),
                   for (final r in waiting) _RequestTile(request: r),
                   for (final r in declined) _RequestTile(request: r),
                 ],
@@ -80,6 +79,7 @@ class _PlanTile extends StatelessWidget {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
     final toReview = store.toReview.where((r) => r.planId == plan.id).length;
+    final l = context.l10n;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
@@ -114,7 +114,7 @@ class _PlanTile extends StatelessWidget {
                       style: text.titleMedium?.copyWith(color: Mountain.sand),
                     ),
                     Text(
-                      whenLabel(plan),
+                      whenLabel(context, plan),
                       style: text.bodySmall?.copyWith(color: Mountain.granite),
                     ),
                     const SizedBox(height: 8),
@@ -127,15 +127,15 @@ class _PlanTile extends StatelessWidget {
                           for (final id in plan.memberIds) store.climber(id),
                         ], radius: 12),
                         if (plan.organizerId == store.me.id)
-                          const Tag('Organizing', color: Mountain.tan)
+                          Tag(l.organizing, color: Mountain.tan)
                         else
-                          const Tag(
-                            'Accepted',
+                          Tag(
+                            l.accepted,
                             icon: Icons.check,
                             color: Mountain.olive,
                           ),
                         if (toReview > 0)
-                          Tag('$toReview to review', color: Mountain.sky),
+                          Tag(l.toReview(toReview), color: Mountain.sky),
                       ],
                     ),
                   ],
@@ -162,6 +162,7 @@ class _RequestTile extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final plan = store.plan(request.planId);
     if (plan == null) return const SizedBox.shrink();
+    final l = context.l10n;
     final pending = [
       for (final id in plan.memberIds)
         if (!request.acceptedBy.contains(id)) store.climber(id).firstName,
@@ -179,16 +180,15 @@ class _RequestTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              request.rejected
-                  ? '${plan.place} · ${dayLabel(plan.start)}\nThe group said no'
-                  : '${plan.place} · ${dayLabel(plan.start)}\nWaiting for ${pending.join(', ')}',
+              '${plan.place} · ${dayLabel(context, plan.start)}\n'
+              '${request.rejected ? l.groupSaidNo : l.waitingForNames(pending.join(', '))}',
               style: text.bodyMedium?.copyWith(color: Mountain.granite),
             ),
             const SizedBox(height: 6),
             request.rejected
-                ? const Tag('Declined', icon: Icons.close, color: Mountain.clay)
-                : const Tag(
-                    'Pending',
+                ? Tag(l.declined, icon: Icons.close, color: Mountain.clay)
+                : Tag(
+                    l.pending,
                     icon: Icons.hourglass_top,
                     color: Mountain.sky,
                   ),
@@ -196,7 +196,7 @@ class _RequestTile extends StatelessWidget {
         ),
         trailing: request.rejected
             ? IconButton(
-                tooltip: 'Dismiss',
+                tooltip: l.dismiss,
                 icon: const Icon(Icons.close, color: Mountain.granite),
                 onPressed: () => store.dismiss(request),
               )

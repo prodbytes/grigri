@@ -48,6 +48,7 @@ class _RolesCardState extends State<RolesCard> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final quiet = text.bodySmall?.copyWith(color: Mountain.granite);
+    final l = context.l10n;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -55,7 +56,7 @@ class _RolesCardState extends State<RolesCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'ROLES',
+              l.roles.toUpperCase(),
               style: text.labelSmall?.copyWith(
                 color: Mountain.granite,
                 letterSpacing: 1.2,
@@ -63,10 +64,7 @@ class _RolesCardState extends State<RolesCard> {
             ),
             const SizedBox(height: 8),
             if (_mine == null)
-              Text(
-                'Not signed in: your roles show here once you sign in.',
-                style: quiet,
-              )
+              Text(l.rolesSignedOut, style: quiet)
             else
               FutureBuilder(
                 future: _mine,
@@ -74,16 +72,8 @@ class _RolesCardState extends State<RolesCard> {
                   if (snapshot.hasError) {
                     return Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            "Couldn't get your roles from rbacr.",
-                            style: quiet,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _retry,
-                          child: const Text('Retry'),
-                        ),
+                        Expanded(child: Text(l.rolesFailed, style: quiet)),
+                        TextButton(onPressed: _retry, child: Text(l.retry)),
                       ],
                     );
                   }
@@ -101,7 +91,7 @@ class _RolesCardState extends State<RolesCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (mine.roles.isEmpty)
-                        Text('No roles in Grigri yet.', style: quiet)
+                        Text(l.noRoles, style: quiet)
                       else
                         Wrap(
                           spacing: 6,
@@ -112,7 +102,7 @@ class _RolesCardState extends State<RolesCard> {
                           ],
                         ),
                       const SizedBox(height: 8),
-                      Text('As ${mine.email}', style: quiet),
+                      Text(l.rolesAs(mine.email), style: quiet),
                     ],
                   );
                 },

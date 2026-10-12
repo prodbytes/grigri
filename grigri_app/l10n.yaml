@@ -1,0 +1,10 @@
+# Flutter's gen-l10n: the translation bundles (specs/i18n.md).
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+# English first: the language for a device whose language the app doesn't
+# speak.
+preferred-supported-locales: [en]
+format: true

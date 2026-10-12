@@ -12,7 +12,7 @@ phone (with six tabs, only the selected one's label shows).
 | **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message and "N to answer" when join requests wait for my answer. The tab's badge counts those requests. Empty: "No chats yet" and **Find a plan** (to Discover). |
 | **Notifications** | Join requests for my plans, and the groups' answers to mine ([matching](matching.md#notifications)). The tab's badge counts the unread ones. Empty: "Nothing yet". |
-| **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; in ⋯, **Sign out** and **Sign out everywhere** (on every phone and browser, this one too), each after a confirmation. Then my [roles](roles.md), from rbacr. The version at the bottom. |
+| **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; the **Language** picker ([languages](i18n.md)); in ⋯, **Sign out** and **Sign out everywhere** (on every phone and browser, this one too), each after a confirmation. Then my [roles](roles.md), from rbacr. The version at the bottom. |
 | **Admin** | Admins only: every open join request, anyone's: who (avatar, name and age; tap for their profile) and when they asked, the plan (discipline, place, where it is, date), how many of the group said yes, its grades, and **Approve** (they join now) and **Reject**, each after a confirmation. Its badge counts the requests. Empty: "No open requests". |
 
 - **Sign-in**: the app's name and tagline on the mountain night gradient,
@@ -50,7 +50,9 @@ phone (with six tabs, only the selected one's label shows).
   location (tap to pick, ✕ clears) and up to 5 other areas (chips: ✕
   removes one, **Add an area** adds one), then the European / American grade switch, per
   discipline a switch and a grade range, and gear: the gear chips, then
-  its photos (✕ removes one, + adds one, up to 6). Saving uploads the new
+  its photos (✕ removes one, + adds one, up to 6), then **Language**:
+  System default or one of the app's six languages, each named in itself,
+  switching the app at once ([languages](i18n.md)). Saving uploads the new
   photos first, and then refreshes the deck, which my grades, location
   and areas rank.
 - **Location picker** (full screen, for the location or an area): a
@@ -66,7 +68,10 @@ phone (with six tabs, only the selected one's label shows).
   leave notes, the join request cards, and a message box.
 - Tapping a person anywhere opens their whole profile in a sheet.
 - While something loads, a spinner; when an action fails, the server's
-  message at the bottom of the screen.
+  message at the bottom of the screen (or the app's own, in the user's
+  language, when the server couldn't say).
+- Every text is in the user's [language](i18n.md); the quoted labels
+  here are the English ones.
 
 The browser tab's title is **Grigri** (**🧪 Grigri RC** on the RC site).
 The look is the app's [theme](theme.md).

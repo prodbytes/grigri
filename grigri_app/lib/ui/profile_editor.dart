@@ -80,6 +80,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
   /// picks. Null when cancelled.
   Future<Uint8List?> _choose(double maxSide, {VoidCallback? onRemove}) async {
     final camera = ImagePicker().supportsImageSource(ImageSource.camera);
+    final l = context.l10n;
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: Mountain.surface,
@@ -91,20 +92,20 @@ class _ProfileEditorState extends State<ProfileEditor> {
             if (camera)
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
-                title: const Text('Take a photo'),
+                title: Text(l.takePhoto),
                 onTap: () => Navigator.pop(context, ImageSource.camera),
               ),
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Choose a photo'),
+              title: Text(l.choosePhoto),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             if (onRemove != null)
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Mountain.clay),
-                title: const Text(
-                  'Remove photo',
-                  style: TextStyle(color: Mountain.clay),
+                title: Text(
+                  l.removePhoto,
+                  style: const TextStyle(color: Mountain.clay),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -120,9 +121,8 @@ class _ProfileEditorState extends State<ProfileEditor> {
       return await widget.pick(source, maxSide);
     } on Exception {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Couldn\'t get that photo')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l.photoFailed)));
       }
       return null;
     }
@@ -144,12 +144,15 @@ class _ProfileEditorState extends State<ProfileEditor> {
   }
 
   Future<void> _pickLocation() async {
-    final picked = await pickLocation(context, title: 'Your location');
+    final picked = await pickLocation(
+      context,
+      title: context.l10n.yourLocation,
+    );
     if (picked != null) setState(() => _location = picked);
   }
 
   Future<void> _addArea() async {
-    final picked = await pickLocation(context, title: 'Add an area');
+    final picked = await pickLocation(context, title: context.l10n.addArea);
     if (picked != null && !_areas.contains(picked)) {
       setState(() => _areas.add(picked));
     }
@@ -192,6 +195,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     Widget label(String s, [String? hint]) => Padding(
       padding: const EdgeInsets.only(top: 24, bottom: 8),
       child: Column(
@@ -215,18 +219,15 @@ class _ProfileEditorState extends State<ProfileEditor> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !widget.create,
-        title: Text(widget.create ? 'Create your profile' : 'Edit profile'),
+        title: Text(widget.create ? l.createProfile : l.editProfile),
         actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: const Text('Save'),
-          ),
+          TextButton(onPressed: _saving ? null : _save, child: Text(l.save)),
           if (widget.create)
             PopupMenuButton<String>(
-              tooltip: 'More',
+              tooltip: l.more,
               onSelected: (_) => StoreScope.read(context).signOut(),
-              itemBuilder: (_) => const [
-                PopupMenuItem(value: 'signOut', child: Text('Sign out')),
+              itemBuilder: (_) => [
+                PopupMenuItem(value: 'signOut', child: Text(l.signOut)),
               ],
             ),
         ],
@@ -240,8 +241,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Text(
-                  'Welcome to Grigri! Tell climbers who you are and what you '
-                  'climb: they see it when you ask to join their plans.',
+                  l.welcomeIntro,
                   style: text.bodyMedium?.copyWith(color: Mountain.snow),
                 ),
               ),
@@ -255,29 +255,31 @@ class _ProfileEditorState extends State<ProfileEditor> {
                   image: _photo == null ? null : _image(_photo!),
                   radius: 52,
                 ),
-                tooltip: _photo == null ? 'Add a photo' : 'Change your photo',
+                tooltip: _photo == null ? l.addPhoto : l.changePhoto,
                 onPressed: _changePhoto,
               ),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _name,
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(labelText: l.nameLabel),
               textCapitalization: TextCapitalization.words,
               onChanged: (_) => setState(() {}),
               validator: (v) =>
-                  (v ?? '').trim().isEmpty ? 'Your name, please' : null,
+                  (v ?? '').trim().isEmpty ? l.nameRequired : null,
             ),
             const SizedBox(height: 10),
             TextFormField(
               controller: _age,
-              decoration: const InputDecoration(labelText: 'Age (optional)'),
+              decoration: InputDecoration(labelText: l.ageLabel),
               keyboardType: TextInputType.number,
               validator: (v) {
                 final text = (v ?? '').trim();
                 if (text.isEmpty) return null;
                 final age = int.tryParse(text);
-                return age == null || age < 16 || age > 99 ? '16 to 99' : null;
+                return age == null || age < 16 || age > 99
+                    ? l.ageRange(16, 99)
+                    : null;
               },
             ),
             const SizedBox(height: 10),
@@ -285,25 +287,22 @@ class _ProfileEditorState extends State<ProfileEditor> {
               controller: _bio,
               minLines: 2,
               maxLines: 5,
-              decoration: const InputDecoration(labelText: 'About you'),
+              decoration: InputDecoration(labelText: l.bioLabel),
               textCapitalization: TextCapitalization.sentences,
             ),
-            label(
-              'Where you climb',
-              'Plans near here come first on Discover. Only you see it.',
-            ),
+            label(l.whereYouClimb, l.whereYouClimbHint),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.my_location, color: Mountain.sky),
-              title: Text(_location?.name ?? 'Set your location'),
-              subtitle: const Text(
-                'Your location',
-                style: TextStyle(color: Mountain.granite),
+              title: Text(_location?.name ?? l.setYourLocation),
+              subtitle: Text(
+                l.yourLocation,
+                style: const TextStyle(color: Mountain.granite),
               ),
               trailing: _location == null
                   ? const Icon(Icons.chevron_right)
                   : IconButton(
-                      tooltip: 'Clear your location',
+                      tooltip: l.clearYourLocation,
                       icon: const Icon(Icons.close),
                       onPressed: () => setState(() => _location = null),
                     ),
@@ -318,31 +317,28 @@ class _ProfileEditorState extends State<ProfileEditor> {
                   InputChip(
                     avatar: const Icon(Icons.place_outlined, size: 18),
                     label: Text(a.name),
-                    deleteButtonTooltipMessage: 'Remove ${a.name}',
+                    deleteButtonTooltipMessage: l.removeArea(a.name),
                     onDeleted: () => setState(() => _areas.removeAt(i)),
                   ),
                 if (_areas.length < Climber.maxAreas)
                   ActionChip(
                     avatar: const Icon(Icons.add, size: 18),
-                    label: const Text('Add an area'),
+                    label: Text(l.addArea),
                     onPressed: _addArea,
                   ),
               ],
             ),
-            label(
-              'What you climb',
-              'Pick your disciplines and the grades you climb.',
-            ),
+            label(l.whatYouClimb, l.whatYouClimbHint),
             const GradeSystemToggle(),
             for (final d in Discipline.values) _levelEditor(d),
-            label('Gear you can bring', 'Add photos of it, too.'),
+            label(l.gearYouCanBring, l.gearHint),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final g in Gear.values)
                   FilterChip(
-                    label: Text(g.label),
+                    label: Text(g.label(l)),
                     selected: _gear.contains(g),
                     onSelected: (on) =>
                         setState(() => on ? _gear.add(g) : _gear.remove(g)),
@@ -358,12 +354,12 @@ class _ProfileEditorState extends State<ProfileEditor> {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      PhotoThumb(_image(photo), label: 'Gear photo ${i + 1}'),
+                      PhotoThumb(_image(photo), label: l.gearPhoto(i + 1)),
                       Positioned(
                         top: -10,
                         right: -10,
                         child: IconButton.filledTonal(
-                          tooltip: 'Remove gear photo ${i + 1}',
+                          tooltip: l.removeGearPhoto(i + 1),
                           iconSize: 16,
                           visualDensity: VisualDensity.compact,
                           icon: const Icon(Icons.close),
@@ -377,6 +373,8 @@ class _ProfileEditorState extends State<ProfileEditor> {
                   _AddPhotoTile(onPressed: _addGearPhoto),
               ],
             ),
+            label(l.language),
+            const LanguagePicker(),
             const SizedBox(height: 28),
             FilledButton(
               onPressed: _saving ? null : _save,
@@ -386,7 +384,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(widget.create ? 'Start climbing' : 'Save'),
+                  : Text(widget.create ? l.startClimbing : l.save),
             ),
           ],
         ),
@@ -402,7 +400,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
       children: [
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('${d.emoji} ${d.label}'),
+          title: Text('${d.emoji} ${d.label(context.l10n)}'),
           subtitle: range == null
               ? null
               : Text(
@@ -492,7 +490,7 @@ class _AddPhotoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: 'Add a gear photo',
+    message: context.l10n.addGearPhoto,
     child: Material(
       color: Mountain.surfaceHigh,
       borderRadius: BorderRadius.circular(12),

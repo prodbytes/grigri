@@ -129,6 +129,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final toReview = store.toReview.length;
     final unread = store.unreadNotices;
     final admin = store.admin;
+    final l = context.l10n;
     if (!admin && _tab == _admin) _tab = 0;
     final screens = [
       DiscoverScreen(onCreatePlan: _createPlan),
@@ -155,30 +156,30 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             ? NavigationDestinationLabelBehavior.onlyShowSelected
             : null,
         destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.landscape_outlined),
-            selectedIcon: Icon(Icons.landscape),
-            label: 'Discover',
+          NavigationDestination(
+            icon: const Icon(Icons.landscape_outlined),
+            selectedIcon: const Icon(Icons.landscape),
+            label: l.tabDiscover,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.event_note_outlined),
-            selectedIcon: Icon(Icons.event_note),
-            label: 'Plans',
+          NavigationDestination(
+            icon: const Icon(Icons.event_note_outlined),
+            selectedIcon: const Icon(Icons.event_note),
+            label: l.tabPlans,
           ),
           NavigationDestination(
             icon: badged(Icons.forum_outlined, toReview),
             selectedIcon: badged(Icons.forum, toReview),
-            label: 'Chats',
+            label: l.tabChats,
           ),
           NavigationDestination(
             icon: badged(Icons.notifications_outlined, unread),
             selectedIcon: badged(Icons.notifications, unread),
-            label: 'Notifications',
+            label: l.tabNotifications,
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: l.tabProfile,
           ),
           if (admin)
             NavigationDestination(
@@ -190,7 +191,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
                 Icons.admin_panel_settings,
                 store.adminRequests.length,
               ),
-              label: 'Admin',
+              label: l.tabAdmin,
             ),
         ],
       ),
