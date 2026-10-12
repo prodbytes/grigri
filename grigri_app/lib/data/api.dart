@@ -17,7 +17,8 @@ abstract interface class GrigriApi {
   /// `PUT /api/me`: creates or updates my profile.
   Future<Climber> saveMe(Climber profile);
 
-  /// `GET /api/discover`: plans to swipe on, best fits first.
+  /// `GET /api/discover`: plans to swipe on, best first (how well they
+  /// match my profile plus how close they are), with their distances.
   Future<PlanList> discover();
 
   /// `POST /api/plans`: a new plan, organized by me.
@@ -107,10 +108,14 @@ class Me {
 }
 
 class PlanList {
-  const PlanList(this.plans, this.climbers);
+  const PlanList(this.plans, this.climbers, {this.distanceKm = const {}});
 
   final List<Plan> plans;
   final Climbers climbers;
+
+  /// For the deck: how far each plan is from my nearest location or area,
+  /// in whole km, for the plans whose distance is known.
+  final Map<String, int> distanceKm;
 }
 
 class MyPlans {
@@ -242,6 +247,10 @@ abstract final class ApiJson {
   static PlanList planList(Map<String, Object?> json) => PlanList(
     _list(json['plans']).map(Plan.fromJson).toList(),
     climbers(json),
+    distanceKm: {
+      for (final e in (json['distanceKm'] as Map? ?? {}).entries)
+        e.key as String: (e.value as num).round(),
+    },
   );
 
   static MyPlans myPlans(Map<String, Object?> json) => MyPlans(

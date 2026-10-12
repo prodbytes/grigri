@@ -4,6 +4,7 @@ import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'profile_editor.dart';
 import 'swipe_deck.dart';
 
 /// The plans deck: swipe right (or tap ✓) to ask to join a plan, left to
@@ -76,6 +77,34 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             )
           : Column(
               children: [
+                if (store.me.location == null && store.me.areas.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.near_me_outlined,
+                          size: 18,
+                          color: Mountain.sky,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Set where you climb to see plans near you first.',
+                            style: TextStyle(color: Mountain.snow),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ProfileEditor(),
+                            ),
+                          ),
+                          child: const Text('Set'),
+                        ),
+                      ],
+                    ),
+                  ),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
@@ -147,7 +176,11 @@ class _PlanCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PlanHighlight(plan, fit: store.fit(plan)),
+            PlanHighlight(
+              plan,
+              fit: store.fit(plan),
+              distanceKm: store.distanceKm(plan.id),
+            ),
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),

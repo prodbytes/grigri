@@ -169,12 +169,21 @@ class Tag extends StatelessWidget {
 /// The plan, highlighted: what, where, when and which grades. On the
 /// swipe cards, the match screen and the chat.
 class PlanHighlight extends StatelessWidget {
-  const PlanHighlight(this.plan, {super.key, this.fit, this.showNotes = true});
+  const PlanHighlight(
+    this.plan, {
+    super.key,
+    this.fit,
+    this.distanceKm,
+    this.showNotes = true,
+  });
 
   final Plan plan;
 
   /// How it fits my profile, to show as badges.
   final Fit? fit;
+
+  /// How far it is from my nearest location or area, on the deck.
+  final int? distanceKm;
   final bool showNotes;
 
   @override
@@ -222,6 +231,8 @@ class PlanHighlight extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           if (plan.area.isNotEmpty) _Line(Icons.place_outlined, plan.area),
+          if (distanceKm != null)
+            _Line(Icons.near_me_outlined, distanceLabel(distanceKm!)),
           _Line(Icons.schedule, whenLabel(plan)),
           _Line(Icons.trending_up, StoreScope.of(context).grades(plan.grades)),
           if (showNotes && plan.notes.isNotEmpty) ...[
@@ -240,6 +251,10 @@ class PlanHighlight extends StatelessWidget {
     );
   }
 }
+
+/// "12 km from you", or "Under 1 km from you".
+String distanceLabel(int km) =>
+    km < 1 ? 'Under 1 km from you' : '$km km from you';
 
 class _Line extends StatelessWidget {
   const _Line(this.icon, this.text);

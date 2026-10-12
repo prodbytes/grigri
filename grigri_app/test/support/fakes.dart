@@ -32,6 +32,10 @@ class FakeApi implements GrigriApi {
   final passed = <String>{};
   final dismissed = <String>{};
 
+  /// What the deck says about how far each plan is (the server works it
+  /// out from my location and areas; tests set it).
+  final distanceKm = <String, int>{};
+
   /// Every call, as "METHOD /api/route".
   final calls = <String>[];
 
@@ -70,8 +74,12 @@ class FakeApi implements GrigriApi {
     return body();
   }
 
+  /// Profiles as the server shares them: without location and areas,
+  /// which are private (mine too).
   Climbers _mention(Iterable<String> ids) => {
-    for (final id in ids) id: ?climbers[id],
+    for (final id in ids)
+      if (climbers[id] case final c?)
+        id: c.copyWith(location: null, areas: const []),
   };
 
   Iterable<String> _planPeople(Plan p) => p.memberIds;
@@ -183,6 +191,8 @@ class FakeApi implements GrigriApi {
       levels: profile.levels,
       gear: profile.gear,
       gearPhotos: profile.gearPhotos,
+      location: profile.location,
+      areas: profile.areas,
     );
     climbers[meId!] = saved;
     return saved;
@@ -211,7 +221,11 @@ class FakeApi implements GrigriApi {
             final fit = (_fits(b) ? 1 : 0).compareTo(_fits(a) ? 1 : 0);
             return fit != 0 ? fit : a.start.compareTo(b.start);
           });
-    return PlanList(list, _mention(list.expand(_planPeople)));
+    return PlanList(
+      list,
+      _mention(list.expand(_planPeople)),
+      distanceKm: {for (final p in list) p.id: ?distanceKm[p.id]},
+    );
   });
 
   @override
@@ -223,6 +237,8 @@ class FakeApi implements GrigriApi {
       place: plan.place,
       area: plan.area,
       sectorId: plan.sectorId,
+      lat: plan.lat,
+      lon: plan.lon,
       start: plan.start,
       end: plan.end,
       grades: plan.grades,

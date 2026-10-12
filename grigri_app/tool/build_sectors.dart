@@ -45,8 +45,9 @@ Future<void> main(List<String> args) async {
 }
 
 /// The Overpass query for one country (an ISO 3166-1 code): the country's
-/// name, its crags and climbing gyms, and the climbing areas with their
-/// members, to tell each sector which crag it's in.
+/// name, its crags and climbing gyms with their points (a way's or
+/// relation's center), and the climbing areas with their members, to tell
+/// each sector which crag it's in.
 String query(String country) =>
     '''
 [out:json][timeout:600];
@@ -57,7 +58,7 @@ area["ISO3166-1"="$country"][admin_level=2]->.c;
   nwr["sport"="climbing"]["leisure"="sports_centre"](area.c);
   nwr["climbing"="gym"](area.c);
 );
-out tags;
+out center tags;
 rel["climbing"="area"](area.c);
 out body;
 ''';
@@ -123,11 +124,17 @@ List<Sector> sectorsFrom(Map<String, Object?> overpass) {
     final area = isGym
         ? (t['addr:city'] as String? ?? '')
         : (areaOf[key] ?? t['is_in'] as String? ?? '');
+    // A node has its point; a way or relation, its center.
+    final point = (e['center'] as Map?)?.cast<String, Object?>() ?? e;
+    double? coordinate(Object? v) =>
+        v is num ? double.parse(v.toStringAsFixed(5)) : null;
     sectors[key] = Sector(
       id: 'osm:$key',
       name: name,
       area: area == name ? '' : area,
       country: country,
+      lat: coordinate(point['lat']),
+      lon: coordinate(point['lon']),
     );
   }
   return sectors.values.toList()..sort((a, b) => a.name.compareTo(b.name));
