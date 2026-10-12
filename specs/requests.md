@@ -193,3 +193,9 @@ spec.
       travel to the API in that shape (no spots, nothing is ever full),
       and the callout's ✕ / ✓ call the API like the request cards.
     - Every tab has an [empty state](screens.md) with what to do next.
+13. **The sector build couldn't reach Overpass (a sandbox here, a stalled
+    connection on the laptop): run it another way.**
+    - A [Sectors workflow](sectors.md#the-data-openstreetmap) builds the
+      index on GitHub and uploads it as an artifact to commit.
+    - The build tries three public Overpass servers, with timeouts,
+      instead of waiting forever on one.

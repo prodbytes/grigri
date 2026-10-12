@@ -14,7 +14,13 @@ import 'dart:io';
 
 import 'package:grigri_app/model/sector.dart';
 
-const overpass = 'https://overpass-api.de/api/interpreter';
+/// Public Overpass servers, tried in order: when one can't be reached or
+/// is busy, the next one gets the query.
+const overpassServers = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
 const attribution = '© OpenStreetMap contributors (ODbL)';
 
 Future<void> main(List<String> args) async {
@@ -28,7 +34,9 @@ Future<void> main(List<String> args) async {
     exit(64);
   }
   final sectors = <Sector>[];
-  final client = HttpClient();
+  final client = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 20)
+    ..userAgent = 'grigri-sector-index/1';
   try {
     for (final country in countries) {
       stderr.write('$country… ');
@@ -62,17 +70,37 @@ rel["climbing"="area"](area.c);
 out body;
 ''';
 
+/// [query]'s answer from the first of [overpassServers] that gives one.
 Future<Map<String, Object?>> _query(HttpClient client, String query) async {
-  final request = await client.postUrl(Uri.parse(overpass));
+  final failures = <String>[];
+  for (final server in overpassServers) {
+    try {
+      return await _queryServer(client, Uri.parse(server), query);
+    } on Exception catch (e) {
+      failures.add('$server: $e');
+      stderr.write('(${Uri.parse(server).host} failed, next) ');
+    }
+  }
+  throw HttpException('no Overpass server answered:\n${failures.join('\n')}');
+}
+
+Future<Map<String, Object?>> _queryServer(
+  HttpClient client,
+  Uri server,
+  String query,
+) async {
+  final request = await client.postUrl(server);
   request.headers.contentType = ContentType(
     'application',
     'x-www-form-urlencoded',
     charset: 'utf-8',
   );
-  request.headers.set('User-Agent', 'grigri-sector-index/1');
   request.write('data=${Uri.encodeQueryComponent(query)}');
   final response = await request.close();
-  final body = await response.transform(utf8.decoder).join();
+  final body = await response
+      .transform(utf8.decoder)
+      .join()
+      .timeout(const Duration(minutes: 12));
   if (response.statusCode != 200) {
     throw HttpException('Overpass answered ${response.statusCode}: $body');
   }

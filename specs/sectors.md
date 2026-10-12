@@ -37,6 +37,15 @@ flutter pub get  # dart run needs the Flutter packages resolved
 dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
 ```
 
+- The [Sectors workflow](../.github/workflows/sectors.yml) runs it on
+  GitHub, whose runners reach Overpass when a laptop's network may not
+  (a sandbox, a VPN). Run it by hand (Actions → Sectors → Run workflow,
+  with the countries) and commit the `sectors` artifact it uploads as
+  `assets/sectors.json`. It also runs, with ES FR IT PT, on a push that
+  changes the build.
+- It asks the public Overpass servers in turn (overpass-api.de, then
+  overpass.kumi.systems, then overpass.private.coffee), giving up on one
+  after 20 s without a connection or 12 minutes without an answer.
 - It writes the file only when every country came through, so a failed
   run leaves the index as it was.
 - It takes the country's crags and sectors (`climbing=crag`) and climbing

@@ -1,0 +1,71 @@
+# Builds the sector index (grigri_app/assets/sectors.json) from
+# OpenStreetMap, on a runner that can reach the public Overpass servers,
+# and uploads it as the "sectors" artifact to review and commit. See
+# specs/sectors.md.
+#
+# - Manual dispatch builds the countries given (ISO 3166-1 codes).
+# - A push that changes the build (this file or tool/build_sectors.dart)
+#   builds the default countries, to check it still works.
+name: Sectors
+
+on:
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: Countries, as ISO 3166-1 codes separated by spaces
+        required: false
+        type: string
+        default: ES FR IT PT
+  push:
+    paths:
+      - .github/workflows/sectors.yml
+      - grigri_app/tool/build_sectors.dart
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sectors-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: "3.47.5"
+  # The commit that tag names: the clone is checked against it.
+  FLUTTER_COMMIT: 6a19cca56475dbfba1478ee68d7bd0c2ef891da1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Flutter ${{ env.FLUTTER_VERSION }}
+        run: |
+          git clone --quiet --depth 1 --branch "$FLUTTER_VERSION" \
+            https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          got="$(git -C "$RUNNER_TEMP/flutter" rev-parse HEAD)"
+          if [[ "$got" != "$FLUTTER_COMMIT" ]]; then
+            echo "::error::Flutter $FLUTTER_VERSION is $got, not the pinned $FLUTTER_COMMIT"
+            exit 1
+          fi
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Build the index
+        working-directory: grigri_app
+        env:
+          # The script checks each one is two capital letters.
+          COUNTRIES: ${{ inputs.countries || 'ES FR IT PT' }}
+        run: |
+          flutter pub get
+          read -ra countries <<< "$COUNTRIES"
+          dart run tool/build_sectors.dart "$RUNNER_TEMP/sectors.json" "${countries[@]}"
+          ls -l "$RUNNER_TEMP/sectors.json"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sectors
+          path: ${{ runner.temp }}/sectors.json
+          if-no-files-found: error
