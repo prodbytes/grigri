@@ -74,7 +74,7 @@ class PlanScreen extends StatelessWidget {
           ],
           const SizedBox(height: 20),
           Text(
-            'THE GROUP · ${plan.memberIds.length} OF ${plan.spots}',
+            'THE GROUP · ${plan.memberIds.length}',
             style: text.labelSmall?.copyWith(
               color: Mountain.granite,
               letterSpacing: 1.2,
