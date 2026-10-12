@@ -43,7 +43,9 @@ Future<void> main(List<String> args) async {
       final response = await _query(client, query(country));
       final found = sectorsFrom(response);
       stderr.writeln('${found.length}');
-      sectors.addAll(found);
+      // A crag on a border comes with both countries: keep the first.
+      final known = {for (final s in sectors) s.id};
+      sectors.addAll(found.where((s) => !known.contains(s.id)));
     }
   } finally {
     client.close();
@@ -53,17 +55,17 @@ Future<void> main(List<String> args) async {
 }
 
 /// The Overpass query for one country (an ISO 3166-1 code): the country's
-/// name, its crags and climbing gyms, and the climbing areas with their
-/// members, to tell each sector which crag it's in.
+/// name; its climbing places (areas, crags, sectors, boulders and gyms,
+/// however they're tagged), but not single routes; and the climbing areas
+/// with their members, to tell each sector which crag it's in.
 String query(String country) =>
     '''
 [out:json][timeout:600];
 area["ISO3166-1"="$country"][admin_level=2]->.c;
 .c out tags;
 (
-  nwr["climbing"="crag"](area.c);
-  nwr["sport"="climbing"]["leisure"="sports_centre"](area.c);
-  nwr["climbing"="gym"](area.c);
+  nwr["climbing"~"^(area|crag|boulder|gym)\$"]["name"](area.c);
+  nwr["sport"="climbing"]["name"][!"climbing"](area.c);
 );
 out tags;
 rel["climbing"="area"](area.c);
@@ -141,9 +143,7 @@ List<Sector> sectorsFrom(Map<String, Object?> overpass) {
   for (final e in elements) {
     final t = tags(e);
     final type = e['type'];
-    if (type == 'area' || (type == 'relation' && t['climbing'] == 'area')) {
-      continue;
-    }
+    if (type == 'area') continue;
     final name = nameOf(e);
     if (name == null) continue;
     final key = '${(type! as String)[0]}${e['id']}';
@@ -158,7 +158,10 @@ List<Sector> sectorsFrom(Map<String, Object?> overpass) {
       country: country,
     );
   }
-  return sectors.values.toList()..sort((a, b) => a.name.compareTo(b.name));
+  return sectors.values.toList()..sort((a, b) {
+    final byName = a.name.compareTo(b.name);
+    return byName != 0 ? byName : a.id.compareTo(b.id);
+  });
 }
 
 /// The index file the app reads (SectorIndex.parse).

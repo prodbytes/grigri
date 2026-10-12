@@ -97,12 +97,14 @@ void main() {
       [
         ['osm:n14', 'Bloc Club', 'Ciudad', 'Spain'],
         ['osm:n11', 'Pared Gris', 'Valle Alto', 'Spain'],
-        // The crag named like its area isn't said to be in itself.
+        // The area can be picked too; the crag named like it isn't said
+        // to be in itself.
+        ['osm:r15', 'Valle Alto', '', 'Spain'],
         ['osm:w12', 'Valle Alto', '', 'Spain'],
       ],
     );
     final again = SectorIndex.parse(build.indexJson(sectors));
-    expect(again.length, 3);
+    expect(again.length, 4);
     expect(again.attribution, contains('OpenStreetMap'));
     expect(build.query('ES'), contains('"ISO3166-1"="ES"'));
   });
