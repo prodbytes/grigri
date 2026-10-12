@@ -360,3 +360,12 @@ spec.
       center` from OpenStreetMap; the placeholder gets approximate
       points); a plan keeps its sector's point. The index is cached once
       loaded, not as a pending load.
+23. **Check the data works as expected: GA with no data, RC with made-up
+    data; push the tags, check the workflows and the health checks.**
+    The deploy configuration's half; the health checks' is entry 24.
+    - [Sign-in](sign-in.md), [deploy](deploy.md): each stage has its own
+      Google web client (its JavaScript origin is its own site), so the
+      RC's sign-in works on https://rc.grigri.nu01.com: Deploy RC and the
+      Release of non-GA tags use the repository variables
+      `GOOGLE_WEB_CLIENT_ID_RC` and `GOOGLE_IOS_CLIENT_ID_RC`; Deploy and
+      GA releases keep `GOOGLE_WEB_CLIENT_ID` and `GOOGLE_IOS_CLIENT_ID`.

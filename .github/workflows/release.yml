@@ -238,13 +238,21 @@ jobs:
 
       - name: make ${{ matrix.target }}
         env:
-          # A GA release's apps talk to production, the rest to the RC site
-          # (specs/sign-in.md); the Google client IDs are public repository
-          # variables, not secrets.
+          # A GA release's apps talk to production, the rest to the RC site,
+          # each with its own Google clients (specs/sign-in.md); the client
+          # IDs are public repository variables, not secrets.
           GRIGRI_STAGE: ${{ endsWith(needs.prepare.outputs.tag, '-GA') && 'prod' || 'rc' }}
-          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
-          GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
-        run: make "$TARGET"
+          PROD_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          PROD_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
+          RC_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID_RC }}
+          RC_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID_RC }}
+        run: |
+          if [[ "$GRIGRI_STAGE" == prod ]]; then
+            export GOOGLE_WEB_CLIENT_ID="$PROD_WEB_CLIENT_ID" GOOGLE_IOS_CLIENT_ID="$PROD_IOS_CLIENT_ID"
+          else
+            export GOOGLE_WEB_CLIENT_ID="$RC_WEB_CLIENT_ID" GOOGLE_IOS_CLIENT_ID="$RC_IOS_CLIENT_ID"
+          fi
+          make "$TARGET"
 
       - name: Package
         run: |

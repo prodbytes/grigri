@@ -119,11 +119,15 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    gh variable set AWS_DEPLOY_ROLE_ARN --body "<DeployRoleArn>"
    gh variable set AWS_DEPLOY_RC_ROLE_ARN --body "<RcDeployRoleArn>"
    gh variable set HOSTED_ZONE_ID --body "<the grigri.nu01.com zone ID>"
-   # The Google web OAuth client (Google Cloud console > Credentials) whose
-   # ID tokens the API trades for its sessions; a public identifier. Its authorized
-   # JavaScript origins: https://grigri.nu01.com, https://rc.grigri.nu01.com
-   # and https://local.grigri.nu01.com:2543.
+   # Each stage's Google web OAuth client (Google Cloud console >
+   # Credentials), whose ID tokens its API trades for sessions; public
+   # identifiers. Authorized JavaScript origins: https://grigri.nu01.com
+   # for production's, https://rc.grigri.nu01.com for the RC's. The iOS
+   # clients are optional until iOS releases sign in.
    gh variable set GOOGLE_WEB_CLIENT_ID --body "<number>-<id>.apps.googleusercontent.com"
+   gh variable set GOOGLE_WEB_CLIENT_ID_RC --body "<number>-<id>.apps.googleusercontent.com"
+   gh variable set GOOGLE_IOS_CLIENT_ID --body "<number>-<id>.apps.googleusercontent.com"
+   gh variable set GOOGLE_IOS_CLIENT_ID_RC --body "<number>-<id>.apps.googleusercontent.com"
    # Secrets, not variables: the repository is public, and run logs show
    # variables.
    gh secret set GRIGRI_HEALTH_EMAILS --body "<who gets health alarms>"

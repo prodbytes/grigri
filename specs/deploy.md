@@ -90,7 +90,9 @@ buckets' objects. Origin access controls, response headers policies and
 HTTP APIs have only IDs (no names or tags to scope by), so they can't be
 separated by stage. The RC seed is the only invoke allowed
 (`grigri-rc-api`). Repository variables: `AWS_DEPLOY_ROLE_ARN`,
-`AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`;
+`AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
+(production's Google web client) and `GOOGLE_WEB_CLIENT_ID_RC` (the
+RC's);
 repository secrets: `GRIGRI_HEALTH_EMAILS` and `GRIGRI_ADMIN_EMAILS`
 (secrets because the repository is public and run logs show
 variables). One-time setup:
