@@ -1,0 +1,92 @@
+# grigri_infra
+
+The production (and release-candidate) infrastructure, as CloudFormation
+templates.
+
+| Template | Stack | Holds |
+|---|---|---|
+| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and a Route 53 health check of `/app/version.json` that emails `GRIGRI_HEALTH_EMAILS` when it fails |
+| [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition, the deploy policy |
+
+`scripts/deploy.sh` deploys `grigri-web`. With `STAGE=rc` it deploys the
+release candidate's own copy, `grigri-rc-web`, for
+https://rc.grigri.nu01.com; `*RC*` tags do that through
+[deploy-rc.yml](../.github/workflows/deploy-rc.yml).
+
+## The distribution
+
+| Path | Origin |
+|---|---|
+| default (`/`) | S3 `index.html`, the [index page](../grigri_index) that redirects to `/app/` |
+| `/app*` | S3 `app/`, the Flutter web build (`--base-href /app/`). A CloudFront Function redirects `/app` to `/app/` and maps directory URIs to `index.html` |
+
+Every file is uploaded with `Cache-Control: no-cache`, because Flutter's web
+files aren't content-hashed. Each deploy also invalidates `/*`.
+
+## Deploying
+
+Push a GA tag (`bash scripts/release-ga.sh`, on `main`). The
+[Deploy workflow](../.github/workflows/deploy.yml) checks the tag's commit
+is on `main`, then runs [scripts/deploy.sh](../scripts/deploy.sh), which:
+
+1. builds the web app for `/app/`;
+2. deploys `site.yaml` (certificate and distribution tagged with the
+   stage);
+3. uploads the content and invalidates the cache;
+4. checks that `https://grigri.nu01.com/app/version.json` reports the
+   tag's version and `/` is the index page.
+
+If any step fails it prints the version that was live before and how to
+redeploy it. `scripts/deploy.sh` also runs by hand with admin credentials
+(inside devbox): `TAG=0.1.<Z>-GA bash scripts/deploy.sh`.
+
+## DNS
+
+`grigri.nu01.com` has its own public Route 53 zone (`HOSTED_ZONE_ID`),
+delegated from the `nu01.com` zone by an NS record (TTL 3600), like
+`tabscan`, `rbacr` and `uplink`. Both stages' records live in it:
+`grigri.nu01.com`, `rc.grigri.nu01.com`, and their ACM validation names.
+
+## One-time setup
+
+0. Create the zone and its delegation:
+
+   ```bash
+   aws route53 create-hosted-zone --name grigri.nu01.com --caller-reference "grigri-$(date -u +%s)"
+   # then, in the nu01.com zone, an NS record for grigri.nu01.com with
+   # the new zone's four name servers
+   ```
+
+1. Deploy the GitHub roles. They're IAM resources, so an administrator
+   deploys them, once. The account already has GitHub's OIDC provider
+   (from `presence-github-deploy`); in an account without it, add
+   `CreateOidcProvider=true`:
+
+   ```bash
+   aws cloudformation deploy --region us-east-1 \
+     --stack-name grigri-github-deploy \
+     --template-file grigri_infra/github-deploy.yaml \
+     --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
+     --parameter-overrides "HostedZoneId=$HOSTED_ZONE_ID"
+   ```
+
+   The prod role trusts only tokens for `*GA` tags, the RC role `*RC*`
+   tags and `main`, each in both subject forms: `repo:prodbytes/grigri:ref:…`
+   and the immutable `repo:prodbytes@288014477/grigri@1415803699:ref:…`
+   (`GitHubImmutableRepository`; the repository uses immutable OIDC
+   subject claims). Each stage's policy covers its own `<prefix>-*`
+   stacks, buckets, alarms and topics; CloudFront distributions and ACM
+   certificates only with its `grigri:stage` tag; and DNS records only
+   under its domain. Run the same command again whenever
+   `github-deploy.yaml` changes, before the next deploy.
+
+2. Set the repository variables and secret:
+
+   ```bash
+   gh variable set AWS_DEPLOY_ROLE_ARN --body "<DeployRoleArn>"
+   gh variable set AWS_DEPLOY_RC_ROLE_ARN --body "<RcDeployRoleArn>"
+   gh variable set HOSTED_ZONE_ID --body "<the grigri.nu01.com zone ID>"
+   # A secret, not a variable: the repository is public, and run logs
+   # show variables.
+   gh secret set GRIGRI_HEALTH_EMAILS --body "<who gets health alarms>"
+   ```

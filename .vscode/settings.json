@@ -1,0 +1,13 @@
+{
+    "git.detectWorktrees": false,
+    "git.repositoryScanIgnoredFolders": ["node_modules", ".claude"],
+    "files.exclude": {
+        "**/.claude/worktrees": true
+    },
+    "files.watcherExclude": {
+        "**/.claude/worktrees/**": true
+    },
+    "search.exclude": {
+        "**/.claude/worktrees": true
+    }
+}

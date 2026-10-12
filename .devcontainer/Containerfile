@@ -1,0 +1,56 @@
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
+
+SHELL ["/bin/bash", "-lc"]
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        git \
+        jq \
+        lsof \
+        sudo \
+        unzip \
+        xz-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Devbox: the pinned release's binary straight from GitHub, checked against
+# its published SHA-256 (the release's checksums.txt) for this
+# architecture, rather than piping get.jetify.com's installer (which
+# fetches an unpinned launcher) into bash.
+ARG DEVBOX_VERSION=0.18.1
+ARG DEVBOX_SHA256_AMD64=e05382153512fcd9df3224e847cef678afc7c9c5918863dfc2048eb9ecea9df4
+ARG DEVBOX_SHA256_ARM64=9259051516638ed0487c95c56e28c36ab715762739b01423ffa8aae9e7f9ad89
+RUN arch="$(dpkg --print-architecture)" \
+    && case "$arch" in \
+         amd64) sha="$DEVBOX_SHA256_AMD64" ;; \
+         arm64) sha="$DEVBOX_SHA256_ARM64" ;; \
+         *) echo "unsupported architecture: $arch" >&2; exit 1 ;; \
+       esac \
+    && curl -fsSL -o /tmp/devbox.tar.gz \
+         "https://github.com/jetify-com/devbox/releases/download/${DEVBOX_VERSION}/devbox_${DEVBOX_VERSION}_linux_${arch}.tar.gz" \
+    && echo "${sha}  /tmp/devbox.tar.gz" | sha256sum -c - \
+    && tar -xzf /tmp/devbox.tar.gz -C /usr/local/bin devbox \
+    && chown root:root /usr/local/bin/devbox \
+    && chmod 755 /usr/local/bin/devbox \
+    && rm /tmp/devbox.tar.gz \
+    && devbox version
+
+# Install packages as the runtime user so the nix profile ownership matches
+USER vscode
+
+# Devbox needs Nix. Install it single-user (--no-daemon): containers have no
+# systemd for the nix daemon, and this way the store is owned by vscode.
+# A pinned release, with its installer checked against the published hash.
+ARG NIX_VERSION=2.35.0
+ARG NIX_INSTALL_SHA256=78142338c3a78fe1b58f56ebcadbe7bbd22f9a304b954daff53c5d14608771f0
+RUN curl -fsSL -o /tmp/nix-install "https://releases.nixos.org/nix/nix-${NIX_VERSION}/install" \
+    && echo "${NIX_INSTALL_SHA256}  /tmp/nix-install" | sha256sum -c - \
+    && sh /tmp/nix-install --no-daemon \
+    && rm /tmp/nix-install
+
+# The Nix store is filled after the container starts (post-create.sh), not
+# here: a 10 GB image layer only slows the build, Codespaces rebuild the
+# image for each codespace anyway, and a failure there leaves a codespace
+# with a terminal instead of recovery mode.
+WORKDIR /workspaces/grigri
