@@ -1,17 +1,17 @@
-/// Climbing vocabulary shared by profiles and plans: disciplines, grades,
-/// weekdays and gear.
+/// Climbing vocabulary shared by profiles and plans: disciplines, grades
+/// and gear. Their names in the user's language are in the translation
+/// bundles (lib/ui/l10n.dart).
 library;
 
 /// How people climb.
 enum Discipline {
-  sport('Sport', '🧗'),
-  trad('Trad', '⛰️'),
-  bouldering('Bouldering', '🪨'),
-  gym('Gym', '🏢');
+  sport('🧗'),
+  trad('⛰️'),
+  bouldering('🪨'),
+  gym('🏢');
 
-  const Discipline(this.label, this.emoji);
+  const Discipline(this.emoji);
 
-  final String label;
   final String emoji;
 
   /// The grade scale this discipline is graded on.
@@ -23,14 +23,10 @@ enum Discipline {
 /// that never changes the grades themselves.
 enum GradeSystem {
   /// French grades for routes, Fontainebleau for boulders.
-  european('European'),
+  european,
 
   /// YDS for routes, the V scale for boulders.
-  american('American');
-
-  const GradeSystem(this.label);
-
-  final String label;
+  american,
 }
 
 /// A grade scale, easiest first, written in each [GradeSystem]: the same
@@ -113,18 +109,5 @@ class GradeRange {
   int get hashCode => Object.hash(scale, min, max);
 }
 
-/// Weekday names, Monday first, as DateTime.weekday numbers them (1–7).
-const weekdayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
 /// Gear someone can bring.
-enum Gear {
-  rope('Rope'),
-  quickdraws('Quickdraws'),
-  rack('Trad rack'),
-  crashPad('Crash pad'),
-  car('Car');
-
-  const Gear(this.label);
-
-  final String label;
-}
+enum Gear { rope, quickdraws, rack, crashPad, car }

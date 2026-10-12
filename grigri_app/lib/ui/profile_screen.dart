@@ -15,37 +15,35 @@ class ProfileScreen extends StatelessWidget {
     final store = StoreScope.of(context);
     final me = store.me;
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: Text(l.profileTitle),
         actions: [
           PopupMenuButton<String>(
-            tooltip: 'More',
+            tooltip: l.more,
             onSelected: (_) async {
               final sure = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Sign out?'),
-                  content: const Text(
-                    'Your profile, plans and chats stay saved; sign back in '
-                    'to see them.',
-                  ),
+                  title: Text(l.signOutQuestion),
+                  content: Text(l.signOutMessage),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
+                      child: Text(l.cancel),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Sign out'),
+                      child: Text(l.signOut),
                     ),
                   ],
                 ),
               );
               if (sure == true) await store.signOut();
             },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'signOut', child: Text('Sign out')),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: 'signOut', child: Text(l.signOut)),
             ],
           ),
         ],
@@ -75,7 +73,7 @@ class ProfileScreen extends StatelessWidget {
           Center(
             child: FilledButton.tonalIcon(
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('Edit profile'),
+              label: Text(l.editProfile),
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const ProfileEditor()),
               ),
@@ -89,9 +87,11 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
+          const SizedBox(height: 4),
+          const LanguagePicker(),
+          const SizedBox(height: 12),
           Text(
-            'Your profile is about you: what you climb and the gear you have. '
-            'When and where are for plans, made separately in Plans.',
+            l.profileFootnote,
             style: text.bodySmall?.copyWith(color: Mountain.granite),
           ),
           const SizedBox(height: 12),

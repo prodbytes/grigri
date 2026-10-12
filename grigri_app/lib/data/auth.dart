@@ -38,8 +38,9 @@ abstract class Auth extends ChangeNotifier {
   /// Whether [start] is done (until then, nobody is known to be signed in).
   bool get started;
 
-  /// The last sign-in failure to show, if any.
-  String? get error;
+  /// Whether the last sign-in failed (the sign-in screen says so, in the
+  /// user's language).
+  bool get failed;
 
   /// Initializes, and signs back in quietly when it can.
   Future<void> start();
@@ -70,7 +71,7 @@ class GoogleAuth extends Auth {
 
   GoogleSignInAccount? _account;
   bool _started = false;
-  String? _error;
+  bool _failed = false;
   StreamSubscription<GoogleSignInAuthenticationEvent>? _events;
 
   GoogleSignIn get _google => GoogleSignIn.instance;
@@ -93,7 +94,7 @@ class GoogleAuth extends Auth {
   bool get started => _started;
 
   @override
-  String? get error => _error;
+  bool get failed => _failed;
 
   @override
   Future<void> start() async {
@@ -128,7 +129,7 @@ class GoogleAuth extends Auth {
       GoogleSignInAuthenticationEventSignIn(:final user) => user,
       GoogleSignInAuthenticationEventSignOut() => null,
     };
-    _error = null;
+    _failed = false;
     notifyListeners();
   }
 
@@ -138,7 +139,7 @@ class GoogleAuth extends Auth {
         e is GoogleSignInException &&
         e.code == GoogleSignInExceptionCode.canceled;
     if (!quiet && !cancelled) {
-      _error = 'Couldn\'t sign in with Google. Try again.';
+      _failed = true;
       notifyListeners();
     }
   }
@@ -148,7 +149,7 @@ class GoogleAuth extends Auth {
     if (mode != SignInMode.google || !_google.supportsAuthenticate()) return;
     try {
       _account = await _google.authenticate();
-      _error = null;
+      _failed = false;
       notifyListeners();
     } on Object catch (e) {
       _fail(e);
@@ -207,7 +208,7 @@ class DevAuth extends Auth {
   bool get started => true;
 
   @override
-  String? get error => null;
+  bool get failed => false;
 
   @override
   Future<void> start() async {}

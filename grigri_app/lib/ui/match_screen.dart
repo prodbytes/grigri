@@ -36,6 +36,7 @@ class MatchScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     final plan = store.plan(match.plan.id) ?? match.plan;
     final members = [for (final id in plan.memberIds) store.climber(id)];
     final mine = match.newcomer.id == store.me.id;
@@ -60,7 +61,7 @@ class MatchScreen extends StatelessWidget {
                     const Text('🧗', style: TextStyle(fontSize: 48)),
                     const SizedBox(height: 8),
                     Text(
-                      "It's a match!",
+                      l.itsAMatch,
                       style: text.displaySmall?.copyWith(
                         color: Mountain.sand,
                         fontWeight: FontWeight.w800,
@@ -69,8 +70,8 @@ class MatchScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       mine
-                          ? 'Everyone in the group said yes. You\'re climbing together:'
-                          : '${match.newcomer.name} joins the group:',
+                          ? l.matchEveryoneSaidYes
+                          : l.matchJoinsGroup(match.newcomer.name),
                       style: text.bodyLarge?.copyWith(color: Mountain.granite),
                       textAlign: TextAlign.center,
                     ),
@@ -83,7 +84,7 @@ class MatchScreen extends StatelessWidget {
                       members
                           .map(
                             (m) => m.id == store.me.id
-                                ? 'you'
+                                ? l.youLower
                                 : m.name.split(' ').first,
                           )
                           .join(', '),
@@ -94,7 +95,7 @@ class MatchScreen extends StatelessWidget {
                       width: double.infinity,
                       child: FilledButton.icon(
                         icon: const Icon(Icons.forum_outlined),
-                        label: const Text('Open the group chat'),
+                        label: Text(l.openGroupChat),
                         style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
@@ -108,7 +109,7 @@ class MatchScreen extends StatelessWidget {
                     const SizedBox(height: 8),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Keep swiping'),
+                      child: Text(l.keepSwiping),
                     ),
                   ],
                 ),

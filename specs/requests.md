@@ -193,3 +193,23 @@ spec.
       travel to the API in that shape (no spots, nothing is ever full),
       and the callout's ✕ / ✓ call the API like the request cards.
     - Every tab has an [empty state](screens.md) with what to do next.
+13. **Make sure the app is internationalized (English, Spanish, German,
+    French, Portuguese, Catalan); keep the translation bundles up to date;
+    let the user pick in the profile.**
+    - New feature: [Languages](i18n.md). Flutter's gen-l10n with ARB
+      bundles in `grigri_app/lib/l10n/` (`app_en.arb` the described
+      template, and es, de, fr, pt, ca); every text the app writes
+      itself moved into them, with ICU plurals, placeholders and a
+      `select` for disciplines; discipline, gear and grade-system names
+      and dates follow the language; the failures the app describes itself
+      (timeouts, unreachable server, photo uploads, signed out, Google
+      sign-in) too. Server data and messages stay as written.
+    - A **Language** picker (System default, or each language named in
+      itself) in the [profile editor](screens.md) and on the Profile tab,
+      applied at once and kept on the device next to the grade system;
+      by default the device's language, English when the app doesn't
+      speak it. The web page's `<html lang>` follows it.
+    - `test/l10n_test.dart` fails when a bundle misses or adds keys, or
+      its placeholders differ from English; widget tests cover the device
+      language, the English fallback, switching to Spanish and back, and
+      the pick kept on the device.

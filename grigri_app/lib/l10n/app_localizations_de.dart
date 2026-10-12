@@ -1,0 +1,707 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for German (`de`).
+class AppLocalizationsDe extends AppLocalizations {
+  AppLocalizationsDe([String locale = 'de']) : super(locale);
+
+  @override
+  String get disciplineSport => 'Sportklettern';
+
+  @override
+  String get disciplineTrad => 'Trad';
+
+  @override
+  String get disciplineBouldering => 'Bouldern';
+
+  @override
+  String get disciplineGym => 'Halle';
+
+  @override
+  String get gradeSystemEuropean => 'Europäisch';
+
+  @override
+  String get gradeSystemAmerican => 'Amerikanisch';
+
+  @override
+  String get gearRope => 'Seil';
+
+  @override
+  String get gearQuickdraws => 'Expressen';
+
+  @override
+  String get gearRack => 'Mobile Sicherungen';
+
+  @override
+  String get gearCrashPad => 'Crashpad';
+
+  @override
+  String get gearCar => 'Auto';
+
+  @override
+  String get save => 'Speichern';
+
+  @override
+  String get cancel => 'Abbrechen';
+
+  @override
+  String get more => 'Mehr';
+
+  @override
+  String get refresh => 'Aktualisieren';
+
+  @override
+  String get signOut => 'Abmelden';
+
+  @override
+  String get tryAgain => 'Erneut versuchen';
+
+  @override
+  String get retry => 'Wiederholen';
+
+  @override
+  String get newPlan => 'Neuer Plan';
+
+  @override
+  String get you => 'Du';
+
+  @override
+  String get youLower => 'du';
+
+  @override
+  String get someone => 'Jemand';
+
+  @override
+  String climberCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Personen',
+      one: '1 Person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String saidYesCount(int yes, int total) {
+    return '$yes von $total haben zugesagt';
+  }
+
+  @override
+  String get declined => 'Abgelehnt';
+
+  @override
+  String get pending => 'Ausstehend';
+
+  @override
+  String get accept => 'Annehmen';
+
+  @override
+  String get decline => 'Ablehnen';
+
+  @override
+  String dayAndTime(String day, String time) {
+    return '$day, $time';
+  }
+
+  @override
+  String get errorGeneric => 'Etwas ist schiefgelaufen.';
+
+  @override
+  String errorStatus(int status) {
+    return 'Etwas ist schiefgelaufen ($status).';
+  }
+
+  @override
+  String get errorTimeout => 'Der Server hat zu lange nicht geantwortet.';
+
+  @override
+  String get errorUnreachable => 'Der Server ist nicht erreichbar.';
+
+  @override
+  String get errorPhotoTimeout =>
+      'Das Hochladen des Fotos hat zu lange gedauert.';
+
+  @override
+  String get errorPhotoUnreachable =>
+      'Das Foto konnte nicht hochgeladen werden.';
+
+  @override
+  String errorPhotoStatus(int status) {
+    return 'Das Hochladen des Fotos ist fehlgeschlagen ($status).';
+  }
+
+  @override
+  String get errorPhotoType => 'Nimm ein Foto im Format JPEG, PNG oder WebP.';
+
+  @override
+  String get errorSignedOut => 'Abgemeldet: Bitte melde dich erneut an.';
+
+  @override
+  String get errorSignIn =>
+      'Anmeldung mit Google fehlgeschlagen. Versuch es noch einmal.';
+
+  @override
+  String get loadFailedTitle => 'Dein Profil konnte nicht geladen werden';
+
+  @override
+  String get signInTagline =>
+      'Finde Kletterpartner: Mach einen Plan oder wisch bei einem nach rechts, und klettert zusammen.';
+
+  @override
+  String get signInWithGoogle => 'Mit Google anmelden';
+
+  @override
+  String get devSignInHeading => 'Dev-Anmeldung · nur lokale API';
+
+  @override
+  String get emailLabel => 'E-Mail';
+
+  @override
+  String get devSignIn => 'Dev-Anmeldung';
+
+  @override
+  String get signInUnconfigured =>
+      'Die Anmeldung ist in diesem Build nicht eingerichtet (keine Google-Client-ID).';
+
+  @override
+  String get tabDiscover => 'Entdecken';
+
+  @override
+  String get tabPlans => 'Pläne';
+
+  @override
+  String get tabChats => 'Chats';
+
+  @override
+  String get tabNotifications => 'Mitteilungen';
+
+  @override
+  String get tabProfile => 'Profil';
+
+  @override
+  String get tabAdmin => 'Admin';
+
+  @override
+  String get thePlan => 'Der Plan';
+
+  @override
+  String get yourGrades => 'Dein Grad';
+
+  @override
+  String get profileClimbs => 'Klettert';
+
+  @override
+  String get profileGear => 'Ausrüstung';
+
+  @override
+  String gearPhotoOf(String name, int number) {
+    return 'Ausrüstung von $name, Foto $number';
+  }
+
+  @override
+  String get language => 'Sprache';
+
+  @override
+  String get languageSystem => 'Systemsprache';
+
+  @override
+  String get profileTitle => 'Profil';
+
+  @override
+  String get signOutQuestion => 'Abmelden?';
+
+  @override
+  String get signOutMessage =>
+      'Dein Profil, deine Pläne und Chats bleiben gespeichert; melde dich wieder an, um sie zu sehen.';
+
+  @override
+  String get editProfile => 'Profil bearbeiten';
+
+  @override
+  String get profileFootnote =>
+      'Dein Profil handelt von dir: was du kletterst und welche Ausrüstung du hast. Wann und wo gehören zu Plänen, die du separat unter Pläne erstellst.';
+
+  @override
+  String get createProfile => 'Erstelle dein Profil';
+
+  @override
+  String get takePhoto => 'Foto aufnehmen';
+
+  @override
+  String get choosePhoto => 'Foto auswählen';
+
+  @override
+  String get removePhoto => 'Foto entfernen';
+
+  @override
+  String get photoFailed => 'Das Foto konnte nicht geladen werden';
+
+  @override
+  String get welcomeIntro =>
+      'Willkommen bei Grigri! Erzähl anderen, wer du bist und was du kletterst: Sie sehen es, wenn du bei ihren Plänen mitmachen willst.';
+
+  @override
+  String get addPhoto => 'Foto hinzufügen';
+
+  @override
+  String get changePhoto => 'Foto ändern';
+
+  @override
+  String get nameLabel => 'Name';
+
+  @override
+  String get nameRequired => 'Bitte gib deinen Namen ein';
+
+  @override
+  String get ageLabel => 'Alter (optional)';
+
+  @override
+  String ageRange(int min, int max) {
+    return '$min bis $max';
+  }
+
+  @override
+  String get bioLabel => 'Über dich';
+
+  @override
+  String get whatYouClimb => 'Was du kletterst';
+
+  @override
+  String get whatYouClimbHint =>
+      'Wähl deine Disziplinen und die Grade, die du kletterst.';
+
+  @override
+  String get gearYouCanBring => 'Ausrüstung, die du mitbringen kannst';
+
+  @override
+  String get gearHint => 'Füg auch Fotos davon hinzu.';
+
+  @override
+  String gearPhoto(int number) {
+    return 'Ausrüstungsfoto $number';
+  }
+
+  @override
+  String removeGearPhoto(int number) {
+    return 'Ausrüstungsfoto $number entfernen';
+  }
+
+  @override
+  String get addGearPhoto => 'Ausrüstungsfoto hinzufügen';
+
+  @override
+  String get startClimbing => 'Los geht\'s';
+
+  @override
+  String get discoverTitle => 'Pläne entdecken';
+
+  @override
+  String askedToJoinPending(String organizer) {
+    return 'Anfrage gesendet: ausstehend. $organizer entscheidet; du bekommst eine Mitteilung.';
+  }
+
+  @override
+  String askedToJoinPendingGroup(String organizer) {
+    return 'Anfrage gesendet: ausstehend. $organizer und die Gruppe entscheiden; du bekommst eine Mitteilung.';
+  }
+
+  @override
+  String get noPlansToJoinTitle => 'Gerade keine Pläne zum Mitmachen';
+
+  @override
+  String get noPlansToJoinMessage =>
+      'Noch hat niemand einen passenden Plan. Mach deinen eigenen: Wer passt, fragt an.';
+
+  @override
+  String get swipeJoin => 'Dabei';
+
+  @override
+  String get swipePass => 'Weiter';
+
+  @override
+  String get pass => 'Überspringen';
+
+  @override
+  String get askToJoin => 'Mitmachen anfragen';
+
+  @override
+  String get organizedBy => 'Organisiert von';
+
+  @override
+  String get alsoInGroup => 'Auch in der Gruppe';
+
+  @override
+  String get chatsTitle => 'Chats';
+
+  @override
+  String get noChatsTitle => 'Noch keine Chats';
+
+  @override
+  String get noChatsMessage =>
+      'Jeder Plan, bei dem du dabei bist, hat einen Gruppenchat. Mach einen Plan oder frag bei einem an, und sein Chat erscheint hier.';
+
+  @override
+  String get findPlan => 'Plan finden';
+
+  @override
+  String messagePreview(String author, String text) {
+    return '$author: $text';
+  }
+
+  @override
+  String toAnswer(int count) {
+    return '$count offen';
+  }
+
+  @override
+  String get notInGroupTitle => 'Nicht in dieser Gruppe';
+
+  @override
+  String get notInGroupMessage =>
+      'Du hast diesen Plan verlassen, sein Chat ist geschlossen.';
+
+  @override
+  String get messageHint => 'Nachricht an die Gruppe';
+
+  @override
+  String get send => 'Senden';
+
+  @override
+  String get wantsToJoinYourAnswer => 'Will mitmachen · deine Antwort';
+
+  @override
+  String declineName(String name) {
+    return '$name ablehnen';
+  }
+
+  @override
+  String acceptName(String name) {
+    return '$name annehmen';
+  }
+
+  @override
+  String askedToJoinAt(String time) {
+    return 'Anfrage · $time';
+  }
+
+  @override
+  String noGradesYet(String discipline) {
+    String _temp0 = intl.Intl.selectLogic(discipline, {
+      'sport': 'Noch kein Grad im Sportklettern',
+      'trad': 'Noch kein Grad im Trad',
+      'bouldering': 'Noch kein Grad im Bouldern',
+      'gym': 'Noch kein Grad in der Halle',
+      'other': 'Noch kein Grad',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get joined => 'Dabei';
+
+  @override
+  String get closed => 'Geschlossen';
+
+  @override
+  String namesSaidYes(String names, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Zugesagt: $names',
+      one: 'Zugesagt: $names',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String waitingFor(String names) {
+    return 'offen: $names';
+  }
+
+  @override
+  String get itsAMatch => 'It\'s a Match!';
+
+  @override
+  String get matchEveryoneSaidYes =>
+      'Alle in der Gruppe haben zugesagt. Ihr klettert zusammen:';
+
+  @override
+  String matchJoinsGroup(String name) {
+    return '$name ist jetzt in der Gruppe:';
+  }
+
+  @override
+  String get openGroupChat => 'Gruppenchat öffnen';
+
+  @override
+  String get keepSwiping => 'Weiter wischen';
+
+  @override
+  String get notificationsTitle => 'Mitteilungen';
+
+  @override
+  String get nothingYetTitle => 'Noch nichts';
+
+  @override
+  String get nothingYetMessage =>
+      'Wenn jemand bei einem deiner Pläne mitmachen will oder eine Gruppe auf deine Anfrage antwortet, erfährst du es hier.';
+
+  @override
+  String noticeWantsToJoin(String name) {
+    return '$name will mitmachen';
+  }
+
+  @override
+  String noticeAnswerInChat(String plan) {
+    return '$plan · antworte im Gruppenchat';
+  }
+
+  @override
+  String noticeYoureIn(String plan) {
+    return 'Du bist dabei: $plan';
+  }
+
+  @override
+  String get noticeAcceptedBody =>
+      'Die Gruppe hat dich angenommen. Sag Hallo im Chat.';
+
+  @override
+  String noticeNotThisTime(String plan) {
+    return 'Diesmal nicht: $plan';
+  }
+
+  @override
+  String get noticeDeclinedBody => 'Die Gruppe hat deine Anfrage abgelehnt.';
+
+  @override
+  String get newTag => 'Neu';
+
+  @override
+  String get planGoneTitle => 'Plan nicht mehr da';
+
+  @override
+  String get planGoneMessage =>
+      'Alle haben diesen Plan verlassen, oder er ist nicht mehr offen.';
+
+  @override
+  String get yourPlan => 'Dein Plan';
+
+  @override
+  String get planTitle => 'Plan';
+
+  @override
+  String get edit => 'Bearbeiten';
+
+  @override
+  String get declinedGroupSaidNo => 'Abgelehnt: Die Gruppe hat abgesagt';
+
+  @override
+  String pendingSaidYes(int yes, int total) {
+    return 'Ausstehend: $yes von $total haben zugesagt';
+  }
+
+  @override
+  String theGroupCount(int count) {
+    return 'Die Gruppe · $count';
+  }
+
+  @override
+  String get organizer => 'Organisator';
+
+  @override
+  String get member => 'Mitglied';
+
+  @override
+  String get askingToJoin => 'Anfragen';
+
+  @override
+  String get youSaidYes => 'Du hast zugesagt';
+
+  @override
+  String get answerInChat => 'Antworte im Chat';
+
+  @override
+  String get groupChat => 'Gruppenchat';
+
+  @override
+  String get cancelPlan => 'Plan absagen';
+
+  @override
+  String get leavePlan => 'Plan verlassen';
+
+  @override
+  String get cancelPlanQuestion => 'Plan absagen?';
+
+  @override
+  String get leavePlanQuestion => 'Plan verlassen?';
+
+  @override
+  String get cancelPlanMessage => 'Der Plan und sein Chat werden gelöscht.';
+
+  @override
+  String leaveOrganizerMessage(String name) {
+    return '$name organisiert ihn dann.';
+  }
+
+  @override
+  String get leaveMessage => 'Du kannst später nicht wieder beitreten.';
+
+  @override
+  String get stay => 'Bleiben';
+
+  @override
+  String get leave => 'Verlassen';
+
+  @override
+  String get editPlan => 'Plan bearbeiten';
+
+  @override
+  String get pickFutureTime => 'Wähl eine Zeit in der Zukunft.';
+
+  @override
+  String get sectorLabel => 'Sektor, Klettergebiet oder Halle';
+
+  @override
+  String get sectorHint => 'Suchen oder eintippen';
+
+  @override
+  String sectorsAttribution(String attribution) {
+    return 'Sektoren: $attribution';
+  }
+
+  @override
+  String get whereRequired => 'Wo kletterst du?';
+
+  @override
+  String get sectionDiscipline => 'Disziplin';
+
+  @override
+  String get sectionWhere => 'Wo';
+
+  @override
+  String get sectionWhen => 'Wann';
+
+  @override
+  String get sectionGrades => 'Grade';
+
+  @override
+  String get sectionNotes => 'Notizen';
+
+  @override
+  String get notesHint =>
+      'Treffpunkt, Plätze im Auto, die Routen, die du im Kopf hast…';
+
+  @override
+  String get publishPlan => 'Plan veröffentlichen';
+
+  @override
+  String get yourPlans => 'Deine Pläne';
+
+  @override
+  String get noPlansYetTitle => 'Noch keine Pläne';
+
+  @override
+  String get noPlansYetMessage =>
+      'Mach einen Plan (was, wo, wann), und passende Leute fragen an. Oder wisch unter Entdecken bei einem nach rechts.';
+
+  @override
+  String get plansClimbing => 'Dabei';
+
+  @override
+  String get plansAskedToJoin => 'Angefragt';
+
+  @override
+  String get organizing => 'Du organisierst';
+
+  @override
+  String get accepted => 'Angenommen';
+
+  @override
+  String toReview(int count) {
+    return '$count zu prüfen';
+  }
+
+  @override
+  String get groupSaidNo => 'Die Gruppe hat abgesagt';
+
+  @override
+  String waitingForNames(String names) {
+    return 'Wartet auf $names';
+  }
+
+  @override
+  String get dismiss => 'Ausblenden';
+
+  @override
+  String get adminTitle => 'Admin: Anfragen';
+
+  @override
+  String get noOpenRequestsTitle => 'Keine offenen Anfragen';
+
+  @override
+  String get noOpenRequestsMessage =>
+      'Wenn jemand bei einem Plan mitmachen will, erscheint die Anfrage hier, damit du sie genehmigst oder ablehnst.';
+
+  @override
+  String get aPlan => 'einen Plan';
+
+  @override
+  String askedAt(String day, String time) {
+    return 'Angefragt am $day, $time';
+  }
+
+  @override
+  String get reject => 'Ablehnen';
+
+  @override
+  String get approve => 'Genehmigen';
+
+  @override
+  String rejectNameQuestion(String name) {
+    return '$name ablehnen?';
+  }
+
+  @override
+  String rejectMessage(String plan) {
+    return 'Die Person kommt nicht zu $plan dazu und erfährt, dass die Gruppe abgelehnt hat.';
+  }
+
+  @override
+  String approveNameQuestion(String name) {
+    return '$name genehmigen?';
+  }
+
+  @override
+  String approveMessage(String plan) {
+    return 'Die Person kommt jetzt zu $plan dazu, als hätten alle in der Gruppe zugesagt.';
+  }
+
+  @override
+  String adminJoined(String name, String plan) {
+    return '$name ist jetzt bei $plan dabei.';
+  }
+
+  @override
+  String get roles => 'Rollen';
+
+  @override
+  String get rolesSignedOut =>
+      'Nicht angemeldet: Deine Rollen erscheinen hier, sobald du dich anmeldest.';
+
+  @override
+  String get rolesFailed =>
+      'Deine Rollen konnten nicht von rbacr geladen werden.';
+
+  @override
+  String get noRoles => 'Noch keine Rollen in Grigri.';
+
+  @override
+  String rolesAs(String email) {
+    return 'Als $email';
+  }
+}

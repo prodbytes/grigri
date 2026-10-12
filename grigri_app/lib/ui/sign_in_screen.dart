@@ -36,6 +36,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final auth = StoreScope.of(context).auth;
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     return ListenableBuilder(
       listenable: auth,
       builder: (context, _) => Scaffold(
@@ -66,8 +67,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Find climbing partners: make a plan, or swipe right '
-                        'on one, and climb together.',
+                        l.signInTagline,
                         style: text.bodyLarge?.copyWith(
                           color: Mountain.granite,
                         ),
@@ -75,10 +75,10 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       const SizedBox(height: 40),
                       ..._buttons(auth, text),
-                      if (auth.error != null) ...[
+                      if (auth.failed) ...[
                         const SizedBox(height: 16),
                         Text(
-                          auth.error!,
+                          l.errorSignIn,
                           style: const TextStyle(color: Mountain.clay),
                           textAlign: TextAlign.center,
                         ),
@@ -94,57 +94,60 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
-  List<Widget> _buttons(Auth auth, TextTheme text) => switch (auth.mode) {
-    SignInMode.google => [
-      SizedBox(
-        width: double.infinity,
-        child: FilledButton.icon(
-          icon: const Icon(Icons.login),
-          label: const Text('Sign in with Google'),
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+  List<Widget> _buttons(Auth auth, TextTheme text) {
+    final l = context.l10n;
+    return switch (auth.mode) {
+      SignInMode.google => [
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            icon: const Icon(Icons.login),
+            label: Text(l.signInWithGoogle),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+            ),
+            onPressed: _busy ? null : () => _signIn(auth),
           ),
-          onPressed: _busy ? null : () => _signIn(auth),
         ),
-      ),
-    ],
-    SignInMode.googleWebButton => [
-      SizedBox(height: 50, child: googleWebButton()),
-    ],
-    SignInMode.dev => [
-      Text(
-        'DEV SIGN-IN · LOCAL API ONLY',
-        style: text.labelSmall?.copyWith(
-          color: Mountain.tan,
-          letterSpacing: 1.2,
+      ],
+      SignInMode.googleWebButton => [
+        SizedBox(height: 50, child: googleWebButton()),
+      ],
+      SignInMode.dev => [
+        Text(
+          l.devSignInHeading.toUpperCase(),
+          style: text.labelSmall?.copyWith(
+            color: Mountain.tan,
+            letterSpacing: 1.2,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      TextField(
-        controller: _email,
-        keyboardType: TextInputType.emailAddress,
-        autocorrect: false,
-        decoration: const InputDecoration(
-          labelText: 'Email',
-          hintText: 'someone@example.com',
+        const SizedBox(height: 8),
+        TextField(
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          decoration: InputDecoration(
+            labelText: l.emailLabel,
+            hintText: 'someone@example.com',
+          ),
+          onSubmitted: (_) => _signIn(auth),
         ),
-        onSubmitted: (_) => _signIn(auth),
-      ),
-      const SizedBox(height: 12),
-      SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: _busy ? null : () => _signIn(auth),
-          child: const Text('Dev sign-in'),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _busy ? null : () => _signIn(auth),
+            child: Text(l.devSignIn),
+          ),
         ),
-      ),
-    ],
-    SignInMode.unconfigured => [
-      const Text(
-        'Sign-in isn\'t set up in this build (no Google client ID).',
-        style: TextStyle(color: Mountain.clay),
-        textAlign: TextAlign.center,
-      ),
-    ],
-  };
+      ],
+      SignInMode.unconfigured => [
+        Text(
+          l.signInUnconfigured,
+          style: const TextStyle(color: Mountain.clay),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    };
+  }
 }

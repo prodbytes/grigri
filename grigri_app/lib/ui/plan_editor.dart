@@ -133,9 +133,8 @@ class _PlanEditorState extends State<PlanEditor> {
     final store = StoreScope.read(context);
     final now = DateTime.now();
     if (!_at(_hours.start).isAfter(now)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a time that\'s still to come.')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.pickFutureTime)));
       return;
     }
     final grades = GradeRange(
@@ -193,20 +192,20 @@ class _PlanEditorState extends State<PlanEditor> {
           controller: controller,
           focusNode: focusNode,
           decoration: InputDecoration(
-            labelText: 'Sector, crag or gym',
-            hintText: 'Search, or type it in',
+            labelText: context.l10n.sectorLabel,
+            hintText: context.l10n.sectorHint,
             prefixIcon: const Icon(Icons.search),
             helperText: _sector != null
                 ? _sector!.where
                 : (_index?.attribution.isNotEmpty ?? false)
-                ? 'Sectors: ${_index!.attribution}'
+                ? context.l10n.sectorsAttribution(_index!.attribution)
                 : null,
             helperMaxLines: 2,
           ),
           textCapitalization: TextCapitalization.words,
           onFieldSubmitted: (_) => onSubmitted(),
           validator: (v) =>
-              (v ?? '').trim().isEmpty ? 'Where are you climbing?' : null,
+              (v ?? '').trim().isEmpty ? context.l10n.whereRequired : null,
         ),
     optionsViewBuilder: (context, onSelected, options) => Align(
       alignment: Alignment.topLeft,
@@ -240,6 +239,7 @@ class _PlanEditorState extends State<PlanEditor> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final l = context.l10n;
     final scale = _discipline.scale.grades(StoreScope.of(context).gradeSystem);
     Widget label(String s) => Padding(
       padding: const EdgeInsets.only(top: 20, bottom: 8),
@@ -253,12 +253,9 @@ class _PlanEditorState extends State<PlanEditor> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.plan == null ? 'New plan' : 'Edit plan'),
+        title: Text(widget.plan == null ? l.newPlan : l.editPlan),
         actions: [
-          TextButton(
-            onPressed: _saving ? null : _save,
-            child: const Text('Save'),
-          ),
+          TextButton(onPressed: _saving ? null : _save, child: Text(l.save)),
         ],
       ),
       body: Form(
@@ -266,14 +263,14 @@ class _PlanEditorState extends State<PlanEditor> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            label('Climbing'),
+            label(l.sectionDiscipline),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
                 for (final d in Discipline.values)
                   ChoiceChip(
-                    label: Text('${d.emoji} ${d.label}'),
+                    label: Text('${d.emoji} ${d.label(l)}'),
                     selected: _discipline == d,
                     onSelected: (_) => setState(() {
                       if (d.scale != _discipline.scale) {
@@ -284,12 +281,12 @@ class _PlanEditorState extends State<PlanEditor> {
                   ),
               ],
             ),
-            label('Where'),
+            label(l.sectionWhere),
             _whereField(),
-            label('When'),
+            label(l.sectionWhen),
             OutlinedButton.icon(
               icon: const Icon(Icons.event),
-              label: Text(dayLabel(_day)),
+              label: Text(dayLabel(context, _day)),
               onPressed: _pickDate,
             ),
             const SizedBox(height: 8),
@@ -318,7 +315,7 @@ class _PlanEditorState extends State<PlanEditor> {
                 ),
               ],
             ),
-            label('Grades'),
+            label(l.sectionGrades),
             const GradeSystemToggle(),
             const SizedBox(height: 4),
             Row(
@@ -348,21 +345,18 @@ class _PlanEditorState extends State<PlanEditor> {
                 ),
               ],
             ),
-            label('Notes'),
+            label(l.sectionNotes),
             TextFormField(
               controller: _notes,
               minLines: 2,
               maxLines: 5,
-              decoration: const InputDecoration(
-                hintText:
-                    'Meeting point, car seats, the routes you have in mind…',
-              ),
+              decoration: InputDecoration(hintText: l.notesHint),
               textCapitalization: TextCapitalization.sentences,
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: Text(widget.plan == null ? 'Publish the plan' : 'Save'),
+              child: Text(widget.plan == null ? l.publishPlan : l.save),
             ),
           ],
         ),

@@ -479,7 +479,7 @@ class FakeAuth extends Auth {
   bool get started => true;
 
   @override
-  String? get error => null;
+  bool get failed => false;
 
   @override
   Future<void> start() async {}

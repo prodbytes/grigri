@@ -46,6 +46,11 @@ dependencies:
       url: https://github.com/prodbytes/rbacr.git
       path: rbacr-flutter
       ref: c3cbfd1875208331f5a3df09e3116daa979c1816
+  # Translations (lib/l10n, specs/i18n.md). intl is the version
+  # flutter_localizations pins.
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +62,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # In-memory device preferences, for the tests that keep choices on it.
+  shared_preferences_platform_interface: ^2.4.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -68,6 +75,9 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Generates AppLocalizations from the ARB bundles in lib/l10n (l10n.yaml).
+  generate: true
 
   # The sector index, built by tool/build_sectors.dart.
   assets:
