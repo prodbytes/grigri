@@ -44,7 +44,7 @@ spec.
      ([grigri_infra/README.md](../grigri_infra/README.md)). Google sign-in
      clients have no API, so they're made in the Google Cloud console; the
      app doesn't sign in yet.
-2. **Add the local address so that local HTTPS works, like presence.**
+3. **Add the local address so that local HTTPS works, like presence.**
    Floci runs as the local CloudFront ([grigri_floci/](../grigri_floci),
    `4-floci` in `devbox services up`), over HTTP on port 2114 and HTTPS on
    2543 at https://local.grigri.nu01.com:2543/app/, with an mkcert
@@ -54,12 +54,12 @@ spec.
    `🔒 https` ([development environment](dev-environment.md)).
    `local.grigri.nu01.com` needs A (127.0.0.1) and AAAA (::1) records in
    the `grigri.nu01.com` zone ([grigri_infra/README.md](../grigri_infra/README.md)).
-3. **Serve the web app on port 7189.** The Flutter dev server's port
+4. **Serve the web app on port 7189.** The Flutter dev server's port
    (`FLUTTER_WEB_PORT`) defaults to 7189 instead of 2112, in
    `process-compose.yaml`, the run and health scripts, Floci's CloudFront
    origin, and the dev container's forwarded ports
    ([development environment](dev-environment.md)).
-4. **Remove the static fake data; everything from a cheap database
+5. **Remove the static fake data; everything from a cheap database
    (DynamoDB); GA empty and real, fake data in RC and local; an admin can
    approve/reject any request.**
    - A backend, [grigri_api/](../grigri_api) ([backend](backend.md),
@@ -98,3 +98,18 @@ spec.
      idle; DynamoDB on demand rather than Aurora Serverless v2 (about
      $43/month minimum) or RDS (hourly), an HTTP API ($1 per million)
      rather than a REST API ($3.50), one Lambda, S3 for photos.
+6. **Theme in mountain colors (olive, light brown, sand, gray, other greens
+   and a sky blue), harmonious, dark for now.** The app is dark only, with
+   an explicit color scheme ([theme](theme.md)) instead of one derived from
+   a seed color; every text color passes WCAG AA.
+7. **A better icon instead of Flutter's default.** Mountain peaks with a
+   snow cap and a moon, in a sand ring, on the theme's dark background,
+   for Android (with an adaptive icon), iOS and the web (favicon, PWA
+   icons, and the manifest's colors in the theme's instead of Flutter
+   blue). How to regenerate the icons is in [platforms](platforms.md).
+8. **Use this icon** (a grigri over mountains, shared as a
+   PNG). It replaces the mountains-in-a-ring icon on every platform; its
+   SVG sources are gone. The shared art is kept as the icon's source, and
+   [scripts/make-icon.py](../scripts/make-icon.py) cleans its stray yellow
+   pixels and makes the full and the adaptive-foreground PNGs
+   ([platforms](platforms.md)).
