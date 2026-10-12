@@ -382,3 +382,9 @@ spec.
       its placeholders differ from English; widget tests cover the device
       language, the English fallback, switching to Spanish and back, and
       the pick kept on the device.
+24. **Check the running health checks; add them if not yet done.** The
+    health checks' half of entry 23.
+    - [Deploy](deploy.md): each stage's site stack also has a Route 53
+      health check of `/api/health` (it must say `"ok":true`), with its
+      own alarm (`<stack>-api-health`) on the same topic, so the API is
+      watched like the web app.
