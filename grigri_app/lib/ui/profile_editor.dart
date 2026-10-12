@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/grigri_store.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../theme.dart';
@@ -16,7 +17,7 @@ typedef PhotoPicker = Future<Uint8List?> Function(
 );
 
 /// The device's picker. Photos are downsized and recompressed as they're
-/// picked, because they're kept on the device with the rest of the state.
+/// picked, so their uploads stay small.
 Future<Uint8List?> pickPhoto(ImageSource source, double maxSide) async {
   final file = await ImagePicker().pickImage(
     source: source,
@@ -29,10 +30,13 @@ Future<Uint8List?> pickPhoto(ImageSource source, double maxSide) async {
 
 /// Edits my profile: my photo, about me, the grades I climb per
 /// discipline, and my gear with its photos. When and where are for plans.
+/// With [create], it's the "Create your profile" step after the first
+/// sign-in, before the tabs.
 class ProfileEditor extends StatefulWidget {
-  const ProfileEditor({super.key, this.pick = pickPhoto});
+  const ProfileEditor({super.key, this.pick = pickPhoto, this.create = false});
 
   final PhotoPicker pick;
+  final bool create;
 
   @override
   State<ProfileEditor> createState() => _ProfileEditorState();
@@ -40,17 +44,24 @@ class ProfileEditor extends StatefulWidget {
 
 class _ProfileEditorState extends State<ProfileEditor> {
   final _form = GlobalKey<FormState>();
-  late final Climber _me = StoreScope.read(context).me;
+  late final Climber _me =
+      StoreScope.read(context).meOrNull ??
+      Climber(id: '', name: StoreScope.read(context).suggestedName);
   late final _name = TextEditingController(text: _me.name);
   late final _age = TextEditingController(text: '${_me.age ?? ''}');
   late final _bio = TextEditingController(text: _me.bio);
-  late Uint8List? _photo = _me.photo;
+  late EditablePhoto? _photo = _me.photo == null
+      ? null
+      : EditablePhoto.saved(_me.photo!);
+  bool _saving = false;
   late final Map<Discipline, RangeValues> _levels = {
     for (final e in _me.levels.entries)
       e.key: RangeValues(e.value.min.toDouble(), e.value.max.toDouble()),
   };
   late final Set<Gear> _gear = {..._me.gear};
-  late final List<Uint8List> _gearPhotos = [..._me.gearPhotos];
+  late final List<EditablePhoto> _gearPhotos = [
+    for (final key in _me.gearPhotos) EditablePhoto.saved(key),
+  ];
 
   @override
   void dispose() {
@@ -117,23 +128,30 @@ class _ProfileEditorState extends State<ProfileEditor> {
       640,
       onRemove: _photo == null ? null : () => setState(() => _photo = null),
     );
-    if (photo != null) setState(() => _photo = photo);
+    if (photo != null) setState(() => _photo = EditablePhoto.picked(photo));
   }
 
   Future<void> _addGearPhoto() async {
     final photo = await _choose(1080);
-    if (photo != null) setState(() => _gearPhotos.add(photo));
+    if (photo != null) {
+      setState(() => _gearPhotos.add(EditablePhoto.picked(photo)));
+    }
   }
 
-  void _save() {
-    if (!_form.currentState!.validate()) return;
-    StoreScope.read(context).updateProfile(
+  /// A photo's image: the picked bytes, or the saved one.
+  ImageProvider _image(EditablePhoto photo) => photo.bytes != null
+      ? MemoryImage(photo.bytes!)
+      : StoreScope.read(context).photo(photo.key!);
+
+  Future<void> _save() async {
+    if (_saving || !_form.currentState!.validate()) return;
+    final store = StoreScope.read(context);
+    setState(() => _saving = true);
+    final saved = await store.saveProfile(
       _me.copyWith(
         name: _name.text.trim(),
         age: int.tryParse(_age.text.trim()),
         bio: _bio.text.trim(),
-        photo: _photo,
-        clearPhoto: _photo == null,
         levels: {
           for (final e in _levels.entries)
             e.key: GradeRange(
@@ -143,10 +161,13 @@ class _ProfileEditorState extends State<ProfileEditor> {
             ),
         },
         gear: _gear,
-        gearPhotos: _gearPhotos,
       ),
+      photo: _photo,
+      gearPhotos: _gearPhotos,
     );
-    Navigator.of(context).pop();
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (saved && !widget.create) Navigator.of(context).pop();
   }
 
   @override
@@ -174,22 +195,45 @@ class _ProfileEditorState extends State<ProfileEditor> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit profile'),
-        actions: [TextButton(onPressed: _save, child: const Text('Save'))],
+        automaticallyImplyLeading: !widget.create,
+        title: Text(widget.create ? 'Create your profile' : 'Edit profile'),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: const Text('Save'),
+          ),
+          if (widget.create)
+            PopupMenuButton<String>(
+              tooltip: 'More',
+              onSelected: (_) => StoreScope.read(context).signOut(),
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'signOut', child: Text('Sign out')),
+              ],
+            ),
+        ],
       ),
       body: Form(
         key: _form,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
+            if (widget.create)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Text(
+                  'Welcome to Grigri! Tell climbers who you are and what you '
+                  'climb: they see it when you ask to join their plans.',
+                  style: text.bodyMedium?.copyWith(color: Mountain.snow),
+                ),
+              ),
             Center(
               child: _PhotoButton(
                 avatar: Avatar(
                   _me.copyWith(
-                    name: _name.text,
-                    photo: _photo,
-                    clearPhoto: _photo == null,
+                    name: _name.text.isEmpty ? '?' : _name.text,
+                    photo: null,
                   ),
+                  image: _photo == null ? null : _image(_photo!),
                   radius: 52,
                 ),
                 tooltip: _photo == null ? 'Add a photo' : 'Change your photo',
@@ -253,7 +297,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      PhotoThumb(photo, label: 'Gear photo ${i + 1}'),
+                      PhotoThumb(_image(photo), label: 'Gear photo ${i + 1}'),
                       Positioned(
                         top: -10,
                         right: -10,
@@ -273,7 +317,16 @@ class _ProfileEditorState extends State<ProfileEditor> {
               ],
             ),
             const SizedBox(height: 28),
-            FilledButton(onPressed: _save, child: const Text('Save')),
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(widget.create ? 'Start climbing' : 'Save'),
+            ),
           ],
         ),
       ),

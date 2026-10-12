@@ -7,7 +7,8 @@ person, and a plan can take a whole group.
 ## Profiles and plans are separate
 
 - A **profile** ([Climber](../grigri_app/lib/model/climber.dart)) is about
-  the person: a **photo** (or their initials), name, age (optional:
+  the person, created after their first [sign-in](sign-in.md): a
+  **photo** (or their initials), name, age (optional:
   without it, cards show just the name), a bio, and:
   - **grades per discipline** (what they climb): sport, trad and gym on
     the French scale (4a–9a), bouldering on the V scale (VB–V13);
@@ -32,6 +33,9 @@ person, and a plan can take a whole group.
   - Right / ✓: I ask to join (a join request).
   - Left / ✕: I pass; the plan leaves my deck.
 
+  The server picks and orders the deck. With nothing to show (GA starts
+  empty), Discover says so and offers **New plan**.
+
 Cards are dragged (they tilt, and stamp JOIN / PASS),
 or thrown by the buttons. A drag past 28% of the width, or a quick flick,
 counts.
@@ -43,7 +47,8 @@ Someone asking to join a plan shows up in its **group chat** as a card
 whole profile), their grade for the plan's discipline (marked when it
 fits), and who in the group has said yes and who it's waiting for. Until
 I've answered it has **Decline** and **Accept**; then it shows "You said
-yes" and who it's still waiting for, **Joined**, or **Declined**. The
+yes" and who it's still waiting for, **Joined**, **Declined** (when I said
+no), or **Closed** (turned down by someone else, or by an admin). The
 organizer and **every member** are notified ("<name> wants to join"), and
 a newcomer is notified of the requests still open when they join. Chats
 marks each chat with how many requests wait for my answer, and the Chats
@@ -75,8 +80,8 @@ plan screen shows the same status.
 When someone joins a plan I'm in, or I join one, **"It's a match!"** opens
 over the screen: the plan, highlighted, the group's avatars and names, and
 **Open the group chat** or **Keep swiping**. That includes a group's yes
-that arrives while I'm doing something else. A group's no shows "Not this
-time: … said no" at the bottom of the screen.
+found by a [refresh](#refreshing) while I'm doing something else. A
+group's no is a notification.
 
 ## Notifications
 
@@ -99,27 +104,49 @@ It notes who joined and who left, and holds the
 [join requests](#join-requests-in-the-group-chat) for the group to
 answer. Chats lists them, most recent first.
 
-## For now: on the device
+## Data: the backend API
 
-There's no backend yet, so everything runs and is kept on the device
-([GrigriStore](../grigri_app/lib/data/grigri_store.dart), saved as JSON
-with shared_preferences: local storage on the web). Photos are kept in
-it too, downsized as they're picked (my photo to 640 px, gear photos to
-1080 px, JPEG quality 75), which is why a profile keeps at most 6 gear
-photos. The made-up climbers have no photos. The app starts with
-demo data ([seed.dart](../grigri_app/lib/data/seed.dart)): my profile
-("You", to edit), eight made-up climbers with their plans, dates always in
-the coming days, two people asking to join my plan, and a bouldering group
-I'm in where Noa waits only for my yes; their request cards in the chats
-and unread notifications for the three requests, and the (read)
-notification that I was accepted into the bouldering group. The made-up climbers answer requests by a fixed
-policy: accept everyone, accept only overlapping grades, never decide (the
-request waits), or turn everyone down. They answer 10 seconds after I ask
-(the app checks every 2 seconds), so my request is pending first; tests
-make them answer at once. Profile →
-⋯ → **Reset the demo data** starts over.
+Everything comes from the database, through the backend's API
+([api.md](api.md)); the app keeps nothing between runs and has no
+built-in data. [GrigriStore](../grigri_app/lib/data/grigri_store.dart) is
+a cache over the API client ([api.dart](../grigri_app/lib/data/api.dart),
+[http_api.dart](../grigri_app/lib/data/http_api.dart)): screens read it
+and call its actions (like, pass, accept, reject, dismiss, create,
+update, leave, send, save the profile, and the admin's approve and
+reject), which call the API and update the cache with the answers. A
+failed action shows the server's message at the bottom of the screen; a
+401 tries fresh credentials once, then signs out; a 409 "no profile"
+goes back to creating one.
 
-A backend would take the store's place behind the same operations (like,
-pass, accept, reject, dismiss, create, update, leave, send, the
-notifications), with real people's decisions instead of the policies, and
-push notifications instead of the 2-second check.
+- **Production (GA) starts empty**: only real people's profiles and plans.
+  RC and local get made-up climbers and plans from the backend's seed
+  (never in GA). Nobody answers by a rule: every request waits for real
+  members (or an [admin](sign-in.md#admins)), in every environment.
+- **Photos** are in the backend's photo store, never in the database or on
+  the device: picked as before (my photo downsized to 640 px, gear photos
+  to 1080 px, JPEG quality 75), uploaded when the profile is saved (`POST
+  /api/photos` for a presigned upload, then the file), and saved in the
+  profile as keys, shown from `<site>/photos/<key>`. A profile keeps up to
+  6 gear photos.
+- **Who answered**: the server matches as described above (unanimous yes,
+  one no), and tells people by notifications.
+
+## Refreshing
+
+Until push notifications (MQTT) come, the app polls, and only what's on
+screen, while the app is in the foreground:
+
+- after signing in: my profile, then my plans, my requests, the requests
+  waiting for me, the deck, notifications (and, for admins, every open
+  request);
+- a tab, when I open it (Discover its deck, Chats every chat's latest
+  messages, Admin its requests), and every **15 seconds** my plans,
+  requests to review and notifications, plus the open tab;
+- an open **chat every 3 seconds**, asking only for messages after the
+  last one it has;
+- a plan's screen and chat load the plan (and its open requests) when
+  they open.
+
+When a refresh finds that a group accepted me (a new, unread "accepted"
+notification), the match screen opens, once per notification; so does a
+yes of mine that completes someone's request.

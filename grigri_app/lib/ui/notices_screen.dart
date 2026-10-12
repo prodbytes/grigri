@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
@@ -17,10 +18,13 @@ class NoticesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notices = StoreScope.of(context).notices;
+    final store = StoreScope.of(context);
+    final notices = store.notices;
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
-      body: notices.isEmpty
+      body: !store.isLoaded(Section.notices)
+          ? const Center(child: CircularProgressIndicator())
+          : notices.isEmpty
           ? const EmptyState(
               icon: Icons.notifications_none,
               title: 'Nothing yet',
@@ -55,7 +59,7 @@ class _NoticeTile extends StatelessWidget {
       NoticeKind.request => (
         Icons.group_add,
         Mountain.sky,
-        '${store.climber(notice.climberId!).name} wants to join',
+        '${store.climber(notice.climberId ?? '').name} wants to join',
         '${notice.planTitle} · answer in the group chat',
       ),
       NoticeKind.accepted => (
@@ -71,13 +75,10 @@ class _NoticeTile extends StatelessWidget {
         'The group declined your request.',
       ),
     };
-    final Widget? open = switch (notice.kind) {
+    final Widget open = switch (notice.kind) {
       NoticeKind.request ||
       NoticeKind.accepted => ChatScreen(planId: notice.planId),
-      NoticeKind.declined =>
-        store.plan(notice.planId) == null
-            ? null
-            : PlanScreen(planId: notice.planId),
+      NoticeKind.declined => PlanScreen(planId: notice.planId),
     };
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -97,11 +98,9 @@ class _NoticeTile extends StatelessWidget {
         ),
         isThreeLine: true,
         trailing: isNew ? const Tag('New', color: Mountain.sky) : null,
-        onTap: open == null
-            ? null
-            : () =>
-                  Navigator.of(context)
-                      .push(MaterialPageRoute<void>(builder: (_) => open)),
+        onTap: () =>
+            Navigator.of(context)
+                .push(MaterialPageRoute<void>(builder: (_) => open)),
       ),
     );
   }

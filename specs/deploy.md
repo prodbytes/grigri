@@ -44,8 +44,10 @@ and a Content Security Policy:
 
 - `/app*`: scripts from the site and CanvasKit
   (`www.gstatic.com/flutter-canvaskit/`) with `'wasm-unsafe-eval'`, inline
-  styles (Flutter injects them), fonts from `fonts.gstatic.com`, and no
-  framing. `Permissions-Policy` denies the camera, microphone and
+  styles (Flutter injects them), fonts from `fonts.gstatic.com`, Google
+  sign-in (Google Identity Services' script, stylesheet, iframe and calls
+  under `accounts.google.com/gsi/`, and its button's account picture from
+  `lh3.googleusercontent.com`), and no framing. `Permissions-Policy` denies the camera, microphone and
   location until a feature needs them.
 - `/`: only the index page's redirect script, by its hash.
 

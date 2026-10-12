@@ -114,3 +114,32 @@ spec.
      chat. A newcomer also hears of the requests still open.
    - The plan screen no longer has ✓ / ✕; it points to the chat.
    - Fixed: long chat notes overflowed their label instead of wrapping.
+9. **Remove the static fake data; everything from the database; GA empty
+   and real, fake data in RC and local; an admin can approve/reject any
+   request; Google sign-in.**
+   - The app's data all comes from the backend API ([api.md](api.md)):
+     the store is a cache over an API client, with loading states and the
+     server's errors at the bottom of the screen. Gone: the demo data
+     (`seed.dart`), the made-up climbers' answering policies and their
+     timer, the on-device state (shared_preferences), and Profile's
+     "Reset the demo data". GA starts empty; RC and local get made-up
+     data from the backend's seed ([matching](matching.md#data-the-backend-api)).
+   - [Refreshing](matching.md#refreshing) polls only what's on screen,
+     while the app is in the foreground: tabs on opening and every 15 s,
+     an open chat every 3 s with `after=`. A group's yes found by a
+     refresh opens the match screen.
+   - Photos are uploaded to the backend's photo store (presigned POSTs)
+     and kept in profiles as keys, shown from `<site>/photos/<key>`.
+   - [Sign-in](sign-in.md) with Google only (google_sign_in 7: Google's
+     button on the web, the web client ID as server client ID on Android
+     and iOS), **Create your profile** after the first sign-in, Sign out
+     in Profile's ⋯; a local-only dev sign-in without a client ID. New
+     public build settings `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID` and
+     `GOOGLE_IOS_CLIENT_ID` (allowed in `scripts/dart-defines.sh`, empty in
+     `.env.example`, repository variables in CI); iOS's client ID and URL
+     scheme reach `Info.plist` through the git-ignored `Private.xcconfig`;
+     Release builds a GA tag's apps for production, the rest for RC. The
+     site's CSP allows Google Identity Services.
+   - Admins get an **Admin** tab to approve or reject any open request
+     ([screens](screens.md)).
+   - Every tab has an [empty state](screens.md) with what to do next.

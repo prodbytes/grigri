@@ -21,9 +21,17 @@ are unsigned (CI's are). `bash scripts/flutter-run.sh -d <iPhone id>
 The Android release APK is signed with the debug key until a release key
 is set up.
 
+**Google sign-in** ([sign-in](sign-in.md#per-platform)): Android needs no
+app setting (the Google Cloud project's Android OAuth client for
+`com.nu01.grigri` and the signing key's SHA-1; the debug key's for now);
+iOS takes its client ID and URL scheme from `Info.plist`, filled from
+`Private.xcconfig` like the team; the web renders Google's button, which
+the site's CSP allows.
+
 **Photos** (profile and gear) come from
 [image_picker](https://pub.dev/packages/image_picker): Android's photo
 picker and camera app (no permissions to declare), iOS's with
 `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` in
 `Info.plist`, and a file chooser on the web (the site's CSP already allows
-`data:` and `blob:` images).
+`data:` and `blob:` images). They're uploaded to the backend's photo store
+([matching](matching.md#data-the-backend-api)).

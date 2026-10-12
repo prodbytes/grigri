@@ -19,13 +19,15 @@ class ProfileScreen extends StatelessWidget {
         title: const Text('Profile'),
         actions: [
           PopupMenuButton<String>(
+            tooltip: 'More',
             onSelected: (_) async {
               final sure = await showDialog<bool>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Start over?'),
+                  title: const Text('Sign out?'),
                   content: const Text(
-                    'Your profile, plans, matches and chats go back to the demo data.',
+                    'Your profile, plans and chats stay saved; sign back in '
+                    'to see them.',
                   ),
                   actions: [
                     TextButton(
@@ -34,18 +36,15 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text(
-                        'Start over',
-                        style: TextStyle(color: Mountain.clay),
-                      ),
+                      child: const Text('Sign out'),
                     ),
                   ],
                 ),
               );
-              if (sure == true) store.reset();
+              if (sure == true) await store.signOut();
             },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'reset', child: Text('Reset the demo data')),
+              PopupMenuItem(value: 'signOut', child: Text('Sign out')),
             ],
           ),
         ],
@@ -57,7 +56,7 @@ class ProfileScreen extends StatelessWidget {
             child: me.photo == null
                 ? Avatar(me, radius: 52)
                 : GestureDetector(
-                    onTap: () => showPhoto(context, me.photo!),
+                    onTap: () => showPhoto(context, store.photo(me.photo!)),
                     child: Avatar(me, radius: 52),
                   ),
           ),

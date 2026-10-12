@@ -100,4 +100,7 @@ jobs:
           # Who is emailed when the site's health check fails or recovers:
           # a secret, not a variable, so the public run logs never show it.
           GRIGRI_HEALTH_EMAILS: ${{ secrets.GRIGRI_HEALTH_EMAILS }}
+          # Google sign-in's web client ID, compiled into the web app: a
+          # public repository variable, not a secret (specs/sign-in.md).
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
         run: bash scripts/deploy.sh

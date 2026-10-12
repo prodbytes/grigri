@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/grigri_store.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
@@ -7,7 +8,10 @@ import 'common.dart';
 /// The group chats: one per plan I'm in, most recent first, with how many
 /// join requests in each wait for my answer.
 class ChatsScreen extends StatelessWidget {
-  const ChatsScreen({super.key});
+  const ChatsScreen({super.key, required this.onDiscover});
+
+  /// Goes to Discover, when there are no chats yet.
+  final VoidCallback onDiscover;
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +30,20 @@ class ChatsScreen extends StatelessWidget {
         store.toReview.where((r) => r.planId == planId).length;
     return Scaffold(
       appBar: AppBar(title: const Text('Chats')),
-      body: chats.isEmpty
-          ? const EmptyState(
+      body: !store.isLoaded(Section.plans)
+          ? const Center(child: CircularProgressIndicator())
+          : chats.isEmpty
+          ? EmptyState(
               icon: Icons.forum_outlined,
               title: 'No chats yet',
-              message: 'When you match on a plan, its group chat opens here.',
+              message:
+                  'Every plan you\'re in has a group chat. Make a plan, or '
+                  'ask to join one, and its chat opens here.',
+              action: FilledButton.icon(
+                icon: const Icon(Icons.landscape_outlined),
+                label: const Text('Find a plan'),
+                onPressed: onDiscover,
+              ),
             )
           : ListView.separated(
               itemCount: chats.length,
@@ -41,7 +54,7 @@ class ChatsScreen extends StatelessWidget {
                     ? null
                     : last!.authorId == store.me.id
                     ? 'You'
-                    : store.climber(last.authorId!).name.split(' ').first;
+                    : store.climber(last.authorId!).firstName;
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,

@@ -1,98 +1,12 @@
-import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 
 import '../model/climber.dart';
-import '../model/climbing.dart';
 import '../model/plan.dart';
-import 'seed.dart';
-import 'storage.dart';
-
-/// How a made-up climber answers join requests for plans they're in, until
-/// there's a backend with real people deciding: see specs/matching.md.
-enum Policy {
-  /// Accepts everyone.
-  acceptsAll,
-
-  /// Accepts newcomers whose grades for the plan's discipline overlap the
-  /// plan's grades; turns down the rest.
-  acceptsMatchingGrades,
-
-  /// Never decides: the request waits.
-  undecided,
-
-  /// Turns everyone down.
-  rejectsAll,
-}
-
-/// Everything the app knows, as one serializable value.
-class GrigriState {
-  GrigriState({
-    required this.meId,
-    required this.climbers,
-    required this.plans,
-    required this.requests,
-    required this.messages,
-    required this.policies,
-    Set<String>? passed,
-    List<Notice>? notices,
-  }) : passed = passed ?? {},
-       notices = notices ?? [];
-
-  final String meId;
-  final Map<String, Climber> climbers;
-  final Map<String, Plan> plans;
-
-  /// Join requests by [JoinRequest.id].
-  final Map<String, JoinRequest> requests;
-  final List<Message> messages;
-
-  /// How each made-up climber decides; never set for [meId].
-  final Map<String, Policy> policies;
-
-  /// Plans I swiped left on, or whose "no" I dismissed.
-  final Set<String> passed;
-
-  /// My notifications, oldest first.
-  final List<Notice> notices;
-
-  Map<String, Object> toJson() => {
-    'meId': meId,
-    'climbers': [for (final c in climbers.values) c.toJson()],
-    'plans': [for (final p in plans.values) p.toJson()],
-    'requests': [for (final r in requests.values) r.toJson()],
-    'messages': [for (final m in messages) m.toJson()],
-    'policies': {for (final e in policies.entries) e.key: e.value.name},
-    'passed': passed.toList(),
-    'notices': [for (final n in notices) n.toJson()],
-  };
-
-  static GrigriState fromJson(Map<String, Object?> json) {
-    List<Map<String, Object?>> list(String key) => [
-      for (final e in json[key]! as List) (e as Map).cast(),
-    ];
-    return GrigriState(
-      meId: json['meId']! as String,
-      climbers: {
-        for (final c in list('climbers').map(Climber.fromJson)) c.id: c,
-      },
-      plans: {for (final p in list('plans').map(Plan.fromJson)) p.id: p},
-      requests: {
-        for (final r in list('requests').map(JoinRequest.fromJson)) r.id: r,
-      },
-      messages: list('messages').map(Message.fromJson).toList(),
-      policies: {
-        for (final e in (json['policies']! as Map).entries)
-          e.key as String: Policy.values.byName(e.value as String),
-      },
-      passed: {for (final p in json['passed'] as List? ?? []) p as String},
-      notices: [
-        for (final n in json['notices'] as List? ?? [])
-          Notice.fromJson((n as Map).cast()),
-      ],
-    );
-  }
-}
+import 'api.dart';
+import 'auth.dart';
 
 /// A newcomer joined a plan I'm in, or I joined one: the match screen
 /// shows it.
@@ -103,431 +17,688 @@ class Match {
   final Climber newcomer;
 }
 
-/// The app's state and rules: the decks, swipes, matches, plans, the
-/// profile and the group chats. Matching works on the device for now
-/// (specs/matching.md); a backend would take its place behind this API.
+/// Where the app is, from signing in to the tabs.
+enum Phase {
+  /// Checking whether someone is signed in.
+  starting,
+
+  /// The sign-in screen.
+  signedOut,
+
+  /// Signed in, loading my profile.
+  loading,
+
+  /// Signed in without a profile: "Create your profile" first.
+  needsProfile,
+
+  /// The tabs.
+  ready,
+
+  /// Signed in, but my profile couldn't be loaded: try again.
+  failed,
+}
+
+/// The parts of the app's data that load separately.
+enum Section { discover, plans, requests, notices, admin }
+
+/// A photo in the profile editor: one already saved ([key]), or one just
+/// picked and not uploaded yet ([bytes]).
+class EditablePhoto {
+  const EditablePhoto.saved(String this.key) : bytes = null;
+  const EditablePhoto.picked(Uint8List this.bytes) : key = null;
+
+  final String? key;
+  final Uint8List? bytes;
+}
+
+/// The app's data, a cache over the [GrigriApi]: the decks, my plans and
+/// requests, notifications, chats, my profile, and (for admins) every open
+/// request. Screens read it and call its actions; it refreshes from the
+/// API when they ask (see specs/matching.md, Refreshing).
 class GrigriStore extends ChangeNotifier {
-  GrigriStore(
-    this._state, {
-    this._storage,
-    DateTime Function()? clock,
-    this.answerAfter = Duration.zero,
-  }) : _clock = clock ?? DateTime.now;
+  GrigriStore({
+    required this.api,
+    required this.auth,
+    ImageProvider Function(Uri url)? image,
+  }) : _image = image ?? ((url) => NetworkImage(url.toString())) {
+    auth.addListener(_authChanged);
+  }
 
-  /// The saved state, or the demo data when there's none (or it can't be
-  /// read).
-  static Future<GrigriStore> load({Storage? storage}) async {
-    final store = storage ?? await Storage.open();
-    GrigriState? state;
-    final saved = store.read();
-    if (saved != null) {
-      try {
-        state = GrigriState.fromJson((jsonDecode(saved) as Map).cast());
-      } on Object catch (e) {
-        debugPrint('grigri: saved state unreadable, starting over: $e');
-      }
+  final GrigriApi api;
+  final Auth auth;
+  final ImageProvider Function(Uri url) _image;
+
+  Phase _phase = Phase.starting;
+  Phase get phase => _phase;
+
+  /// Why my profile couldn't be loaded ([Phase.failed]).
+  String? loadError;
+
+  Climber? _me;
+  bool _admin = false;
+  String? _userEmail;
+
+  final _climbers = <String, Climber>{};
+  final _plans = <String, Plan>{};
+  List<String> _discover = [];
+  List<String> _mine = [];
+  List<JoinRequest> _asked = [];
+  List<JoinRequest> _toReview = [];
+  List<JoinRequest> _adminRequests = [];
+  final _open = <String, List<JoinRequest>>{};
+  final _declinedHere = <String>{};
+  List<Notice> _notices = [];
+  final _messages = <String, List<Message>>{};
+  final _gone = <String>{};
+  final _loaded = <Section>{};
+  final _loadingPlans = <String>{};
+
+  /// Accepted notices already shown as a match.
+  final _announced = <String>{};
+
+  final _errors = StreamController<String>.broadcast();
+  final _matches = StreamController<Match>.broadcast();
+
+  /// Messages to show at the bottom of the screen: what failed, in the
+  /// server's words.
+  Stream<String> get errors => _errors.stream;
+
+  /// Groups that accepted me, found while refreshing: the match screen
+  /// shows them.
+  Stream<Match> get matches => _matches.stream;
+
+  // --- Session -----------------------------------------------------------
+
+  /// Starts signing in (quietly, when it can).
+  Future<void> start() async {
+    if (!auth.started) await auth.start();
+    _authChanged();
+    await _loading;
+  }
+
+  /// Loading my profile, after signing in.
+  Future<void>? _loading;
+
+  /// Counts sign-ins and sign-outs, so answers for an earlier session are
+  /// dropped.
+  int _session = 0;
+
+  void _authChanged() {
+    if (!auth.started) return;
+    final email = auth.user?.email;
+    if (email == _userEmail && _phase != Phase.starting) return;
+    _userEmail = email;
+    _clear();
+    if (email == null) {
+      _loading = null;
+      _phase = Phase.signedOut;
+      notifyListeners();
+    } else {
+      _loading = loadMe();
     }
-    return GrigriStore(
-      state ?? demoState(DateTime.now()),
-      storage: store,
-      answerAfter: const Duration(seconds: 10),
-    );
   }
 
-  GrigriState _state;
-  final Storage? _storage;
-  final DateTime Function() _clock;
-
-  /// How long the made-up climbers take to answer a request, so it shows
-  /// as pending first. [settle] applies their answers once it's up.
-  final Duration answerAfter;
-
-  /// Whether [_settle] changed anything.
-  bool _touched = false;
-
-  GrigriState get state => _state;
-  Climber get me => _state.climbers[_state.meId]!;
-  Climber climber(String id) => _state.climbers[id]!;
-  Plan? plan(String id) => _state.plans[id];
-
-  // --- Decks -------------------------------------------------------------
-
-  /// Plans to swipe on: upcoming, with a spot open, that I'm not in and
-  /// haven't swiped on yet, best fits first.
-  List<Plan> get discover {
-    final now = _clock();
-    final plans = _state.plans.values.where(
-      (p) =>
-          p.start.isAfter(now) &&
-          !p.isFull &&
-          !p.memberIds.contains(me.id) &&
-          !_state.passed.contains(p.id) &&
-          !_state.requests.containsKey(_requestId(p.id, me.id)),
-    );
-    return plans.toList()..sort((a, b) {
-      final byFit = fit(b).score.compareTo(fit(a).score);
-      return byFit != 0 ? byFit : a.start.compareTo(b.start);
-    });
+  void _clear() {
+    _session++;
+    _me = null;
+    _admin = false;
+    _climbers.clear();
+    _plans.clear();
+    _discover = [];
+    _mine = [];
+    _asked = [];
+    _toReview = [];
+    _adminRequests = [];
+    _open.clear();
+    _declinedHere.clear();
+    _notices = [];
+    _messages.clear();
+    _gone.clear();
+    _loaded.clear();
+    _loadingPlans.clear();
+    _announced.clear();
   }
 
-  /// People asking to join plans I'm in, that I haven't answered yet.
-  List<JoinRequest> get toReview => [
-    for (final r in _state.requests.values)
-      if (!r.rejected &&
-          !r.acceptedBy.contains(me.id) &&
-          (_state.plans[r.planId]?.memberIds.contains(me.id) ?? false) &&
-          !_state.plans[r.planId]!.memberIds.contains(r.climberId))
-        r,
-  ];
+  /// Loads my profile (`GET /api/me`), then everything else.
+  Future<void> loadMe() async {
+    _phase = Phase.loading;
+    loadError = null;
+    notifyListeners();
+    try {
+      final me = await _call(api.me);
+      _admin = me.admin;
+      _me = me.climber;
+      if (me.climber case final c?) _climbers[c.id] = c;
+      _phase = me.climber == null ? Phase.needsProfile : Phase.ready;
+      notifyListeners();
+      if (_phase == Phase.ready) await refreshAll();
+    } on ApiException catch (e) {
+      if (_phase == Phase.signedOut || e.status == _stale) return;
+      loadError = e.message;
+      _phase = Phase.failed;
+      notifyListeners();
+    }
+  }
+
+  Future<void> signOut() => auth.signOut();
+
+  /// The name to start a new profile with: Google's, when there is one.
+  String get suggestedName => auth.user?.name ?? '';
+
+  // --- Reading -----------------------------------------------------------
+
+  bool get admin => _admin;
+
+  /// My profile (a blank one until it's loaded, so screens on their way
+  /// out after a sign-out still build).
+  Climber get me => _me ?? const Climber(id: '', name: '');
+
+  Climber? get meOrNull => _me;
+
+  /// Someone, as far as the app knows them.
+  Climber climber(String id) =>
+      _climbers[id] ?? Climber(id: id, name: 'Someone');
+
+  Plan? plan(String id) => _plans[id];
+
+  /// Whether a plan turned out not to exist (anymore) or to be off limits.
+  bool isGone(String planId) => _gone.contains(planId);
+
+  bool isLoadingPlan(String planId) => _loadingPlans.contains(planId);
+
+  bool isLoaded(Section section) => _loaded.contains(section);
+
+  /// A photo's image.
+  ImageProvider photo(String key) => _image(api.photoUrl(key));
+
+  /// Plans to swipe on, best fits first (the server's order).
+  List<Plan> get discover => [for (final id in _discover) ?_plans[id]];
+
+  /// Plans I'm in, soonest first.
+  List<Plan> get myPlans => [for (final id in _mine) ?_plans[id]];
 
   /// My swipes right still waiting for members to decide.
   List<JoinRequest> get waiting => [
-    for (final r in _state.requests.values)
-      if (r.climberId == me.id &&
-          !r.rejected &&
-          !(_state.plans[r.planId]?.memberIds.contains(me.id) ?? true))
-        r,
+    for (final r in _asked)
+      if (!r.rejected) r,
   ];
 
   /// My swipes right that a group turned down, until I dismiss them.
   List<JoinRequest> get declined => [
-    for (final r in _state.requests.values)
-      if (r.climberId == me.id &&
-          r.rejected &&
-          _state.plans.containsKey(r.planId) &&
-          !_state.passed.contains(r.planId))
-        r,
+    for (final r in _asked)
+      if (r.rejected) r,
   ];
 
+  /// My request to join a plan, if I asked.
+  JoinRequest? myRequest(String planId) =>
+      _asked.where((r) => r.planId == planId).firstOrNull;
+
+  /// People asking to join plans I'm in, that I haven't answered yet.
+  List<JoinRequest> get toReview => _toReview;
+
+  /// A plan's open requests, as far as the app knows (I see them when I'm
+  /// in it).
+  List<JoinRequest> openRequests(String planId) {
+    final byId = <String, JoinRequest>{
+      for (final r in _open[planId] ?? const <JoinRequest>[]) r.id: r,
+      for (final r in _toReview)
+        if (r.planId == planId) r.id: r,
+    };
+    return byId.values.toList();
+  }
+
+  /// Whether a plan's open requests have been loaded ([loadPlan]).
+  bool knowsRequests(String planId) => _open.containsKey(planId);
+
+  /// A join request, by [JoinRequest.id], while it's open (or mine).
+  JoinRequest? request(String id) => [
+    ..._toReview,
+    for (final list in _open.values) ...list,
+    ..._asked,
+    ..._adminRequests,
+  ].where((r) => r.id == id).firstOrNull;
+
+  /// Whether I turned this request down (in this session).
+  bool declinedHere(String requestId) => _declinedHere.contains(requestId);
+
+  /// Every open request (admins).
+  List<JoinRequest> get adminRequests => _adminRequests;
+
   /// My notifications, newest first.
-  List<Notice> get notices =>
-      _state.notices.toList()..sort((a, b) => b.time.compareTo(a.time));
+  List<Notice> get notices => _notices;
 
-  int get unreadNotices => _state.notices.where((n) => !n.read).length;
+  int get unreadNotices => _notices.where((n) => !n.read).length;
 
-  /// Plans I'm in (organizing or joined), soonest first.
-  List<Plan> get myPlans =>
-      _state.plans.values.where((p) => p.memberIds.contains(me.id)).toList()
-        ..sort((a, b) => a.start.compareTo(b.start));
+  /// A plan's group chat, oldest first.
+  List<Message> messages(String planId) => _messages[planId] ?? const [];
 
   /// Why a plan suits me.
   Fit fit(Plan plan) {
-    final level = me.levels[plan.discipline];
+    final level = _me?.levels[plan.discipline];
     return Fit(grades: level != null && level.overlaps(plan.grades));
+  }
+
+  // --- Calling the API ---------------------------------------------------
+
+  /// Calls the API; a 401 tries fresh credentials once, then signs out. A
+  /// 409 "no profile" goes back to creating one.
+  Future<T> _call<T>(Future<T> Function() call) async {
+    final session = _session;
+    try {
+      final result = await call();
+      if (session != _session) throw const ApiException(_stale, 'stale');
+      return result;
+    } on ApiException catch (e) {
+      if (e.status == _stale || session != _session) {
+        throw const ApiException(_stale, 'stale');
+      }
+      if (e.status == 401) {
+        if (await auth.refresh()) {
+          try {
+            return await call();
+          } on ApiException catch (again) {
+            if (again.status != 401) rethrow;
+          }
+        }
+        _errors.add('Signed out: please sign in again.');
+        // Auth notifies, and _authChanged clears everything.
+        await auth.signOut();
+        rethrow;
+      }
+      if (e.noProfile && _phase == Phase.ready) {
+        _me = null;
+        _phase = Phase.needsProfile;
+        notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  /// The status of an answer that came after a sign-out: dropped quietly.
+  static const _stale = -1;
+
+  /// Runs an action: its error, in the server's words, goes to [errors].
+  Future<T?> _act<T>(Future<T> Function() call) async {
+    try {
+      return await _call(call);
+    } on ApiException catch (e) {
+      if (e.status != 401 && e.status != _stale) _errors.add(e.message);
+      return null;
+    }
+  }
+
+  /// Runs an action that answers nothing: true when it worked.
+  Future<bool> _ok(Future<void> Function() call) async =>
+      await _act(() async {
+        await call();
+        return true;
+      }) ??
+      false;
+
+  /// Runs a refresh: [fetch], then [apply] its answer (unless it came
+  /// after a sign-out). Quiet when it fails: the next one tries again.
+  Future<bool> _refresh<T>(
+    Future<T> Function() fetch,
+    void Function(T answer) apply,
+  ) async {
+    if (_phase != Phase.ready) return false;
+    try {
+      apply(await _call(fetch));
+      notifyListeners();
+      return true;
+    } on ApiException {
+      return false;
+    }
+  }
+
+  void _learn(Map<String, Climber> climbers) {
+    _climbers.addAll(climbers);
+    final me = _me == null ? null : climbers[_me!.id];
+    if (me != null) _me = me;
+  }
+
+  // --- Refreshing --------------------------------------------------------
+
+  /// My plans, my requests, the requests waiting for me, notifications and
+  /// the deck; for admins, every open request too.
+  Future<void> refreshAll() async {
+    await Future.wait([
+      refreshPlans(),
+      refreshRequests(),
+      refreshDiscover(),
+      if (_admin) refreshAdmin(),
+    ]);
+    await refreshNotices();
+  }
+
+  Future<void> refreshDiscover() => _refresh(api.discover, (list) {
+    _learn(list.climbers);
+    for (final p in list.plans) {
+      _plans[p.id] = p;
+    }
+    _discover = [for (final p in list.plans) p.id];
+    _loaded.add(Section.discover);
+  });
+
+  Future<void> refreshPlans() => _refresh(api.myPlans, (mine) {
+    _learn(mine.climbers);
+    for (final p in mine.plans) {
+      _plans[p.id] = p;
+      _gone.remove(p.id);
+    }
+    for (final a in mine.asked) {
+      _plans[a.plan.id] = a.plan;
+    }
+    _mine = [for (final p in mine.plans) p.id];
+    _asked = [for (final a in mine.asked) a.request];
+    _loaded.add(Section.plans);
+  });
+
+  Future<void> refreshRequests() => _refresh(api.requests, (list) {
+    _learn(list.climbers);
+    _plans.addAll(list.plans);
+    _toReview = list.requests;
+    _loaded.add(Section.requests);
+  });
+
+  /// Notifications; a group's yes I haven't seen yet opens the match
+  /// screen.
+  Future<void> refreshNotices() async {
+    final fresh = <Notice>[];
+    final ok = await _refresh(api.notices, (list) {
+      _learn(list.climbers);
+      _notices = [...list.notices]..sort((a, b) => b.time.compareTo(a.time));
+      _loaded.add(Section.notices);
+      fresh.addAll([
+        for (final n in _notices)
+          if (n.kind == NoticeKind.accepted &&
+              !n.read &&
+              !_announced.contains(n.id))
+            n,
+      ]);
+      _announced.addAll(fresh.map((n) => n.id));
+    });
+    if (!ok || fresh.isEmpty) return;
+    if (fresh.any((n) => !_mine.contains(n.planId))) await refreshPlans();
+    final me = _me;
+    if (me == null) return;
+    for (final n in fresh.reversed) {
+      final plan = _plans[n.planId];
+      if (plan != null && plan.memberIds.contains(me.id)) {
+        _matches.add(Match(plan: plan, newcomer: me));
+      }
+    }
+  }
+
+  Future<void> refreshAdmin() async {
+    if (!_admin) return;
+    await _refresh(api.adminRequests, (list) {
+      _learn(list.climbers);
+      _plans.addAll(list.plans);
+      _adminRequests = list.requests;
+      _loaded.add(Section.admin);
+    });
+  }
+
+  /// One plan, with its open requests when I'm in it.
+  Future<void> loadPlan(String planId) async {
+    if (_phase != Phase.ready) return;
+    _loadingPlans.add(planId);
+    notifyListeners();
+    try {
+      final detail = await _call(() => api.plan(planId));
+      _learn(detail.climbers);
+      _plans[planId] = detail.plan;
+      _open[planId] = detail.requests;
+      _gone.remove(planId);
+    } on ApiException catch (e) {
+      if (e.status == 404 || e.status == 403) _gone.add(planId);
+    } finally {
+      _loadingPlans.remove(planId);
+      notifyListeners();
+    }
+  }
+
+  /// A plan's chat: all of it the first time, then what's new.
+  Future<void> pollMessages(String planId) {
+    final have = _messages[planId];
+    return _refresh(
+      () => api.messages(
+        planId,
+        after: have == null || have.isEmpty ? null : have.last.time,
+      ),
+      (list) {
+        _learn(list.climbers);
+        _addMessages(planId, list.messages, replace: have == null);
+      },
+    );
+  }
+
+  /// Every chat's latest messages, for Chats.
+  Future<void> refreshChats() async {
+    await Future.wait([for (final id in _mine) pollMessages(id)]);
+  }
+
+  void _addMessages(
+    String planId,
+    List<Message> messages, {
+    bool replace = false,
+  }) {
+    final byId = <String, Message>{
+      if (!replace)
+        for (final m in _messages[planId] ?? const <Message>[]) m.id: m,
+      for (final m in messages) m.id: m,
+    };
+    final list = byId.values.toList()..sort((a, b) => a.time.compareTo(b.time));
+    _messages[planId] = list;
+    notifyListeners();
   }
 
   // --- Swiping -----------------------------------------------------------
 
-  /// I swipe right on a plan: I ask to join it. Its members decide; when
-  /// they all accept, I join and get a [Match].
-  Match? like(String planId) {
-    final plan = _state.plans[planId]!;
-    _ask(JoinRequest(planId: planId, climberId: me.id, time: _clock()));
-    final match = _settle(plan.id);
-    _changed();
-    return match.where((m) => m.newcomer.id == me.id).firstOrNull;
+  /// I swipe left on a plan: it leaves my deck.
+  Future<void> pass(String planId) async {
+    _discover.remove(planId);
+    notifyListeners();
+    await _ok(() => api.pass(planId));
   }
 
-  /// I swipe left on a plan: it leaves my deck.
-  void pass(String planId) {
-    _state.passed.add(planId);
-    _changed();
+  /// I swipe right on a plan: I ask to join it. Its members decide; I'm
+  /// told when they have. False when it failed.
+  Future<bool> like(String planId) async {
+    _discover.remove(planId);
+    notifyListeners();
+    final request = await _act(() => api.join(planId));
+    if (request == null) return false;
+    _asked = [..._asked.where((r) => r.id != request.id), request];
+    notifyListeners();
+    return true;
   }
 
   /// I accept someone into a plan I'm in. When every member has accepted,
   /// they join, and I get a [Match].
-  Match? accept(String requestId) {
-    final request = _state.requests[requestId]!;
-    _state.requests[requestId] = request.copyWith(
-      acceptedBy: {...request.acceptedBy, me.id},
+  Future<Match?> accept(JoinRequest request) async {
+    final match = await _act(
+      () => api.accept(request.planId, request.climberId),
     );
-    final matches = _settle(request.planId);
-    _changed();
-    return matches.where((m) => m.newcomer.id == request.climberId).firstOrNull;
+    _toReview = [..._toReview.where((r) => r.id != request.id)];
+    await _afterAnswer(request.planId);
+    if (match == null) return null;
+    _plans[match.plan.id] = match.plan;
+    notifyListeners();
+    return Match(plan: match.plan, newcomer: climber(match.newcomerId));
   }
 
   /// I turn someone down for a plan I'm in: one "no" is enough.
-  void reject(String requestId) {
-    _state.requests[requestId] = _state.requests[requestId]!.copyWith(
-      rejected: true,
-    );
-    _changed();
+  Future<bool> reject(JoinRequest request) async {
+    if (!await _ok(() => api.reject(request.planId, request.climberId))) {
+      return false;
+    }
+    _declinedHere.add(request.id);
+    _toReview = [..._toReview.where((r) => r.id != request.id)];
+    await _afterAnswer(request.planId);
+    return true;
   }
 
-  /// Someone asks to join a plan: the request shows in its group chat, and
-  /// every member is notified.
-  void _ask(JoinRequest request) {
-    final plan = _state.plans[request.planId]!;
-    _state.requests[request.id] = request;
-    _state.messages.add(
-      Message(
-        planId: plan.id,
-        authorId: null,
-        text: '${climber(request.climberId).name} asked to join',
-        time: _clock(),
-        requestId: request.id,
-      ),
-    );
-    _tellMembers(request, plan.memberIds);
-  }
-
-  /// Tells the given members that someone asked to join their plan. Only
-  /// I am notified on this device; a backend would notify each of them.
-  void _tellMembers(JoinRequest request, Iterable<String> memberIds) {
-    if (!memberIds.contains(me.id) || request.climberId == me.id) return;
-    _state.notices.add(
-      Notice(
-        kind: NoticeKind.request,
-        planId: request.planId,
-        planTitle: _state.plans[request.planId]!.title,
-        climberId: request.climberId,
-        time: _clock(),
-      ),
-    );
+  Future<void> _afterAnswer(String planId) async {
+    notifyListeners();
+    await Future.wait([
+      loadPlan(planId),
+      pollMessages(planId),
+      refreshRequests(),
+      refreshPlans(),
+    ]);
   }
 
   /// I clear a group's "no" from my plans; the plan stays out of my deck.
-  void dismiss(String requestId) {
-    final request = _state.requests.remove(requestId)!;
-    _state.passed.add(request.planId);
-    _changed();
+  Future<void> dismiss(JoinRequest request) async {
+    _asked = [..._asked.where((r) => r.id != request.id)];
+    notifyListeners();
+    await _ok(() => api.dismiss(request.planId, request.climberId));
   }
 
   /// Marks my notifications read.
-  void readNotices() {
+  Future<void> readNotices() async {
     if (unreadNotices == 0) return;
-    for (final (i, n) in _state.notices.indexed) {
-      _state.notices[i] = n.copyWith(read: true);
-    }
-    _changed();
+    _notices = [for (final n in _notices) n.copyWith(read: true)];
+    notifyListeners();
+    await _ok(api.readNotices);
   }
-
-  /// Applies the made-up members' answers that are due, to every plan with
-  /// open requests. Returns the notifications they made for me.
-  List<Notice> settle() {
-    final before = _state.notices.length;
-    _touched = false;
-    final planIds = {
-      for (final r in _state.requests.values)
-        if (!r.rejected && _state.plans.containsKey(r.planId)) r.planId,
-    };
-    for (final planId in planIds) {
-      _settle(planId);
-    }
-    if (_touched) _changed();
-    return _state.notices.sublist(before);
-  }
-
-  /// Applies the made-up members' decisions to a plan's open requests and
-  /// adds whoever every member has accepted, until nothing changes (each
-  /// newcomer must then accept the requests still open). Returns who
-  /// joined.
-  List<Match> _settle(String planId) {
-    final joined = <Match>[];
-    var changed = true;
-    while (changed) {
-      changed = false;
-      final plan = _state.plans[planId]!;
-      for (final request in _state.requests.values.toList()) {
-        if (request.planId != planId ||
-            request.rejected ||
-            plan.memberIds.contains(request.climberId)) {
-          continue;
-        }
-        var r = request;
-        for (final memberId in plan.memberIds) {
-          if (r.acceptedBy.contains(memberId)) continue;
-          switch (_decide(memberId, r, plan)) {
-            case true:
-              r = r.copyWith(acceptedBy: {...r.acceptedBy, memberId});
-            case false:
-              r = r.copyWith(rejected: true);
-            case null:
-              break;
-          }
-          if (r.rejected) break;
-        }
-        if (!identical(r, request)) {
-          _state.requests[r.id] = r;
-          _touched = true;
-          if (r.rejected) _notify(NoticeKind.declined, r);
-        }
-        if (!r.rejected &&
-            !plan.isFull &&
-            plan.memberIds.every(r.acceptedBy.contains)) {
-          final grown = plan.copyWith(
-            memberIds: [...plan.memberIds, r.climberId],
-          );
-          _state.plans[planId] = grown;
-          _note(planId, '${climber(r.climberId).name} joined the plan 🎉');
-          joined.add(Match(plan: grown, newcomer: climber(r.climberId)));
-          _notify(NoticeKind.accepted, r);
-          // A newcomer decides on the requests still open, too.
-          for (final open in _state.requests.values) {
-            if (open.planId == planId &&
-                !open.rejected &&
-                !grown.memberIds.contains(open.climberId)) {
-              _tellMembers(open, [r.climberId]);
-            }
-          }
-          _touched = true;
-          changed = true;
-          break;
-        }
-      }
-    }
-    return joined;
-  }
-
-  /// Tells me when a group answered my request.
-  void _notify(NoticeKind kind, JoinRequest request) {
-    if (request.climberId != me.id) return;
-    _state.notices.add(
-      Notice(
-        kind: kind,
-        planId: request.planId,
-        planTitle: _state.plans[request.planId]!.title,
-        time: _clock(),
-      ),
-    );
-  }
-
-  /// A made-up member's answer: true, false, or null (not yet). I answer
-  /// for myself, in the group chat.
-  bool? _decide(String memberId, JoinRequest request, Plan plan) {
-    if (memberId == me.id) return null;
-    final asked = request.time;
-    if (asked != null && _clock().difference(asked) < answerAfter) return null;
-    switch (_state.policies[memberId] ?? Policy.undecided) {
-      case Policy.acceptsAll:
-        return true;
-      case Policy.rejectsAll:
-        return false;
-      case Policy.undecided:
-        return null;
-      case Policy.acceptsMatchingGrades:
-        final level = climber(request.climberId).levels[plan.discipline];
-        return level != null && level.overlaps(plan.grades);
-    }
-  }
-
-  String _requestId(String planId, String climberId) => '$planId/$climberId';
 
   // --- Plans -------------------------------------------------------------
 
-  /// A new plan, organized by me.
-  Plan createPlan({
-    required String title,
-    required Discipline discipline,
-    required String place,
-    required String area,
-    required DateTime start,
-    required int hours,
-    required GradeRange grades,
-    required int spots,
-    String notes = '',
-  }) {
-    final plan = Plan(
-      id: 'plan-${_clock().microsecondsSinceEpoch}',
-      organizerId: me.id,
-      title: title,
-      discipline: discipline,
-      place: place,
-      area: area,
-      start: start,
-      hours: hours,
-      grades: grades,
-      spots: spots,
-      memberIds: [me.id],
-      notes: notes,
-    );
-    _state.plans[plan.id] = plan;
-    _note(plan.id, 'You created the plan. People who match will show up here.');
-    _changed();
+  /// Publishes a new plan, organized by me; null when it failed.
+  Future<Plan?> createPlan(Plan draft) async {
+    final plan = await _act(() => api.createPlan(draft));
+    if (plan == null) return null;
+    _plans[plan.id] = plan;
+    _mine = [..._mine, plan.id];
+    _sortMine();
+    notifyListeners();
+    unawaited(refreshPlans());
     return plan;
   }
 
-  /// Saves my changes to a plan I organize (never its members).
-  void updatePlan(Plan plan) {
-    final current = _state.plans[plan.id]!;
-    assert(current.organizerId == me.id);
-    _state.plans[plan.id] = plan.copyWith(memberIds: current.memberIds);
-    _changed();
+  /// Saves my changes to a plan I organize.
+  Future<bool> updatePlan(Plan plan) async {
+    final saved = await _act(() => api.updatePlan(plan));
+    if (saved == null) return false;
+    _plans[saved.id] = saved;
+    _sortMine();
+    notifyListeners();
+    return true;
   }
+
+  void _sortMine() => _mine.sort(
+    (a, b) => (_plans[a]?.start ?? DateTime(0)).compareTo(
+      _plans[b]?.start ?? DateTime(0),
+    ),
+  );
 
   /// I leave a plan's group. When the organizer leaves, the next member
   /// organizes it; when the last member leaves, the plan is gone.
-  void leave(String planId) {
-    final plan = _state.plans[planId]!;
-    final members = [...plan.memberIds]..remove(me.id);
-    if (members.isEmpty) {
-      _state.plans.remove(planId);
-      _state.requests.removeWhere((_, r) => r.planId == planId);
-      _state.messages.removeWhere((m) => m.planId == planId);
-    } else {
-      _state.plans[planId] = Plan(
-        id: plan.id,
-        organizerId: plan.organizerId == me.id
-            ? members.first
-            : plan.organizerId,
-        title: plan.title,
-        discipline: plan.discipline,
-        place: plan.place,
-        area: plan.area,
-        start: plan.start,
-        hours: plan.hours,
-        grades: plan.grades,
-        spots: plan.spots,
-        memberIds: members,
-        notes: plan.notes,
-      );
-      _note(planId, '${me.name} left the plan');
-      // One fewer member to wait for.
-      _settle(planId);
-    }
-    _state.passed.add(planId);
-    _changed();
+  Future<bool> leave(String planId) async {
+    if (!await _ok(() => api.leave(planId))) return false;
+    _mine = [..._mine.where((id) => id != planId)];
+    _messages.remove(planId);
+    _open.remove(planId);
+    _toReview = [..._toReview.where((r) => r.planId != planId)];
+    notifyListeners();
+    unawaited(refreshPlans());
+    return true;
   }
 
   // --- Profile -----------------------------------------------------------
 
-  void updateProfile(Climber profile) {
-    assert(profile.id == me.id);
-    _state.climbers[me.id] = profile;
-    _changed();
+  /// Saves my profile (creating it the first time): uploads the photos
+  /// just picked, then `PUT /api/me` with their keys. False when it failed.
+  Future<bool> saveProfile(
+    Climber profile, {
+    EditablePhoto? photo,
+    List<EditablePhoto> gearPhotos = const [],
+  }) async {
+    Future<String> keyOf(EditablePhoto p, PhotoKind kind) async {
+      if (p.key case final key?) return key;
+      final bytes = p.bytes!;
+      final type = photoContentType(bytes);
+      if (type == null) {
+        throw const ApiException(400, 'Use a JPEG, PNG or WebP photo.');
+      }
+      final upload = await _call(() => api.newPhoto(kind, type));
+      await api.uploadPhoto(upload, bytes);
+      return upload.key;
+    }
+
+    final saved = await _act(() async {
+      final photoKey = photo == null
+          ? null
+          : await keyOf(photo, PhotoKind.profile);
+      final gearKeys = [
+        for (final p in gearPhotos) await keyOf(p, PhotoKind.gear),
+      ];
+      return api.saveMe(
+        profile.copyWith(photo: photoKey, gearPhotos: gearKeys),
+      );
+    });
+    if (saved == null) return false;
+    _me = saved;
+    _climbers[saved.id] = saved;
+    if (_phase == Phase.needsProfile) {
+      _phase = Phase.ready;
+      notifyListeners();
+      unawaited(refreshAll());
+    } else {
+      notifyListeners();
+    }
+    return true;
   }
 
   // --- Chat --------------------------------------------------------------
 
-  /// A plan's group chat, oldest first.
-  List<Message> messages(String planId) =>
-      _state.messages.where((m) => m.planId == planId).toList()
-        ..sort((a, b) => a.time.compareTo(b.time));
-
-  void send(String planId, String text) {
+  /// Sends a message to a plan's group; false when it failed.
+  Future<bool> send(String planId, String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
-    _state.messages.add(
-      Message(planId: planId, authorId: me.id, text: trimmed, time: _clock()),
+    if (trimmed.isEmpty) return false;
+    final message = await _act(() => api.send(planId, trimmed));
+    if (message == null) return false;
+    _addMessages(planId, [message]);
+    return true;
+  }
+
+  // --- Admin -------------------------------------------------------------
+
+  /// An admin lets someone in, as if every member had said yes.
+  Future<Match?> adminAccept(JoinRequest request) async {
+    final match = await _act(
+      () => api.adminAccept(request.planId, request.climberId),
     );
-    _changed();
+    await _afterAdmin(request);
+    if (match == null) return null;
+    _plans[match.plan.id] = match.plan;
+    return Match(plan: match.plan, newcomer: climber(match.newcomerId));
   }
 
-  void _note(String planId, String text) => _state.messages.add(
-    Message(planId: planId, authorId: null, text: text, time: _clock()),
-  );
-
-  // --- Storage -----------------------------------------------------------
-
-  /// Back to the demo data.
-  void reset() {
-    _state = demoState(_clock());
-    _changed();
+  /// An admin turns someone down.
+  Future<bool> adminReject(JoinRequest request) async {
+    final ok = await _ok(
+      () => api.adminReject(request.planId, request.climberId),
+    );
+    await _afterAdmin(request);
+    return ok;
   }
 
-  void _changed() {
+  Future<void> _afterAdmin(JoinRequest request) async {
+    _adminRequests = [..._adminRequests.where((r) => r.id != request.id)];
     notifyListeners();
-    _storage?.write(jsonEncode(_state.toJson()));
+    await Future.wait([refreshAdmin(), refreshRequests(), refreshPlans()]);
+  }
+
+  @override
+  void dispose() {
+    auth.removeListener(_authChanged);
+    _errors.close();
+    _matches.close();
+    super.dispose();
   }
 }
 

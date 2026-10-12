@@ -7,8 +7,8 @@ A matchmaking app for climbing and sports: find someone to climb with.
 Like Tinder or Happn, for climbing: swipe on **plans** (an outing: what,
 where, when, which grades), separate from people's profiles. When everyone
 in a plan's group says yes to a newcomer, it's a match, and they climb
-together, with a group chat. For now the matching runs on the device, with
-demo data. What the app does is specified in [specs/](specs/README.md).
+together, with a group chat. Everyone signs in with Google, and the data
+lives in the backend (its API, under `/api`). What the app does is specified in [specs/](specs/README.md).
 
 - Production: https://grigri.nu01.com
 - Release candidate: https://rc.grigri.nu01.com

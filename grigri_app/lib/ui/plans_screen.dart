@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
@@ -36,24 +37,34 @@ class PlansScreen extends StatelessWidget {
         label: const Text('New plan'),
         onPressed: onCreatePlan,
       ),
-      body: mine.isEmpty && waiting.isEmpty && declined.isEmpty
-          ? const EmptyState(
+      body: !store.isLoaded(Section.plans)
+          ? const Center(child: CircularProgressIndicator())
+          : mine.isEmpty && waiting.isEmpty && declined.isEmpty
+          ? EmptyState(
               icon: Icons.event_note_outlined,
               title: 'No plans yet',
               message:
                   'Make a plan (what, where, when) and climbers who fit will '
                   'ask to join. Or swipe right on one in Discover.',
+              action: FilledButton.icon(
+                icon: const Icon(Icons.add),
+                label: const Text('New plan'),
+                onPressed: onCreatePlan,
+              ),
             )
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
-              children: [
-                if (mine.isNotEmpty) heading('Climbing'),
-                for (final plan in mine) _PlanTile(plan: plan),
-                if (waiting.isNotEmpty || declined.isNotEmpty)
-                  heading('Asked to join'),
-                for (final r in waiting) _RequestTile(request: r),
-                for (final r in declined) _RequestTile(request: r),
-              ],
+          : RefreshIndicator(
+              onRefresh: store.refreshPlans,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+                children: [
+                  if (mine.isNotEmpty) heading('Climbing'),
+                  for (final plan in mine) _PlanTile(plan: plan),
+                  if (waiting.isNotEmpty || declined.isNotEmpty)
+                    heading('Asked to join'),
+                  for (final r in waiting) _RequestTile(request: r),
+                  for (final r in declined) _RequestTile(request: r),
+                ],
+              ),
             ),
     );
   }
@@ -155,11 +166,11 @@ class _RequestTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
-    final plan = store.plan(request.planId)!;
+    final plan = store.plan(request.planId);
+    if (plan == null) return const SizedBox.shrink();
     final pending = [
       for (final id in plan.memberIds)
-        if (!request.acceptedBy.contains(id))
-          store.climber(id).name.split(' ').first,
+        if (!request.acceptedBy.contains(id)) store.climber(id).firstName,
     ];
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -193,7 +204,7 @@ class _RequestTile extends StatelessWidget {
             ? IconButton(
                 tooltip: 'Dismiss',
                 icon: const Icon(Icons.close, color: Mountain.granite),
-                onPressed: () => store.dismiss(request.id),
+                onPressed: () => store.dismiss(request),
               )
             : null,
         onTap: () => Navigator.of(context).push(

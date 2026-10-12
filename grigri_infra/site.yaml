@@ -134,6 +134,9 @@ Resources:
   # - style-src 'unsafe-inline': Flutter's engine injects <style> elements
   #   and style attributes.
   # - connect-src: CanvasKit and Google's fonts, which Flutter downloads.
+  # - accounts.google.com/gsi/: Google sign-in on the web (Google Identity
+  #   Services: its script, stylesheet, iframe and calls), and
+  #   lh3.googleusercontent.com its button's account picture.
   # frame-ancestors 'none' (and X-Frame-Options DENY): nothing may frame it.
   AppHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
@@ -146,11 +149,12 @@ Resources:
             Override: true
             ContentSecurityPolicy: >-
               default-src 'self';
-              script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com/flutter-canvaskit/;
-              style-src 'self' 'unsafe-inline';
-              img-src 'self' data: blob:;
+              script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com/flutter-canvaskit/ https://accounts.google.com/gsi/client;
+              style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style;
+              img-src 'self' data: blob: https://lh3.googleusercontent.com;
               font-src 'self' data: https://fonts.gstatic.com;
-              connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com;
+              connect-src 'self' blob: data: https://www.gstatic.com https://fonts.gstatic.com https://accounts.google.com/gsi/;
+              frame-src https://accounts.google.com/gsi/;
               worker-src 'self' blob:;
               manifest-src 'self';
               object-src 'none';
