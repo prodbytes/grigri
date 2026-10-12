@@ -1,0 +1,183 @@
+# Matching
+
+Grigri works like Tinder or Happn, for climbing: swipe right for yes, left
+for no (or tap ✓ and ✕). What people match on is a **plan**, not just a
+person, and a plan can take a whole group.
+
+## Profiles and plans are separate
+
+- A **profile** ([Climber](../grigri_app/lib/model/climber.dart)) is about
+  the person, created after their first [sign-in](sign-in.md): a
+  **photo** (or their initials), name, age (optional:
+  without it, cards show just the name), a bio, and:
+  - **grades per discipline** (what they climb): sport, trad and gym on
+    the route scale, bouldering on the boulder scale. Each scale is
+    written in my **grade system**, like Celsius and Fahrenheit:
+    **European** (French 4a–9a for routes, Fontainebleau 3–8B for
+    boulders) or **American** (YDS 5.5–5.14d, the V scale VB–V13). The
+    two write the same grades, index for index; switching changes how
+    grades read everywhere in the app, never the grades themselves (the
+    API stores them as `routes` / `boulders` indices); the choice is kept
+    on the device, the one thing the app keeps there;
+  - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car,
+    and up to 6 **photos of their gear**.
+
+  - **where I climb**: my **location** and up to 5 other **areas** I'd
+    climb near, each a place picked from the [sector index](sectors.md)
+    (a crag, sector or gym, with its point). They're **private**: the
+    server keeps them to about 1 km and only my own profile has them;
+    everyone else's comes without (the app keeps mine when a refresh
+    brings my profile back without them). They rank my
+    [deck](#the-deck).
+
+  When is only the plan's: a profile has no availability or years
+  climbing.
+- A **plan** ([Plan](../grigri_app/lib/model/plan.dart)) is one outing:
+  discipline, where (a sector, crag or gym: picked from the
+  [sector index](sectors.md), with where it is and its point on the
+  map, or typed in), the day and
+  its time range (from and to), the grades it's for, and notes. It has
+  no title: it's called by its place. Its members are its **group**,
+  organizer first, and the group has **no size limit**: it's as big as
+  the people who match.
+
+## The deck
+
+- **Discover**: plans to join. Upcoming plans that I'm
+  not in and haven't swiped on, **ranked by how well they match my
+  profile plus how close they are** to the nearest of my location and
+  areas ([the score](api.md#the-decks-ranking)): a plan in my grades
+  nearby first; one in my grades far away still before one next door
+  that I don't climb; ties soonest first. A plan typed in by hand (no
+  point), or a deck without my location or areas, counts as about 70 km
+  away. Each card shows **the plan first, highlighted**, with a "Your
+  grades" badge when they fit and how far it is from me ("12 km from
+  you") when known, then the organizer's profile (without the gear) and
+  the rest of the group.
+  - Right / ✓: I ask to join (a join request).
+  - Left / ✕: I pass; the plan leaves my deck.
+
+  The server picks and orders the deck. With nothing to show (GA starts
+  empty), Discover says so and offers **New plan**.
+
+Cards are dragged (they tilt, and stamp JOIN / PASS),
+or thrown by the buttons. A drag past 28% of the width, or a quick flick,
+counts.
+
+## Join requests, in the group chat
+
+Someone asking to join a plan shows up in its **group chat** as a card
+("Asked to join" and when): their photo, name and age (tap for their
+whole profile), their grade for the plan's discipline (marked when it
+fits), and who in the group has said yes and who it's waiting for. Until
+I've answered it has **Decline** and **Accept**; then it shows "You said
+yes" and who it's still waiting for, **Joined**, **Declined** (when I said
+no), or **Closed** (turned down by someone else, or by an admin). The
+organizer and **every member** are notified ("<name> wants to join"), and
+a newcomer is notified of the requests still open when they join. Chats
+marks each chat with how many requests wait for my answer, and the Chats
+tab's badge counts them all. The plan's screen lists them too, with
+"Answer in the chat".
+
+So the group doesn't miss them, the requests still waiting for **my**
+answer are also **called out at the top of the chat**, under the pinned
+plan: their avatar and name, how many have said yes, and ✕ / ✓ (the same
+answer as the card's). Once I've answered, the request leaves the
+callout; its card in the messages stays as the record.
+
+## The group decides
+
+- A newcomer joins a plan when **every current member** has accepted
+  them. **One "no" turns them down.**
+- When someone joins, the members who are still to decide on other open
+  requests now include them: the group as it is then decides.
+- When a member leaves, the requests stop waiting for them. The organizer
+  leaving hands the plan to the next member; the last member leaving ends
+  the plan, its requests and its chat. A plan I left never comes back to
+  my deck.
+
+## My request: pending, accepted or declined
+
+Swiping right on a plan makes it **pending** ("Asked to join: pending…").
+Plans lists it under **Asked to join**, tagged **Pending**, with who it's
+still waiting for. When the whole group has said yes, it moves up to the
+plans I'm in, tagged **Accepted**. When one member says no, it's tagged
+**Declined** until I dismiss it (✕); it doesn't come back to my deck. Its
+plan screen shows the same status.
+
+## Matches
+
+When someone joins a plan I'm in, or I join one, **"It's a match!"** opens
+over the screen: the plan, highlighted, the group's avatars and names, and
+**Open the group chat** or **Keep swiping**. That includes a group's yes
+found by a [refresh](#refreshing) while I'm doing something else. A
+group's no is a notification.
+
+## Notifications
+
+The **Notifications** tab, with a badge counting the unread ones, lists
+newest first, with when it happened:
+
+- **"<name> wants to join"** a plan I'm in (tap for its group chat, to
+  answer);
+- **"You're in: <plan>"** when a group accepted me (tap for the chat);
+- **"Not this time: <plan>"** when one declined me (tap for the plan).
+
+Opening the tab marks them read; the ones that were new stay highlighted
+("New") until I come back to it, and so do ones that arrive while it's
+open.
+
+## Group chat
+
+Each plan has one chat for its whole group, with the plan pinned on top.
+It notes who joined and who left, and holds the
+[join requests](#join-requests-in-the-group-chat) for the group to
+answer. Chats lists them, most recent first.
+
+## Data: the backend API
+
+Everything comes from the database, through the backend's API
+([api.md](api.md)); the app has no built-in data, and keeps nothing
+between runs but my grade system (shared_preferences, a display choice)
+and the bundled [sector index](sectors.md). [GrigriStore](../grigri_app/lib/data/grigri_store.dart) is
+a cache over the API client ([api.dart](../grigri_app/lib/data/api.dart),
+[http_api.dart](../grigri_app/lib/data/http_api.dart)): screens read it
+and call its actions (like, pass, accept, reject, dismiss, create,
+update, leave, send, save the profile, and the admin's approve and
+reject), which call the API and update the cache with the answers. A
+failed action shows the server's message at the bottom of the screen; a
+401 tries fresh credentials once, then signs out; a 409 "no profile"
+goes back to creating one.
+
+- **Production (GA) starts empty**: only real people's profiles and plans.
+  RC and local get made-up climbers and plans from the backend's seed
+  (never in GA). Nobody answers by a rule: every request waits for real
+  members (or an [admin](sign-in.md#admins)), in every environment.
+- **Photos** are in the backend's photo store, never in the database or on
+  the device: picked as before (my photo downsized to 640 px, gear photos
+  to 1080 px, JPEG quality 75), uploaded when the profile is saved (`POST
+  /api/photos` for a presigned upload, then the file), and saved in the
+  profile as keys, shown from `<site>/photos/<key>`. A profile keeps up to
+  6 gear photos.
+- **Who answered**: the server matches as described above (unanimous yes,
+  one no), and tells people by notifications.
+
+## Refreshing
+
+Until push notifications (MQTT) come, the app polls, and only what's on
+screen, while the app is in the foreground:
+
+- after signing in: my profile, then my plans, my requests, the requests
+  waiting for me, the deck, notifications (and, for admins, every open
+  request);
+- a tab, when I open it (Discover its deck, Chats every chat's latest
+  messages, Admin its requests), and every **15 seconds** my plans,
+  requests to review and notifications, plus the open tab;
+- an open **chat every 3 seconds**, asking only for messages after the
+  last one it has;
+- a plan's screen and chat load the plan (and its open requests) when
+  they open.
+
+When a refresh finds that a group accepted me (a new, unread "accepted"
+notification), the match screen opens, once per notification; so does a
+yes of mine that completes someone's request.

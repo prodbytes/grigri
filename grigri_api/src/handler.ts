@@ -3,13 +3,14 @@
 // test data (RC and local only: refused in prod; see seed/seed.ts). The
 // HTTP API can't send that event: its events always carry requestContext.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, DeleteObjectTaggingCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
-import type { APIGatewayProxyEventV2WithJWTAuthorizer, APIGatewayProxyResultV2 } from 'aws-lambda';
+import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { Api, type Photos } from './api.js';
-import { type AuthConfig, caller, parseAdminEmails } from './auth.js';
+import { Auth, type AuthConfig, parseAdminEmails } from './auth.js';
 import { ApiError } from './domain/errors.js';
+import { googleVerifier } from './google.js';
 import { Store } from './store/store.js';
 import { assertSeedable, seed } from '../seed/seed.js';
 
@@ -19,11 +20,6 @@ const MAX_PHOTO = 2 * 1024 * 1024;
 const env = process.env;
 const stage = env.STAGE ?? 'local';
 const table = env.TABLE_NAME ?? '';
-const auth: AuthConfig = {
-  // The template refuses DevMode unless Stage is local; checked here too.
-  devMode: env.DEV_MODE === 'true' && stage === 'local',
-  adminEmails: parseAdminEmails(env.ADMIN_EMAILS),
-};
 
 // Floci (the local stack) sets AWS_ENDPOINT_URL; its S3 is path-style.
 const local = Boolean(env.AWS_ENDPOINT_URL);
@@ -32,29 +28,58 @@ const doc = DynamoDBDocumentClient.from(new DynamoDBClient({}), {
 });
 const s3 = new S3Client({ forcePathStyle: local });
 const store = new Store(doc, table);
+const bucket = env.PHOTOS_BUCKET ?? '';
+
+// Every upload is tagged pending; the bucket's lifecycle rule (site.yaml,
+// and 05-api.sh locally) expires pending photos after a day, so photos
+// never saved to a profile go away. PUT /api/me clears the tag.
+const PENDING_TAGGING = '<Tagging><TagSet><Tag><Key>grigri-pending</Key><Value>true</Value></Tag></TagSet></Tagging>';
 
 const photos: Photos = {
   async presign(key, contentType) {
     const { url, fields } = await createPresignedPost(s3, {
-      Bucket: env.PHOTOS_BUCKET ?? '',
+      Bucket: bucket,
       Key: `photos/${key}`,
       Conditions: [
         ['content-length-range', 1, MAX_PHOTO],
         ['eq', '$Content-Type', contentType],
         ['eq', '$Cache-Control', 'public, max-age=31536000, immutable'],
+        ['eq', '$tagging', PENDING_TAGGING],
       ],
       // Keys are never reused, so the photo can be cached for good.
-      Fields: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' },
+      Fields: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable', tagging: PENDING_TAGGING },
       Expires: 300,
     });
     // Locally the browser can't reach the endpoint the function uses.
     return { url: env.PHOTOS_UPLOAD_URL || url, fields };
   },
+  async keep(key) {
+    try {
+      await s3.send(new DeleteObjectTaggingCommand({ Bucket: bucket, Key: `photos/${key}` }));
+      return true;
+    } catch (e) {
+      // Never uploaded, or expired. Without s3:ListBucket (not granted),
+      // S3 may answer a missing key with 403 rather than 404.
+      const status = (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+      if (status === 404 || status === 403) return false;
+      throw e;
+    }
+  },
+  async remove(keys) {
+    // At most 7 (a photo and 6 gear photos); S3 doesn't bill DELETEs.
+    await Promise.all(keys.map((k) => s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: `photos/${k}` }))));
+  },
 };
 
-const api = new Api({ store, photos, config: { stage, version: env.VERSION ?? 'dev' } });
+const authConfig: AuthConfig = {
+  // The template refuses DevMode unless Stage is local; checked here too.
+  devMode: env.DEV_MODE === 'true' && stage === 'local',
+  adminEmails: parseAdminEmails(env.ADMIN_EMAILS),
+};
+const auth = new Auth({ store, verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? ''), config: authConfig });
+const api = new Api({ store, photos, auth, config: { stage, version: env.VERSION ?? 'dev' } });
 
-type Event = APIGatewayProxyEventV2WithJWTAuthorizer | { grigriSeed?: boolean };
+type Event = APIGatewayProxyEventV2 | { grigriSeed?: boolean };
 
 export async function handler(event: Event): Promise<APIGatewayProxyResultV2 | Record<string, unknown>> {
   if (!('requestContext' in event)) {
@@ -67,7 +92,7 @@ export async function handler(event: Event): Promise<APIGatewayProxyResultV2 | R
   return http(event);
 }
 
-async function http(event: APIGatewayProxyEventV2WithJWTAuthorizer): Promise<APIGatewayProxyResultV2> {
+async function http(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> {
   const method = event.requestContext.http.method;
   const path = event.rawPath;
   try {
@@ -84,8 +109,8 @@ async function http(event: APIGatewayProxyEventV2WithJWTAuthorizer): Promise<API
         throw new ApiError(400, 'body is not valid JSON');
       }
     }
-    const isPublic = method === 'GET' && path === '/api/health';
-    const who = isPublic ? null : caller(event.requestContext.authorizer?.jwt?.claims, headers, auth);
+    // The session lookup (one read) only for routes that need a caller.
+    const who = api.access(method, path) === 'public' ? null : await auth.caller(headers);
     const result = await api.handle(method, path, {
       caller: who,
       query: event.queryStringParameters ?? {},

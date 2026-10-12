@@ -107,7 +107,9 @@ jobs:
           # Who is emailed when the site's health check fails or recovers:
           # a secret, not a variable, so the public run logs never show it.
           GRIGRI_HEALTH_EMAILS: ${{ secrets.GRIGRI_HEALTH_EMAILS }}
-          # The Google web client whose ID tokens the API accepts (public).
+          # Google sign-in's web client ID: compiled into the web app, and the
+          # client whose ID tokens the API accepts. A public repository
+          # variable, not a secret (specs/sign-in.md).
           GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
           # Who may approve or reject any join request: a secret, like the
           # health emails.

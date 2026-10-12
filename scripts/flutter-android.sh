@@ -12,5 +12,9 @@ set -euo pipefail
 # adb and the phone: $adb and $serial.
 source "$(dirname "$0")/android-device.sh"
 
+# The phone's localhost:<port> reaches this computer's local rbacr
+# (process-compose.yaml's 1-rbacr), for RBACR_URL=http://localhost:2115.
+"$adb" -s "$serial" reverse "tcp:${RBACR_PORT:-2115}" "tcp:${RBACR_PORT:-2115}" >/dev/null
+
 echo "Running on $serial ($("$adb" -s "$serial" shell getprop ro.product.model | tr -d '\r'))"
 exec bash "$(dirname "$0")/flutter-run.sh" -d "$serial" "$@"

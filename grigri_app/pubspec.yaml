@@ -34,6 +34,25 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.6
+  image_picker: ^1.2.4
+  google_sign_in: ^7.2.0
+  http: ^1.6.0
+  google_sign_in_web: ^1.1.3
+  # The user's roles (lib/data/roles.dart); not on pub.dev. Pinned to a
+  # commit: bump the ref to update.
+  rbacr:
+    git:
+      url: https://github.com/prodbytes/rbacr.git
+      path: rbacr-flutter
+      ref: c3cbfd1875208331f5a3df09e3116daa979c1816
+  # The session token on Android and iOS (Keystore, Keychain).
+  flutter_secure_storage: ^11.2.0
+  # Pulled in by flutter_secure_storage (path_provider, for Windows).
+  # Pinned to the last release without the objective_c native-assets hook,
+  # which can't build under devbox's Nix toolchain on macOS (so
+  # `flutter test` would fail there). The app doesn't use it.
+  path_provider_foundation: 2.5.1
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +76,10 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # The sector index, built by tool/build_sectors.dart.
+  assets:
+    - assets/sectors.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

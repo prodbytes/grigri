@@ -45,7 +45,7 @@ services:
       # bucket's upload URL and CORS origins (05-api.sh).
       FLOCI_PORT_HOST: ${FLOCI_PORT:-2114}
       FLOCI_HTTPS_PORT_HOST: ${FLOCI_HTTPS_PORT:-2543}
-      # The API's JWT authorizer accepts only ID tokens for this client
+      # POST /api/session accepts only Google ID tokens for this client
       # (from .env; a public identifier). Empty: dev mode.
       GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
       # Who may approve or reject any request locally (from .env).

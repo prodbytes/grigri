@@ -237,6 +237,13 @@ jobs:
         run: flutter --version
 
       - name: make ${{ matrix.target }}
+        env:
+          # A GA release's apps talk to production, the rest to the RC site
+          # (specs/sign-in.md); the Google client IDs are public repository
+          # variables, not secrets.
+          GRIGRI_STAGE: ${{ endsWith(needs.prepare.outputs.tag, '-GA') && 'prod' || 'rc' }}
+          GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_IOS_CLIENT_ID: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
         run: make "$TARGET"
 
       - name: Package

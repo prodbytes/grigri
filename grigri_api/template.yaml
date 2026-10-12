@@ -2,9 +2,11 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   grigri-api (and grigri-rc-api; grigri-local-api in Floci): Grigri's
   backend. One Node.js Lambda with an internal router behind one HTTP API,
-  whose JWT authorizer checks Google ID tokens on every route but
-  GET /api/health, and one on-demand DynamoDB table (single-table design,
-  grigri_api/README.md). Photos live in the site stack's bucket
+  and one on-demand DynamoDB table (single-table design,
+  grigri_api/README.md). The function authenticates every request itself:
+  POST /api/session verifies a Google ID token and issues the API's own
+  session (365 days without use, sliding), which every other route but
+  GET /api/health takes as a bearer token. Photos live in the site stack's bucket
   (PhotosBucket), uploaded with presigned POSTs. The site's CloudFront
   serves the HTTP API under /api/*. Nothing here costs anything while idle.
   Package with `aws cloudformation package` (Code: dist, from npm run build).
@@ -21,9 +23,9 @@ Parameters:
     Default: ''
     AllowedPattern: '([0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com)?'
     Description: >
-      The Google web OAuth client; ID tokens must be issued for it (their
-      aud). Required outside local (see Rules). A public identifier, not a
-      secret.
+      The Google web OAuth client; the ID tokens POST /api/session takes
+      must be issued for it (their aud). Required outside local (see
+      Rules). A public identifier, not a secret.
   AdminEmails:
     Type: String
     Default: ''
@@ -52,9 +54,10 @@ Parameters:
     Default: 'false'
     AllowedValues: ['false', 'true']
     Description: >
-      Local only (see Rules): no authorizer, and the caller is whoever the
-      X-Grigri-Dev-User header names. For local development without a
-      Google client.
+      Local only (see Rules): the caller may be whoever the
+      X-Grigri-Dev-User header names, and POST /api/session takes
+      {"devUser": "<email>"}. For local development without a Google
+      client.
   Version:
     Type: String
     Default: dev
@@ -83,7 +86,7 @@ Rules:
     Assertions:
       - Assert: !Equals [!Ref Stage, local]
         AssertDescription: DevMode is only allowed when Stage is local
-  # Outside local, a Google client is required (no client: no token passes).
+  # Outside local, a Google client is required (no client: nobody signs in).
   GoogleClientOutsideLocal:
     RuleCondition: !Not [!Equals [!Ref Stage, local]]
     Assertions:
@@ -95,8 +98,6 @@ Rules:
 Conditions:
   IsProd: !Equals [!Ref Stage, prod]
   IsLocal: !Equals [!Ref Stage, local]
-  IsDevMode: !Equals [!Ref DevMode, 'true']
-  HasAuthorizer: !Not [!Condition IsDevMode]
   HasBoundary: !Not [!Equals [!Ref PermissionsBoundary, '']]
 
 Resources:
@@ -124,6 +125,10 @@ Resources:
           AttributeType: S
         - AttributeName: gsi2sk
           AttributeType: S
+        - AttributeName: gsi3pk
+          AttributeType: S
+        - AttributeName: gsi3sk
+          AttributeType: S
       KeySchema:
         - AttributeName: pk
           KeyType: HASH
@@ -148,6 +153,22 @@ Resources:
               KeyType: RANGE
           Projection:
             ProjectionType: ALL
+        # An account's sessions (SESSIONS#<subject>), for sign-out
+        # everywhere. Keys only: sliding a session (lastUsedAt, ttl) never
+        # writes to it.
+        - IndexName: gsi3
+          KeySchema:
+            - AttributeName: gsi3pk
+              KeyType: HASH
+            - AttributeName: gsi3sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      # Sessions carry ttl (epoch seconds): DynamoDB deletes them, for free,
+      # once unused for 365 days. Nothing else has the attribute.
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: !If [IsProd, true, false]
       DeletionProtectionEnabled: !If [IsProd, true, false]
@@ -165,8 +186,10 @@ Resources:
         - Key: grigri:stage
           Value: !Ref Stage
 
-  # Only what the function does: its table, its logs, and uploads (via
-  # presigned POSTs) under the photos bucket's photos/ prefix. Its name is
+  # Only what the function does: its table, its logs, and under the photos
+  # bucket's photos/ prefix: uploads (presigned POSTs, tagged pending),
+  # clearing the pending tag of photos a profile saves, and deleting the
+  # ones it drops. Its name is
   # <stack>-function, inside the deploy role's <prefix>-* scope, and it
   # carries the stage's permissions boundary.
   FunctionRole:
@@ -207,9 +230,13 @@ Resources:
                 Resource:
                   - !GetAtt Table.Arn
                   - !Sub ${Table.Arn}/index/*
-              - Sid: PhotoUploads
+              - Sid: Photos
                 Effect: Allow
-                Action: s3:PutObject
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectTagging
+                  - s3:DeleteObjectTagging
+                  - s3:DeleteObject
                 Resource: !Sub arn:${AWS::Partition}:s3:::${PhotosBucket}/photos/*
       Tags:
         - Key: grigri:stage
@@ -239,6 +266,7 @@ Resources:
           PHOTOS_BUCKET: !Ref PhotosBucket
           PHOTOS_UPLOAD_URL: !Ref PhotosUploadUrl
           ADMIN_EMAILS: !Ref AdminEmails
+          GOOGLE_WEB_CLIENT_ID: !Ref GoogleWebClientId
           DEV_MODE: !Ref DevMode
           # Reuse TCP connections to DynamoDB between invocations.
           AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
@@ -247,8 +275,8 @@ Resources:
         - Key: grigri:stage
           Value: !Ref Stage
 
-  # An HTTP API: $1 per million requests (REST APIs are $3.50), with a
-  # built-in JWT authorizer.
+  # An HTTP API: $1 per million requests (REST APIs are $3.50). No
+  # authorizer: the function checks the session token (one DynamoDB read).
   HttpApi:
     Type: AWS::ApiGatewayV2::Api
     Properties:
@@ -262,22 +290,6 @@ Resources:
         - grigri:stage: !Ref Stage
           floci:override-id: grigri
         - grigri:stage: !Ref Stage
-
-  # Rejects missing, expired, forged or foreign tokens with 401 before the
-  # function runs (and before it costs anything).
-  GoogleIdToken:
-    Type: AWS::ApiGatewayV2::Authorizer
-    Condition: HasAuthorizer
-    Properties:
-      ApiId: !Ref HttpApi
-      Name: GoogleIdToken
-      AuthorizerType: JWT
-      IdentitySource:
-        - $request.header.Authorization
-      JwtConfiguration:
-        Issuer: https://accounts.google.com
-        Audience:
-          - !Ref GoogleWebClientId
 
   Integration:
     Type: AWS::ApiGatewayV2::Integration
@@ -297,15 +309,14 @@ Resources:
       AuthorizationType: NONE
       Target: !Sub integrations/${Integration}
 
-  # Everything else, behind the authorizer (none in dev mode); the
-  # function routes it.
+  # Everything else; the function routes it and authenticates it:
+  # POST /api/session is public, the rest take a session token.
   ApiRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
       ApiId: !Ref HttpApi
       RouteKey: ANY /api/{proxy+}
-      AuthorizationType: !If [HasAuthorizer, JWT, NONE]
-      AuthorizerId: !If [HasAuthorizer, !Ref GoogleIdToken, !Ref AWS::NoValue]
+      AuthorizationType: NONE
       Target: !Sub integrations/${Integration}
 
   # Throttling caps the bill if someone floods it (every route together).

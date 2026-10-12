@@ -25,7 +25,7 @@ spec.
      identity, the install script site, legal pages, and the Linux /
      Raspberry Pi builds.
    - The app ([grigri_app/](../grigri_app)): the
-     [home screen](home-screen.md), a static screen with the name, a
+     home screen, a static screen with the name, a
      tagline and the version, on [Android, iOS and the web](platforms.md),
      with a widget test.
    - Deploys to https://grigri.nu01.com (GA) and
@@ -42,8 +42,12 @@ spec.
      `AWS_DEPLOY_ROLE_ARN` / `AWS_DEPLOY_RC_ROLE_ARN` variables and the
      `GRIGRI_HEALTH_EMAILS` secret
      ([grigri_infra/README.md](../grigri_infra/README.md)). Google sign-in
-     clients have no API, so they're made in the Google Cloud console; the
-     app doesn't sign in yet.
+     clients have no API, so they're made in the Google Cloud console
+     (project `grigri-511416`); the app doesn't sign in yet.
+   - Google clients so far: GA Android (`com.nu01.grigri`), its ID in
+     `.env` as `GOOGLE_ANDROID_CLIENT_ID_GA` (named in `.env.example`).
+     Still to make: web (both sites' origins and `localhost:2112`), iOS,
+     and RC Android if the RC gets its own package.
 3. **Add the local address so that local HTTPS works, like presence.**
    Floci runs as the local CloudFront ([grigri_floci/](../grigri_floci),
    `4-floci` in `devbox services up`), over HTTP on port 2114 and HTTPS on
@@ -117,7 +121,213 @@ spec.
    says: serverless services with minimal cost; between services or
    libraries, the least costly one that meets the requirements; and say
    what a new cloud resource costs.
-10. **On the Discover view, rank the suggestions by how much they match my
+10. **Begin the app: matchmaking like Tinder or Happn, for sports.** Swipe
+    left / right or the buttons; profiles with climbing details (grades,
+    when, where); plans separate from profiles and highlighted on the match
+    screen; mutual yes makes a match and opens a chat; several people can
+    match the same plan, which becomes a group; a newcomer joins only when
+    every current member accepts.
+    - [Matching](matching.md): the Discover deck of plans (best fits first)
+      and the Requests deck of people; unanimous acceptance, one "no" is
+      enough; matches; one group chat per plan.
+    - [Screens](screens.md): Discover, Requests, Plans, Chats and Profile;
+      the plan and profile editors; the match screen. The static home
+      screen is gone.
+    - No backend yet: the rules run on the device, the state is saved
+      with shared_preferences, and demo data with made-up climbers (who
+      answer by fixed policies) starts it.
+11. **Someone joins a plan only when every member accepts them; meanwhile
+    the plan shows as pending in their list, then as accepted. Notify people
+    when they're accepted or rejected. Let people reject, too: one
+    rejection is a rejection.**
+    - The unanimous yes and the single "no" were already the rule
+      ([matching](matching.md#the-group-decides)). New: the made-up
+      climbers answer 10 seconds after a request (instantly in tests), so
+      it shows as pending first.
+    - Plans lists my plans as **Organizing** or **Accepted**, and the ones I
+      asked to join as **Pending** (and who it's waiting for) or
+      **Declined** (dismissable) ([screens](screens.md)).
+    - [Notifications](matching.md#notifications): a bell on every tab, with
+      a badge for unread ones, opens "You're in" and "Not this time"
+      notifications. A yes that arrives later also opens "It's a match!",
+      and a no shows a note at the bottom.
+    - Besides swiping left in Requests, the plan screen has ✓ and ✕ for
+      each person asking to join.
+12. **Make the age optional in the profile; don't show it when it's left
+    empty.** The profile editor's Age (optional) can be blank. A profile
+    without an age shows just the name ("Name" instead of "Name, 30") on
+    the decks, profile sheets and Profile.
+13. **In the profile: a photo, a description, the climbs; no when or where
+    (that's for plans), and nothing under the picture (no home area or years
+    climbing); the gear, with photos of it.**
+    - [Profiles](matching.md#profiles-and-plans-are-separate) gain a photo
+      (shown wherever their avatar is, initials otherwise) and up to 6 gear
+      photos, and lose availability, places, home area and years climbing;
+      profiles saved before are read without them.
+    - Discover ranks by grades alone, then the soonest, and its only badge
+      is "Your grades". The demo deck now opens on Tuesday's bouldering.
+    - The [profile editor](screens.md) takes or picks the photos
+      (image_picker, downsized as picked, kept on the device); iOS gains the
+      camera and photo library usage strings ([platforms](platforms.md)).
+14. **No Requests tab: the tabs are Discover, Plans, Chats, Notifications
+    and Profile. Accepting or declining a join request happens inside the
+    group chat; when someone asks to join, notify the organizer and
+    everyone already in.**
+    - The Requests tab and its people deck are gone. Each request is a
+      card in the plan's group chat, with Accept / Decline and who has said
+      yes ([matching](matching.md#join-requests-in-the-group-chat)); one
+      decline still turns them down. Chats shows "N to answer", and its tab
+      badge counts them.
+    - Notifications is a tab (the bell on each tab's bar is gone). It adds
+      "<name> wants to join" for every member of the plan, which opens the
+      chat. A newcomer also hears of the requests still open.
+    - The plan screen no longer has ✓ / ✕; it points to the chat.
+    - Fixed: long chat notes overflowed their label instead of wrapping.
+15. **A searchable database of climbing sectors, the cheapest way; then in
+    the new plan screen: no title; where is one search field; when is the
+    date and a time range (from, to) instead of a start and a length; a
+    European / American grade system switch above the grades, like Celsius
+    and Fahrenheit; no group size (the group is whoever matches); notes;
+    publish.**
+    - [Sectors](sectors.md): a static index searched on the device (no
+      server), built from OpenStreetMap by `tool/build_sectors.dart`.
+      OpenBeta was set aside: it barely covers Europe. The bundled index is
+      a placeholder until the build runs.
+    - [Plans](matching.md#profiles-and-plans-are-separate) lose their title
+      (they're called by their place), length and group size, and gain an
+      end time and the sector's id; plans saved before are read with their
+      length as the time range. Discover no longer skips full plans: none
+      are.
+    - The grade system is my setting, everywhere: grades on cards, chats,
+      profiles and the editors read in it. The scales are now routes and
+      boulders, each written both ways.
+    - The [plan editor](screens.md) is as asked; the profile editor gains
+      the same grade switch.
+16. **When someone likes the plan but doesn't match yet, call it out at
+    the top of the chat, so people know they need to approve or reject
+    the new person.**
+    - The [group chat](matching.md#join-requests-in-the-group-chat) pins
+      a callout under the plan for each request still waiting for my
+      answer: avatar, name, how many said yes, and ✕ / ✓ (the same accept
+      and decline as the request's card). After I answer, it leaves the
+      callout; the card in the messages stays as the record.
+17. **Add the rbacr integration; at the end of the profile view, show the
+    user's roles.**
+    - New feature: [Roles](roles.md). The app depends on rbacr's Dart
+      client (pinned to a commit) and asks rbacr's `/api/me`; the
+      [Profile](screens.md) tab ends with a Roles card: my roles in the
+      `grigri` system and my global ones, the email rbacr knows me by,
+      or why there are none (not signed in, none yet, rbacr unreachable,
+      with Retry).
+    - Grigri has no sign-in yet, so only development builds ask rbacr,
+      with the local dev server's token; `scripts/dart-defines.sh` passes
+      `RBACR_URL`, and `RBACR_TOKEN` only to the dev run scripts, for a
+      localhost rbacr outside a deploy.
+    - [Development environment](dev-environment.md): `devbox services up`
+      runs rbacr's dev server (`1-rbacr`, port 2115, CORS for the web
+      app), the health line gains 🔑 rbacr, debug Android builds allow
+      plain http and `devbox run android` sets up `adb reverse` for it;
+      `.env.example` lists `RBACR_URL` and `RBACR_TOKEN`.
+18. **Remove the static fake data; everything from the database; GA empty
+    and real, fake data in RC and local; an admin can approve/reject any
+    request; Google sign-in.**
+    - The app's data all comes from the backend API ([api.md](api.md)):
+      the store is a cache over an API client, with loading states and the
+      server's errors at the bottom of the screen. Gone: the demo data
+      (`seed.dart`), the made-up climbers' answering policies and their
+      timer, the on-device state (shared_preferences now keeps only the
+      grade system, a display preference), and Profile's "Reset the demo
+      data". GA starts empty; RC and local get made-up
+      data from the backend's seed ([matching](matching.md#data-the-backend-api)).
+    - [Refreshing](matching.md#refreshing) polls only what's on screen,
+      while the app is in the foreground: tabs on opening and every 15 s,
+      an open chat every 3 s with `after=`. A group's yes found by a
+      refresh opens the match screen.
+    - Photos are uploaded to the backend's photo store (presigned POSTs)
+      and kept in profiles as keys, shown from `<site>/photos/<key>`.
+    - [Sign-in](sign-in.md) with Google only (google_sign_in 7: Google's
+      button on the web, the web client ID as server client ID on Android
+      and iOS), **Create your profile** after the first sign-in, Sign out
+      in Profile's ⋯; a local-only dev sign-in without a client ID. New
+      public build settings `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID` and
+      `GOOGLE_IOS_CLIENT_ID` (allowed in `scripts/dart-defines.sh`, empty in
+      `.env.example`, repository variables in CI); iOS's client ID and URL
+      scheme reach `Info.plist` through the git-ignored `Private.xcconfig`;
+      Release builds a GA tag's apps for production, the rest for RC. The
+      site's CSP allows Google Identity Services.
+    - Admins get an **Admin** tab to approve or reject any open request
+      ([screens](screens.md)).
+    - Merged with the sector search, time-range plans without title or
+      group size, the grade systems and the chat's join callout: plans
+      travel to the API in that shape (no spots, nothing is ever full),
+      and the callout's ✕ / ✓ call the API like the request cards.
+    - Every tab has an [empty state](screens.md) with what to do next.
+19. **Merge it all to main; publish a new rbacr image.**
+    - The open stack merged into `main`: the scaffold, local HTTPS with
+      the backend API, the mountain theme and icons, cost first, and
+      matchmaking (the app on the API, with sign-in and the roles card).
+      Merged together: the deploy workflows pass `GOOGLE_WEB_CLIENT_ID`
+      (to the app and the API) and `GRIGRI_ADMIN_EMAILS`; the CSP keeps
+      sign-in, the API and photo uploads; `devbox services up` runs Floci,
+      the API and the local rbacr side by side (web on 7189), and rbacr's
+      CORS allows the web app directly and through Floci's HTTPS
+      ([development environment](dev-environment.md)).
+    - `prodbytes/rbacr-local` republished (amd64 and arm64,
+      `0.1.202610121814` and `latest`) from rbacr's main, so the local
+      rbacr answers the web app's CORS preflights.
+    - Also merged: the API's long sessions and pending-photo cleanup
+      (#21, from `local-https`) with the app's side (#19) and Discover's
+      ranking by match and distance (#20).
+20. **Make sign-in last as long as possible: the API's own sessions (365
+    days without use, sliding); clean up photos never saved to a
+    profile.** (Asked as "make sign out longer, max time": Google ID tokens
+    last an hour and can't be refreshed quietly on the web, so people were
+    signed out hourly.)
+    - Sessions ([API](api.md#sessions), [backend](backend.md)):
+      `POST /api/session` trades a Google ID token, now verified by the
+      function (jose, Google's keys cached; issuer, audience, expiry), for
+      an opaque session token stored only as its SHA-256 hash. Every other
+      route but `GET /api/health` takes it as a bearer token (401
+      `signed out` otherwise). It slides (at most one write per session per
+      day) and expires after 365 days without use (DynamoDB TTL, checked by
+      the function too); no absolute limit. `DELETE /api/session` signs
+      out, `DELETE /api/sessions` everywhere (a new keys-only index, gsi3,
+      by subject). Admin is decided per request from the session's
+      verified email and the current list. The HTTP API's JWT authorizer
+      is gone. Dev mode (local only) keeps `X-Grigri-Dev-User` and also
+      takes `{"devUser"}` at `POST /api/session`.
+    - Photos: presigned uploads are tagged `grigri-pending=true`, a
+      lifecycle rule on the photos bucket expires pending photos after a
+      day, and saving a profile clears the tag of its new photos (400 if
+      one isn't uploaded) and deletes the ones it drops. The function may
+      now tag, untag and delete under `photos/` (still no reads); the
+      permissions boundary allows the same, and the deploy roles may turn
+      on TTL. Administrators redeploy `github-deploy.yaml` before the next
+      API deploy.
+    - Cost ([backend](backend.md#cost)): one DynamoDB read per request
+      (about $0.06 per million), a write per active session per day, and
+      one S3 request per new photo saved; nothing while idle.
+    - Local ([Floci](../grigri_floci/README.md)): the same; Floci ignores
+      the upload's tag field and skips the template's TTL setting (the
+      ready hook turns TTL on itself).
+    - The app (on the web people were signed out after about an hour, when
+      the Google ID token it sent on every call expired): after Google
+      sign-in it calls `POST /api/session` once with the ID token and
+      sends the API's session token as the bearer on every call; Google
+      isn't asked again until a 401 or a sign-out. A kept session starts
+      the app signed in, straight to `GET /api/me`. Sessions last until
+      sign-out or 365 days without use ([sign-in](sign-in.md)).
+    - The token is kept in secure storage on Android and iOS
+      (flutter_secure_storage: Keystore, Keychain this-device-only) and in
+      local storage on the web (guarded by the site's CSP).
+    - A 401 forgets the token and goes back to the sign-in screen; the
+      quiet Google refresh on 401 is gone. Sign out calls
+      `DELETE /api/session`; Profile's ⋯ adds **Sign out everywhere**
+      (`DELETE /api/sessions`, after a confirmation;
+      [screens](screens.md)).
+    - The local dev sign-in starts a session with `{"devUser"}` too,
+      instead of sending `X-Grigri-Dev-User` on every call.
+21. **On the Discover view, rank the suggestions by how much they match my
     profile and how close they are to me; let people set their location on
     their profile and add other locations of interest.** This entry is the
     backend's half; the app's is on the app's branch.
@@ -132,3 +342,21 @@ spec.
       gone.
     - The seed's plans carry their places' approximate points.
     - Cost: none; it's computed in the same request, over the same reads.
+22. **On the Discover view, rank the suggestions by how much they match my
+    profile and how close they are to me; let people set their location on
+    their profile and add other locations of interest.** The app's half;
+    the backend's is entry 21.
+    - [Matching](matching.md): a profile has a private **location** and up
+      to 5 **areas**, picked from the sector index; the deck is ranked by
+      grade fit plus nearness to the nearest of them (the server's score),
+      replacing "fits first, then soonest"; cards say how far each plan
+      is. The app keeps my location and areas when a refresh brings my
+      profile back without them.
+    - [Screens](screens.md): the profile editor's "Where you climb"
+      section and a full-screen location picker; Discover's distance
+      line and, without a location, a hint with **Set**; saving the
+      profile refreshes the deck.
+    - [Sectors](sectors.md): index rows carry each place's point (`out
+      center` from OpenStreetMap; the placeholder gets approximate
+      points); a plan keeps its sector's point. The index is cached once
+      loaded, not as a pending load.

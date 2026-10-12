@@ -1,57 +1,153 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'app_version.dart';
+import 'config.dart';
+import 'data/auth.dart';
+import 'data/grigri_store.dart';
+import 'data/http_api.dart';
+import 'data/preferences.dart';
+import 'data/roles.dart';
+import 'data/session_storage.dart';
 import 'theme.dart';
+import 'ui/common.dart';
+import 'ui/home_shell.dart';
+import 'ui/profile_editor.dart';
+import 'ui/roles_card.dart';
+import 'ui/sign_in_screen.dart';
 
-void main() {
-  runApp(const GrigriApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  late final Auth auth;
+  final api = HttpGrigriApi(
+    origin: AppConfig.origin,
+    headers: () => auth.headers(),
+  );
+  auth = SessionAuth(
+    method: AppConfig.devSignIn
+        ? DevSignInMethod()
+        : GoogleSignInMethod(
+            webClientId: AppConfig.googleWebClientId,
+            iosClientId: AppConfig.googleIosClientId,
+          ),
+    sessions: api,
+    storage: SessionStorage.device(),
+  );
+  final store = GrigriStore(
+    api: api,
+    auth: auth,
+    preferences: await Preferences.open(),
+  );
+  runApp(GrigriApp(store: store, roles: Roles.fromSettings()));
+  unawaited(store.start());
 }
 
-class GrigriApp extends StatelessWidget {
-  const GrigriApp({super.key});
+class GrigriApp extends StatefulWidget {
+  const GrigriApp({
+    super.key,
+    required this.store,
+    this.roles = const Roles.none(),
+  });
+
+  final GrigriStore store;
+
+  /// The user's roles, from rbacr.
+  final Roles roles;
+
+  @override
+  State<GrigriApp> createState() => _GrigriAppState();
+}
+
+class _GrigriAppState extends State<GrigriApp> {
+  final _messenger = GlobalKey<ScaffoldMessengerState>();
+  final _navigator = GlobalKey<NavigatorState>();
+  StreamSubscription<String>? _errors;
+  Phase? _phase;
+
+  /// Leaving the tabs (signed out, or back to creating a profile) closes
+  /// the screens opened over them.
+  void _phaseChanged() {
+    final phase = widget.store.phase;
+    if (phase == _phase) return;
+    if (_phase == Phase.ready) {
+      _navigator.currentState?.popUntil((route) => route.isFirst);
+    }
+    _phase = phase;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.store.addListener(_phaseChanged);
+    _errors = widget.store.errors.listen(
+      (message) => _messenger.currentState
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message))),
+    );
+  }
+
+  @override
+  void dispose() {
+    widget.store.removeListener(_phaseChanged);
+    _errors?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     // Dark only, for now: the mountain palette (theme.dart).
-    return MaterialApp(
-      title: AppVersion.title,
-      debugShowCheckedModeBanner: false,
-      theme: mountainTheme(),
-      home: const HomeScreen(),
+    return StoreScope(
+      store: widget.store,
+      child: RolesScope(
+        roles: widget.roles,
+        child: MaterialApp(
+          title: AppVersion.title,
+          debugShowCheckedModeBanner: false,
+          theme: mountainTheme(),
+          scaffoldMessengerKey: _messenger,
+          navigatorKey: _navigator,
+          home: const Root(),
+        ),
+      ),
     );
   }
 }
 
-/// The only screen for now: the app's name and what it's for, with the
-/// version underneath.
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+/// Signing in, then creating a profile the first time, then the tabs.
+class Root extends StatelessWidget {
+  const Root({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    final store = StoreScope.of(context);
+    return switch (store.phase) {
+      Phase.starting || Phase.loading => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      Phase.signedOut => const SignInScreen(),
+      Phase.needsProfile => const ProfileEditor(create: true),
+      Phase.ready => const HomeShell(),
+      Phase.failed => Scaffold(
+        body: EmptyState(
+          icon: Icons.cloud_off,
+          title: 'Couldn\'t load your profile',
+          message: store.loadError ?? 'Something went wrong.',
+          action: Wrap(
+            spacing: 12,
             children: [
-              Text(AppVersion.title, style: text.displayMedium),
-              const SizedBox(height: 8),
-              Text(
-                'Find a partner to climb with',
-                style: text.titleMedium,
-                textAlign: TextAlign.center,
+              FilledButton(
+                onPressed: store.loadMe,
+                child: const Text('Try again'),
               ),
-              if (AppVersion.version.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                Text(AppVersion.version, style: text.bodySmall),
-              ],
+              TextButton(
+                onPressed: store.signOut,
+                child: const Text('Sign out'),
+              ),
             ],
           ),
         ),
       ),
-    );
+    };
   }
 }

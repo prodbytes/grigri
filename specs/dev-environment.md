@@ -19,6 +19,16 @@
     base href production uses), on Flutter's `web-server` device, through
     `scripts/flutter-web.sh` (also `devbox run web`). Ready when `/app/`
     answers. Stopping it also stops whatever listens on the port.
+  - `1-rbacr`: rbacr's dev server (the `prodbytes/rbacr-local` image, in
+    Docker, as the `grigri-rbacr` container with the `grigri-rbacr-data`
+    volume) on http://localhost:2115, for the [roles](roles.md). It takes
+    `RBACR_TOKEN` from `.env` as its root token (owner
+    `dev@rbacr.local`), or generates one and logs it, and lets the web
+    app call it (`RBACR_CORS_ORIGINS`): directly (http://localhost:7189)
+    and through Floci (https://local.grigri.nu01.com:2543); that needs an
+    image from 12 Oct 2026 or later (`docker pull prodbytes/rbacr-local`).
+    Ready when `/health` answers; nothing waits for it, so the app runs
+    without Docker (its roles then fail, with Retry).
   - `5-index`: [grigri_index/site](../grigri_index) on
     http://localhost:2113/.
   - `4-floci`: [Floci](https://floci.io/) as the local CloudFront and the
@@ -30,7 +40,8 @@
     template into Floci (Lambda, HTTP API, DynamoDB, S3) and loads the
     made-up test data. Without `GOOGLE_WEB_CLIENT_ID` in `.env` the API
     runs in dev mode: callers name themselves with
-    `X-Grigri-Dev-User: <email>`; `GRIGRI_ADMIN_EMAILS` in `.env` lists
+    `X-Grigri-Dev-User: <email>`, or get a session from `POST /api/session`
+    with `{"devUser": "<email>"}`; `GRIGRI_ADMIN_EMAILS` in `.env` lists
     the local admins ([backend.md](backend.md)).
     HTTP on http://grigri.localhost:2114/app/ (`FLOCI_PORT`), HTTPS on
     **https://local.grigri.nu01.com:2543/app/** (`FLOCI_HTTPS_PORT`) and
@@ -47,17 +58,22 @@
     (🧗 the app, 🏠 the index, 🔒 HTTPS, 🔌 the API), then every 15 s
     (`HEALTH_CHECK_INTERVAL`) one line for the whole check: the time, then
     each dependency as its icon, a short label and ✅ or ❌, e.g.
-    `2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅`.
+    `2026-10-12 18:27:56  🏠 index ✅  🧗 web ✅  🚚 cdn ✅  🔒 https ✅  🔌 api ✅  🔑 rbacr ✅`.
     `🚚 cdn` asks Floci with the alias as `Host`; `🔒 https` validates the
     certificate against mkcert's CA and pins the name to 127.0.0.1, so
     neither needs DNS or `mkcert -install`; `🔌 api` asks
-    `/api/health` through the CDN and expects the `local` stage.
-  - The ports (7189, 2113, 2114, 2543) differ from presence's and TabScan's, so the
+    `/api/health` through the CDN and expects the `local` stage; `🔑 rbacr`
+    asks the local rbacr's `/health`.
+  - `2-flutter-web` gets `RBACR_URL=http://localhost:2115` (unless `.env`
+    sets it), so the web app asks the local rbacr.
+  - The ports (7189, 2113, 2114, 2115, 2543) differ from presence's and TabScan's, so the
     projects can run side by side. Servers bind to 127.0.0.1;
     `GRIGRI_BIND_HOST=0.0.0.0` serves other devices (a phone's browser).
 - **Android** (USB, debugging on; `ANDROID_SERIAL` picks one of several):
   `devbox run android` runs a debug build attached
-  (`scripts/flutter-android.sh`); `devbox run android-release` installs a
+  (`scripts/flutter-android.sh`), with `adb reverse` so the phone's
+  localhost:2115 reaches the local rbacr (debug builds allow plain http;
+  set `RBACR_URL=http://localhost:2115` in `.env`); `devbox run android-release` installs a
   release build over the app (keeping its data), starts it and checks it
   runs (`scripts/android-install.sh`); `devbox run android-log` streams the
   app's log lines and the system's related errors
@@ -66,8 +82,13 @@
 - **Settings**: `.env` (git-ignored; see [.env.example](../.env.example)),
   linked from the private `prodbytes/setec-astronomy` repo
   (`grigri.nu01/`) by `scripts/link-private.sh`. Only names listed in
-  `scripts/dart-defines.sh` reach the app (now `GRIGRI_STAGE`); the
-  version is passed as `GRIGRI_VERSION`.
+  `scripts/dart-defines.sh` reach the app (`GRIGRI_STAGE`,
+  `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID`: see
+  [sign-in](sign-in.md); `RBACR_URL`, and `RBACR_TOKEN` only to the dev
+  run scripts, when `RBACR_URL` is a localhost rbacr and no stage is set);
+  the version is passed as `GRIGRI_VERSION`. Without
+  `GOOGLE_WEB_CLIENT_ID`, a local build signs in with the local API's dev
+  sign-in.
 - **Checks**: `flutter analyze` and `flutter test` in `grigri_app/`; the
   Release workflow runs both on pull requests that touch the app or the
   build. The API: `npm run check` in `grigri_api/` (type check, tests,
