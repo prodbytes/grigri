@@ -5,6 +5,7 @@ import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/main.dart';
 import 'package:grigri_app/model/climber.dart';
+import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
 
@@ -129,7 +130,7 @@ void main() {
     ) async {
       await pumpApp(tester, sampleApi());
       expect(find.text('THE PLAN'), findsWidgets);
-      expect(find.text('Bouldering night'), findsOneWidget);
+      expect(find.text('Block Hall'), findsOneWidget);
       expect(find.text('Kit Marlow'), findsOneWidget);
       expect(find.text('Your grades'), findsWidgets);
     });
@@ -141,7 +142,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(api.calls, contains('POST /api/plans/boulder-night/join'));
       expect(find.textContaining('Asked to join: pending'), findsOneWidget);
-      expect(find.text('Bouldering night'), findsNothing);
+      expect(find.text('Block Hall'), findsNothing);
       await tapTab(tester, 'Plans');
       expect(find.text('ASKED TO JOIN'), findsOneWidget);
       expect(find.text('Pending'), findsOneWidget);
@@ -151,23 +152,23 @@ void main() {
       final api = sampleApi();
       await pumpApp(tester, api);
       await tester.timedDrag(
-        find.text('Bouldering night'),
+        find.text('Block Hall'),
         const Offset(-600, 0),
         const Duration(milliseconds: 400),
       );
       await tester.pumpAndSettle();
       expect(api.calls, contains('POST /api/plans/boulder-night/pass'));
-      expect(find.text('Bouldering night'), findsNothing);
-      expect(find.text('Crag day'), findsOneWidget);
+      expect(find.text('Block Hall'), findsNothing);
+      expect(find.text('Grey Cliffs'), findsOneWidget);
     });
 
     testWidgets('the server\'s error shows at the bottom', (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);
-      api.failNext = const ApiException(409, 'That plan is full.');
+      api.failNext = const ApiException(409, 'You already asked.');
       await tester.tap(find.byTooltip('Ask to join'));
       await tester.pumpAndSettle();
-      expect(find.text('That plan is full.'), findsOneWidget);
+      expect(find.text('You already asked.'), findsOneWidget);
     });
 
     testWidgets('a group\'s yes found by the refresh shows the match', (
@@ -187,7 +188,7 @@ void main() {
       await tester.tap(find.text('Keep swiping'));
       await tester.pumpAndSettle();
       await tapTab(tester, 'Plans');
-      expect(find.text('Crag day'), findsOneWidget);
+      expect(find.text('Grey Cliffs'), findsOneWidget);
       expect(find.text('Accepted'), findsOneWidget);
     });
   });
@@ -217,12 +218,42 @@ void main() {
       expect(api.plans['my-gym']!.memberIds, ['me', 'jules']);
     });
 
+    testWidgets('the chat calls out on top who still needs my answer', (
+      tester,
+    ) async {
+      final api = sampleApi()..ask('my-gym', 'kit');
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Chats');
+      await tester.tap(find.text('Wall Works'));
+      await tester.pumpAndSettle();
+      expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNWidgets(2));
+
+      await tester.tap(find.byTooltip('Decline Kit Marlow'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/requests/my-gym/kit/reject'));
+      expect(find.byKey(const ValueKey('callout my-gym/kit')), findsNothing);
+      // The card in the messages stays, as the record.
+      final card = find.byKey(const ValueKey('request my-gym/kit'));
+      expect(
+        find.descendant(of: card, matching: find.text('Declined')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byTooltip('Accept Jules Fern'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/requests/my-gym/jules/accept'));
+      expect(find.text("It's a match!"), findsOneWidget);
+      await tester.tap(find.text('Keep swiping'));
+      await tester.pumpAndSettle();
+      expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    });
+
     testWidgets('declining in the chat turns them down', (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);
       await tapTab(tester, 'Chats');
       expect(find.text('1 to answer'), findsOneWidget);
-      await tester.tap(find.text('Gym evening'));
+      await tester.tap(find.text('Wall Works'));
       await tester.pumpAndSettle();
       final card = find.byKey(const ValueKey('request my-gym/jules'));
       await tester.tap(
@@ -249,7 +280,7 @@ void main() {
       );
       await pumpApp(tester, api);
       await tapTab(tester, 'Chats');
-      await tester.tap(find.text('Crag day'));
+      await tester.tap(find.text('Grey Cliffs'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), 'Count me in!');
       await tester.tap(find.byTooltip('Send'));
@@ -266,24 +297,69 @@ void main() {
   });
 
   group('plans', () {
-    testWidgets('a new plan shows up in Plans', (tester) async {
-      final api = sampleApi();
-      await pumpApp(tester, api);
+    Future<void> openNewPlan(WidgetTester tester) async {
       await tapTab(tester, 'Plans');
       await tester.tap(find.text('New plan'));
       await tester.pumpAndSettle();
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Title'),
-        'Gym night',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Crag or gym'),
-        'Climbing gym',
-      );
-      await tester.tap(find.text('Save'));
+    }
+
+    Future<void> publish(WidgetTester tester) async {
+      final button = find.text('Publish the plan');
+      await tester.ensureVisible(button);
       await tester.pumpAndSettle();
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a new plan picks its sector from the search', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await openNewPlan(tester);
+      expect(find.widgetWithText(TextFormField, 'Title'), findsNothing);
+      expect(find.text('GROUP SIZE'), findsNothing);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Sector, crag or gym'),
+        'pati',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('El Pati'));
+      await tester.pumpAndSettle();
+      await publish(tester);
       expect(api.calls, contains('POST /api/plans'));
-      expect(find.text('Gym night'), findsOneWidget);
+      final plan = api.plans.values.firstWhere((p) => p.place == 'El Pati');
+      expect(plan.sectorId, 'demo:el-pati');
+      expect(plan.area, isNotEmpty);
+      expect(plan.start.hour, 9);
+      expect(plan.end.hour, 17);
+      expect(find.text('El Pati'), findsOneWidget);
+    });
+
+    testWidgets('a place the index lacks is typed in by hand', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await openNewPlan(tester);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Sector, crag or gym'),
+        'Hidden Slab',
+      );
+      await tester.pumpAndSettle();
+      await publish(tester);
+      final plan = api.plans.values.firstWhere((p) => p.place == 'Hidden Slab');
+      expect(plan.sectorId, isNull);
+      expect(plan.area, isEmpty);
+      expect(find.text('Hidden Slab'), findsOneWidget);
+    });
+
+    testWidgets('grades switch between European and American, on the device', (
+      tester,
+    ) async {
+      final store = await pumpApp(tester, sampleApi());
+      await openNewPlan(tester);
+      expect(find.text('6a–6c+'), findsOneWidget);
+      await tester.tap(find.text('American'));
+      await tester.pumpAndSettle();
+      expect(find.text('5.10b–5.11c'), findsOneWidget);
+      expect(store.gradeSystem, GradeSystem.american);
     });
 
     testWidgets('leaving a plan takes it out of Plans', (tester) async {
@@ -293,15 +369,15 @@ void main() {
       );
       await pumpApp(tester, api);
       await tapTab(tester, 'Plans');
-      await tester.tap(find.text('Crag day'));
+      await tester.tap(find.text('Grey Cliffs'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Leave the plan'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Leave'));
       await tester.pumpAndSettle();
       expect(api.calls, contains('POST /api/plans/crag-day/leave'));
-      expect(find.text('Crag day'), findsNothing);
-      expect(find.text('Gym evening'), findsOneWidget);
+      expect(find.text('Grey Cliffs'), findsNothing);
+      expect(find.text('Wall Works'), findsOneWidget);
     });
   });
 
@@ -364,7 +440,7 @@ void main() {
         contains('POST /api/admin/requests/boulder-night/jules/accept'),
       );
       expect(api.plans['boulder-night']!.memberIds, contains('jules'));
-      expect(find.text('Jules Fern joined Bouldering night.'), findsOneWidget);
+      expect(find.text('Jules Fern joined Block Hall.'), findsOneWidget);
       expect(tile, findsNothing);
     });
 

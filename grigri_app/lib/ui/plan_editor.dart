@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../data/sector_index.dart';
 import '../model/climbing.dart';
 import '../model/plan.dart';
+import '../model/sector.dart';
 import '../theme.dart';
 import 'common.dart';
 
-/// Creates a plan, or edits one I organize: what, where, when, grades
-/// and how many people.
+/// Creates a plan, or edits one I organize: what, where (a sector from the
+/// index, or typed in), when (a day and a time range) and which grades.
 class PlanEditor extends StatefulWidget {
   const PlanEditor({super.key, this.plan});
 
@@ -19,23 +21,59 @@ class PlanEditor extends StatefulWidget {
 
 class _PlanEditorState extends State<PlanEditor> {
   final _form = GlobalKey<FormState>();
-  late final _title = TextEditingController(text: widget.plan?.title);
   late final _place = TextEditingController(text: widget.plan?.place);
-  late final _area = TextEditingController(text: widget.plan?.area);
+  final _placeFocus = FocusNode();
   late final _notes = TextEditingController(text: widget.plan?.notes);
   late Discipline _discipline = widget.plan?.discipline ?? Discipline.sport;
-  late DateTime _start = widget.plan?.start ?? _nextSaturday();
-  late int _hours = widget.plan?.hours ?? 6;
-  late int _spots = widget.plan?.spots ?? 3;
+  late DateTime _day = _dayOf(widget.plan?.start ?? _nextSaturday());
+
+  /// From and to, in half hours since midnight.
+  late RangeValues _hours = widget.plan == null
+      ? const RangeValues(9 * 2, 17 * 2)
+      : RangeValues(
+          _halfHours(widget.plan!.start, _firstHalfHour, _lastHalfHour - 1),
+          _halfHours(widget.plan!.end, _firstHalfHour + 1, _lastHalfHour),
+        );
   late RangeValues _grades;
+
+  /// The sector picked from the index; null when the place is typed in.
+  late Sector? _sector = widget.plan?.sectorId == null
+      ? null
+      : Sector(
+          id: widget.plan!.sectorId!,
+          name: widget.plan!.place,
+          area: widget.plan!.area,
+        );
+  SectorIndex? _index;
+
+  /// The time range's ends: 05:00 and 23:30.
+  static const _firstHalfHour = 5 * 2;
+  static const _lastHalfHour = 23 * 2 + 1;
+
+  static DateTime _dayOf(DateTime t) => DateTime(t.year, t.month, t.day);
 
   static DateTime _nextSaturday() {
     final now = DateTime.now();
-    var d = DateTime(now.year, now.month, now.day + 1, 9);
+    var d = DateTime(now.year, now.month, now.day + 1);
     while (d.weekday != DateTime.saturday) {
-      d = d.add(const Duration(days: 1));
+      d = DateTime(d.year, d.month, d.day + 1);
     }
     return d;
+  }
+
+  /// [t] in half hours since midnight, to the nearest, within [min]–[max].
+  static double _halfHours(DateTime t, int min, int max) =>
+      ((t.hour * 60 + t.minute) / 30).round().clamp(min, max).toDouble();
+
+  /// [_day] at [halfHours] since midnight.
+  DateTime _at(double halfHours) {
+    final h = halfHours.round();
+    return DateTime(_day.year, _day.month, _day.day, h ~/ 2, h.isOdd ? 30 : 0);
+  }
+
+  static String _clockOf(double halfHours) {
+    final h = halfHours.round();
+    return '${(h ~/ 2).toString().padLeft(2, '0')}:${h.isOdd ? '30' : '00'}';
   }
 
   @override
@@ -45,6 +83,15 @@ class _PlanEditorState extends State<PlanEditor> {
     _grades = g != null
         ? RangeValues(g.min.toDouble(), g.max.toDouble())
         : _defaultGrades(_discipline);
+    SectorIndex.load().then((index) {
+      if (mounted) setState(() => _index = index);
+    });
+    _place.addListener(() {
+      // Typing over a picked sector makes it a place typed in by hand.
+      if (_sector != null && _place.text != _sector!.name) {
+        setState(() => _sector = null);
+      }
+    });
   }
 
   /// My own grades for the discipline, or the scale's middle.
@@ -55,55 +102,28 @@ class _PlanEditorState extends State<PlanEditor> {
     if (mine != null) {
       return RangeValues(mine.min.toDouble(), mine.max.toDouble());
     }
-    final n = d.scale.grades.length;
+    final n = d.scale.european.length;
     return RangeValues((n * 0.3).roundToDouble(), (n * 0.5).roundToDouble());
   }
 
   @override
   void dispose() {
-    for (final c in [_title, _place, _area, _notes]) {
-      c.dispose();
-    }
+    _place.dispose();
+    _placeFocus.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
   Future<void> _pickDate() async {
     final now = DateTime.now();
+    final today = _dayOf(now);
     final date = await showDatePicker(
       context: context,
-      initialDate: _start.isBefore(now) ? now : _start,
-      firstDate: DateTime(now.year, now.month, now.day),
+      initialDate: _day.isBefore(today) ? today : _day,
+      firstDate: today,
       lastDate: now.add(const Duration(days: 365)),
     );
-    if (date != null) {
-      setState(
-        () => _start = DateTime(
-          date.year,
-          date.month,
-          date.day,
-          _start.hour,
-          _start.minute,
-        ),
-      );
-    }
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_start),
-    );
-    if (time != null) {
-      setState(
-        () => _start = DateTime(
-          _start.year,
-          _start.month,
-          _start.day,
-          time.hour,
-          time.minute,
-        ),
-      );
-    }
+    if (date != null) setState(() => _day = _dayOf(date));
   }
 
   bool _saving = false;
@@ -112,7 +132,7 @@ class _PlanEditorState extends State<PlanEditor> {
     if (_saving || !_form.currentState!.validate()) return;
     final store = StoreScope.read(context);
     final now = DateTime.now();
-    if (!_start.isAfter(now)) {
+    if (!_at(_hours.start).isAfter(now)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pick a time that\'s still to come.')),
       );
@@ -123,16 +143,20 @@ class _PlanEditorState extends State<PlanEditor> {
       _grades.start.round(),
       _grades.end.round(),
     );
+    final sector = _sector;
+    final place = _place.text.trim();
+    final area = sector?.where ?? '';
+    final start = _at(_hours.start);
+    final end = _at(_hours.end);
     final existing = widget.plan;
     final plan = (existing ?? _draft).copyWith(
-      title: _title.text.trim(),
       discipline: _discipline,
-      place: _place.text.trim(),
-      area: _area.text.trim(),
-      start: _start,
-      hours: _hours,
+      place: place,
+      area: area,
+      sectorId: () => sector?.id,
+      start: start,
+      end: end,
       grades: grades,
-      spots: _spots,
       notes: _notes.text.trim(),
     );
     setState(() => _saving = true);
@@ -148,21 +172,75 @@ class _PlanEditorState extends State<PlanEditor> {
   Plan get _draft => Plan(
     id: '',
     organizerId: '',
-    title: '',
     discipline: _discipline,
     place: '',
-    start: _start,
-    hours: _hours,
+    start: _at(_hours.start),
+    end: _at(_hours.end),
     grades: GradeRange(_discipline.scale, 0, 0),
-    spots: _spots,
     memberIds: const [],
+  );
+
+  /// The where field: searches the sector index as I type, and takes any
+  /// place the index doesn't have.
+  Widget _whereField() => RawAutocomplete<Sector>(
+    textEditingController: _place,
+    focusNode: _placeFocus,
+    displayStringForOption: (s) => s.name,
+    optionsBuilder: (value) => _index?.search(value.text) ?? const <Sector>[],
+    onSelected: (s) => setState(() => _sector = s),
+    fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
+        TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          decoration: InputDecoration(
+            labelText: 'Sector, crag or gym',
+            hintText: 'Search, or type it in',
+            prefixIcon: const Icon(Icons.search),
+            helperText: _sector != null
+                ? _sector!.where
+                : (_index?.attribution.isNotEmpty ?? false)
+                ? 'Sectors: ${_index!.attribution}'
+                : null,
+            helperMaxLines: 2,
+          ),
+          textCapitalization: TextCapitalization.words,
+          onFieldSubmitted: (_) => onSubmitted(),
+          validator: (v) =>
+              (v ?? '').trim().isEmpty ? 'Where are you climbing?' : null,
+        ),
+    optionsViewBuilder: (context, onSelected, options) => Align(
+      alignment: Alignment.topLeft,
+      child: Material(
+        color: Mountain.pine,
+        elevation: 6,
+        borderRadius: BorderRadius.circular(12),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 280, maxWidth: 560),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            children: [
+              for (final s in options)
+                ListTile(
+                  leading: const Icon(
+                    Icons.place_outlined,
+                    color: Mountain.sky,
+                  ),
+                  title: Text(s.name),
+                  subtitle: s.where.isEmpty ? null : Text(s.where),
+                  onTap: () => onSelected(s),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ),
   );
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final scale = _discipline.scale.grades;
-    final members = widget.plan?.memberIds.length ?? 1;
+    final scale = _discipline.scale.grades(StoreScope.of(context).gradeSystem);
     Widget label(String s) => Padding(
       padding: const EdgeInsets.only(top: 20, bottom: 8),
       child: Text(
@@ -188,16 +266,6 @@ class _PlanEditorState extends State<PlanEditor> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            TextFormField(
-              controller: _title,
-              decoration: const InputDecoration(
-                labelText: 'Title',
-                hintText: 'Saturday at the crag',
-              ),
-              textCapitalization: TextCapitalization.sentences,
-              validator: (v) =>
-                  (v ?? '').trim().isEmpty ? 'Give the plan a title' : null,
-            ),
             label('Climbing'),
             Wrap(
               spacing: 8,
@@ -217,99 +285,66 @@ class _PlanEditorState extends State<PlanEditor> {
               ],
             ),
             label('Where'),
-            TextFormField(
-              controller: _place,
-              decoration: const InputDecoration(
-                labelText: 'Crag or gym',
-                hintText: 'Siurana',
-              ),
-              textCapitalization: TextCapitalization.words,
-              validator: (v) =>
-                  (v ?? '').trim().isEmpty ? 'Where are you climbing?' : null,
-            ),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _area,
-              decoration: const InputDecoration(
-                labelText: 'Area (optional)',
-                hintText: 'Catalonia',
-              ),
-              textCapitalization: TextCapitalization.words,
-            ),
+            _whereField(),
             label('When'),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.event),
-                    label: Text(dayLabel(_start)),
-                    onPressed: _pickDate,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.schedule),
-                    label: Text(clock(_start)),
-                    onPressed: _pickTime,
-                  ),
-                ),
-              ],
+            OutlinedButton.icon(
+              icon: const Icon(Icons.event),
+              label: Text(dayLabel(_day)),
+              onPressed: _pickDate,
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                const Text('For'),
+                const Icon(Icons.schedule, size: 20, color: Mountain.granite),
                 Expanded(
-                  child: Slider(
-                    value: _hours.toDouble(),
-                    min: 1,
-                    max: 12,
-                    divisions: 11,
-                    label: '$_hours h',
-                    onChanged: (v) => setState(() => _hours = v.round()),
+                  child: RangeSlider(
+                    values: _hours,
+                    min: _firstHalfHour.toDouble(),
+                    max: _lastHalfHour.toDouble(),
+                    divisions: _lastHalfHour - _firstHalfHour,
+                    labels: RangeLabels(
+                      _clockOf(_hours.start),
+                      _clockOf(_hours.end),
+                    ),
+                    onChanged: (v) {
+                      // At least half an hour.
+                      if (v.end > v.start) setState(() => _hours = v);
+                    },
                   ),
                 ),
-                Text('$_hours h'),
+                Text(
+                  '${_clockOf(_hours.start)}–${_clockOf(_hours.end)}',
+                  style: text.titleSmall,
+                ),
               ],
             ),
-            label(
-              'Grades: ${scale[_grades.start.round()]}–${scale[_grades.end.round()]}',
-            ),
-            RangeSlider(
-              values: _grades,
-              min: 0,
-              max: (scale.length - 1).toDouble(),
-              divisions: scale.length - 1,
-              labels: RangeLabels(
-                scale[_grades.start.round()],
-                scale[_grades.end.round()],
-              ),
-              onChanged: (v) => setState(() => _grades = v),
-            ),
-            label('Group size'),
+            label('Grades'),
+            const GradeSystemToggle(),
+            const SizedBox(height: 4),
             Row(
               children: [
-                IconButton.outlined(
-                  tooltip: 'Fewer',
-                  icon: const Icon(Icons.remove),
-                  onPressed: _spots > 2 && _spots > members
-                      ? () => setState(() => _spots--)
-                      : null,
+                const Icon(
+                  Icons.trending_up,
+                  size: 20,
+                  color: Mountain.granite,
                 ),
                 Expanded(
-                  child: Text(
-                    '$_spots climbers, you included',
-                    textAlign: TextAlign.center,
-                    style: text.titleMedium,
+                  child: RangeSlider(
+                    values: _grades,
+                    min: 0,
+                    max: (scale.length - 1).toDouble(),
+                    divisions: scale.length - 1,
+                    labels: RangeLabels(
+                      scale[_grades.start.round()],
+                      scale[_grades.end.round()],
+                    ),
+                    onChanged: (v) => setState(() => _grades = v),
                   ),
                 ),
-                IconButton.outlined(
-                  tooltip: 'More',
-                  icon: const Icon(Icons.add),
-                  onPressed: _spots < 12
-                      ? () => setState(() => _spots++)
-                      : null,
+                // Not upper-cased: 6a and 6A are different grades.
+                Text(
+                  '${scale[_grades.start.round()]}–${scale[_grades.end.round()]}',
+                  style: text.titleSmall,
                 ),
               ],
             ),

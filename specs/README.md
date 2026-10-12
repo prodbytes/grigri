@@ -25,6 +25,8 @@ Each match opens the plan's group chat.
   after the first sign-in; the local dev sign-in; admins.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
+- [Sectors](sectors.md): the searchable index of climbing sectors, crags
+  and gyms that a plan's "where" picks from, built from OpenStreetMap.
 - [Theme](theme.md): dark, in mountain colors.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.

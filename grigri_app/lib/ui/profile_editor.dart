@@ -273,6 +273,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
               'What you climb',
               'Pick your disciplines and the grades you climb.',
             ),
+            const GradeSystemToggle(),
             for (final d in Discipline.values) _levelEditor(d),
             label('Gear you can bring', 'Add photos of it, too.'),
             Wrap(
@@ -334,7 +335,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
   }
 
   Widget _levelEditor(Discipline d) {
-    final grades = d.scale.grades;
+    final grades = d.scale.grades(StoreScope.of(context).gradeSystem);
     final range = _levels[d];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

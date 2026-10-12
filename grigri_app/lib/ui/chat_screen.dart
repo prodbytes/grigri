@@ -10,7 +10,8 @@ import 'plan_screen.dart';
 
 /// A plan's group chat: everyone in the plan, with the plan pinned on top.
 /// Join requests show in it as cards the group answers: everyone must say
-/// yes, and one no turns them down.
+/// yes, and one no turns them down. The ones still waiting for my answer
+/// are also called out on top, under the plan.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
@@ -129,6 +130,7 @@ class _ChatScreenState extends State<ChatScreen> {
       body: Column(
         children: [
           _PinnedPlan(plan: plan),
+          _AnswerCallout(plan: plan),
           Expanded(
             child: ListView.builder(
               reverse: true,
@@ -210,13 +212,131 @@ class _PinnedPlan extends StatelessWidget {
         const SizedBox(width: 12),
         Expanded(
           child: Text(
-            '${plan.place} · ${whenLabel(plan)} · ${plan.grades.label}',
+            '${whenLabel(plan)} · ${StoreScope.of(context).grades(plan.grades)}',
             style: const TextStyle(color: Mountain.snow),
           ),
         ),
       ],
     ),
   );
+}
+
+/// People asking to join who still need my answer, pinned on top of the
+/// chat so I don't miss them: who they are and Decline / Accept. Once I've
+/// answered they leave it; their card in the messages stays as the record.
+class _AnswerCallout extends StatelessWidget {
+  const _AnswerCallout({required this.plan});
+
+  final Plan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final toAnswer = [
+      for (final r in store.toReview)
+        if (r.planId == plan.id) r,
+    ];
+    if (toAnswer.isEmpty) return const SizedBox.shrink();
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.35,
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+        child: Column(
+          children: [
+            for (final r in toAnswer)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: _CalloutRow(request: r, plan: plan),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One person in the [_AnswerCallout].
+class _CalloutRow extends StatelessWidget {
+  const _CalloutRow({required this.request, required this.plan});
+
+  final JoinRequest request;
+  final Plan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final text = Theme.of(context).textTheme;
+    final person = store.climber(request.climberId);
+    final yes = plan.memberIds.where(request.acceptedBy.contains).length;
+    return Container(
+      key: ValueKey('callout ${request.id}'),
+      padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
+      decoration: BoxDecoration(
+        color: Mountain.tan.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Mountain.tan.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => showProfileSheet(context, person),
+              child: Row(
+                children: [
+                  Avatar(person, radius: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'WANTS TO JOIN · YOUR ANSWER',
+                          style: text.labelSmall?.copyWith(
+                            color: Mountain.tan,
+                            letterSpacing: 1.2,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          person.name,
+                          style: text.titleSmall?.copyWith(
+                            color: Mountain.sand,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '$yes of ${plan.memberIds.length} said yes',
+                          style: text.bodySmall?.copyWith(color: Mountain.sky),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Decline ${person.name}',
+            icon: const Icon(Icons.close, color: Mountain.clay),
+            onPressed: () => store.reject(request),
+          ),
+          IconButton.filled(
+            tooltip: 'Accept ${person.name}',
+            icon: const Icon(Icons.check),
+            onPressed: () async {
+              final match = await store.accept(request);
+              if (match != null && context.mounted) {
+                MatchScreen.show(context, match);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Someone asking to join, in the chat: who they are, who has said yes,
@@ -317,7 +437,7 @@ class _RequestCard extends StatelessWidget {
                         Tag(
                           level == null
                               ? 'No ${plan.discipline.label.toLowerCase()} grades yet'
-                              : '${plan.discipline.label} ${level.label}',
+                              : '${plan.discipline.label} ${store.grades(level)}',
                           icon: fits ? Icons.check : Icons.info_outline,
                           color: fits ? Mountain.olive : Mountain.tan,
                         ),

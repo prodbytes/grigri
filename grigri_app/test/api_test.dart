@@ -18,14 +18,12 @@ final site = Uri.parse('https://grigri.test');
 const planJson = {
   'id': 'p1',
   'organizerId': 'robin',
-  'title': 'Crag day',
   'discipline': 'sport',
   'place': 'Grey Cliffs',
-  'area': 'Northvale',
+  'area': 'Northvale, Nowhere',
   'start': '2026-10-17T07:00:00.000Z',
-  'hours': 7,
-  'grades': {'scale': 'french', 'min': 6, 'max': 12},
-  'spots': 3,
+  'end': '2026-10-17T14:00:00.000Z',
+  'grades': {'scale': 'routes', 'min': 6, 'max': 12},
   'memberIds': ['robin'],
   'notes': '',
 };
@@ -35,6 +33,7 @@ const robinJson = {
   'name': 'Robin Vale',
   'bio': '',
   'levels': {
+    // The old scale name is still read.
     'sport': {'scale': 'french', 'min': 10, 'max': 16},
   },
   'gear': ['rope', 'jetpack'],
@@ -80,10 +79,17 @@ void main() {
         expect(seen.single.headers['Authorization'], 'Bearer t0ken');
         final plan = list.plans.single;
         expect(plan.discipline, Discipline.sport);
-        expect(plan.grades, const GradeRange(GradeScale.french, 6, 12));
+        expect(plan.grades, const GradeRange(GradeScale.routes, 6, 12));
         expect(plan.start, DateTime.utc(2026, 10, 17, 7).toLocal());
         final robin = list.climbers['robin']!;
-        expect(robin.levels[Discipline.sport]!.label, '6c–7c');
+        expect(
+          robin.levels[Discipline.sport]!.label(GradeSystem.european),
+          '6c–7c',
+        );
+        expect(
+          robin.levels[Discipline.sport]!.label(GradeSystem.american),
+          '5.11b–5.12d',
+        );
         // Gear this version doesn't know is skipped.
         expect(robin.gear, {Gear.rope});
         expect(robin.gearPhotos, ['robin/gear-1']);
@@ -108,6 +114,10 @@ void main() {
         expect(body.containsKey('organizerId'), isFalse);
         expect(body.containsKey('memberIds'), isFalse);
         expect(body['start'], '2026-10-17T07:00:00.000Z');
+        expect(body['end'], '2026-10-17T14:00:00.000Z');
+        expect(body.containsKey('title'), isFalse);
+        expect(body.containsKey('spots'), isFalse);
+        expect(body.containsKey('sectorId'), isFalse);
       },
     );
 

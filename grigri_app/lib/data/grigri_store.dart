@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../model/climber.dart';
+import '../model/climbing.dart';
 import '../model/plan.dart';
 import 'api.dart';
 import 'auth.dart';
+import 'preferences.dart';
 
 /// A newcomer joined a plan I'm in, or I joined one: the match screen
 /// shows it.
@@ -60,13 +62,30 @@ class GrigriStore extends ChangeNotifier {
     required this.api,
     required this.auth,
     ImageProvider Function(Uri url)? image,
-  }) : _image = image ?? ((url) => NetworkImage(url.toString())) {
+    Preferences? preferences,
+  }) : _image = image ?? ((url) => NetworkImage(url.toString())),
+       _preferences = preferences ?? Preferences.none() {
+    _gradeSystem = _preferences.gradeSystem;
     auth.addListener(_authChanged);
   }
 
   final GrigriApi api;
   final Auth auth;
   final ImageProvider Function(Uri url) _image;
+  final Preferences _preferences;
+  late GradeSystem _gradeSystem;
+
+  /// How I like grades written, everywhere in the app; kept on the device.
+  GradeSystem get gradeSystem => _gradeSystem;
+
+  set gradeSystem(GradeSystem system) {
+    _gradeSystem = system;
+    notifyListeners();
+    _preferences.setGradeSystem(system);
+  }
+
+  /// [range] written the way I like.
+  String grades(GradeRange range) => range.label(_gradeSystem);
 
   Phase _phase = Phase.starting;
   Phase get phase => _phase;

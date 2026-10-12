@@ -8,19 +8,19 @@ String apiTime(DateTime t) => t.toUtc().toIso8601String();
 
 /// A plan to climb: a specific outing (what, where, when, which grades),
 /// separate from the people's profiles. Its members are its group, and
-/// share its chat; the organizer is its first member.
+/// share its chat; the organizer is its first member. The group has no
+/// size limit: it is as big as the people who match.
 class Plan {
   const Plan({
     required this.id,
     required this.organizerId,
-    required this.title,
     required this.discipline,
     required this.place,
     required this.start,
-    required this.hours,
+    required this.end,
     required this.grades,
-    required this.spots,
     required this.memberIds,
+    this.sectorId,
     this.area = '',
     this.notes = '',
   });
@@ -28,53 +28,50 @@ class Plan {
   /// Given by the server; empty for a plan not created yet.
   final String id;
   final String organizerId;
-  final String title;
   final Discipline discipline;
 
-  /// The crag or gym, e.g. "Siurana".
+  /// The sector, crag or gym, e.g. "El Pati".
   final String place;
 
-  /// The region, e.g. "Catalonia".
+  /// Where [place] is, from the sector index: the crag and country, e.g.
+  /// "Siurana, Spain". Empty for a place typed in by hand.
   final String area;
+
+  /// The [Sector.id] of [place] in the sector index; null for a place
+  /// typed in by hand.
+  final String? sectorId;
   final DateTime start;
-
-  /// How long it lasts.
-  final int hours;
+  final DateTime end;
   final GradeRange grades;
-
-  /// How many people the group takes, the organizer included.
-  final int spots;
 
   /// The group, organizer first, in the order they joined.
   final List<String> memberIds;
   final String notes;
 
-  DateTime get end => start.add(Duration(hours: hours));
-  int get openSpots => spots - memberIds.length;
-  bool get isFull => openSpots <= 0;
+  /// What the plan is called in lists and chats: where it is.
+  String get title => place;
 
   Plan copyWith({
-    String? title,
     Discipline? discipline,
     String? place,
     String? area,
+    String? Function()? sectorId,
     DateTime? start,
-    int? hours,
+    DateTime? end,
     GradeRange? grades,
-    int? spots,
+    String? organizerId,
     List<String>? memberIds,
     String? notes,
   }) => Plan(
     id: id,
-    organizerId: organizerId,
-    title: title ?? this.title,
+    organizerId: organizerId ?? this.organizerId,
     discipline: discipline ?? this.discipline,
     place: place ?? this.place,
     area: area ?? this.area,
+    sectorId: sectorId != null ? sectorId() : this.sectorId,
     start: start ?? this.start,
-    hours: hours ?? this.hours,
+    end: end ?? this.end,
     grades: grades ?? this.grades,
-    spots: spots ?? this.spots,
     memberIds: memberIds ?? this.memberIds,
     notes: notes ?? this.notes,
   );
@@ -83,28 +80,26 @@ class Plan {
   /// /api/plans/{id}`): without id, organizer and members, which are the
   /// server's.
   Map<String, Object> toJson() => {
-    'title': title,
     'discipline': discipline.name,
     'place': place,
     'area': area,
+    'sectorId': ?sectorId,
     'start': apiTime(start),
-    'hours': hours,
+    'end': apiTime(end),
     'grades': grades.toJson(),
-    'spots': spots,
     'notes': notes,
   };
 
   static Plan fromJson(Map<String, Object?> json) => Plan(
     id: json['id']! as String,
     organizerId: json['organizerId']! as String,
-    title: json['title']! as String,
     discipline: Discipline.values.byName(json['discipline']! as String),
     place: json['place']! as String,
     area: json['area'] as String? ?? '',
+    sectorId: json['sectorId'] as String?,
     start: _time(json['start']),
-    hours: (json['hours']! as num).toInt(),
+    end: _time(json['end']),
     grades: GradeRange.fromJson((json['grades']! as Map).cast()),
-    spots: (json['spots']! as num).toInt(),
     memberIds: [for (final m in json['memberIds']! as List) m as String],
     notes: json['notes'] as String? ?? '',
   );
@@ -170,8 +165,8 @@ enum NoticeKind {
 }
 
 /// A notification for me: a group answered my request to join its plan,
-/// or someone asked to join a plan I'm in. It keeps the plan's title, in
-/// case the plan ends.
+/// or someone asked to join a plan I'm in. It keeps the plan's title (its
+/// place), in case the plan ends.
 class Notice {
   const Notice({
     required this.id,

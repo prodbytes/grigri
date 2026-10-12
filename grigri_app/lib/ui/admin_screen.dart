@@ -113,8 +113,11 @@ class _AdminRequestTile extends StatelessWidget {
             Text(
               plan == null
                   ? planTitle
-                  : '${plan.discipline.emoji} ${plan.title} · ${plan.place} · '
-                        '${dayLabel(plan.start)}',
+                  : [
+                      '${plan.discipline.emoji} ${plan.place}',
+                      if (plan.area.isNotEmpty) plan.area,
+                      dayLabel(plan.start),
+                    ].join(' · '),
               style: text.bodyMedium?.copyWith(color: Mountain.snow),
             ),
             const SizedBox(height: 6),
@@ -129,10 +132,9 @@ class _AdminRequestTile extends StatelessWidget {
                 ),
                 if (plan != null)
                   Tag(
-                    plan.isFull
-                        ? 'Full'
-                        : '${plan.openSpots} of ${plan.spots} spots open',
-                    color: plan.isFull ? Mountain.clay : Mountain.olive,
+                    store.grades(plan.grades),
+                    icon: Icons.trending_up,
+                    color: Mountain.olive,
                   ),
               ],
             ),
@@ -170,32 +172,30 @@ class _AdminRequestTile extends StatelessWidget {
                   child: FilledButton.icon(
                     icon: const Icon(Icons.check),
                     label: const Text('Approve'),
-                    onPressed: plan != null && plan.isFull
-                        ? null
-                        : () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            if (!await _confirm(
-                              context,
-                              title: 'Approve ${person.name}?',
-                              message:
-                                  'They join $planTitle now, as if everyone '
-                                  'in the group had said yes.',
-                              action: 'Approve',
-                            )) {
-                              return;
-                            }
-                            final match = await store.adminAccept(request);
-                            if (match != null) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '${match.newcomer.name} joined '
-                                    '${match.plan.title}.',
-                                  ),
-                                ),
-                              );
-                            }
-                          },
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      if (!await _confirm(
+                        context,
+                        title: 'Approve ${person.name}?',
+                        message:
+                            'They join $planTitle now, as if everyone '
+                            'in the group had said yes.',
+                        action: 'Approve',
+                      )) {
+                        return;
+                      }
+                      final match = await store.adminAccept(request);
+                      if (match != null) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${match.newcomer.name} joined '
+                              '${match.plan.title}.',
+                            ),
+                          ),
+                        );
+                      }
+                    },
                   ),
                 ),
               ],

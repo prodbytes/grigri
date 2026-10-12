@@ -66,5 +66,5 @@ The API says who's an admin (`"admin": true` from `GET /api/me`: a
 verified email in the stage's admin list). Admins get the **Admin** tab
 ([screens](screens.md)): every open join request, anyone's, to **Approve**
 (`POST /api/admin/requests/{planId}/{climberId}/accept`: they join now,
-as if every member had said yes, when there's a spot) or **Reject**
+as if every member had said yes) or **Reject**
 (`…/reject`: they're told the group declined), each after a confirmation.

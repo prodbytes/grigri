@@ -9,11 +9,11 @@ phone (with six tabs, only the selected one's label shows).
 | Tab | Shows |
 |---|---|
 | **Discover** | The plans deck ([matching](matching.md)), with ✕ and ✓ buttons, and ⟳ to refresh. Empty: "No plans to join right now" and **New plan**. |
-| **Plans** | The plans I'm in, soonest first (discipline, place, date, the group's avatars and size, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
+| **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message and "N to answer" when join requests wait for my answer. The tab's badge counts those requests. Empty: "No chats yet" and **Find a plan** (to Discover). |
 | **Notifications** | Join requests for my plans, and the groups' answers to mine ([matching](matching.md#notifications)). The tab's badge counts the unread ones. Empty: "Nothing yet". |
 | **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; in ⋯, **Sign out** (after a confirmation). The version at the bottom. |
-| **Admin** | Admins only: every open join request, anyone's: who (avatar, name and age; tap for their profile) and when they asked, the plan (discipline, title, place, date), how many of the group said yes, the spots open, and **Approve** (they join now; not when the plan is full) and **Reject**, each after a confirmation. Its badge counts the requests. Empty: "No open requests". |
+| **Admin** | Admins only: every open join request, anyone's: who (avatar, name and age; tap for their profile) and when they asked, the plan (discipline, place, where it is, date), how many of the group said yes, its grades, and **Approve** (they join now) and **Reject**, each after a confirmation. Its badge counts the requests. Empty: "No open requests". |
 
 - **Sign-in**: the app's name and tagline on the mountain night gradient,
   and **Sign in with Google** (Google's own button on the web). See
@@ -29,21 +29,34 @@ phone (with six tabs, only the selected one's label shows).
   **Group chat** and **Leave the plan** (Cancel the plan when I'm alone in
   it), after a confirmation. The organizer can **Edit**. "Plan gone" when
   it no longer exists.
-- **Plan editor**: title, discipline, crag or gym, area, date and start
-  time, length (1–12 h), grades (a range on the discipline's scale,
-  starting at my own grades), group size, notes. Title and place are
-  required, and the start must be still to come.
+- **Plan editor**, top to bottom:
+  - **Climbing**: the discipline.
+  - **Where**: one search field, "Sector, crag or gym". As I type it
+    lists the [sector index](sectors.md)'s matches, each with where it
+    is; picking one shows where it is under the field. A place the index
+    lacks is just typed in. Required.
+  - **When**: the day, then a time range slider, from and to, in half
+    hours between 05:00 and 23:30 (09:00–17:00 to start); the start must
+    be still to come.
+  - **Grades**: the European / American switch (my grade system,
+    everywhere in the app), then a range on the discipline's scale,
+    starting at my own grades.
+  - **Notes**, then **Publish the plan** (Save when editing).
+
+  There's no title and no group size.
 - **Profile editor**: my photo (tap it: take a photo, where the device has
   a camera, choose one, or remove it), name, age (optional, 16–99
-  when given), about, per
+  when given), about, the European / American grade switch, per
   discipline a switch and a grade range, and gear: the gear chips, then
   its photos (✕ removes one, + adds one, up to 6). Saving uploads the new
   photos first.
 - **Match**: see [matching](matching.md#matches).
-- **Chat**: the group's avatars, the plan's title and date, the plan pinned
-  under the bar, messages (mine on the right in pine, others' on the left
-  with their name), the join and leave notes, the join request cards, and
-  a message box.
+- **Chat**: the group's avatars, the plan's place and date, the plan pinned
+  under the bar, then a callout for each join request still waiting for
+  my answer ("Wants to join · your answer", their avatar and name, N of M
+  said yes, ✕ / ✓; tap them for their profile), then the messages (mine on
+  the right in pine, others' on the left with their name), the join and
+  leave notes, the join request cards, and a message box.
 - Tapping a person anywhere opens their whole profile in a sheet.
 - While something loads, a spinner; when an action fails, the server's
   message at the bottom of the screen.

@@ -114,32 +114,65 @@ spec.
      chat. A newcomer also hears of the requests still open.
    - The plan screen no longer has ✓ / ✕; it points to the chat.
    - Fixed: long chat notes overflowed their label instead of wrapping.
-9. **Remove the static fake data; everything from the database; GA empty
-   and real, fake data in RC and local; an admin can approve/reject any
-   request; Google sign-in.**
-   - The app's data all comes from the backend API ([api.md](api.md)):
-     the store is a cache over an API client, with loading states and the
-     server's errors at the bottom of the screen. Gone: the demo data
-     (`seed.dart`), the made-up climbers' answering policies and their
-     timer, the on-device state (shared_preferences), and Profile's
-     "Reset the demo data". GA starts empty; RC and local get made-up
-     data from the backend's seed ([matching](matching.md#data-the-backend-api)).
-   - [Refreshing](matching.md#refreshing) polls only what's on screen,
-     while the app is in the foreground: tabs on opening and every 15 s,
-     an open chat every 3 s with `after=`. A group's yes found by a
-     refresh opens the match screen.
-   - Photos are uploaded to the backend's photo store (presigned POSTs)
-     and kept in profiles as keys, shown from `<site>/photos/<key>`.
-   - [Sign-in](sign-in.md) with Google only (google_sign_in 7: Google's
-     button on the web, the web client ID as server client ID on Android
-     and iOS), **Create your profile** after the first sign-in, Sign out
-     in Profile's ⋯; a local-only dev sign-in without a client ID. New
-     public build settings `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID` and
-     `GOOGLE_IOS_CLIENT_ID` (allowed in `scripts/dart-defines.sh`, empty in
-     `.env.example`, repository variables in CI); iOS's client ID and URL
-     scheme reach `Info.plist` through the git-ignored `Private.xcconfig`;
-     Release builds a GA tag's apps for production, the rest for RC. The
-     site's CSP allows Google Identity Services.
-   - Admins get an **Admin** tab to approve or reject any open request
-     ([screens](screens.md)).
-   - Every tab has an [empty state](screens.md) with what to do next.
+9. **A searchable database of climbing sectors, the cheapest way; then in
+   the new plan screen: no title; where is one search field; when is the
+   date and a time range (from, to) instead of a start and a length; a
+   European / American grade system switch above the grades, like Celsius
+   and Fahrenheit; no group size (the group is whoever matches); notes;
+   publish.**
+   - [Sectors](sectors.md): a static index searched on the device (no
+     server), built from OpenStreetMap by `tool/build_sectors.dart`.
+     OpenBeta was set aside: it barely covers Europe. The bundled index is
+     a placeholder until the build runs.
+   - [Plans](matching.md#profiles-and-plans-are-separate) lose their title
+     (they're called by their place), length and group size, and gain an
+     end time and the sector's id; plans saved before are read with their
+     length as the time range. Discover no longer skips full plans: none
+     are.
+   - The grade system is my setting, everywhere: grades on cards, chats,
+     profiles and the editors read in it. The scales are now routes and
+     boulders, each written both ways.
+   - The [plan editor](screens.md) is as asked; the profile editor gains
+     the same grade switch.
+10. **When someone likes the plan but doesn't match yet, call it out at
+    the top of the chat, so people know they need to approve or reject
+    the new person.**
+    - The [group chat](matching.md#join-requests-in-the-group-chat) pins
+      a callout under the plan for each request still waiting for my
+      answer: avatar, name, how many said yes, and ✕ / ✓ (the same accept
+      and decline as the request's card). After I answer, it leaves the
+      callout; the card in the messages stays as the record.
+11. **Remove the static fake data; everything from the database; GA empty
+    and real, fake data in RC and local; an admin can approve/reject any
+    request; Google sign-in.**
+    - The app's data all comes from the backend API ([api.md](api.md)):
+      the store is a cache over an API client, with loading states and the
+      server's errors at the bottom of the screen. Gone: the demo data
+      (`seed.dart`), the made-up climbers' answering policies and their
+      timer, the on-device state (shared_preferences now keeps only the
+      grade system, a display preference), and Profile's "Reset the demo
+      data". GA starts empty; RC and local get made-up
+      data from the backend's seed ([matching](matching.md#data-the-backend-api)).
+    - [Refreshing](matching.md#refreshing) polls only what's on screen,
+      while the app is in the foreground: tabs on opening and every 15 s,
+      an open chat every 3 s with `after=`. A group's yes found by a
+      refresh opens the match screen.
+    - Photos are uploaded to the backend's photo store (presigned POSTs)
+      and kept in profiles as keys, shown from `<site>/photos/<key>`.
+    - [Sign-in](sign-in.md) with Google only (google_sign_in 7: Google's
+      button on the web, the web client ID as server client ID on Android
+      and iOS), **Create your profile** after the first sign-in, Sign out
+      in Profile's ⋯; a local-only dev sign-in without a client ID. New
+      public build settings `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID` and
+      `GOOGLE_IOS_CLIENT_ID` (allowed in `scripts/dart-defines.sh`, empty in
+      `.env.example`, repository variables in CI); iOS's client ID and URL
+      scheme reach `Info.plist` through the git-ignored `Private.xcconfig`;
+      Release builds a GA tag's apps for production, the rest for RC. The
+      site's CSP allows Google Identity Services.
+    - Admins get an **Admin** tab to approve or reject any open request
+      ([screens](screens.md)).
+    - Merged with the sector search, time-range plans without title or
+      group size, the grade systems and the chat's join callout: plans
+      travel to the API in that shape (no spots, nothing is ever full),
+      and the callout's ✕ / ✓ call the API like the request cards.
+    - Every tab has an [empty state](screens.md) with what to do next.

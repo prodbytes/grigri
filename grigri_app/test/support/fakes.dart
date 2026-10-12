@@ -150,7 +150,7 @@ class FakeApi implements GrigriApi {
   ApiMatch? _settle(String requestId, {bool force = false}) {
     final r = requestsById[requestId]!;
     final plan = plans[r.planId]!;
-    if (r.rejected || plan.isFull) return null;
+    if (r.rejected) return null;
     if (!force && !plan.memberIds.every(r.acceptedBy.contains)) return null;
     final grown = plan.copyWith(memberIds: [...plan.memberIds, r.climberId]);
     plans[plan.id] = grown;
@@ -201,7 +201,6 @@ class FakeApi implements GrigriApi {
             .where(
               (p) =>
                   p.start.isAfter(now) &&
-                  !p.isFull &&
                   !p.memberIds.contains(meId) &&
                   !passed.contains(p.id) &&
                   !requestsById.containsKey('${p.id}/$meId') &&
@@ -220,14 +219,13 @@ class FakeApi implements GrigriApi {
     final created = Plan(
       id: _id('plan'),
       organizerId: meId!,
-      title: plan.title,
       discipline: plan.discipline,
       place: plan.place,
       area: plan.area,
+      sectorId: plan.sectorId,
       start: plan.start,
-      hours: plan.hours,
+      end: plan.end,
       grades: plan.grades,
-      spots: plan.spots,
       memberIds: [meId!],
       notes: plan.notes,
     );
@@ -289,19 +287,9 @@ class FakeApi implements GrigriApi {
           plans.remove(planId);
           requestsById.removeWhere((_, r) => r.planId == planId);
         } else {
-          plans[planId] = Plan(
-            id: p.id,
+          plans[planId] = p.copyWith(
             organizerId: p.organizerId == meId ? members.first : p.organizerId,
-            title: p.title,
-            discipline: p.discipline,
-            place: p.place,
-            area: p.area,
-            start: p.start,
-            hours: p.hours,
-            grades: p.grades,
-            spots: p.spots,
             memberIds: members,
-            notes: p.notes,
           );
           _note(planId, '${climbers[meId]!.name} left the plan');
         }
@@ -311,8 +299,6 @@ class FakeApi implements GrigriApi {
   @override
   Future<JoinRequest> join(String planId) =>
       _route('POST /api/plans/$planId/join', () {
-        final p = plans[planId]!;
-        if (p.isFull) throw const ApiException(409, 'That plan is full.');
         if (requestsById.containsKey('$planId/$meId')) {
           throw const ApiException(409, 'You already asked.');
         }
@@ -534,8 +520,8 @@ const me = Climber(
   age: 30,
   bio: 'Weekend sport climber.',
   levels: {
-    Discipline.sport: GradeRange(GradeScale.french, 6, 11),
-    Discipline.bouldering: GradeRange(GradeScale.vScale, 3, 6),
+    Discipline.sport: GradeRange(GradeScale.routes, 6, 11),
+    Discipline.bouldering: GradeRange(GradeScale.boulders, 3, 6),
   },
   gear: {Gear.rope, Gear.quickdraws},
 );
@@ -544,29 +530,30 @@ const robin = Climber(
   id: 'robin',
   name: 'Robin Vale',
   age: 34,
-  levels: {Discipline.sport: GradeRange(GradeScale.french, 10, 16)},
+  levels: {Discipline.sport: GradeRange(GradeScale.routes, 10, 16)},
 );
 const kit = Climber(
   id: 'kit',
   name: 'Kit Marlow',
-  levels: {Discipline.bouldering: GradeRange(GradeScale.vScale, 3, 7)},
+  levels: {Discipline.bouldering: GradeRange(GradeScale.boulders, 3, 7)},
 );
 const sasha = Climber(
   id: 'sasha',
   name: 'Sasha Brook',
   age: 27,
-  levels: {Discipline.bouldering: GradeRange(GradeScale.vScale, 2, 5)},
+  levels: {Discipline.bouldering: GradeRange(GradeScale.boulders, 2, 5)},
 );
 const jules = Climber(
   id: 'jules',
   name: 'Jules Fern',
   age: 25,
-  levels: {Discipline.gym: GradeRange(GradeScale.french, 5, 9)},
+  levels: {Discipline.gym: GradeRange(GradeScale.routes, 5, 9)},
 );
 
 /// A backend with [me] (unless [profile] is false), a few made-up
-/// climbers and their plans: Kit and Sasha's bouldering tomorrow, Robin's
-/// crag day in three days, and my gym plan, which Jules asked to join.
+/// climbers and their plans: Kit and Sasha's bouldering at Block Hall
+/// tomorrow, Robin's day at Grey Cliffs in three days, and my plan at Wall
+/// Works, which Jules asked to join.
 FakeApi sampleApi({bool admin = false, bool profile = true}) {
   final api = FakeApi(admin: admin);
   for (final c in [robin, kit, sasha, jules]) {
@@ -582,13 +569,11 @@ FakeApi sampleApi({bool admin = false, bool profile = true}) {
       Plan(
         id: 'boulder-night',
         organizerId: 'kit',
-        title: 'Bouldering night',
         discipline: Discipline.bouldering,
         place: 'Block Hall',
         start: inDays(1, 19),
-        hours: 3,
-        grades: const GradeRange(GradeScale.vScale, 2, 6),
-        spots: 4,
+        end: inDays(1, 22),
+        grades: const GradeRange(GradeScale.boulders, 2, 6),
         memberIds: const ['kit', 'sasha'],
       ),
     )
@@ -596,14 +581,12 @@ FakeApi sampleApi({bool admin = false, bool profile = true}) {
       Plan(
         id: 'crag-day',
         organizerId: 'robin',
-        title: 'Crag day',
         discipline: Discipline.sport,
         place: 'Grey Cliffs',
-        area: 'Northvale',
+        area: 'Northvale, Nowhere',
         start: inDays(3),
-        hours: 7,
-        grades: const GradeRange(GradeScale.french, 6, 12),
-        spots: 3,
+        end: inDays(3, 16),
+        grades: const GradeRange(GradeScale.routes, 6, 12),
         memberIds: const ['robin'],
       ),
     )
@@ -611,13 +594,11 @@ FakeApi sampleApi({bool admin = false, bool profile = true}) {
       Plan(
         id: 'my-gym',
         organizerId: 'me',
-        title: 'Gym evening',
         discipline: Discipline.gym,
         place: 'Wall Works',
         start: inDays(2, 18),
-        hours: 2,
-        grades: const GradeRange(GradeScale.french, 5, 10),
-        spots: 3,
+        end: inDays(2, 20),
+        grades: const GradeRange(GradeScale.routes, 5, 10),
         memberIds: const ['me'],
       ),
     );

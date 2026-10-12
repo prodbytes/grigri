@@ -7,6 +7,7 @@ import 'config.dart';
 import 'data/auth.dart';
 import 'data/grigri_store.dart';
 import 'data/http_api.dart';
+import 'data/preferences.dart';
 import 'theme.dart';
 import 'ui/common.dart';
 import 'ui/home_shell.dart';
@@ -24,6 +25,7 @@ Future<void> main() async {
   final store = GrigriStore(
     api: HttpGrigriApi(origin: AppConfig.origin, headers: auth.headers),
     auth: auth,
+    preferences: await Preferences.open(),
   );
   runApp(GrigriApp(store: store));
   unawaited(store.start());

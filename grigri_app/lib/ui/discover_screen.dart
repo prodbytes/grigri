@@ -186,7 +186,10 @@ class _PlanCard extends StatelessWidget {
                         title: Text(c.nameAndAge),
                         subtitle: Text(
                           c.levels.entries
-                              .map((e) => '${e.key.label} ${e.value.label}')
+                              .map(
+                                (e) =>
+                                    '${e.key.label} ${StoreScope.of(context).grades(e.value)}',
+                              )
                               .join(' · '),
                           style: const TextStyle(color: Mountain.granite),
                         ),
