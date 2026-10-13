@@ -559,3 +559,7 @@ spec.
     - [Languages](i18n.md): the distance and "will decide" strings are
       gone; new: the snackbar and the +N button's tooltips (Show the
       group, Hide the group), in every language.
+38. **Make the shade of green of the primary color a little darker.**
+    - [Theme](theme.md): olive, the primary, is `#8F9B5D` (was
+      `#A3B06A`), about 12% darker; dark text on it (`night`) keeps a
+      contrast of about 5.9:1.

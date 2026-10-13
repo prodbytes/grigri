@@ -8,7 +8,7 @@ Dark only, for now, in mountain colors
 | night | `#161A16` | The background: dark rock with a hint of green |
 | surface | `#1F241E` | Cards, sheets, the navigation bar |
 | surfaceHigh | `#2A3028` | Chips, inputs, raised surfaces |
-| olive | `#A3B06A` | Primary: main buttons, selection |
+| olive | `#8F9B5D` | Primary: main buttons, selection (a little darker than the first `#A3B06A`; dark text on it still passes WCAG AA, about 5.9:1) |
 | moss | `#6F9468` | Icons and large accents only (3.9:1 on surfaceHigh) |
 | pine | `#3F5C45` | Primary containers, the navigation indicator, selected chips |
 | sand | `#E2D3B3` | Headings and highlights |
