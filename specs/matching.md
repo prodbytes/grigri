@@ -175,7 +175,10 @@ loads my profile again (`GET /api/me`, which makes a new one).
 
 - **Production (GA) starts empty**: only real people's profiles and plans.
   RC and local get made-up climbers and plans from the backend's seed
-  (never in GA). Nobody answers by a rule: every request waits for real
+  (never in GA), marked **demo**: a demo plan (on the deck, its screen,
+  the match screen) and a demo person's profile sheet begin with
+  "Demo: this isn't real data, just a demonstration to help you see how
+  Grigri works.", and a demo person's name has a **Demo** tag. Nobody answers by a rule: every request waits for real
   members (or an [admin](sign-in.md#admins)), in every environment.
 - **Photos** are in the backend's photo store, never in the database or on
   the device: picked as before (my photo downsized to 640 px, gear photos

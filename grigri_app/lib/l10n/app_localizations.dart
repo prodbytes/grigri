@@ -412,6 +412,18 @@ abstract class AppLocalizations {
   /// **'The plan'**
   String get thePlan;
 
+  /// Tag next to a made-up (demo) person's name.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo'**
+  String get demoTag;
+
+  /// Disclaimer on a made-up (demo) plan or profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo: this isn\'t real data, just a demonstration to help you see how Grigri works.'**
+  String get demoNotice;
+
   /// Badge: the plan is at grades the user climbs.
   ///
   /// In en, this message translates to:

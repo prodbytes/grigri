@@ -181,6 +181,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get thePlan => 'The plan';
 
   @override
+  String get demoTag => 'Demo';
+
+  @override
+  String get demoNotice =>
+      'Demo: this isn\'t real data, just a demonstration to help you see how Grigri works.';
+
+  @override
   String get yourGrades => 'Your grades';
 
   @override

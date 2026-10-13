@@ -183,6 +183,13 @@ class AppLocalizationsCa extends AppLocalizations {
   String get thePlan => 'El pla';
 
   @override
+  String get demoTag => 'Demo';
+
+  @override
+  String get demoNotice =>
+      'Demo: no són dades reals, només una demostració perquè vegis com funciona Grigri.';
+
+  @override
   String get yourGrades => 'El teu grau';
 
   @override

@@ -11,6 +11,7 @@ import 'package:grigri_app/main.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/location.dart';
+import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -243,6 +244,43 @@ void main() {
       // Sharing doesn't swipe: the plan is still on top.
       expect(find.text('Block Hall'), findsOneWidget);
       expect(api.calls.where((c) => c.contains('boulder-night')), isEmpty);
+    });
+
+    testWidgets('demo plans and people say they are made up', (tester) async {
+      const notice =
+          "Demo: this isn't real data, just a demonstration to help you see "
+          'how Grigri works.';
+      final api = sampleApi();
+      final plan = api.plans['boulder-night']!;
+      api
+        ..addPlan(
+          Plan(
+            id: plan.id,
+            organizerId: plan.organizerId,
+            discipline: plan.discipline,
+            place: plan.place,
+            start: plan.start,
+            end: plan.end,
+            grades: plan.grades,
+            memberIds: plan.memberIds,
+            demo: true,
+          ),
+        )
+        ..addClimber(const Climber(id: 'kit', name: 'Kit Marlow', demo: true));
+      await pumpApp(tester, api);
+      expect(find.text(notice), findsOneWidget);
+      expect(find.text('Demo'), findsOneWidget);
+      // Their profile says so too.
+      await tester.tap(find.text('Kit Marlow'));
+      await tester.pumpAndSettle();
+      expect(find.text(notice), findsNWidgets(2));
+      await tester.tapAt(const Offset(20, 20));
+      await tester.pumpAndSettle();
+      // Real ones don't.
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      expect(find.text('Grey Cliffs'), findsOneWidget);
+      expect(find.text(notice), findsNothing);
     });
 
     testWidgets('dragging a card left passes on the plan', (tester) async {

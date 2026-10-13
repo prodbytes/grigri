@@ -71,6 +71,8 @@ export interface Climber {
   location?: Location;
   /** Other places I'd climb near (rounded to ~1 km). Private. */
   areas?: Location[];
+  /** Made-up, to show how Grigri works (the seed's, on RC and local); the app says so. Never set through the API. */
+  demo?: true;
 }
 
 /** A profile as other people see it: without where its climber is. */
@@ -106,6 +108,8 @@ export interface Plan {
   /** Organizer first, then in join order. */
   memberIds: string[];
   notes: string;
+  /** Made-up, to show how Grigri works (the seed's, on RC and local); the app says so. Never set through the API. */
+  demo?: true;
 }
 
 /** Someone asking to join a plan (a swipe right). */

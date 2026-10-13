@@ -484,6 +484,7 @@ export function climberItem(c: Climber, subject: string | undefined, now: Date):
     gearPhotos: c.gearPhotos,
     ...(c.location ? { location: c.location } : {}),
     areas: c.areas ?? [],
+    ...(c.demo ? { demo: true } : {}),
     // Who signs in as this climber (never returned); none for the seed's.
     ...(subject ? { subject } : {}),
     updatedAt: now.toISOString(),
@@ -502,6 +503,7 @@ export function toClimber(i: Item): Climber {
     gearPhotos: (i.gearPhotos as string[]) ?? [],
     ...(i.location ? { location: i.location as Location } : {}),
     areas: (i.areas as Location[]) ?? [],
+    ...(i.demo === true ? { demo: true as const } : {}),
   };
 }
 
@@ -524,6 +526,7 @@ export function planItem(p: Plan, version: number): Item {
     grades: p.grades,
     memberIds: p.memberIds,
     notes: p.notes,
+    ...(p.demo ? { demo: true } : {}),
   };
 }
 
@@ -541,6 +544,7 @@ export function toPlan(i: Item): Plan {
     grades: i.grades as Plan['grades'],
     memberIds: (i.memberIds as string[]) ?? [],
     notes: (i.notes as string) ?? '',
+    ...(i.demo === true ? { demo: true as const } : {}),
   };
 }
 

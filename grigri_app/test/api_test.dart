@@ -7,6 +7,7 @@ import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/http_api.dart';
 import 'package:grigri_app/model/climbing.dart';
+import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -281,6 +282,37 @@ void main() {
         'https://grigri.test/photos/pat/profile-1',
       );
     });
+  });
+
+  group('demo', () {
+    test(
+      'plans and profiles read the server\'s demo mark, and never send it',
+      () {
+        final climber = Climber.fromJson({
+          'id': 'x',
+          'name': 'X',
+          'demo': true,
+        });
+        expect(climber.demo, isTrue);
+        expect(climber.copyWith(bio: 'hi').demo, isTrue);
+        expect(climber.toJson().containsKey('demo'), isFalse);
+        expect(Climber.fromJson({'id': 'x', 'name': 'X'}).demo, isFalse);
+        final plan = Plan.fromJson({
+          'id': 'p',
+          'organizerId': 'x',
+          'discipline': 'sport',
+          'place': 'Somewhere',
+          'start': '2030-05-10T08:00:00Z',
+          'end': '2030-05-10T14:00:00Z',
+          'grades': {'scale': 'routes', 'min': 6, 'max': 10},
+          'memberIds': ['x'],
+          'demo': true,
+        });
+        expect(plan.demo, isTrue);
+        expect(plan.copyWith(notes: 'n').demo, isTrue);
+        expect(plan.toJson().containsKey('demo'), isFalse);
+      },
+    );
   });
 
   group('config', () {

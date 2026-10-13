@@ -587,3 +587,15 @@ spec.
       place, date and time with a link to the app, through `share_plus`
       (the system's share sheet; on the web the browser's, or an email
       draft). Strings in every language. No cloud change, no cost.
+41. **Let events and profiles be marked as "demo"; on those, add a
+    disclaimer that this isn't real data, just a demonstration to help you
+    see how the system works.**
+    - [API](api.md), [backend](backend.md#the-seed): Climber and Plan
+      have an optional `demo: true`, stored on the item and returned
+      (others' profiles too); only the seed sets it, on all its profiles
+      and plans (RC and local; GA is never seeded). The API's input
+      ignores it, so nobody marks their own data.
+    - [Matching](matching.md): the app shows a disclaimer at the top of a
+      demo plan (deck card, plan screen, match screen) and of a demo
+      person's profile sheet, and a **Demo** tag after their name; in
+      every language. No new resource or cost.
