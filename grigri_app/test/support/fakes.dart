@@ -209,17 +209,18 @@ class FakeApi implements GrigriApi, SessionApi {
   // --- The routes -----------------------------------------------------------
 
   @override
-  Future<String> createSession({String? idToken, String? devUser}) async {
+  Future<String> createSession({required String idToken}) async {
     calls.add('POST /api/session');
     final fail = failNext;
     if (fail != null) {
       failNext = null;
       throw fail;
     }
-    sessionBodies.add({'idToken': ?idToken, 'devUser': ?devUser});
-    final email = idToken == 'google-id-token' ? 'pat@example.com' : devUser;
-    if (email == null) throw const ApiException(401, 'signed out');
-    return openSession(email);
+    sessionBodies.add({'idToken': idToken});
+    if (idToken != 'google-id-token') {
+      throw const ApiException(401, 'signed out');
+    }
+    return openSession('pat@example.com');
   }
 
   @override
@@ -583,7 +584,7 @@ class FakeGoogle extends SignInMethod {
   }) async => _onCredential = onCredential;
 
   @override
-  Future<void> signIn({String? devEmail}) async => _onCredential?.call(
+  Future<void> signIn() async => _onCredential?.call(
     const Credential(
       user: AuthUser(email: 'pat@example.com', name: 'Pat Quill'),
       idToken: 'google-id-token',
@@ -695,9 +696,8 @@ FakeApi sampleApi({bool admin = false, bool profile = true}) {
 
 /// The store over [api], with photos from memory and the app's own
 /// sessions: signed in (unless [signedIn] is false) with a session kept on
-/// the device, or the one in [storage]. Dev mode signs in with
-/// [DevSignInMethod], the rest with [FakeGoogle]. Live updates over
-/// [realtime] when given.
+/// the device, or the one in [storage]. Signs in with [FakeGoogle]. Live
+/// updates over [realtime] when given.
 GrigriStore storeFor(
   FakeApi api, {
   bool signedIn = true,
@@ -707,7 +707,7 @@ GrigriStore storeFor(
   RealtimeTransport? realtime,
 }) {
   final auth = SessionAuth(
-    method: mode == SignInMode.dev ? DevSignInMethod() : FakeGoogle(mode: mode),
+    method: FakeGoogle(mode: mode),
     sessions: api,
     storage:
         storage ??

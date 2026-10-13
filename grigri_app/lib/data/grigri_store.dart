@@ -271,7 +271,6 @@ class GrigriStore extends ChangeNotifier {
   /// out after a sign-out still build).
   Climber get me => _me ?? const Climber(id: '', name: '');
 
-
   /// Someone, as far as the app knows them.
   Climber climber(String id) =>
       _climbers[id] ?? Climber(id: id, name: l10n.someone);

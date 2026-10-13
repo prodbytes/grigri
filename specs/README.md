@@ -26,8 +26,7 @@ Each match opens the plan's group chat.
   climber to their own topic, reconnecting, and polling as a slow safety
   net.
 - [Sign-in](sign-in.md): Google only, per platform; the profile made
-  from the Google account at the first sign-in; the local dev sign-in;
-  admins.
+  from the Google account at the first sign-in; admins.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
 - [Sectors](sectors.md): the searchable index of climbing sectors, crags

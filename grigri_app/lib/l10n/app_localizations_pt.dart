@@ -161,19 +161,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get signInWithGoogle => 'Entrar com o Google';
 
   @override
-  String get devSignInHeading => 'Acesso de desenvolvimento · só API local';
-
-  @override
-  String get emailLabel => 'E-mail';
-
-  @override
-  String get devSignIn => 'Acesso de desenvolvimento';
-
-  @override
-  String get signInUnconfigured =>
-      'O login não está configurado nesta versão (sem ID de cliente do Google).';
-
-  @override
   String get tabDiscover => 'Descobrir';
 
   @override

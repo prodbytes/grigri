@@ -40,7 +40,6 @@ Future<void> main() async {
         ' stage=${AppVersion.stage.isEmpty ? 'local' : AppVersion.stage}'
         ' platform=${kIsWeb ? 'web' : defaultTargetPlatform.name}'
         ' api=${AppConfig.origin}'
-        ' signIn=${AppConfig.devSignIn ? 'dev' : 'google'}'
         ' webClientId=${AppConfig.googleWebClientId.isEmpty ? 'none' : AppConfig.googleWebClientId}'
         ' iosClientId=${AppConfig.googleIosClientId.isEmpty ? 'none' : AppConfig.googleIosClientId}',
   );
@@ -51,12 +50,10 @@ Future<void> main() async {
     headers: () => auth.headers(),
   );
   auth = SessionAuth(
-    method: AppConfig.devSignIn
-        ? DevSignInMethod()
-        : GoogleSignInMethod(
-            webClientId: AppConfig.googleWebClientId,
-            iosClientId: AppConfig.googleIosClientId,
-          ),
+    method: GoogleSignInMethod(
+      webClientId: AppConfig.googleWebClientId,
+      iosClientId: AppConfig.googleIosClientId,
+    ),
     sessions: api,
     storage: SessionStorage.device(),
   );

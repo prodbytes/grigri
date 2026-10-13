@@ -102,18 +102,12 @@ or `.env`; see [.env.example](../.env.example)):
   `GRIGRI_STAGE=prod`, https://rc.grigri.nu01.com otherwise. Release
   builds a GA tag's apps with `GRIGRI_STAGE=prod`, the rest with `rc`.
 
-On a build without `GOOGLE_WEB_CLIENT_ID`, the sign-in screen says
-sign-in isn't set up.
-
-## Local dev sign-in
-
-A **local** build (`GRIGRI_STAGE` empty or `local`) **without**
-`GOOGLE_WEB_CLIENT_ID`, whose API isn't one of the deployed sites, shows
-**Dev sign-in** instead: an email, sent once as
-`POST /api/session` `{"devUser": "<email>"}` for the local API's dev
-mode, then the session token like everyone else. RC and production
-builds can't show it (they have a stage), and the deployed APIs refuse
-dev mode anyway.
+Every build, local ones too, shows only **Sign in with Google**; the app
+has no other way in. On a build without `GOOGLE_WEB_CLIENT_ID` the
+button is still there (the plain one, also on the web), and tapping it
+fails with the sign-in error. The local API's dev mode (`devUser`, the
+`X-Grigri-Dev-User` header: see [API](api.md)) is for scripts and
+`curl`, not the app.
 
 ## Admins
 
