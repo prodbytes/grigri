@@ -158,8 +158,8 @@ class PlanHighlight extends StatelessWidget {
     this.plan, {
     super.key,
     this.fit,
-    this.distanceKm,
     this.showNotes = true,
+    this.compact = false,
   });
 
   final Plan plan;
@@ -167,9 +167,10 @@ class PlanHighlight extends StatelessWidget {
   /// How it fits my profile, to show as badges.
   final Fit? fit;
 
-  /// How far it is from my nearest location or area, on the deck.
-  final int? distanceKm;
   final bool showNotes;
+
+  /// Tighter, for the swipe cards, to fit small phones.
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +178,7 @@ class PlanHighlight extends StatelessWidget {
     final l = context.l10n;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 12 : 18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
         gradient: const LinearGradient(
@@ -207,19 +208,18 @@ class PlanHighlight extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 4 : 8),
           Text(
             plan.title,
-            style: text.headlineSmall?.copyWith(
+            style: (compact ? text.titleLarge : text.headlineSmall)?.copyWith(
               color: Mountain.sand,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: compact ? 6 : 10),
           if (plan.area.isNotEmpty) _Line(Icons.place_outlined, plan.area),
-          if (distanceKm != null)
-            _Line(Icons.near_me_outlined, distanceLabel(context, distanceKm!)),
-          _Line(Icons.schedule, whenLabel(context, plan)),
+          _Line(Icons.event_outlined, dayLabel(context, plan.start)),
+          _Line(Icons.schedule, timeRangeLabel(plan)),
           _Line(Icons.trending_up, StoreScope.of(context).grades(plan.grades)),
           if (showNotes && plan.notes.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -237,10 +237,6 @@ class PlanHighlight extends StatelessWidget {
     );
   }
 }
-
-/// "12 km from you", or "Under 1 km from you".
-String distanceLabel(BuildContext context, int km) =>
-    context.l10n.distanceKm(km < 1 ? 0 : km);
 
 class _Line extends StatelessWidget {
   const _Line(this.icon, this.text);
@@ -483,9 +479,9 @@ class DeckButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: onPressed,
         child: SizedBox(
-          width: 64,
-          height: 64,
-          child: Icon(icon, size: 30, color: filled ? Mountain.night : color),
+          width: 56,
+          height: 56,
+          child: Icon(icon, size: 26, color: filled ? Mountain.night : color),
         ),
       ),
     ),

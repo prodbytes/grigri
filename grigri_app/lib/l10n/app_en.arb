@@ -487,16 +487,6 @@
   "@currentLocation": {
     "description": "My location taken from the device, when no place in the index is near it."
   },
-  "distanceKm": "{km, plural, =0{Under 1 km from you} other{{km} km from you}}",
-  "@distanceKm": {
-    "description": "How far a plan is from me, in kilometres (0 means under 1 km).",
-    "placeholders": {
-      "km": {
-        "type": "int",
-        "example": "12"
-      }
-    }
-  },
   "setWhereYouClimbHint": "Set where you climb to see plans near you first.",
   "@setWhereYouClimbHint": {
     "description": "Discover hint when I have no location or areas."
@@ -509,25 +499,9 @@
   "@discoverTitle": {
     "description": "Title of the Discover tab."
   },
-  "askedToJoinPending": "Asked to join: pending. {organizer} will decide; you'll get a notification.",
-  "@askedToJoinPending": {
-    "description": "Snackbar after asking to join a plan with one member.",
-    "placeholders": {
-      "organizer": {
-        "type": "String",
-        "example": "Marta"
-      }
-    }
-  },
-  "askedToJoinPendingGroup": "Asked to join: pending. {organizer} and the group will decide; you'll get a notification.",
-  "@askedToJoinPendingGroup": {
-    "description": "Snackbar after asking to join a plan with a group.",
-    "placeholders": {
-      "organizer": {
-        "type": "String",
-        "example": "Marta"
-      }
-    }
+  "askedToJoinSent": "Asked to join. You'll get an alert when you're accepted.",
+  "@askedToJoinSent": {
+    "description": "Snackbar after asking to join a plan."
   },
   "noPlansToJoinTitle": "No plans to join right now",
   "@noPlansToJoinTitle": {
@@ -560,6 +534,14 @@
   "alsoInGroup": "Also in the group",
   "@alsoInGroup": {
     "description": "Heading over the other members (shown uppercased)."
+  },
+  "showGroup": "Show the group",
+  "@showGroup": {
+    "description": "Tooltip: show the others in the plan (the \"+3\" button on a card)."
+  },
+  "hideGroup": "Hide the group",
+  "@hideGroup": {
+    "description": "Tooltip: hide the others in the plan again."
   },
   "chatsTitle": "Chats",
   "@chatsTitle": {

@@ -114,12 +114,22 @@ void main() {
       expect(find.text('Your grades'), findsWidgets);
     });
 
-    testWidgets('cards say how far the plan is; no location, a hint', (
-      tester,
-    ) async {
+    testWidgets('cards: the organizer +N, the date and time apart, no '
+        'distance; no location, a hint', (tester) async {
       final api = sampleApi()..distanceKm['boulder-night'] = 12;
       await pumpApp(tester, api);
-      expect(find.text('12 km from you'), findsOneWidget);
+      // Kit organizes, with Sasha: "+1"; the group's list opens on a tap.
+      expect(find.text('+1'), findsOneWidget);
+      expect(find.textContaining('Sasha'), findsNothing);
+      await tester.tap(find.byTooltip('Show the group'));
+      await tester.pumpAndSettle();
+      expect(find.text('ALSO IN THE GROUP'), findsOneWidget);
+      expect(find.textContaining('Sasha'), findsOneWidget);
+      await tester.tap(find.byTooltip('Hide the group'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Sasha'), findsNothing);
+      expect(find.textContaining('km from you'), findsNothing);
+      expect(find.text('19:00–22:00'), findsOneWidget);
       expect(
         find.text('Set where you climb to see plans near you first.'),
         findsOneWidget,
@@ -187,7 +197,10 @@ void main() {
       await tester.tap(find.byTooltip('Ask to join'));
       await tester.pumpAndSettle();
       expect(api.calls, contains('POST /api/plans/boulder-night/join'));
-      expect(find.textContaining('Asked to join: pending'), findsOneWidget);
+      expect(
+        find.text("Asked to join. You'll get an alert when you're accepted."),
+        findsOneWidget,
+      );
       expect(find.text('Block Hall'), findsNothing);
       await tapTab(tester, 'Plans');
       expect(find.text('ASKED TO JOIN'), findsOneWidget);

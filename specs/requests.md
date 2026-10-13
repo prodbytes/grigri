@@ -542,7 +542,28 @@ spec.
       short words in every language: Find, Plans, Chats, Alerts, Me,
       Admin in English; a widget test checks they each fit on one line
       on a 360 dp phone.
-37. **Roles aren't shown on the profile page: verify the rbacr integration
+37. **On Find, make the card a little smaller to fit smaller phones; show
+    how many people are with the organizer ("Maria +3"), keeping the list
+    of the others collapsed until tapped; remove the distance line; put
+    the date and the time on separate lines; after asking to join, don't
+    say the organizer will decide, just that you'll get an alert when
+    accepted.**
+    - [Matching](matching.md), [screens](screens.md): the deck's card is
+      compact (less padding, a smaller title, a 20 px avatar; 56 dp swipe
+      buttons, tighter margins); the plan shows the date and the time
+      range on separate lines (everywhere it's highlighted) and no
+      distance (the server's distance still ranks the deck); the
+      organizer has **+N**, which shows or hides the rest of the group.
+      The snackbar says "Asked to join. You'll get an alert when you're
+      accepted."
+    - [Languages](i18n.md): the distance and "will decide" strings are
+      gone; new: the snackbar and the +N button's tooltips (Show the
+      group, Hide the group), in every language.
+38. **Make the shade of green of the primary color a little darker.**
+    - [Theme](theme.md): olive, the primary, is `#8F9B5D` (was
+      `#A3B06A`), about 12% darker; dark text on it (`night`) keeps a
+      contrast of about 5.9:1.
+39. **Roles aren't shown on the profile page: verify the rbacr integration
     and show the roles on the profile; I must be an admin.**
     - Found: deployed and phone builds had no way to ask rbacr (the app
       only asked with the local dev token, so the card always said "Not

@@ -16,7 +16,7 @@ abstract final class Mountain {
   static const surfaceHigh = Color(0xFF2A3028);
 
   /// The primary green: olive.
-  static const olive = Color(0xFFA3B06A);
+  static const olive = Color(0xFF8F9B5D);
 
   /// The secondary green: moss.
   static const moss = Color(0xFF6F9468);

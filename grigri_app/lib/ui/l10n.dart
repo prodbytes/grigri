@@ -59,7 +59,10 @@ String dayLabel(BuildContext context, DateTime t) =>
 
 /// "Sat 17 Oct · 08:00–17:00".
 String whenLabel(BuildContext context, Plan plan) =>
-    '${dayLabel(context, plan.start)} · ${clock(plan.start)}–${clock(plan.end)}';
+    '${dayLabel(context, plan.start)} · ${timeRangeLabel(plan)}';
+
+/// "08:00–17:00".
+String timeRangeLabel(Plan plan) => '${clock(plan.start)}–${clock(plan.end)}';
 
 /// "Sat 17 Oct, 18:30".
 String dayAndTime(BuildContext context, DateTime t) =>
