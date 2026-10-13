@@ -110,6 +110,8 @@
   "swipePass": "Passo",
   "pass": "Passa",
   "askToJoin": "Demana unir-te",
+  "sharePlan": "Comparteix aquest pla",
+  "sharePlanText": "Pla d'escalada a Grigri: {discipline} a {place}, {when}. {link}",
   "organizedBy": "Organitza",
   "alsoInGroup": "També al grup",
   "showGroup": "Mostra el grup",

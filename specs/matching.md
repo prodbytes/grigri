@@ -74,6 +74,12 @@ person, and a plan can take a whole group.
   - Right / ✓: I ask to join (a join request); a snackbar says "Asked to
     join. You'll get an alert when you're accepted."
   - Left / ✕: I pass; the plan leaves my deck.
+  - Share (the smaller button between ✕ and ✓): shares the top plan as
+    text through the system's share sheet, "Climbing plan on Grigri:
+    Bouldering at Block Hall, Sat 18 Oct · 19:00–22:00." and a link to
+    the app at the API's origin (`/app/`; there are no links to one plan
+    yet). On the web, the browser's share sheet, or an email draft where
+    it has none. It doesn't swipe.
 
   The server picks and orders the deck. With nothing to show (GA starts
   empty), Discover says so and offers **New plan**.

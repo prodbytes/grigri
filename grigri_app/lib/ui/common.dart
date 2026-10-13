@@ -461,6 +461,7 @@ class DeckButton extends StatelessWidget {
     required this.tooltip,
     required this.onPressed,
     this.filled = false,
+    this.size = 56,
   });
 
   final IconData icon;
@@ -468,6 +469,9 @@ class DeckButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback? onPressed;
   final bool filled;
+
+  /// Across, in dp; the icon scales with it.
+  final double size;
 
   @override
   Widget build(BuildContext context) => Tooltip(
@@ -479,9 +483,13 @@ class DeckButton extends StatelessWidget {
         customBorder: const CircleBorder(),
         onTap: onPressed,
         child: SizedBox(
-          width: 56,
-          height: 56,
-          child: Icon(icon, size: 26, color: filled ? Mountain.night : color),
+          width: size,
+          height: size,
+          child: Icon(
+            icon,
+            size: size * 0.46,
+            color: filled ? Mountain.night : color,
+          ),
         ),
       ),
     ),

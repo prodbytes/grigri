@@ -580,3 +580,10 @@ spec.
       rbacr call per profile load, cached for a minute.
     - Still needed: an rbacr API token owned by a root, as the repository
       secret `GRIGRI_RBACR_TOKEN`, then a deploy.
+40. **In the Find view, add a smaller share button beside the accept and
+    reject ones.**
+    - [Matching](matching.md), [screens](screens.md): a 44 dp share button
+      between ✕ and ✓ (both 56 dp) shares the top plan's discipline,
+      place, date and time with a link to the app, through `share_plus`
+      (the system's share sheet; on the web the browser's, or an email
+      draft). Strings in every language. No cloud change, no cost.

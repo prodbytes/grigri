@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
@@ -205,6 +206,43 @@ void main() {
       await tapTab(tester, 'Plans');
       expect(find.text('ASKED TO JOIN'), findsOneWidget);
       expect(find.text('Pending'), findsOneWidget);
+    });
+
+    testWidgets('the small share button shares the top plan, with a link', (
+      tester,
+    ) async {
+      const channel = MethodChannel('dev.fluttercommunity.plus/share');
+      final shared = <Map<Object?, Object?>>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
+        call,
+      ) async {
+        shared.add(call.arguments as Map<Object?, Object?>);
+        return 'dev.fluttercommunity.plus/share/success';
+      });
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          channel,
+          null,
+        ),
+      );
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      expect(
+        tester.getSize(find.byTooltip('Share this plan')).width,
+        lessThan(tester.getSize(find.byTooltip('Ask to join')).width),
+      );
+      await tester.tap(find.byTooltip('Share this plan'));
+      await tester.pumpAndSettle();
+      final text = shared.single['text']! as String;
+      expect(
+        text,
+        startsWith('Climbing plan on Grigri: Bouldering at Block Hall, '),
+      );
+      expect(text, contains('19:00–22:00'));
+      expect(text, endsWith('/app/'));
+      // Sharing doesn't swipe: the plan is still on top.
+      expect(find.text('Block Hall'), findsOneWidget);
+      expect(api.calls.where((c) => c.contains('boulder-night')), isEmpty);
     });
 
     testWidgets('dragging a card left passes on the plan', (tester) async {
