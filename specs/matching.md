@@ -64,11 +64,15 @@ person, and a plan can take a whole group.
   nearby first; one in my grades far away still before one next door
   that I don't climb; ties soonest first. A plan typed in by hand (no
   point), or a deck without my location or areas, counts as about 70 km
-  away. Each card shows **the plan first, highlighted**, with a "Your
-  grades" badge when they fit and how far it is from me ("12 km from
-  you") when known, then the organizer's profile (without the gear) and
-  the rest of the group.
-  - Right / ✓: I ask to join (a join request).
+  away. Each card shows **the plan first, highlighted** (the place, the
+  date and the time range on lines of their own, the grades, a "Your
+  grades" badge when they fit; the distance isn't shown, only used to
+  rank), then the organizer with how many others are in the group
+  ("Kit Marlow" and **+1**: tap it to show or hide the group's list,
+  collapsed at first) and their profile (without the gear). The card
+  is compact, to fit small phones.
+  - Right / ✓: I ask to join (a join request); a snackbar says "Asked to
+    join. You'll get an alert when you're accepted."
   - Left / ✕: I pass; the plan leaves my deck.
 
   The server picks and orders the deck. With nothing to show (GA starts

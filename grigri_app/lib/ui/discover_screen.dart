@@ -34,16 +34,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final l = context.l10n;
     if (!await store.like(plan.id)) return;
-    final organizer = store.climber(plan.organizerId).firstName;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          plan.memberIds.length > 1
-              ? l.askedToJoinPendingGroup(organizer)
-              : l.askedToJoinPending(organizer),
-        ),
-      ),
-    );
+    messenger.showSnackBar(SnackBar(content: Text(l.askedToJoinSent)));
   }
 
   @override
@@ -109,7 +100,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(12, 4, 12, 6),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
@@ -128,7 +119,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.only(bottom: 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -155,14 +146,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   }
 }
 
-/// A plan on the deck: the plan, highlighted, then who's in it.
-class _PlanCard extends StatelessWidget {
+/// A plan on the deck: the plan, highlighted, then its organizer, with
+/// how many others are in the group ("+3"); tapping that shows them.
+class _PlanCard extends StatefulWidget {
   const _PlanCard({required this.plan});
 
   final Plan plan;
 
   @override
+  State<_PlanCard> createState() => _PlanCardState();
+}
+
+class _PlanCardState extends State<_PlanCard> {
+  /// The group's list, collapsed until the "+3" is tapped.
+  bool _showGroup = false;
+
+  @override
   Widget build(BuildContext context) {
+    final plan = widget.plan;
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
     final l = context.l10n;
@@ -175,16 +176,12 @@ class _PlanCard extends StatelessWidget {
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PlanHighlight(
-              plan,
-              fit: store.fit(plan),
-              distanceKm: store.distanceKm(plan.id),
-            ),
-            const SizedBox(height: 16),
+            PlanHighlight(plan, fit: store.fit(plan), compact: true),
+            const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Column(
@@ -197,16 +194,41 @@ class _PlanCard extends StatelessWidget {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => showProfileSheet(context, organizer),
-                    child: ClimberHeader(organizer),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => showProfileSheet(context, organizer),
+                          child: ClimberHeader(organizer, radius: 20),
+                        ),
+                      ),
+                      if (others.isNotEmpty)
+                        Tooltip(
+                          message: _showGroup ? l.hideGroup : l.showGroup,
+                          child: TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _showGroup = !_showGroup),
+                            icon: Icon(
+                              _showGroup
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                            ),
+                            label: Text('+${others.length}'),
+                            iconAlignment: IconAlignment.end,
+                            style: TextButton.styleFrom(
+                              foregroundColor: Mountain.sky,
+                              textStyle: text.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  ProfileDetails(organizer, compact: true),
-                  if (others.isNotEmpty) ...[
-                    const SizedBox(height: 16),
+                  if (_showGroup && others.isNotEmpty) ...[
+                    const SizedBox(height: 8),
                     Text(
                       l.alsoInGroup.toUpperCase(),
                       style: text.labelSmall?.copyWith(
@@ -214,9 +236,9 @@ class _PlanCard extends StatelessWidget {
                         letterSpacing: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 6),
                     for (final c in others)
                       ListTile(
+                        dense: true,
                         contentPadding: EdgeInsets.zero,
                         leading: Avatar(c),
                         title: Text(c.nameAndAge),
@@ -224,7 +246,7 @@ class _PlanCard extends StatelessWidget {
                           c.levels.entries
                               .map(
                                 (e) =>
-                                    '${e.key.label(l)} ${StoreScope.of(context).grades(e.value)}',
+                                    '${e.key.label(l)} ${store.grades(e.value)}',
                               )
                               .join(' · '),
                           style: const TextStyle(color: Mountain.granite),
@@ -232,6 +254,8 @@ class _PlanCard extends StatelessWidget {
                         onTap: () => showProfileSheet(context, c),
                       ),
                   ],
+                  const SizedBox(height: 8),
+                  ProfileDetails(organizer, compact: true),
                 ],
               ),
             ),
