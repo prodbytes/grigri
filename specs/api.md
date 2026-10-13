@@ -74,8 +74,12 @@ the web, so the API issues its own sessions:
   it: RS256 signature against Google's keys
   (`https://www.googleapis.com/oauth2/v3/certs`, cached across warm
   invocations), `iss` `accounts.google.com` or
-  `https://accounts.google.com`, `aud` the Google **web** client ID, not
-  expired. It keeps the token's `name` claim (whitespace collapsed, at
+  `https://accounts.google.com`, `aud` the Google **web** client ID or
+  one of the stage's **iOS** client IDs (template parameter
+  `GoogleIosClientIds`: production's `GOOGLE_IOS_CLIENT_ID`; the RC's
+  `GOOGLE_IOS_CLIENT_ID_RC` and production's, while phone builds for the
+  RC keep production's bundle ID), not expired; with no web client
+  configured, none. It keeps the token's `name` claim (whitespace collapsed, at
   most 60 characters) for the profile `GET /api/me` creates; dev mode
   uses the email's part before the @. → `{"token": "<opaque>", "expiresAt": "<ISO time>"}`. 401
   `{"error": "invalid Google ID token"}` for a bad, expired or foreign

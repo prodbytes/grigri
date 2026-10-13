@@ -5,9 +5,10 @@ own **session**: the Google ID token is used once, to start it.
 
 - After Google sign-in (Google's button on the web, the app's on Android
   and iOS), the app calls `POST /api/session` with `{"idToken"}`. The API
-  checks the token (issuer `https://accounts.google.com`, audience the
-  Google **web** client ID, on every platform; [api.md](api.md)) and
-  answers a session token.
+  checks the token (issuer `https://accounts.google.com`; audience the
+  Google **web** client ID, or on iOS the app's **iOS** client ID: Google
+  issues an iPhone's token to the iOS client even with the web client as
+  its server client; [api.md](api.md)) and answers a session token.
 - The app keeps the session token on the device and sends
   `Authorization: Bearer <session token>` on every API call. It doesn't
   ask Google again until the API says 401 or the person signs out.
