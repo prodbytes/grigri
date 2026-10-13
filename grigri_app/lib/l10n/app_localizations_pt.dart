@@ -383,6 +383,19 @@ class AppLocalizationsPt extends AppLocalizations {
   String get askToJoin => 'Pedir para entrar';
 
   @override
+  String get sharePlan => 'Compartilhar este plano';
+
+  @override
+  String sharePlanText(
+    String discipline,
+    String place,
+    String when,
+    String link,
+  ) {
+    return 'Plano de escalada no Grigri: $discipline em $place, $when. $link';
+  }
+
+  @override
   String get organizedBy => 'Organizado por';
 
   @override

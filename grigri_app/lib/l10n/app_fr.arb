@@ -110,6 +110,8 @@
   "swipePass": "Passer",
   "pass": "Passer",
   "askToJoin": "Demander à rejoindre",
+  "sharePlan": "Partager ce plan",
+  "sharePlanText": "Plan d'escalade sur Grigri : {discipline} à {place}, {when}. {link}",
   "organizedBy": "Organisé par",
   "alsoInGroup": "Aussi dans le groupe",
   "showGroup": "Voir le groupe",

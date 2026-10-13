@@ -766,6 +766,23 @@ abstract class AppLocalizations {
   /// **'Ask to join'**
   String get askToJoin;
 
+  /// Tooltip of the small share button between ✕ and ✓ on Find.
+  ///
+  /// In en, this message translates to:
+  /// **'Share this plan'**
+  String get sharePlan;
+
+  /// The text shared for a plan, with a link to the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Climbing plan on Grigri: {discipline} at {place}, {when}. {link}'**
+  String sharePlanText(
+    String discipline,
+    String place,
+    String when,
+    String link,
+  );
+
   /// Heading over the plan organizer (shown uppercased).
   ///
   /// In en, this message translates to:

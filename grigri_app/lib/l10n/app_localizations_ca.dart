@@ -383,6 +383,19 @@ class AppLocalizationsCa extends AppLocalizations {
   String get askToJoin => 'Demana unir-te';
 
   @override
+  String get sharePlan => 'Comparteix aquest pla';
+
+  @override
+  String sharePlanText(
+    String discipline,
+    String place,
+    String when,
+    String link,
+  ) {
+    return 'Pla d\'escalada a Grigri: $discipline a $place, $when. $link';
+  }
+
+  @override
   String get organizedBy => 'Organitza';
 
   @override

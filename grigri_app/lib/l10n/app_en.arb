@@ -527,6 +527,32 @@
   "@askToJoin": {
     "description": "Tooltip of the button that asks to join a plan."
   },
+  "sharePlan": "Share this plan",
+  "@sharePlan": {
+    "description": "Tooltip of the small share button between ✕ and ✓ on Find."
+  },
+  "sharePlanText": "Climbing plan on Grigri: {discipline} at {place}, {when}. {link}",
+  "@sharePlanText": {
+    "description": "The text shared for a plan, with a link to the app.",
+    "placeholders": {
+      "discipline": {
+        "type": "String",
+        "example": "Bouldering"
+      },
+      "place": {
+        "type": "String",
+        "example": "Block Hall"
+      },
+      "when": {
+        "type": "String",
+        "example": "Sat 18 Oct · 19:00–22:00"
+      },
+      "link": {
+        "type": "String",
+        "example": "https://grigri.nu01.com/app/"
+      }
+    }
+  },
   "organizedBy": "Organized by",
   "@organizedBy": {
     "description": "Heading over the plan organizer (shown uppercased)."

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../config.dart';
 import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
@@ -35,6 +37,29 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final l = context.l10n;
     if (!await store.like(plan.id)) return;
     messenger.showSnackBar(SnackBar(content: Text(l.askedToJoinSent)));
+  }
+
+  /// Shares the top plan as text with the app's link, through the
+  /// system's share sheet (the browser's, or copying, on the web).
+  Future<void> _share(BuildContext button, Plan plan) async {
+    final l = context.l10n;
+    final box = button.findRenderObject() as RenderBox?;
+    final text = l.sharePlanText(
+      plan.discipline.label(l),
+      plan.title,
+      whenLabel(context, plan),
+      AppConfig.origin.resolve('/app/').toString(),
+    );
+    await SharePlus.instance.share(
+      ShareParams(
+        text: text,
+        subject: plan.title,
+        // Where the sheet points from, on iPad.
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
+      ),
+    );
   }
 
   @override
@@ -129,7 +154,17 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         tooltip: l.pass,
                         onPressed: () => _controller.swipe(right: false),
                       ),
-                      const SizedBox(width: 40),
+                      const SizedBox(width: 24),
+                      Builder(
+                        builder: (context) => DeckButton(
+                          icon: Icons.share_outlined,
+                          color: Mountain.sky,
+                          size: 44,
+                          tooltip: l.sharePlan,
+                          onPressed: () => _share(context, plans.first),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
                       DeckButton(
                         icon: Icons.check,
                         color: Mountain.olive,
