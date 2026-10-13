@@ -113,7 +113,7 @@ ThemeData mountainTheme() {
       ),
       labelTextStyle: WidgetStateProperty.resolveWith(
         (states) => TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           color: states.contains(WidgetState.selected)
               ? Mountain.sand
               : Mountain.granite,

@@ -5,13 +5,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
+import 'package:grigri_app/data/device_location.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/realtime.dart';
+import 'package:grigri_app/data/sector_index.dart';
 import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/plan.dart';
+import 'package:grigri_app/model/sector.dart';
 
 /// A tiny valid PNG, standing in for photos.
 final png = base64Decode(
@@ -705,6 +708,7 @@ GrigriStore storeFor(
   MemorySessionStorage? storage,
   Preferences? preferences,
   RealtimeTransport? realtime,
+  DeviceLocation deviceLocation = const DeviceLocation.none(),
 }) {
   final auth = SessionAuth(
     method: mode == SignInMode.dev ? DevSignInMethod() : FakeGoogle(mode: mode),
@@ -722,7 +726,38 @@ GrigriStore storeFor(
     image: (_) => MemoryImage(png),
     preferences: preferences,
     realtime: realtime,
+    deviceLocation: deviceLocation,
+    places: () async => fakePlaces,
   );
+}
+
+/// The sector index the store names a device's location from: made-up
+/// places.
+final fakePlaces = SectorIndex(const [
+  Sector(
+    id: 'osm:n1',
+    name: 'Pared Gris',
+    area: 'Valle Alto',
+    country: 'Spain',
+    lat: 41.5,
+    lon: 1.0,
+  ),
+  Sector(id: 'osm:n2', name: 'Roca Fosca', country: 'France', lat: 45, lon: 6),
+]);
+
+/// A device that says it's at [here] (null: it can't tell), counting how
+/// often it was asked.
+class FakeDeviceLocation extends DeviceLocation {
+  FakeDeviceLocation(this.here);
+
+  final ({double lat, double lon})? here;
+  int asked = 0;
+
+  @override
+  Future<({double lat, double lon})?> current() async {
+    asked++;
+    return here;
+  }
 }
 
 /// Where the fake live updates say to connect.

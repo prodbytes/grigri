@@ -175,7 +175,7 @@ class AppLocalizationsCa extends AppLocalizations {
       'L\'inici de sessió no està configurat en aquesta versió (no hi ha ID de client de Google).';
 
   @override
-  String get tabDiscover => 'Descobreix';
+  String get tabDiscover => 'Cerca';
 
   @override
   String get tabPlans => 'Plans';
@@ -187,7 +187,7 @@ class AppLocalizationsCa extends AppLocalizations {
   String get tabNotifications => 'Avisos';
 
   @override
-  String get tabProfile => 'Perfil';
+  String get tabProfile => 'Jo';
 
   @override
   String get tabAdmin => 'Admin';
@@ -347,6 +347,20 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get noPlacesFound => 'No s\'ha trobat cap lloc';
+
+  @override
+  String get useCurrentLocation => 'Fes servir la meva ubicació actual';
+
+  @override
+  String get locationNotFound => 'No s\'ha pogut saber on ets. Cerca un lloc.';
+
+  @override
+  String nearPlace(String place) {
+    return 'A prop de $place';
+  }
+
+  @override
+  String get currentLocation => 'On soc';
 
   @override
   String distanceKm(int km) {

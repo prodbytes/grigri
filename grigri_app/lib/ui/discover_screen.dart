@@ -77,7 +77,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
             )
           : Column(
               children: [
-                if (store.me.location == null && store.me.areas.isEmpty)
+                if (store.me.location == null &&
+                    store.me.areas.isEmpty &&
+                    !store.locating)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                     child: Row(

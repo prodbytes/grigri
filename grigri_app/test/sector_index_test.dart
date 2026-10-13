@@ -17,6 +17,32 @@ final index = SectorIndex(const [
 List<String> names(String q) => [for (final s in index.search(q)) s.name];
 
 void main() {
+  group('nearest', () {
+    // Made-up places.
+    final places = SectorIndex(const [
+      Sector(id: 'a', name: 'North', lat: 42, lon: 1),
+      Sector(id: 'b', name: 'South', lat: 40, lon: 1),
+      Sector(id: 'c', name: 'Nowhere'),
+      Sector(id: 'd', name: 'Dateline', lat: 0, lon: 179.9),
+    ]);
+
+    test('picks the closest place with a point', () {
+      expect(places.nearest(41.2, 1.3)?.name, 'North');
+      expect(places.nearest(40.4, 0.5)?.name, 'South');
+    });
+
+    test('wraps around the antimeridian', () {
+      expect(places.nearest(0, -179.9)?.name, 'Dateline');
+    });
+
+    test('is null without any point', () {
+      expect(
+        SectorIndex(const [Sector(id: 'x', name: 'X')]).nearest(0, 0),
+        isNull,
+      );
+    });
+  });
+
   group('search', () {
     test('matches the start of any word, ignoring case and accents', () {
       expect(names('PAL'), ['Cova Pàl·lida']);

@@ -61,6 +61,7 @@ dependencies:
   # Where the log file is kept on Android and iOS (lib/log_file_io.dart).
   path_provider: ^2.1.5
   mqtt_client: 10.11.11
+  geolocator: ^14.1.1
 
 dev_dependencies:
   flutter_test:

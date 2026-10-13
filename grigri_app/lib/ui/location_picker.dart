@@ -4,7 +4,7 @@ import '../data/sector_index.dart';
 import '../model/location.dart';
 import '../model/sector.dart';
 import '../theme.dart';
-import 'l10n.dart';
+import 'common.dart';
 
 /// Picks a place from the sector index (a crag, sector or gym near where
 /// I am or want to climb), for my profile's location or areas. Null when
@@ -30,12 +30,29 @@ class _LocationPickerState extends State<_LocationPicker> {
   final _query = TextEditingController();
   SectorIndex? _index;
 
+  /// Asking the device where it is.
+  bool _locating = false;
+
   @override
   void initState() {
     super.initState();
     SectorIndex.load().then((index) {
       if (mounted) setState(() => _index = index);
     });
+  }
+
+  /// Takes where the phone or browser is; says so when it can't tell.
+  Future<void> _useCurrent() async {
+    setState(() => _locating = true);
+    final here = await StoreScope.read(context).locateMe();
+    if (!mounted) return;
+    setState(() => _locating = false);
+    if (here != null) {
+      Navigator.of(context).pop(here);
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(context.l10n.locationNotFound)));
+    }
   }
 
   @override
@@ -79,7 +96,25 @@ class _LocationPickerState extends State<_LocationPicker> {
           ),
           Expanded(
             child: _query.text.trim().isEmpty
-                ? const SizedBox.shrink()
+                ? ListView(
+                    children: [
+                      ListTile(
+                        leading: _locating
+                            ? const SizedBox.square(
+                                dimension: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.my_location,
+                                color: Mountain.sky,
+                              ),
+                        title: Text(l.useCurrentLocation),
+                        onTap: _locating ? null : _useCurrent,
+                      ),
+                    ],
+                  )
                 : found.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.all(24),

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'app_version.dart';
 import 'config.dart';
 import 'data/auth.dart';
+import 'data/device_location.dart';
 import 'data/grigri_store.dart';
 import 'data/http_api.dart';
 import 'data/mqtt_transport.dart';
@@ -65,6 +66,7 @@ Future<void> main() async {
     auth: auth,
     preferences: await Preferences.open(),
     realtime: const MqttRealtimeTransport(),
+    deviceLocation: const GeolocatorDeviceLocation(),
   );
   runApp(GrigriApp(store: store, roles: Roles.fromSettings()));
   unawaited(store.start());

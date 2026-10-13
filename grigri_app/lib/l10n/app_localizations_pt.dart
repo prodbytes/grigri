@@ -174,19 +174,19 @@ class AppLocalizationsPt extends AppLocalizations {
       'O início de sessão não está configurado nesta versão (sem ID de cliente Google).';
 
   @override
-  String get tabDiscover => 'Descobrir';
+  String get tabDiscover => 'Buscar';
 
   @override
   String get tabPlans => 'Planos';
 
   @override
-  String get tabChats => 'Conversas';
+  String get tabChats => 'Chats';
 
   @override
-  String get tabNotifications => 'Notificações';
+  String get tabNotifications => 'Avisos';
 
   @override
-  String get tabProfile => 'Perfil';
+  String get tabProfile => 'Eu';
 
   @override
   String get tabAdmin => 'Admin';
@@ -346,6 +346,21 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get noPlacesFound => 'Nenhum local encontrado';
+
+  @override
+  String get useCurrentLocation => 'Usar a minha localização atual';
+
+  @override
+  String get locationNotFound =>
+      'Não foi possível saber onde você está. Procure um local.';
+
+  @override
+  String nearPlace(String place) {
+    return 'Perto de $place';
+  }
+
+  @override
+  String get currentLocation => 'Onde estou';
 
   @override
   String distanceKm(int km) {
@@ -510,7 +525,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get keepSwiping => 'Continuar a deslizar';
 
   @override
-  String get notificationsTitle => 'Notificações';
+  String get notificationsTitle => 'Avisos';
 
   @override
   String get nothingYetTitle => 'Ainda nada';

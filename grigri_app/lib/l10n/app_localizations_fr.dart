@@ -173,19 +173,19 @@ class AppLocalizationsFr extends AppLocalizations {
       'La connexion n\'est pas configurée dans cette version (pas d\'identifiant client Google).';
 
   @override
-  String get tabDiscover => 'Découvrir';
+  String get tabDiscover => 'Trouve';
 
   @override
   String get tabPlans => 'Plans';
 
   @override
-  String get tabChats => 'Discussions';
+  String get tabChats => 'Tchats';
 
   @override
-  String get tabNotifications => 'Notifications';
+  String get tabNotifications => 'Alertes';
 
   @override
-  String get tabProfile => 'Profil';
+  String get tabProfile => 'Moi';
 
   @override
   String get tabAdmin => 'Admin';
@@ -344,6 +344,21 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get noPlacesFound => 'Aucun lieu trouvé';
+
+  @override
+  String get useCurrentLocation => 'Utiliser ma position actuelle';
+
+  @override
+  String get locationNotFound =>
+      'Impossible de savoir où tu es. Cherche plutôt un lieu.';
+
+  @override
+  String nearPlace(String place) {
+    return 'Près de $place';
+  }
+
+  @override
+  String get currentLocation => 'Là où je suis';
 
   @override
   String distanceKm(int km) {
@@ -508,7 +523,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get keepSwiping => 'Continuer à swiper';
 
   @override
-  String get notificationsTitle => 'Notifications';
+  String get notificationsTitle => 'Alertes';
 
   @override
   String get nothingYetTitle => 'Rien pour l\'instant';
