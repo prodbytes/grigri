@@ -411,7 +411,16 @@ class FakeApi implements GrigriApi, SessionApi {
           throw const ApiException(409, 'You already asked.');
         }
         ask(planId, meId!);
-        return requestsById['$planId/$meId']!;
+        final request = requestsById['$planId/$meId']!;
+        // A demo plan's group says yes at once (specs/matching.md).
+        if (plans[planId]!.demo) {
+          final accepted = request.copyWith(
+            acceptedBy: plans[planId]!.memberIds.toSet(),
+          );
+          _settle(request.id, force: true);
+          return accepted;
+        }
+        return request;
       });
 
   @override

@@ -72,7 +72,9 @@ person, and a plan can take a whole group.
   collapsed at first) and their profile (without the gear). The card
   is compact, to fit small phones.
   - Right / ✓: I ask to join (a join request); a snackbar says "Asked to
-    join. You'll get an alert when you're accepted."
+    join. You'll get an alert when you're accepted." On a **demo** plan
+    the group says yes at once (its made-up members can't answer): I
+    join, and the match screen opens instead of the snackbar.
   - Left / ✕: I pass; the plan leaves my deck.
   - Share (the smaller button between ✕ and ✓): shares the top plan as
     text through the system's share sheet, "Climbing plan on Grigri:
