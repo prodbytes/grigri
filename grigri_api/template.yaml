@@ -487,7 +487,7 @@ Resources:
 Outputs:
   ApiDomain:
     Description: The HTTP API's host name (the site distribution's /api/* origin; site.yaml ApiDomainName)
-    Value: !Sub ${HttpApi}.execute-api.${AWS::URLSuffix}
+    Value: !Sub ${HttpApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
   ApiId:
     Value: !Ref HttpApi
   TableName:
