@@ -151,6 +151,10 @@ jobs:
           # client (its JavaScript origin is the RC site): a public
           # repository variable, not a secret (specs/sign-in.md).
           GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID_RC }}
+          # iPhones' ID tokens are their iOS client's: the API takes those
+          # too (public identifiers). Production's as well, while the
+          # phone builds that talk to the RC keep production's bundle ID.
+          GOOGLE_IOS_CLIENT_IDS: ${{ vars.GOOGLE_IOS_CLIENT_ID }},${{ vars.GOOGLE_IOS_CLIENT_ID_RC }}
           # An rbacr root's API token: the API asks rbacr who holds
           # grigri's admin role. A secret, like the health emails.
           GRIGRI_RBACR_TOKEN: ${{ secrets.GRIGRI_RBACR_TOKEN }}

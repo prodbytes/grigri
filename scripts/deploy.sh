@@ -37,6 +37,9 @@
 #                confirm AWS's subscription email.
 #   GOOGLE_WEB_CLIENT_ID the Google web OAuth client whose ID tokens the
 #                API accepts (also from .env; a public identifier)
+#   GOOGLE_IOS_CLIENT_IDS the Google iOS clients whose ID tokens the API
+#                accepts too, comma-separated (optional; an iPhone's
+#                token is its iOS client's)
 #   GRIGRI_RBACR_TOKEN an rbacr API token owned by an rbacr root, with
 #                which the API asks rbacr who holds grigri's admin role
 #                (also from .env; a secret in CI). Optional: without it
@@ -148,6 +151,13 @@ if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
 fi
 GRIGRI_RBACR_TOKEN="${GRIGRI_RBACR_TOKEN:-}"
+# The iOS clients whose ID tokens the API also takes (an iPhone's token is
+# its iOS client's): optional, comma-separated; empties and spaces dropped.
+GOOGLE_IOS_CLIENT_IDS="$(tr -d ' ' <<<"${GOOGLE_IOS_CLIENT_IDS:-}" | tr -s ',' | sed 's/^,//; s/,$//')"
+if [[ -n "$GOOGLE_IOS_CLIENT_IDS" && ! "$GOOGLE_IOS_CLIENT_IDS" =~ ^[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com(,[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com)*$ ]]; then
+  echo "error: GOOGLE_IOS_CLIENT_IDS must be comma-separated Google OAuth client IDs" >&2
+  exit 1
+fi
 for name in HOSTED_ZONE_ID GRIGRI_HEALTH_EMAILS GOOGLE_WEB_CLIENT_ID; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
@@ -255,6 +265,7 @@ clear_failed_create "$API_STACK"
 aws cloudformation deploy --stack-name "$API_STACK" \
   --template-file "$packaged" --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
+    "GoogleIosClientIds=$GOOGLE_IOS_CLIENT_IDS" \
     "RbacrToken=$GRIGRI_RBACR_TOKEN" "PhotosBucket=$PHOTOS_BUCKET" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \

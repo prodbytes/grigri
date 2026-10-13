@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app_version.dart';
@@ -11,16 +12,38 @@ import 'data/mqtt_transport.dart';
 import 'data/preferences.dart';
 import 'data/roles.dart';
 import 'data/session_storage.dart';
+import 'log.dart';
+import 'log_file.dart';
 import 'theme.dart';
 import 'ui/common.dart';
 import 'ui/document_language/document_language.dart';
 import 'ui/home_shell.dart';
-import 'ui/profile_editor.dart';
 import 'ui/roles_card.dart';
 import 'ui/sign_in_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Uncaught errors reach the log (specs/logging.md); Flutter still
+  // reports them as before.
+  final presentError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    log.error('flutter', details.exceptionAsString(), null, details.stack);
+    presentError?.call(details);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    log.error('uncaught', 'uncaught error', error, stack);
+    return true;
+  };
+  log.info(
+    'start',
+    'Grigri ${AppVersion.version.isEmpty ? 'dev' : AppVersion.version}'
+        ' stage=${AppVersion.stage.isEmpty ? 'local' : AppVersion.stage}'
+        ' platform=${kIsWeb ? 'web' : defaultTargetPlatform.name}'
+        ' api=${AppConfig.origin}'
+        ' webClientId=${AppConfig.googleWebClientId.isEmpty ? 'none' : AppConfig.googleWebClientId}'
+        ' iosClientId=${AppConfig.googleIosClientId.isEmpty ? 'none' : AppConfig.googleIosClientId}',
+  );
+  if (await openLogFile() case final write?) log.attachFile(write);
   late final Auth auth;
   final api = HttpGrigriApi(
     origin: AppConfig.origin,
@@ -132,7 +155,7 @@ class _GrigriAppState extends State<GrigriApp> {
   }
 }
 
-/// Signing in, then creating a profile the first time, then the tabs.
+/// Signing in, then the tabs (the first sign-in creates my profile).
 class Root extends StatelessWidget {
   const Root({super.key});
 
@@ -145,7 +168,6 @@ class Root extends StatelessWidget {
         body: Center(child: CircularProgressIndicator()),
       ),
       Phase.signedOut => const SignInScreen(),
-      Phase.needsProfile => const ProfileEditor(create: true),
       Phase.ready => const HomeShell(),
       Phase.failed => Scaffold(
         body: EmptyState(

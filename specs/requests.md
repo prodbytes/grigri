@@ -466,7 +466,56 @@ spec.
       HTTP Publish doesn't reach subscribers, so locally the broker is
       open (like dev mode) and the function publishes over MQTT. The
       health check gains `📡 mqtt`.
-30. **Remove the app's dev sign-in (local API); always show Google.**
+30. **Create the profile from the Google account at sign-in, then let it
+    be edited: no "Create your profile" screen; just signing in should
+    be fine.**
+    - [API](api.md), [backend](backend.md): `POST /api/session` keeps the
+      Google ID token's `name` claim on the session (dev mode: the
+      email's part before the @). The first `GET /api/me` creates the
+      profile with that name (`Climber` without one) and the rest empty,
+      so it never answers `"climber": null`. No new resource: one more
+      attribute on the session item and one write per new account, both
+      within what DynamoDB on demand already bills (fractions of a cent).
+    - [Sign-in](sign-in.md), [screens](screens.md), [matching](matching.md),
+      [i18n](i18n.md): the app goes from sign-in straight to the tabs; the
+      "Create your profile" step, its welcome line, **Start climbing** and
+      its strings are gone. **Edit profile** on the Profile tab fills in
+      the rest. A 409 "no profile" now loads the profile again.
+
+## 2026-10-13
+
+31. **(Follow-up to 25: make sign-in work on the iPhone.)** The deployed
+    sites didn't exist yet: the site stack refused the API's host name.
+    - [Deploy](deploy.md): the API stack's `ApiDomain` output is
+      `<id>.execute-api.<region>.amazonaws.com` (it lacked the region),
+      the `/api/*` origin the site stack takes as `ApiDomainName`.
+32. **Google sign-in on the iPhone opens Google's popup but never enters
+    the app.** The API took only tokens issued to the web client, but on
+    iOS Google issues the ID token to the app's iOS client, so every
+    iPhone sign-in got a 401.
+    - [API](api.md), [sign-in](sign-in.md), [backend](backend.md):
+      `POST /api/session` also takes tokens issued to the stage's iOS
+      clients (template parameter `GoogleIosClientIds`, from the
+      repository variables in Deploy and Deploy RC; `scripts/deploy.sh`'s
+      optional `GOOGLE_IOS_CLIENT_IDS`), never without a web client.
+33. **Make sure logging is available both on the web and the phone, so we
+    can fix things; don't show the logs to the user, they're just for
+    developers.**
+    - [Logging](logging.md) (new): the app's log (`lib/log.dart`) prints
+      each line to the platform's log (browser console, device log) and,
+      on Android and iOS, appends it to `grigri.log` in the app's storage
+      (rotated past 512 KB). Startup, every sign-in step and failure,
+      failed API calls, MQTT connection failures and uncaught errors are
+      logged, scrubbed of emails and tokens. No screen or button shows
+      them.
+    - [Development environment](dev-environment.md): `devbox run ios-log`
+      (`scripts/ios-log.sh`) copies the log file off the iPhone over USB
+      (`--follow`, `--previous`), like `android-log`.
+34. **Brazilian Portuguese would be better (than European).** `app_pt.arb`
+    is rewritten in Brazilian Portuguese (você; Salvar, Sair, celular,
+    Buscar; esportiva, academia, costuras, móveis, pico), and the picker
+    calls it "Português (Brasil)" ([i18n](i18n.md)).
+35. **Remove the app's dev sign-in (local API); always show Google.**
     - [Sign-in](sign-in.md): the sign-in screen only ever shows **Sign in
       with Google**. The email "Dev sign-in" of local builds without a
       client ID is gone, and so is the "sign-in isn't set up" message: a

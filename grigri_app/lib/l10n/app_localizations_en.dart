@@ -228,9 +228,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your profile is about you: what you climb and the gear you have. When and where are for plans, made separately in Plans.';
 
   @override
-  String get createProfile => 'Create your profile';
-
-  @override
   String get takePhoto => 'Take a photo';
 
   @override
@@ -241,10 +238,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get photoFailed => 'Couldn\'t get that photo';
-
-  @override
-  String get welcomeIntro =>
-      'Welcome to Grigri! Tell climbers who you are and what you climb: they see it when you ask to join their plans.';
 
   @override
   String get addPhoto => 'Add a photo';
@@ -294,9 +287,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get addGearPhoto => 'Add a gear photo';
-
-  @override
-  String get startClimbing => 'Start climbing';
 
   @override
   String get whereYouClimb => 'Where you climb';

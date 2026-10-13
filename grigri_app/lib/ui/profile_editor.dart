@@ -33,13 +33,12 @@ Future<Uint8List?> pickPhoto(ImageSource source, double maxSide) async {
 /// Edits my profile: my photo, about me, the grades I climb per
 /// discipline, my gear with its photos, and where I climb (my location and
 /// other areas, private, which rank the Discover deck). When is for plans.
-/// With [create], it's the "Create your profile" step after the first
-/// sign-in, before the tabs.
+/// My profile is made from my Google account at the first sign-in; this is
+/// where I fill in the rest.
 class ProfileEditor extends StatefulWidget {
-  const ProfileEditor({super.key, this.pick = pickPhoto, this.create = false});
+  const ProfileEditor({super.key, this.pick = pickPhoto});
 
   final PhotoPicker pick;
-  final bool create;
 
   @override
   State<ProfileEditor> createState() => _ProfileEditorState();
@@ -47,9 +46,7 @@ class ProfileEditor extends StatefulWidget {
 
 class _ProfileEditorState extends State<ProfileEditor> {
   final _form = GlobalKey<FormState>();
-  late final Climber _me =
-      StoreScope.read(context).meOrNull ??
-      Climber(id: '', name: StoreScope.read(context).suggestedName);
+  late final Climber _me = StoreScope.read(context).me;
   late final _name = TextEditingController(text: _me.name);
   late final _age = TextEditingController(text: '${_me.age ?? ''}');
   late final _bio = TextEditingController(text: _me.bio);
@@ -189,7 +186,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
     );
     if (!mounted) return;
     setState(() => _saving = false);
-    if (saved && !widget.create) Navigator.of(context).pop();
+    if (saved) Navigator.of(context).pop();
   }
 
   @override
@@ -218,18 +215,9 @@ class _ProfileEditorState extends State<ProfileEditor> {
     );
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: !widget.create,
-        title: Text(widget.create ? l.createProfile : l.editProfile),
+        title: Text(l.editProfile),
         actions: [
           TextButton(onPressed: _saving ? null : _save, child: Text(l.save)),
-          if (widget.create)
-            PopupMenuButton<String>(
-              tooltip: l.more,
-              onSelected: (_) => StoreScope.read(context).signOut(),
-              itemBuilder: (_) => [
-                PopupMenuItem(value: 'signOut', child: Text(l.signOut)),
-              ],
-            ),
         ],
       ),
       body: Form(
@@ -237,14 +225,6 @@ class _ProfileEditorState extends State<ProfileEditor> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            if (widget.create)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  l.welcomeIntro,
-                  style: text.bodyMedium?.copyWith(color: Mountain.snow),
-                ),
-              ),
             Center(
               child: _PhotoButton(
                 avatar: Avatar(
@@ -384,7 +364,7 @@ class _ProfileEditorState extends State<ProfileEditor> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(widget.create ? l.startClimbing : l.save),
+                  : Text(l.save),
             ),
           ],
         ),

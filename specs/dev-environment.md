@@ -110,6 +110,9 @@
   runs (`scripts/android-install.sh`); `devbox run android-log` streams the
   app's log lines and the system's related errors
   (`scripts/android-log.sh`, `--clear`, `--all`).
+- **iPhone**: `devbox run ios-log` shows the app's log file from the
+  iPhone attached by USB (`scripts/ios-log.sh`, `--follow`, `--previous`;
+  [logging](logging.md)).
 - **Any device**: `bash scripts/flutter-run.sh -d <device>`.
 - **Settings**: `.env` (git-ignored; see [.env.example](../.env.example)),
   linked from the private `prodbytes/setec-astronomy` repo

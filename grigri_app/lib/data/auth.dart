@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../log.dart';
 import 'api.dart';
 import 'session_storage.dart';
 
@@ -170,6 +171,10 @@ class SessionAuth extends Auth {
     if (_started) return;
     final kept = await storage.read();
     _token = kept == null || kept.isEmpty ? null : kept;
+    log.info(
+      'auth',
+      'start: ${method.mode.name}, kept session: ${_token != null}',
+    );
     final starting = method.start(
       onCredential: _onCredential,
       onError: _fail,
@@ -196,6 +201,7 @@ class SessionAuth extends Auth {
     // Google's event and the button's answer both bring the same one.
     if (_token != null || _signingIn) return;
     _signingIn = true;
+    log.info('auth', 'got a Google ID token; asking the API for a session');
     try {
       final token = await sessions.createSession(idToken: credential.idToken);
       try {
@@ -206,8 +212,10 @@ class SessionAuth extends Auth {
       _token = token;
       _user = credential.user;
       _error = null;
-    } on Object {
-      // Never log the details: they may carry account data.
+      log.info('auth', 'signed in: the API started a session');
+    } on Object catch (e) {
+      // The log scrubs account data (emails, tokens) from the details.
+      log.error('auth', 'the API didn\'t start a session', e);
       _error = SignInError.session;
       unawaited(_quietly(method.signOut));
     } finally {
@@ -217,6 +225,7 @@ class SessionAuth extends Auth {
   }
 
   void _fail(Object error) {
+    log.error('auth', 'Google sign-in failed', error);
     _error = SignInError.google;
     notifyListeners();
   }
@@ -315,8 +324,9 @@ class GoogleSignInMethod extends SignInMethod {
     if (!await (_ready ??= _initialize()) || !quietly) return;
     try {
       await _google.attemptLightweightAuthentication();
-    } on Object {
+    } on Object catch (e) {
       // Not signed in with Google: the button will ask.
+      log.info('auth', 'no quiet Google sign-in (${e.runtimeType})');
     }
   }
 
@@ -335,8 +345,10 @@ class GoogleSignInMethod extends SignInMethod {
           unawaited(_forward(user));
         }
       }, onError: _report);
+      log.info('auth', 'Google sign-in initialized');
       return true;
-    } on Object {
+    } on Object catch (e) {
+      log.error('auth', 'Google sign-in couldn\'t initialize', e);
       return false;
     }
   }
@@ -356,11 +368,15 @@ class GoogleSignInMethod extends SignInMethod {
   }
 
   void _report(Object error) {
-    // Never log the exception's details: they may carry account data.
+    // The log scrubs account data (emails, tokens) from the details.
     final cancelled =
         error is GoogleSignInException &&
         error.code == GoogleSignInExceptionCode.canceled;
-    if (!cancelled) _onError?.call(error);
+    if (cancelled) {
+      log.info('auth', 'Google sign-in cancelled');
+    } else {
+      _onError?.call(error);
+    }
   }
 
   @override
@@ -370,8 +386,12 @@ class GoogleSignInMethod extends SignInMethod {
       return;
     }
     if (mode != SignInMode.google) return;
+    log.info('auth', 'sign-in button pressed');
     if (!await (_ready ??= _initialize())) return;
-    if (!_google.supportsAuthenticate()) return;
+    if (!_google.supportsAuthenticate()) {
+      log.warn('auth', 'Google sign-in can\'t authenticate on this platform');
+      return;
+    }
     try {
       // It also comes as an event; the session is made once.
       await _forward(await _google.authenticate());

@@ -308,10 +308,6 @@
   "@profileFootnote": {
     "description": "Note under my profile."
   },
-  "createProfile": "Create your profile",
-  "@createProfile": {
-    "description": "Title of the first-time profile step."
-  },
   "takePhoto": "Take a photo",
   "@takePhoto": {
     "description": "Photo source option: the camera."
@@ -327,10 +323,6 @@
   "photoFailed": "Couldn't get that photo",
   "@photoFailed": {
     "description": "Snackbar: the picked photo could not be read."
-  },
-  "welcomeIntro": "Welcome to Grigri! Tell climbers who you are and what you climb: they see it when you ask to join their plans.",
-  "@welcomeIntro": {
-    "description": "Intro text of the first-time profile step."
   },
   "addPhoto": "Add a photo",
   "@addPhoto": {
@@ -409,10 +401,6 @@
   "addGearPhoto": "Add a gear photo",
   "@addGearPhoto": {
     "description": "Tooltip: add a gear photo."
-  },
-  "startClimbing": "Start climbing",
-  "@startClimbing": {
-    "description": "Button finishing the first-time profile step."
   },
   "whereYouClimb": "Where you climb",
   "@whereYouClimb": {

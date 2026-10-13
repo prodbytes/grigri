@@ -228,9 +228,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ton profil parle de toi : ce que tu grimpes et le matériel que tu as. Le quand et le où sont pour les plans, créés à part dans Plans.';
 
   @override
-  String get createProfile => 'Crée ton profil';
-
-  @override
   String get takePhoto => 'Prendre une photo';
 
   @override
@@ -241,10 +238,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get photoFailed => 'Impossible d\'obtenir cette photo';
-
-  @override
-  String get welcomeIntro =>
-      'Bienvenue sur Grigri ! Dis aux grimpeurs qui tu es et ce que tu grimpes : ils le verront quand tu demanderas à rejoindre leurs plans.';
 
   @override
   String get addPhoto => 'Ajouter une photo';
@@ -294,9 +287,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get addGearPhoto => 'Ajouter une photo du matériel';
-
-  @override
-  String get startClimbing => 'Commencer à grimper';
 
   @override
   String get whereYouClimb => 'Où tu grimpes';

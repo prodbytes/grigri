@@ -50,7 +50,8 @@ who are members, or by an admin.
   sends a Google ID token once to `POST /api/session`; the function
   verifies it (with [jose](https://github.com/panva/jose): RS256 against
   Google's keys, cached while the function stays warm; issuer, audience
-  the web client ID, expiry) and returns an opaque session token (32
+  the web client ID or, for iPhones, one of the stage's iOS client IDs,
+  expiry) and returns an opaque session token (32
   random bytes), stored only as its SHA-256 hash. Every other route but
   `GET /api/health` sends it as a bearer token, and the function reads
   the session (one DynamoDB read) before routing; a missing, unknown or
@@ -63,8 +64,10 @@ who are members, or by an admin.
   had signed people out hourly.
 - **Identity**: a Google account (`https://accounts.google.com#<sub>`) is
   linked to one climber id (random, made by the server at the first
-  profile save). Emails are only used for the admin check: kept on the
-  session (only when verified), never on a profile, never returned.
+  `GET /api/me`, which starts the profile with the account's Google
+  name). Emails are only used for the admin check: kept on the session
+  (only when verified), never on a profile, never returned. The Google
+  name is kept on the session only to start the profile.
 - **Admin**: a signed-in caller whose session's verified email is in the
   stage's current admin list, checked on every request (so removing
   someone from the list takes effect at once). Admins see every open request (`GET /api/admin/requests`)

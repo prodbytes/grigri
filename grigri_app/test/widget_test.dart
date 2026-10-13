@@ -60,21 +60,17 @@ void main() {
       expect(find.byType(NavigationBar), findsNothing);
     });
 
-    testWidgets('the first sign-in creates the profile before the tabs', (
+    testWidgets('the first sign-in makes the profile and opens the tabs', (
       tester,
     ) async {
       final api = sampleApi(profile: false);
       final store = await pumpApp(tester, api, signedIn: false);
       await tester.tap(find.text('Sign in with Google'));
       await tester.pumpAndSettle();
-      expect(find.text('Create your profile'), findsOneWidget);
-      // Google's name to start with.
-      expect(find.widgetWithText(TextFormField, 'Pat Quill'), findsOneWidget);
-      await tester.tap(find.text('Save'));
-      await tester.pumpAndSettle();
-      expect(api.calls, contains('PUT /api/me'));
-      expect(store.me.name, 'Pat Quill');
       expect(find.byType(NavigationBar), findsOneWidget);
+      expect(api.calls, isNot(contains('PUT /api/me')));
+      // Google's name to start with.
+      expect(store.me.name, 'Pat Quill');
     });
 
     testWidgets('signing out from Profile goes back to the sign-in screen', (

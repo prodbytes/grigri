@@ -15,7 +15,8 @@
       "web":             "bash scripts/flutter-web.sh",
       "android":         "bash scripts/flutter-android.sh",
       "android-release": "bash scripts/android-install.sh",
-      "android-log":     "bash scripts/android-log.sh"
+      "android-log":     "bash scripts/android-log.sh",
+      "ios-log":         "bash scripts/ios-log.sh"
     }
   }
 }

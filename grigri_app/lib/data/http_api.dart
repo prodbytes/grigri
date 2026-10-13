@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../model/climber.dart';
 import '../model/plan.dart';
+import '../log.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'realtime.dart';
@@ -16,7 +17,8 @@ typedef AuthHeaders = Future<Map<String, String>> Function();
 
 /// [GrigriApi] and the [SessionApi] over HTTP, against `<origin>/api`.
 /// Errors come back as an [ApiException] with the server's message;
-/// nothing here logs a token or puts one in a URL.
+/// nothing here logs a token or puts one in a URL. Failed calls are logged
+/// (method, path, status, the server's message), never their bodies.
 class HttpGrigriApi implements GrigriApi, SessionApi {
   HttpGrigriApi({
     required this.origin,
@@ -56,18 +58,21 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
         ..headers['Content-Type'] = 'application/json'
         ..body = jsonEncode(body);
     }
+    final what = '$method /api/${segments.join('/')}';
     final http.Response response;
     try {
       response = await http.Response.fromStream(
         await _client.send(request).timeout(timeout),
       ).timeout(timeout);
     } on TimeoutException {
+      log.warn('api', '$what: timed out after ${timeout.inSeconds} s');
       throw const ApiException(
         0,
         'The server took too long to answer.',
         client: ClientError.timeout,
       );
-    } on http.ClientException {
+    } on http.ClientException catch (e) {
+      log.warn('api', '$what: unreachable (${origin.host}): ${e.message}');
       throw const ApiException(
         0,
         'Couldn\'t reach the server.',
@@ -83,6 +88,11 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       }
     }
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      log.warn(
+        'api',
+        '$what: ${response.statusCode}'
+            '${json is Map && json['error'] is String ? ' ${json['error']}' : ''}',
+      );
       if (json is Map && json['error'] is String) {
         throw ApiException(response.statusCode, json['error'] as String);
       }

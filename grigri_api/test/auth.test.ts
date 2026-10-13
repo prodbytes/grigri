@@ -3,7 +3,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, type JWK, SignJWT } from
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Auth, type AuthConfig, hashToken, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
-import { type GoogleIdentity, googleVerifier, InvalidIdToken } from '../src/google.js';
+import { type GoogleIdentity, googleVerifier, InvalidIdToken, parseClientIds } from '../src/google.js';
 import { Router } from '../src/router.js';
 import { FakeStore } from './fake-store.js';
 
@@ -42,6 +42,36 @@ describe('googleVerifier', () => {
     const expected: GoogleIdentity = { subject: 'https://accounts.google.com#1001', email: 'ada@example.com', emailVerified: true };
     expect(await verify(await idToken())).toEqual(expected);
     expect(await verify(await idToken({}, { iss: 'accounts.google.com' }))).toEqual(expected);
+  });
+
+  it('also accepts tokens issued to the iOS clients (an iPhone\'s), and only those', async () => {
+    const IOS = '123456789-ios.apps.googleusercontent.com';
+    const verify = googleVerifier(AUD, jwks, [IOS]);
+    expect((await verify(await idToken({}, { aud: IOS }))).subject).toBe('https://accounts.google.com#1001');
+    expect((await verify(await idToken())).subject).toBe('https://accounts.google.com#1001');
+    await expect(verify(await idToken({}, { aud: 'someone-else.apps.googleusercontent.com' }))).rejects.toBeInstanceOf(
+      InvalidIdToken,
+    );
+    // Without the iOS client, its tokens are refused.
+    await expect(googleVerifier(AUD, jwks)(await idToken({}, { aud: IOS }))).rejects.toBeInstanceOf(InvalidIdToken);
+    // No web client (dev mode): nothing is accepted, iOS clients or not.
+    await expect(googleVerifier('', jwks, [IOS])(await idToken({}, { aud: IOS }))).rejects.toBeInstanceOf(InvalidIdToken);
+  });
+
+  it('reads client IDs from a comma-separated setting', () => {
+    expect(parseClientIds(' a.apps.googleusercontent.com, ,b.apps.googleusercontent.com,')).toEqual([
+      'a.apps.googleusercontent.com',
+      'b.apps.googleusercontent.com',
+    ]);
+    expect(parseClientIds(undefined)).toEqual([]);
+  });
+
+  it('keeps the account name, tidied, for a new profile', async () => {
+    const verify = googleVerifier(AUD, jwks);
+    expect((await verify(await idToken({ name: '  Ada   Example ' }))).name).toBe('Ada Example');
+    expect((await verify(await idToken({ name: 'x'.repeat(80) }))).name).toBe('x'.repeat(60));
+    expect(await verify(await idToken({ name: '   ' }))).not.toHaveProperty('name');
+    expect(await verify(await idToken({ name: 42 }))).not.toHaveProperty('name');
   });
 
   it('drops an unverified email', async () => {
@@ -131,6 +161,12 @@ describe('Auth sessions', () => {
     expect((await make({ isAdmin: async () => false }).caller(bearer(token))).admin).toBe(false);
   });
 
+  it('keeps the Google name with the session, for the caller', async () => {
+    identity = { ...identity, name: 'Ada Example' };
+    const { token } = await make().signIn({ idToken: 'good' });
+    expect((await make().caller(bearer(token))).name).toBe('Ada Example');
+  });
+
   it('is never admin with an unverified email', async () => {
     identity = { subject: 'https://accounts.google.com#8', emailVerified: false };
     const { token } = await make().signIn({ idToken: 'good' });
@@ -187,10 +223,10 @@ describe('Auth sessions', () => {
 
   it('dev mode: the header, and devUser sign-in; refused outside dev mode', async () => {
     const dev = make({ devMode: true });
-    expect(await dev.caller({ 'x-grigri-dev-user': 'Admin@Example.com' })).toEqual({ subject: 'dev#admin@example.com', email: 'admin@example.com', admin: true });
+    expect(await dev.caller({ 'x-grigri-dev-user': 'Admin@Example.com' })).toEqual({ subject: 'dev#admin@example.com', email: 'admin@example.com', admin: true, name: 'admin' });
     expect(await status(dev.caller({ 'x-grigri-dev-user': 'not an email' }))).toBe(401);
     const { token } = await dev.signIn({ devUser: 'Admin@Example.com' });
-    expect(await dev.caller(bearer(token))).toMatchObject({ subject: 'dev#admin@example.com', admin: true });
+    expect(await dev.caller(bearer(token))).toMatchObject({ subject: 'dev#admin@example.com', admin: true, name: 'admin' });
     expect(await status(dev.signIn({ devUser: 'nope' }))).toBe(400);
 
     const prod = make();

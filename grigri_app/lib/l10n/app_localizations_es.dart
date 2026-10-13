@@ -230,9 +230,6 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu perfil habla de ti: qué escalas y qué material tienes. El cuándo y el dónde son para los planes, que se crean aparte en Planes.';
 
   @override
-  String get createProfile => 'Crea tu perfil';
-
-  @override
   String get takePhoto => 'Hacer una foto';
 
   @override
@@ -243,10 +240,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get photoFailed => 'No se ha podido obtener la foto';
-
-  @override
-  String get welcomeIntro =>
-      '¡Te damos la bienvenida a Grigri! Cuéntales a los escaladores quién eres y qué escalas: lo verán cuando pidas unirte a sus planes.';
 
   @override
   String get addPhoto => 'Añadir una foto';
@@ -296,9 +289,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get addGearPhoto => 'Añadir una foto del material';
-
-  @override
-  String get startClimbing => 'Empezar a escalar';
 
   @override
   String get whereYouClimb => 'Dónde escalas';

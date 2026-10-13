@@ -18,7 +18,7 @@ const languageNames = {
   'es': 'Español',
   'de': 'Deutsch',
   'fr': 'Français',
-  'pt': 'Português',
+  'pt': 'Português (Brasil)',
   'ca': 'Català',
 };
 

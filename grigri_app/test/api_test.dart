@@ -344,10 +344,11 @@ void main() {
   });
 
   group('store', () {
-    test('signed in without a profile, it asks for one first', () async {
+    test('signed in without a profile, loading makes one', () async {
       final store = storeFor(sampleApi(profile: false));
       await store.start();
-      expect(store.phase, Phase.needsProfile);
+      expect(store.phase, Phase.ready);
+      expect(store.me.name, 'Pat Quill');
     });
 
     test('loads everything once signed in', () async {
@@ -391,13 +392,16 @@ void main() {
       expect(matches.single.newcomer.id, 'me');
     });
 
-    test('a 409 "no profile" goes back to creating one', () async {
+    test('a 409 "no profile" loads my profile again', () async {
       final api = sampleApi();
       final store = storeFor(api);
       await store.start();
+      api.calls.clear();
       api.failNext = const ApiException(409, 'no profile');
       await store.refreshDiscover();
-      expect(store.phase, Phase.needsProfile);
+      await pumpEventQueue();
+      expect(api.calls, contains('GET /api/me'));
+      expect(store.phase, Phase.ready);
     });
 
     test('signing out forgets everything', () async {
