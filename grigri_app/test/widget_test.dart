@@ -283,6 +283,31 @@ void main() {
       expect(find.text(notice), findsNothing);
     });
 
+    testWidgets('asking to join a demo plan matches at once', (tester) async {
+      final api = sampleApi();
+      final plan = api.plans['boulder-night']!;
+      api.addPlan(
+        Plan(
+          id: plan.id,
+          organizerId: plan.organizerId,
+          discipline: plan.discipline,
+          place: plan.place,
+          start: plan.start,
+          end: plan.end,
+          grades: plan.grades,
+          memberIds: plan.memberIds,
+          demo: true,
+        ),
+      );
+      final store = await pumpApp(tester, api);
+      await tester.tap(find.byTooltip('Ask to join'));
+      await tester.pumpAndSettle();
+      expect(find.text("It's a match!"), findsOneWidget);
+      expect(find.textContaining("You'll get an alert"), findsNothing);
+      expect(api.plans['boulder-night']!.memberIds, contains('me'));
+      expect(store.waiting, isEmpty);
+    });
+
     testWidgets('dragging a card left passes on the plan', (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);

@@ -358,6 +358,23 @@ export class Api {
 
   private async join(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
+    const asked = await this.ask(planId, s);
+    if (!asked.demo) return { request: requestJson(asked.request) };
+    // A demo plan's made-up members can't answer: the group says yes at
+    // once, as an admin's yes would, and I match.
+    return this.retry(async () => {
+      const loaded = await this.loadPlan(planId);
+      await this.loadNames(s, loaded.plan.memberIds, loaded.requests.map((r) => r.climberId));
+      const effects = rules.accept(loaded, { id: loaded.plan.organizerId, admin: true }, s.me.id, s.ctx);
+      await this.store.apply(loaded, effects, s.now);
+      await this.hint(answerHints(loaded, effects, 'accept', s.me.id, s.me.id));
+      const request = effects.requests.find((r) => r.climberId === s.me.id) ?? asked.request;
+      return { request: requestJson(request) };
+    });
+  }
+
+  /** My join request, saved; whether the plan is a demo. */
+  private async ask(planId: string, s: Session): Promise<{ request: JoinRequest; demo: boolean }> {
     return this.retry(async () => {
       const loaded = await this.loadPlan(planId);
       if (loaded.requests.filter(isOpen).length >= MAX_OPEN_REQUESTS) {
@@ -375,7 +392,7 @@ export class Api {
         throw e;
       }
       await this.hint(hintsFor(loaded.plan.memberIds, { kind: 'request', planId }, s.me.id));
-      return { request: requestJson(effects.requests[0]!) };
+      return { request: effects.requests[0]!, demo: loaded.plan.demo === true };
     });
   }
 

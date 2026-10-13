@@ -599,3 +599,11 @@ spec.
       demo plan (deck card, plan screen, match screen) and of a demo
       person's profile sheet, and a **Demo** tag after their name; in
       every language. No new resource or cost.
+42. **When a demo plan is found and accepted (swiped right), match
+    automatically.**
+    - [API](api.md), [matching](matching.md): `POST /api/plans/{id}/join`
+      on a demo plan saves the request and then accepts it on the group's
+      behalf, as an admin's yes does: I join, get the accepted notice,
+      and the chat gets the joined note. The app refreshes its
+      notifications right after, so the match screen opens (no "you'll
+      get an alert" snackbar). Real plans are unchanged.

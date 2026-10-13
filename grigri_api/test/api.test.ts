@@ -181,6 +181,17 @@ describe('the matchmaking flow', () => {
     planId = (await call(ada, 'POST', '/api/plans', planBody)).plan.id;
   });
 
+  it('joining a demo plan matches at once: its made-up members never answer', async () => {
+    const stored = store.plans.get(planId)!;
+    store.plans.set(planId, { ...stored, plan: { ...stored.plan, demo: true } });
+    const { request } = await call(ben, 'POST', `/api/plans/${planId}/join`);
+    expect(request).toMatchObject({ climberId: ids.Ben, acceptedBy: [ids.Ada], rejected: false });
+    expect((await call(ben, 'GET', '/api/plans')).plans.map((p: any) => p.id)).toEqual([planId]);
+    expect((await call(ben, 'GET', '/api/notices')).notices[0]).toMatchObject({ kind: 'accepted', planId, read: false });
+    expect((await call(ada, 'GET', '/api/requests')).requests).toEqual([]);
+    await fails(call(ben, 'POST', `/api/plans/${planId}/join`), 409, /already in this plan/);
+  });
+
   it('discover, join, unanimous accept, chat, leave', async () => {
     const deck = await call(ben, 'GET', '/api/discover');
     expect(deck.plans.map((p: any) => p.id)).toEqual([planId]);

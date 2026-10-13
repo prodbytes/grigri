@@ -677,12 +677,19 @@ class GrigriStore extends ChangeNotifier {
   }
 
   /// I swipe right on a plan: I ask to join it. Its members decide; I'm
-  /// told when they have. False when it failed.
+  /// told when they have. A demo plan's say yes at once (the server's),
+  /// and the match screen opens. False when it failed.
   Future<bool> like(String planId) async {
+    final demo = _plans[planId]?.demo ?? false;
     _discover.remove(planId);
     notifyListeners();
     final request = await _act(() => api.join(planId));
     if (request == null) return false;
+    if (demo) {
+      // A demo plan's group says yes at once: the match screen opens.
+      await refreshNotices();
+      return true;
+    }
     _asked = [..._asked.where((r) => r.id != request.id), request];
     notifyListeners();
     return true;

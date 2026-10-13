@@ -36,6 +36,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final l = context.l10n;
     if (!await store.like(plan.id)) return;
+    // A demo plan matches at once, and the match screen says so.
+    if (plan.demo) return;
     messenger.showSnackBar(SnackBar(content: Text(l.askedToJoinSent)));
   }
 
