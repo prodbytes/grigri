@@ -498,4 +498,17 @@ spec.
       clients (template parameter `GoogleIosClientIds`, from the
       repository variables in Deploy and Deploy RC; `scripts/deploy.sh`'s
       optional `GOOGLE_IOS_CLIENT_IDS`), never without a web client.
+33. **Make sure logging is available both on the web and the phone, so we
+    can fix things; don't show the logs to the user, they're just for
+    developers.**
+    - [Logging](logging.md) (new): the app's log (`lib/log.dart`) prints
+      each line to the platform's log (browser console, device log) and,
+      on Android and iOS, appends it to `grigri.log` in the app's storage
+      (rotated past 512 KB). Startup, every sign-in step and failure,
+      failed API calls, MQTT connection failures and uncaught errors are
+      logged, scrubbed of emails and tokens. No screen or button shows
+      them.
+    - [Development environment](dev-environment.md): `devbox run ios-log`
+      (`scripts/ios-log.sh`) copies the log file off the iPhone over USB
+      (`--follow`, `--previous`), like `android-log`.
 
