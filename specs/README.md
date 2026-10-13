@@ -38,6 +38,9 @@ Each match opens the plan's group chat.
   Catalan; the language picker in the profile, kept on the device; the
   translation bundles and the test that keeps them complete.
 - [Theme](theme.md): dark, in mountain colors.
+- [Logging](logging.md): the app's developer log on every platform
+  (browser console, device log, a file on phones), scrubbed of account
+  data; never shown to users.
 - [Platforms](platforms.md): Android, iOS and the web; app IDs and iOS
   signing.
 

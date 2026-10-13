@@ -4,6 +4,7 @@ import 'package:mqtt_client/mqtt_client.dart';
 
 import 'mqtt/client_io.dart'
     if (dart.library.js_interop) 'mqtt/client_web.dart';
+import '../log.dart';
 import 'realtime.dart';
 
 /// Live updates over MQTT 3.1.1 on a WebSocket (AWS IoT Core; Floci's
@@ -37,12 +38,18 @@ class MqttRealtimeTransport implements RealtimeTransport {
     };
     try {
       await client.connect();
-    } catch (_) {
+    } catch (e) {
       client.disconnect();
-      // Not rethrown as is: its message may quote the URL (the token).
+      // Neither logged nor rethrown as is: its message may quote the URL
+      // (the token).
+      log.warn('live', 'MQTT connect failed (${e.runtimeType})');
       throw const RealtimeUnavailable();
     }
     if (client.connectionStatus?.state != MqttConnectionState.connected) {
+      log.warn(
+        'live',
+        'MQTT not connected: ${client.connectionStatus?.returnCode}',
+      );
       client.disconnect();
       throw const RealtimeUnavailable();
     }
