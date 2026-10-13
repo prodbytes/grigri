@@ -161,16 +161,20 @@ void main() {
       expect(errors, ['Couldn\'t sign out everywhere. Try again.']);
     });
 
-    test('the dev sign-in starts a session with the email', () async {
+    test('a build without a Google client ID still offers Google, '
+        'and signing in fails', () async {
       final api = sampleApi();
-      final store = storeFor(api, signedIn: false, mode: SignInMode.dev);
-      await store.start();
-      await store.auth.signIn(devEmail: ' pat@example.com ');
-      await store.start();
-      expect(api.sessionBodies.single, {'devUser': 'pat@example.com'});
-      final token = keptToken(store)!;
-      expect(await store.auth.headers(), {'Authorization': 'Bearer $token'});
-      expect(store.phase, Phase.ready);
+      final auth = SessionAuth(
+        method: GoogleSignInMethod(webClientId: ''),
+        sessions: api,
+        storage: MemorySessionStorage(),
+      );
+      await auth.start();
+      expect(auth.mode, SignInMode.google);
+      await auth.signIn();
+      expect(auth.signedIn, isFalse);
+      expect(auth.error, SignInError.google);
+      expect(api.calls, isNot(contains('POST /api/session')));
     });
 
     test('a refused session start shows an error and keeps nothing', () async {

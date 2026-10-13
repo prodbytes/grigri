@@ -162,19 +162,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get signInWithGoogle => 'Iniciar sesión con Google';
 
   @override
-  String get devSignInHeading => 'Acceso de desarrollo · solo API local';
-
-  @override
-  String get emailLabel => 'Correo electrónico';
-
-  @override
-  String get devSignIn => 'Acceso de desarrollo';
-
-  @override
-  String get signInUnconfigured =>
-      'El inicio de sesión no está configurado en esta versión (no hay ID de cliente de Google).';
-
-  @override
   String get tabDiscover => 'Buscar';
 
   @override

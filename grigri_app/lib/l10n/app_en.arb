@@ -214,22 +214,6 @@
   "@signInWithGoogle": {
     "description": "Button: sign in with a Google account."
   },
-  "devSignInHeading": "Dev sign-in · local API only",
-  "@devSignInHeading": {
-    "description": "Heading over the developer sign-in form (local builds only)."
-  },
-  "emailLabel": "Email",
-  "@emailLabel": {
-    "description": "Label of the email field."
-  },
-  "devSignIn": "Dev sign-in",
-  "@devSignIn": {
-    "description": "Button: developer sign-in (local builds only)."
-  },
-  "signInUnconfigured": "Sign-in isn't set up in this build (no Google client ID).",
-  "@signInUnconfigured": {
-    "description": "Shown when the build has no Google client ID."
-  },
   "tabDiscover": "Find",
   "@tabDiscover": {
     "description": "Bottom tab: the deck of plans to join."

@@ -511,7 +511,20 @@ spec.
     - [Development environment](dev-environment.md): `devbox run ios-log`
       (`scripts/ios-log.sh`) copies the log file off the iPhone over USB
       (`--follow`, `--previous`), like `android-log`.
-34. **Take the user's location from the phone or web instead of asking,
+34. **Brazilian Portuguese would be better (than European).** `app_pt.arb`
+    is rewritten in Brazilian Portuguese (você; Salvar, Sair, celular,
+    Buscar; esportiva, academia, costuras, móveis, pico), and the picker
+    calls it "Português (Brasil)" ([i18n](i18n.md)).
+35. **Remove the app's dev sign-in (local API); always show Google.**
+    - [Sign-in](sign-in.md): the sign-in screen only ever shows **Sign in
+      with Google**. The email "Dev sign-in" of local builds without a
+      client ID is gone, and so is the "sign-in isn't set up" message: a
+      build without `GOOGLE_WEB_CLIENT_ID` shows the button, and signing
+      in fails with the sign-in error. The app no longer sends `devUser`.
+      The local API's dev mode stays, for scripts and `curl`.
+    - [Dev environment](dev-environment.md), `.env.example`: a local
+      build needs `GOOGLE_WEB_CLIENT_ID` to sign in.
+36. **Take the user's location from the phone or web instead of asking,
     and ask only if it isn't found. Reduce the nav bar's font size, it's
     breaking; use a shorter word than "Notifications", and short words
     on every nav bar item.**

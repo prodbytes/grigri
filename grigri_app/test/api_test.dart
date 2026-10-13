@@ -220,14 +220,6 @@ void main() {
       },
     );
 
-    test('the dev mode starts a session with an email', () async {
-      final seen = <http.Request>[];
-      final api = apiWith((_) async => json({'token': 's3ssion'}), seen: seen);
-      await api.createSession(devUser: 'pat@example.com');
-      expect(jsonDecode(seen.single.body), {'devUser': 'pat@example.com'});
-      expect(seen.single.headers.containsKey('X-Grigri-Dev-User'), isFalse);
-    });
-
     test('a refused session start is a 401', () async {
       final api = apiWith((_) async => json({'error': 'signed out'}, 401));
       await expectLater(
@@ -326,19 +318,6 @@ void main() {
         ).toString(),
         'http://10.0.2.2:4566',
       );
-    });
-
-    test('the dev sign-in is only for local builds without a client ID', () {
-      final local = Uri.parse('https://localhost:7189');
-      bool dev(String stage, String id, Uri origin) =>
-          AppConfig.isDevSignIn(stage: stage, webClientId: id, origin: origin);
-      expect(dev('', '', local), isTrue);
-      expect(dev('local', '', local), isTrue);
-      expect(dev('', 'web-id.apps.googleusercontent.com', local), isFalse);
-      expect(dev('rc', '', local), isFalse);
-      expect(dev('prod', '', local), isFalse);
-      expect(dev('', '', Uri.parse('https://rc.grigri.nu01.com')), isFalse);
-      expect(dev('', '', Uri.parse('https://grigri.nu01.com')), isFalse);
     });
   });
 
