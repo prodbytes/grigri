@@ -511,4 +511,7 @@ spec.
     - [Development environment](dev-environment.md): `devbox run ios-log`
       (`scripts/ios-log.sh`) copies the log file off the iPhone over USB
       (`--follow`, `--previous`), like `android-log`.
-
+34. **Brazilian Portuguese would be better (than European).** `app_pt.arb`
+    is rewritten in Brazilian Portuguese (você; Salvar, Sair, celular,
+    Buscar; esportiva, academia, costuras, móveis, pico), and the picker
+    calls it "Português (Brasil)" ([i18n](i18n.md)).
