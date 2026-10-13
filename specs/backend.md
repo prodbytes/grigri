@@ -50,7 +50,8 @@ who are members, or by an admin.
   sends a Google ID token once to `POST /api/session`; the function
   verifies it (with [jose](https://github.com/panva/jose): RS256 against
   Google's keys, cached while the function stays warm; issuer, audience
-  the web client ID, expiry) and returns an opaque session token (32
+  the web client ID or, for iPhones, one of the stage's iOS client IDs,
+  expiry) and returns an opaque session token (32
   random bytes), stored only as its SHA-256 hash. Every other route but
   `GET /api/health` sends it as a bearer token, and the function reads
   the session (one DynamoDB read) before routing; a missing, unknown or

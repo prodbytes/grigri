@@ -3,7 +3,7 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, type JWK, SignJWT } from
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { Auth, type AuthConfig, hashToken, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
-import { type GoogleIdentity, googleVerifier, InvalidIdToken } from '../src/google.js';
+import { type GoogleIdentity, googleVerifier, InvalidIdToken, parseClientIds } from '../src/google.js';
 import { Router } from '../src/router.js';
 import { FakeStore } from './fake-store.js';
 
@@ -42,6 +42,28 @@ describe('googleVerifier', () => {
     const expected: GoogleIdentity = { subject: 'https://accounts.google.com#1001', email: 'ada@example.com', emailVerified: true };
     expect(await verify(await idToken())).toEqual(expected);
     expect(await verify(await idToken({}, { iss: 'accounts.google.com' }))).toEqual(expected);
+  });
+
+  it('also accepts tokens issued to the iOS clients (an iPhone\'s), and only those', async () => {
+    const IOS = '123456789-ios.apps.googleusercontent.com';
+    const verify = googleVerifier(AUD, jwks, [IOS]);
+    expect((await verify(await idToken({}, { aud: IOS }))).subject).toBe('https://accounts.google.com#1001');
+    expect((await verify(await idToken())).subject).toBe('https://accounts.google.com#1001');
+    await expect(verify(await idToken({}, { aud: 'someone-else.apps.googleusercontent.com' }))).rejects.toBeInstanceOf(
+      InvalidIdToken,
+    );
+    // Without the iOS client, its tokens are refused.
+    await expect(googleVerifier(AUD, jwks)(await idToken({}, { aud: IOS }))).rejects.toBeInstanceOf(InvalidIdToken);
+    // No web client (dev mode): nothing is accepted, iOS clients or not.
+    await expect(googleVerifier('', jwks, [IOS])(await idToken({}, { aud: IOS }))).rejects.toBeInstanceOf(InvalidIdToken);
+  });
+
+  it('reads client IDs from a comma-separated setting', () => {
+    expect(parseClientIds(' a.apps.googleusercontent.com, ,b.apps.googleusercontent.com,')).toEqual([
+      'a.apps.googleusercontent.com',
+      'b.apps.googleusercontent.com',
+    ]);
+    expect(parseClientIds(undefined)).toEqual([]);
   });
 
   it('keeps the account name, tidied, for a new profile', async () => {

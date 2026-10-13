@@ -11,7 +11,7 @@ import { Api, type Photos } from './api.js';
 import { Auth, type AuthConfig } from './auth.js';
 import { rbacrAdminCheck } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
-import { googleVerifier } from './google.js';
+import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
 import { Store } from './store/store.js';
@@ -80,7 +80,7 @@ const authConfig: AuthConfig = {
   // Admins are whoever rbacr says holds grigri's admin role.
   isAdmin: rbacrAdminCheck({ url: env.RBACR_URL ?? '', token: env.RBACR_TOKEN ?? '' }),
 };
-const auth = new Auth({ store, verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? ''), config: authConfig });
+const auth = new Auth({ store, verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? '', undefined, parseClientIds(env.GOOGLE_IOS_CLIENT_IDS)), config: authConfig });
 // Live updates: hints to IoT Core in AWS; locally, over MQTT to Floci's
 // broker (its HTTP Publish doesn't reach subscribers). IOT_ENDPOINT is
 // where the app connects; empty: live updates off.

@@ -489,4 +489,13 @@ spec.
     - [Deploy](deploy.md): the API stack's `ApiDomain` output is
       `<id>.execute-api.<region>.amazonaws.com` (it lacked the region),
       the `/api/*` origin the site stack takes as `ApiDomainName`.
+32. **Google sign-in on the iPhone opens Google's popup but never enters
+    the app.** The API took only tokens issued to the web client, but on
+    iOS Google issues the ID token to the app's iOS client, so every
+    iPhone sign-in got a 401.
+    - [API](api.md), [sign-in](sign-in.md), [backend](backend.md):
+      `POST /api/session` also takes tokens issued to the stage's iOS
+      clients (template parameter `GoogleIosClientIds`, from the
+      repository variables in Deploy and Deploy RC; `scripts/deploy.sh`'s
+      optional `GOOGLE_IOS_CLIENT_IDS`), never without a web client.
 
