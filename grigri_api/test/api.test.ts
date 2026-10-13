@@ -94,6 +94,24 @@ describe('access', () => {
     expect((await call(ben, 'GET', '/api/me')).climber.name).toBe(NO_NAME);
   });
 
+  it('GET /api/me has my roles from rbacr, or null when it can\'t say', async () => {
+    expect((await call(ada, 'GET', '/api/me')).roles).toBeNull();
+    const asked: string[] = [];
+    const withRoles = new Api({
+      store: store.asStore(),
+      photos: { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} },
+      auth,
+      roles: async (email) => {
+        asked.push(email);
+        return email === root.email ? ['admin', 'root'] : [];
+      },
+      config: { stage: 'local', version: '0.1.2' },
+      clock: () => now,
+    });
+    expect(await withRoles.handle('GET', '/api/me', { caller: root, body: undefined, query: {} })).toMatchObject({ admin: true, roles: ['admin', 'root'] });
+    expect(asked).toEqual([root.email]);
+  });
+
   it('two first loads at once make one profile', async () => {
     const [a, b] = await Promise.all([call(ada, 'GET', '/api/me'), call(ada, 'GET', '/api/me')]);
     expect(a.climber.id).toBe(b.climber.id);

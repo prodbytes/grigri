@@ -1354,13 +1354,7 @@ abstract class AppLocalizations {
   /// **'Roles'**
   String get roles;
 
-  /// Roles card when signed out.
-  ///
-  /// In en, this message translates to:
-  /// **'Not signed in: your roles show here once you sign in.'**
-  String get rolesSignedOut;
-
-  /// Roles card when loading the roles failed. rbacr is the roles service: keep its name.
+  /// Roles card: the API couldn't get my roles from rbacr (with Retry).
   ///
   /// In en, this message translates to:
   /// **'Couldn\'t get your roles from rbacr.'**
@@ -1371,12 +1365,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No roles in Grigri yet.'**
   String get noRoles;
-
-  /// Which account the roles belong to.
-  ///
-  /// In en, this message translates to:
-  /// **'As {email}'**
-  String rolesAs(String email);
 }
 
 class _AppLocalizationsDelegate

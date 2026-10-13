@@ -208,8 +208,6 @@
   "approveMessage": "Entra em {plan} agora, como se o grupo todo tivesse dito sim.",
   "adminJoined": "{name} entrou em {plan}.",
   "roles": "Funções",
-  "rolesSignedOut": "Você não entrou: suas funções aparecem aqui quando você entrar.",
   "rolesFailed": "Não foi possível buscar suas funções no rbacr.",
-  "noRoles": "Nenhuma função no Grigri ainda.",
-  "rolesAs": "Como {email}"
+  "noRoles": "Nenhuma função no Grigri ainda."
 }

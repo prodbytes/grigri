@@ -208,8 +208,6 @@
   "approveMessage": "Cette personne rejoint {plan} maintenant, comme si tout le groupe avait dit oui.",
   "adminJoined": "{name} a rejoint {plan}.",
   "roles": "Rôles",
-  "rolesSignedOut": "Non connecté : tes rôles apparaîtront ici une fois connecté.",
   "rolesFailed": "Impossible de récupérer tes rôles depuis rbacr.",
-  "noRoles": "Pas encore de rôle dans Grigri.",
-  "rolesAs": "En tant que {email}"
+  "noRoles": "Pas encore de rôle dans Grigri."
 }

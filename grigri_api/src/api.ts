@@ -17,6 +17,7 @@ import {
 } from './domain/model.js';
 import * as rules from './domain/rules.js';
 import { asObject, id, messageText, parseDate, planInput, profileInput } from './domain/validate.js';
+import type { RolesLookup } from './rbacr.js';
 import { type Params, Router } from './router.js';
 import { type Delivery, type Realtime, hintsFor } from './realtime.js';
 import { Conflict, type LoadedPlan, type Store } from './store/store.js';
@@ -51,6 +52,8 @@ export interface Deps {
   config: Config;
   /** Live updates' hints (realtime.ts); none: off. */
   realtime?: Realtime;
+  /** My roles in Grigri, from rbacr (rbacr.ts); none: unknown. */
+  roles?: RolesLookup;
   clock?: () => Date;
 }
 
@@ -120,7 +123,15 @@ export class Api {
       return {};
     });
 
-    r('GET /api/me', 'caller', async (_req, s) => ({ climber: await this.myProfile(s), admin: s.caller.admin }));
+    r('GET /api/me', 'caller', async (_req, s) => {
+      const email = s.caller.email;
+      const [climber, roles] = await Promise.all([
+        this.myProfile(s),
+        email && deps.roles ? deps.roles(email) : Promise.resolve(null),
+      ]);
+      // roles: my roles in Grigri from rbacr, or null when it can't say.
+      return { climber, admin: s.caller.admin, roles };
+    });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
     r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });

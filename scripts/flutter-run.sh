@@ -5,7 +5,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../grigri_app"
-GRIGRI_DEV_RUN=1 source ../scripts/dart-defines.sh
+source ../scripts/dart-defines.sh
 source ../scripts/version.sh
 # The About dialog shows X.Y.Z, Z being when this run started.
 exec flutter run ${DART_DEFINES[@]+"${DART_DEFINES[@]}"} --dart-define="GRIGRI_VERSION=$VERSION" "$@"

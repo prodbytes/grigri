@@ -208,8 +208,6 @@
   "approveMessage": "S'uneix a {plan} ara, com si tot el grup hagués dit que sí.",
   "adminJoined": "{name} s'ha unit a {plan}.",
   "roles": "Rols",
-  "rolesSignedOut": "Sense sessió iniciada: els teus rols apareixeran aquí quan iniciïs la sessió.",
   "rolesFailed": "No s'han pogut obtenir els teus rols de rbacr.",
-  "noRoles": "Encara no tens rols a Grigri.",
-  "rolesAs": "Com a {email}"
+  "noRoles": "Encara no tens rols a Grigri."
 }

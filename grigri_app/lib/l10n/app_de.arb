@@ -208,8 +208,6 @@
   "approveMessage": "Die Person kommt jetzt zu {plan} dazu, als hätten alle in der Gruppe zugesagt.",
   "adminJoined": "{name} ist jetzt bei {plan} dabei.",
   "roles": "Rollen",
-  "rolesSignedOut": "Nicht angemeldet: Deine Rollen erscheinen hier, sobald du dich anmeldest.",
   "rolesFailed": "Deine Rollen konnten nicht von rbacr geladen werden.",
-  "noRoles": "Noch keine Rollen in Grigri.",
-  "rolesAs": "Als {email}"
+  "noRoles": "Noch keine Rollen in Grigri."
 }

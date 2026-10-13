@@ -757,17 +757,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roles => 'Roles';
 
   @override
-  String get rolesSignedOut =>
-      'Not signed in: your roles show here once you sign in.';
-
-  @override
   String get rolesFailed => 'Couldn\'t get your roles from rbacr.';
 
   @override
   String get noRoles => 'No roles in Grigri yet.';
-
-  @override
-  String rolesAs(String email) {
-    return 'As $email';
-  }
 }

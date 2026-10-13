@@ -63,6 +63,12 @@ An admin can approve or reject any join request.
   production's rbacr (https://rbacr.nu01.com). Locally the API asks the
   local rbacr with `.env`'s `RBACR_TOKEN`, and in dev mode the header's
   (or `devUser`'s) email counts as verified.
+- **Roles**: `GET /api/me` also gives my [roles](roles.md), with the same
+  token: `POST <RbacrUrl>/api/roles` `{email}` (my verified email), my
+  effective roles in the `grigri` system plus my global ones (`root`),
+  sorted, without duplicates; kept 60 s per Lambda instance like the
+  admin answer. No token, an error or a timeout (2 s) gives `null`, never
+  kept. Without a verified email, `null` too.
 
 ## Sessions
 
@@ -169,7 +175,7 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `POST /api/session` | body `{"idToken"}` (dev mode: or `{"devUser"}`) → `{"token", "expiresAt"}` (no auth; see [Sessions](#sessions)) |
 | `DELETE /api/session` | sign out: this session ends. → `{}` |
 | `DELETE /api/sessions` | sign out everywhere: all my sessions end. → `{}` |
-| `GET /api/me` | `{"climber": Climber, "admin": bool}`. The first time, it creates my profile from my Google account: the session's name (`Climber` when the session has none, as sessions from before names were kept), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
+| `GET /api/me` | `{"climber": Climber, "admin": bool, "roles": [string] \| null}`. `roles`: my roles in Grigri from rbacr (see **Roles** above), or null when it can't say. The first time, it creates my profile from my Google account: the session's name (`Climber` when the session has none, as sessions from before names were kept), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
 | `GET /api/realtime` | where [live updates](#live-updates) come from: `{"url": "wss://<IoT endpoint>/mqtt", "authorizer": "<prefix>-api-realtime" (empty locally), "topic": "grigri/<stage>/climbers/<my climber id>/#", "clientIdPrefix": "<my climber id>-"}`, or `{"url": null}` when they're off |
 | `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars, age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
 | `GET /api/discover` | plans to swipe on: upcoming (start > now), I'm not in, I haven't passed or asked; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known) |

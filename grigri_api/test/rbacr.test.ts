@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { rbacrAdminCheck } from '../src/rbacr.js';
+import { rbacrAdminCheck, rbacrRoles } from '../src/rbacr.js';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -56,6 +56,45 @@ describe('rbacr admin check', () => {
     const fetch = vi.fn(async () => json(200, { allowed: true }));
     expect(await rbacrAdminCheck({ url: 'https://r', token: ' ', fetch })('a@example.com')).toBe(false);
     expect(await rbacrAdminCheck({ url: '', token: 't', fetch })('a@example.com')).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('rbacr roles', () => {
+  it('asks rbacr for my roles: grigri\'s and the global ones, sorted', async () => {
+    const fetch = vi.fn(async () =>
+      json(200, { email: 'a@example.com', globalRoles: ['root'], roles: { grigri: ['admin', 'member'], other: ['boss'] } }),
+    );
+    const roles = rbacrRoles({ url: 'https://rbacr.example.com/', token: 'rbacr_abc', fetch });
+    expect(await roles('A@Example.com')).toEqual(['admin', 'member', 'root']);
+    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://rbacr.example.com/api/roles');
+    expect((init.headers as Record<string, string>).authorization).toBe('Bearer rbacr_abc');
+    expect(JSON.parse(init.body as string)).toEqual({ email: 'a@example.com' });
+  });
+
+  it('caches for a minute; a failure is null and never cached', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    let now = 0;
+    const ok = vi.fn(async () => json(200, { globalRoles: [], roles: {} }));
+    const roles = rbacrRoles({ url: 'https://r', token: 't', fetch: ok, clock: () => now });
+    expect(await roles('a@example.com')).toEqual([]);
+    await roles('a@example.com');
+    expect(ok).toHaveBeenCalledTimes(1);
+    now = 60_001;
+    await roles('a@example.com');
+    expect(ok).toHaveBeenCalledTimes(2);
+    const down = vi.fn(async () => json(503, {}));
+    const failing = rbacrRoles({ url: 'https://r', token: 't', fetch: down });
+    expect(await failing('a@example.com')).toBeNull();
+    expect(await failing('a@example.com')).toBeNull();
+    expect(down).toHaveBeenCalledTimes(2);
+  });
+
+  it('without a token or URL it can\'t say, and rbacr is never called', async () => {
+    const fetch = vi.fn(async () => json(200, {}));
+    expect(await rbacrRoles({ url: 'https://r', token: '', fetch })('a@example.com')).toBeNull();
+    expect(await rbacrRoles({ url: '', token: 't', fetch })('a@example.com')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
   });
 });

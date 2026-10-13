@@ -542,3 +542,20 @@ spec.
       short words in every language: Find, Plans, Chats, Alerts, Me,
       Admin in English; a widget test checks they each fit on one line
       on a 360 dp phone.
+37. **Roles aren't shown on the profile page: verify the rbacr integration
+    and show the roles on the profile; I must be an admin.**
+    - Found: deployed and phone builds had no way to ask rbacr (the app
+      only asked with the local dev token, so the card always said "Not
+      signed in"), and the repository secret `GRIGRI_RBACR_TOKEN` isn't
+      set, so the deployed API can't ask rbacr and nobody is an admin.
+    - [Roles](roles.md), [API](api.md): `GET /api/me` returns `roles`, my
+      Grigri and global roles, which the API asks rbacr for
+      (`POST /api/roles`) with the root token it already uses for admins;
+      `null` when rbacr can't say. The app's Roles card shows them, with
+      Retry. The app no longer has an rbacr client: the `rbacr` package,
+      `lib/data/roles.dart`, the `RBACR_URL`/`RBACR_TOKEN` dart-defines,
+      the local rbacr's CORS and the Android `adb reverse` are gone
+      ([dev environment](dev-environment.md)). No new resource: one more
+      rbacr call per profile load, cached for a minute.
+    - Still needed: an rbacr API token owned by a root, as the repository
+      secret `GRIGRI_RBACR_TOKEN`, then a deploy.
