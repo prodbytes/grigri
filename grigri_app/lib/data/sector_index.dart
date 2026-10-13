@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' show cos, pi;
 
 import 'package:flutter/services.dart';
 
@@ -66,6 +67,28 @@ class SectorIndex {
       return byLength != 0 ? byLength : a.$2.name.compareTo(b.$2.name);
     });
     return [for (final r in ranked.take(limit)) r.$2];
+  }
+
+  /// The place with a point closest to [lat], [lon]; null when none has
+  /// one. Distances are flat-earth, near enough to pick the closest.
+  Sector? nearest(double lat, double lon) {
+    final cosLat = cos(lat * pi / 180);
+    Sector? best;
+    var bestD = double.infinity;
+    for (final e in _entries) {
+      final s = e.sector;
+      if (s.lat == null || s.lon == null) continue;
+      final dLat = s.lat! - lat;
+      var dLon = (s.lon! - lon).abs();
+      if (dLon > 180) dLon = 360 - dLon;
+      dLon *= cosLat;
+      final d = dLat * dLat + dLon * dLon;
+      if (d < bestD) {
+        bestD = d;
+        best = s;
+      }
+    }
+    return best;
   }
 
   static final spaces = RegExp(r"[\s,'’()\-/·.]+");

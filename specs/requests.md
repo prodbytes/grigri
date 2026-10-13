@@ -524,3 +524,21 @@ spec.
       The local API's dev mode stays, for scripts and `curl`.
     - [Dev environment](dev-environment.md), `.env.example`: a local
       build needs `GOOGLE_WEB_CLIENT_ID` to sign in.
+36. **Take the user's location from the phone or web instead of asking,
+    and ask only if it isn't found. Reduce the nav bar's font size, it's
+    breaking; use a shorter word than "Notifications", and short words
+    on every nav bar item.**
+    - [Matching](matching.md), [screens](screens.md): with no location or
+      areas on my profile, the app takes my location from the device
+      (`geolocator`: GPS or network on phones, the browser's geolocation
+      on the web; free) and saves it, named after the nearest place in
+      the sector index; the Discover hint asks only when the device
+      can't tell. The location picker has **Use my current location**.
+      Android asks for coarse location, iOS has a location usage string.
+    - [Deploy](deploy.md): the web app's `Permissions-Policy` allows
+      `geolocation=(self)` (it denied location); no new resources, no
+      added cost.
+    - [Screens](screens.md): the nav bar's labels are 11 pt (were 12) and
+      short words in every language: Find, Plans, Chats, Alerts, Me,
+      Admin in English; a widget test checks they each fit on one line
+      on a 360 dp phone.

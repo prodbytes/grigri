@@ -6,11 +6,15 @@ import 'package:flutter/painting.dart';
 import '../l10n/app_localizations.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
+import '../model/location.dart';
 import '../model/plan.dart';
+import '../model/sector.dart';
 import 'api.dart';
 import 'auth.dart';
+import 'device_location.dart';
 import 'preferences.dart';
 import 'realtime.dart';
+import 'sector_index.dart';
 
 /// A newcomer joined a plan I'm in, or I joined one: the match screen
 /// shows it.
@@ -64,7 +68,10 @@ class GrigriStore extends ChangeNotifier {
     ImageProvider Function(Uri url)? image,
     Preferences? preferences,
     RealtimeTransport? realtime,
+    this.deviceLocation = const DeviceLocation.none(),
+    Future<SectorIndex> Function()? places,
   }) : _image = image ?? ((url) => NetworkImage(url.toString())),
+       _places = places ?? SectorIndex.load,
        _preferences = preferences ?? Preferences.none() {
     _gradeSystem = _preferences.gradeSystem;
     final language = _preferences.language;
@@ -91,6 +98,12 @@ class GrigriStore extends ChangeNotifier {
   final Auth auth;
   final ImageProvider Function(Uri url) _image;
   final Preferences _preferences;
+
+  /// Where the phone or browser is, to fill in my location.
+  final DeviceLocation deviceLocation;
+
+  /// The sector index, to name a place the device found.
+  final Future<SectorIndex> Function() _places;
   late GradeSystem _gradeSystem;
 
   /// How I like grades written, everywhere in the app; kept on the device.
@@ -210,6 +223,7 @@ class GrigriStore extends ChangeNotifier {
     _session++;
     _me = null;
     _admin = false;
+    _locating = false;
     _climbers.clear();
     _plans.clear();
     _discover = [];
@@ -243,6 +257,7 @@ class GrigriStore extends ChangeNotifier {
       _climbers[climber.id] = climber;
       _phase = Phase.ready;
       notifyListeners();
+      unawaited(fillLocation());
       await refreshAll();
     } on ApiException catch (e) {
       if (_phase == Phase.signedOut || e.status == _stale) return;
@@ -788,6 +803,55 @@ class GrigriStore extends ChangeNotifier {
     // My grades, location and areas rank the deck.
     unawaited(refreshDiscover());
     return true;
+  }
+
+  bool _locating = false;
+
+  /// Taking my location from the device ([fillLocation]); Discover holds
+  /// off asking for it meanwhile.
+  bool get locating => _locating;
+
+  /// Where the device is, as a location named after the nearest place in
+  /// the sector index ("Near Siurana, Spain"), rounded to about 1 km; null
+  /// when the device can't tell.
+  Future<Location?> locateMe() async {
+    final here = await deviceLocation.current();
+    if (here == null) return null;
+    double round(double v) => (v * 100).roundToDouble() / 100;
+    Sector? near;
+    try {
+      near = (await _places()).nearest(here.lat, here.lon);
+    } on Object {
+      near = null;
+    }
+    final place = near == null
+        ? null
+        : near.area.isEmpty
+        ? near.fullName
+        : near.where;
+    return Location(
+      name: place == null ? l10n.currentLocation : l10n.nearPlace(place),
+      lat: round(here.lat),
+      lon: round(here.lon),
+    );
+  }
+
+  /// With no location or areas on my profile, takes my location from the
+  /// phone or browser and saves it, instead of asking; Discover asks only
+  /// when the device can't tell.
+  Future<void> fillLocation() async {
+    final me = _me;
+    if (me == null || me.location != null || me.areas.isNotEmpty) return;
+    final session = _session;
+    _locating = true;
+    notifyListeners();
+    final found = await locateMe();
+    if (session != _session) return;
+    _locating = false;
+    notifyListeners();
+    final now = _me;
+    if (found == null || now == null || now.location != null) return;
+    await saveProfile(now.copyWith(location: found));
   }
 
   // --- Chat --------------------------------------------------------------

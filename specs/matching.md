@@ -30,6 +30,20 @@ person, and a plan can take a whole group.
     brings my profile back without them). They rank my
     [deck](#the-deck).
 
+    The app **takes my location from the device instead of asking**:
+    when my profile has no location or areas, it asks the phone or
+    browser where it is once signed in (the system's location
+    permission prompt the first time; coarse, through `geolocator`, at
+    no running cost) and saves it as my location, rounded to 0.01°
+    (about 1 km) and named after the closest place in the
+    [sector index](sectors.md) ("Near Siurana, Spain"; "Where I am" with
+    no place in the index). Discover asks me to set where I climb only
+    when the device can't tell (no location service, permission refused,
+    no fix within 15 s). A location I already have is never replaced.
+    Android declares `ACCESS_COARSE_LOCATION`, iOS
+    `NSLocationWhenInUseUsageDescription`, and the web app's
+    `Permissions-Policy` allows `geolocation=(self)` ([deploy](deploy.md)).
+
   When is only the plan's: a profile has no availability or years
   climbing.
 - A **plan** ([Plan](../grigri_app/lib/model/plan.dart)) is one outing:

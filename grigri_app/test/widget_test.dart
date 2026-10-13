@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/api.dart';
 import 'package:grigri_app/data/auth.dart';
+import 'package:grigri_app/data/device_location.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/sector_index.dart';
@@ -26,11 +27,17 @@ Future<GrigriStore> pumpApp(
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
   Roles roles = const Roles.none(),
+  DeviceLocation deviceLocation = const DeviceLocation.none(),
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.6;
   addTearDown(tester.view.reset);
-  final store = storeFor(api, signedIn: signedIn, mode: mode);
+  final store = storeFor(
+    api,
+    signedIn: signedIn,
+    mode: mode,
+    deviceLocation: deviceLocation,
+  );
   await tester.pumpWidget(GrigriApp(store: store, roles: roles));
   await store.start();
   await tester.pumpAndSettle();
@@ -77,7 +84,7 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester, sampleApi());
-      await tapTab(tester, 'Profile');
+      await tapTab(tester, 'Me');
       await tester.tap(find.byTooltip('More'));
       await tester.pumpAndSettle();
       expect(find.text('Reset the demo data'), findsNothing);
@@ -135,6 +142,45 @@ void main() {
       expect(
         find.text('Set where you climb to see plans near you first.'),
         findsNothing,
+      );
+    });
+
+    testWidgets('without a location, the app takes it from the device', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final device = FakeDeviceLocation((lat: 41.512, lon: 1.004));
+      final store = await pumpApp(tester, api, deviceLocation: device);
+      final saved = api.climbers['me']!.location;
+      expect(saved?.name, 'Near Valle Alto, Spain');
+      // Rounded to about 1 km.
+      expect((saved?.lat, saved?.lon), (41.51, 1.0));
+      expect(store.me.location, saved);
+      expect(
+        find.text('Set where you climb to see plans near you first.'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('a location already set is left alone', (tester) async {
+      final api = sampleApi();
+      const home = Location(name: 'Home crag', lat: 1, lon: 2);
+      api.climbers['me'] = api.climbers['me']!.copyWith(location: home);
+      final device = FakeDeviceLocation((lat: 41.5, lon: 1));
+      await pumpApp(tester, api, deviceLocation: device);
+      expect(device.asked, 0);
+      expect(api.climbers['me']!.location, home);
+    });
+
+    testWidgets('when the device can\'t tell, the hint asks', (tester) async {
+      final api = sampleApi();
+      final device = FakeDeviceLocation(null);
+      await pumpApp(tester, api, deviceLocation: device);
+      expect(device.asked, 1);
+      expect(api.climbers['me']!.location, isNull);
+      expect(
+        find.text('Set where you climb to see plans near you first.'),
+        findsOneWidget,
       );
     });
 
@@ -202,7 +248,7 @@ void main() {
     ) async {
       final api = sampleApi();
       await pumpApp(tester, api);
-      await tapTab(tester, 'Notifications');
+      await tapTab(tester, 'Alerts');
       expect(find.text('Jules Fern wants to join'), findsOneWidget);
       expect(api.calls, contains('POST /api/notices/read'));
       await tester.tap(find.text('Jules Fern wants to join'));
@@ -402,7 +448,7 @@ void main() {
       await tester.tap(find.text('Find a plan'));
       await tester.pumpAndSettle();
       expect(find.text('No plans to join right now'), findsOneWidget);
-      await tapTab(tester, 'Notifications');
+      await tapTab(tester, 'Alerts');
       expect(find.text('Nothing yet'), findsOneWidget);
       await tapTab(tester, 'Admin');
       expect(find.text('No open requests'), findsOneWidget);
@@ -415,13 +461,7 @@ void main() {
       final labels = tester
           .widgetList<NavigationDestination>(find.byType(NavigationDestination))
           .map((d) => d.label);
-      expect(labels, [
-        'Discover',
-        'Plans',
-        'Chats',
-        'Notifications',
-        'Profile',
-      ]);
+      expect(labels, ['Find', 'Plans', 'Chats', 'Alerts', 'Me']);
     });
 
     testWidgets('admins approve any request', (tester) async {
@@ -482,7 +522,7 @@ void main() {
       tester.view.physicalSize = const Size(1080, 2280);
       tester.view.devicePixelRatio = 3;
       await tester.pumpAndSettle();
-      for (final tab in ['Notifications', 'Admin', 'Discover']) {
+      for (final tab in ['Alerts', 'Admin', 'Find']) {
         await tapTab(tester, tab);
       }
       expect(find.byType(NavigationDestination), findsNWidgets(6));
@@ -490,20 +530,31 @@ void main() {
   });
 
   group('profile', () {
-    testWidgets('the tabs are Discover, Plans, Chats, Notifications, Profile', (
-      tester,
-    ) async {
+    testWidgets('the tabs are Find, Plans, Chats, Alerts, Me', (tester) async {
       await pumpApp(tester, sampleApi());
       tester.view.physicalSize = const Size(1080, 2280);
       tester.view.devicePixelRatio = 3;
       await tester.pumpAndSettle();
       expect(find.byType(NavigationDestination), findsNWidgets(5));
+      // Every label fits on one line on a 360 dp wide phone.
+      final lines = {
+        for (final label in ['Find', 'Plans', 'Chats', 'Alerts', 'Me'])
+          tester
+              .getSize(
+                find.descendant(
+                  of: find.byType(NavigationBar),
+                  matching: find.text(label),
+                ),
+              )
+              .height,
+      };
+      expect(lines, hasLength(1));
     });
 
     testWidgets('the age can be left out of the profile', (tester) async {
       final api = sampleApi();
       final store = await pumpApp(tester, api);
-      await tapTab(tester, 'Profile');
+      await tapTab(tester, 'Me');
       expect(find.text('Pat Quill, 30'), findsOneWidget);
       await tester.tap(find.text('Edit profile'));
       await tester.pumpAndSettle();
@@ -523,7 +574,7 @@ void main() {
     ) async {
       final api = sampleApi();
       final store = await pumpApp(tester, api);
-      await tapTab(tester, 'Profile');
+      await tapTab(tester, 'Me');
       await tester.tap(find.text('Edit profile'));
       await tester.pumpAndSettle();
       final picker = find.widgetWithText(TextField, 'A crag or gym near there');
@@ -537,6 +588,18 @@ void main() {
       await tester.tap(find.text('Boulder gym'));
       await tester.pumpAndSettle();
       expect(find.text('Boulder gym, Barcelona, Spain'), findsOneWidget);
+
+      // The device can't tell where it is (the default here): it says so.
+      await tester.tap(find.text('Boulder gym, Barcelona, Spain'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Use my current location'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't tell where you are. Search for a place instead."),
+        findsOneWidget,
+      );
+      await tester.tap(find.byType(CloseButton));
+      await tester.pumpAndSettle();
 
       await tester.ensureVisible(find.text('Add an area'));
       await tester.tap(find.text('Add an area'));
@@ -659,7 +722,7 @@ void main() {
   group('the profile ends with my roles, from rbacr', () {
     Future<void> openProfile(WidgetTester tester, Roles roles) async {
       await pumpApp(tester, sampleApi(), roles: roles);
-      await tapTab(tester, 'Profile');
+      await tapTab(tester, 'Me');
       await tester.scrollUntilVisible(find.text('ROLES'), 200);
     }
 
@@ -721,7 +784,7 @@ void main() {
         tester.platformDispatcher.localesTestValue = const [Locale('de', 'DE')];
         addTearDown(tester.platformDispatcher.clearLocalesTestValue);
         await pumpApp(tester, sampleApi());
-        expect(find.text('Entdecken'), findsOneWidget);
+        expect(find.text('Suche'), findsOneWidget);
         expect(find.text('Pläne entdecken'), findsOneWidget);
 
         tester.platformDispatcher.localesTestValue = const [Locale('ja')];
@@ -734,7 +797,7 @@ void main() {
       tester,
     ) async {
       final store = await pumpApp(tester, sampleApi());
-      await tapTab(tester, 'Profile');
+      await tapTab(tester, 'Me');
       await tester.scrollUntilVisible(find.text('System default'), 200);
       await tester.tap(find.text('System default'));
       await tester.pumpAndSettle();
@@ -745,11 +808,11 @@ void main() {
       expect(find.text('Editar perfil'), findsOneWidget);
       expect(find.text('Idioma'), findsOneWidget);
       expect(find.text('Español'), findsOneWidget);
-      await tapTab(tester, 'Descubrir');
+      await tapTab(tester, 'Buscar');
       expect(find.text('Descubre planes'), findsOneWidget);
       expect(find.text('EL PLAN'), findsWidgets);
 
-      await tapTab(tester, 'Perfil');
+      await tapTab(tester, 'Yo');
       await tester.scrollUntilVisible(find.text('Español'), 200);
       await tester.tap(find.text('Español'));
       await tester.pumpAndSettle();

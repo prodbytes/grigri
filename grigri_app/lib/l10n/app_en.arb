@@ -214,7 +214,7 @@
   "@signInWithGoogle": {
     "description": "Button: sign in with a Google account."
   },
-  "tabDiscover": "Discover",
+  "tabDiscover": "Find",
   "@tabDiscover": {
     "description": "Bottom tab: the deck of plans to join."
   },
@@ -226,11 +226,11 @@
   "@tabChats": {
     "description": "Bottom tab: group chats."
   },
-  "tabNotifications": "Notifications",
+  "tabNotifications": "Alerts",
   "@tabNotifications": {
     "description": "Bottom tab: notifications."
   },
-  "tabProfile": "Profile",
+  "tabProfile": "Me",
   "@tabProfile": {
     "description": "Bottom tab: my profile."
   },
@@ -466,6 +466,27 @@
   "@noPlacesFound": {
     "description": "The location search found nothing."
   },
+  "useCurrentLocation": "Use my current location",
+  "@useCurrentLocation": {
+    "description": "Location picker: take where the phone or browser is."
+  },
+  "locationNotFound": "Couldn't tell where you are. Search for a place instead.",
+  "@locationNotFound": {
+    "description": "The device could not tell where I am."
+  },
+  "nearPlace": "Near {place}",
+  "@nearPlace": {
+    "description": "My location taken from the device, named after the nearest place in the index: \"Near Siurana, Spain\".",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocation": "Where I am",
+  "@currentLocation": {
+    "description": "My location taken from the device, when no place in the index is near it."
+  },
   "distanceKm": "{km, plural, =0{Under 1 km from you} other{{km} km from you}}",
   "@distanceKm": {
     "description": "How far a plan is from me, in kilometres (0 means under 1 km).",
@@ -698,7 +719,7 @@
   "@keepSwiping": {
     "description": "Button: close the match screen."
   },
-  "notificationsTitle": "Notifications",
+  "notificationsTitle": "Alerts",
   "@notificationsTitle": {
     "description": "Title of the Notifications tab."
   },

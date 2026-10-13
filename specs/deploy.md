@@ -75,8 +75,9 @@ and a Content Security Policy:
   photos bucket (`https://<bucket>.s3.us-east-1.amazonaws.com`), [live
   updates](live-updates.md) over WebSocket to the account's IoT endpoint
   (`wss://<id>-ats.iot.us-east-1.amazonaws.com`, the `IotEndpoint`
-  parameter), and no framing. `Permissions-Policy` denies the camera, microphone and
-  location until a feature needs them.
+  parameter), and no framing. `Permissions-Policy` denies the camera and
+  microphone, and allows location to the app itself (`geolocation=(self)`),
+  which fills in [where I climb](matching.md) from the browser.
 - `/`: only the index page's redirect script, by its hash.
 - `/api/*` and `/photos/*`: AWS's managed security headers policy.
 

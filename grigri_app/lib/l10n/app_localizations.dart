@@ -373,7 +373,7 @@ abstract class AppLocalizations {
   /// Bottom tab: the deck of plans to join.
   ///
   /// In en, this message translates to:
-  /// **'Discover'**
+  /// **'Find'**
   String get tabDiscover;
 
   /// Bottom tab: my plans.
@@ -391,13 +391,13 @@ abstract class AppLocalizations {
   /// Bottom tab: notifications.
   ///
   /// In en, this message translates to:
-  /// **'Notifications'**
+  /// **'Alerts'**
   String get tabNotifications;
 
   /// Bottom tab: my profile.
   ///
   /// In en, this message translates to:
-  /// **'Profile'**
+  /// **'Me'**
   String get tabProfile;
 
   /// Bottom tab for admins.
@@ -682,6 +682,30 @@ abstract class AppLocalizations {
   /// **'No places found'**
   String get noPlacesFound;
 
+  /// Location picker: take where the phone or browser is.
+  ///
+  /// In en, this message translates to:
+  /// **'Use my current location'**
+  String get useCurrentLocation;
+
+  /// The device could not tell where I am.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t tell where you are. Search for a place instead.'**
+  String get locationNotFound;
+
+  /// My location taken from the device, named after the nearest place in the index: "Near Siurana, Spain".
+  ///
+  /// In en, this message translates to:
+  /// **'Near {place}'**
+  String nearPlace(String place);
+
+  /// My location taken from the device, when no place in the index is near it.
+  ///
+  /// In en, this message translates to:
+  /// **'Where I am'**
+  String get currentLocation;
+
   /// How far a plan is from me, in kilometres (0 means under 1 km).
   ///
   /// In en, this message translates to:
@@ -913,7 +937,7 @@ abstract class AppLocalizations {
   /// Title of the Notifications tab.
   ///
   /// In en, this message translates to:
-  /// **'Notifications'**
+  /// **'Alerts'**
   String get notificationsTitle;
 
   /// Notifications, empty: title.

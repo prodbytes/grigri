@@ -285,9 +285,10 @@ Resources:
             Override: true
         CustomHeadersConfig:
           Items:
-            # Nothing yet needs the camera, microphone or location.
+            # The app takes where I climb from the browser's location
+            # (specs/matching.md); nothing needs the camera or microphone.
             - Header: Permissions-Policy
-              Value: camera=(), microphone=(), geolocation=()
+              Value: camera=(), microphone=(), geolocation=(self)
               Override: true
 
   # The index page (/): its only script is the redirect to /app/, allowed

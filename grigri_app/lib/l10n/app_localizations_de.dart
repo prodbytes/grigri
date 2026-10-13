@@ -164,7 +164,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signInWithGoogle => 'Mit Google anmelden';
 
   @override
-  String get tabDiscover => 'Entdecken';
+  String get tabDiscover => 'Suche';
 
   @override
   String get tabPlans => 'Pläne';
@@ -173,10 +173,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tabChats => 'Chats';
 
   @override
-  String get tabNotifications => 'Mitteilungen';
+  String get tabNotifications => 'Infos';
 
   @override
-  String get tabProfile => 'Profil';
+  String get tabProfile => 'Ich';
 
   @override
   String get tabAdmin => 'Admin';
@@ -337,6 +337,21 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noPlacesFound => 'Keine Orte gefunden';
+
+  @override
+  String get useCurrentLocation => 'Meinen aktuellen Standort verwenden';
+
+  @override
+  String get locationNotFound =>
+      'Dein Standort ließ sich nicht bestimmen. Such stattdessen einen Ort.';
+
+  @override
+  String nearPlace(String place) {
+    return 'In der Nähe von $place';
+  }
+
+  @override
+  String get currentLocation => 'Wo ich bin';
 
   @override
   String distanceKm(int km) {
@@ -501,7 +516,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get keepSwiping => 'Weiter wischen';
 
   @override
-  String get notificationsTitle => 'Mitteilungen';
+  String get notificationsTitle => 'Hinweise';
 
   @override
   String get nothingYetTitle => 'Noch nichts';
