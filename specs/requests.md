@@ -542,3 +542,7 @@ spec.
       short words in every language: Find, Plans, Chats, Alerts, Me,
       Admin in English; a widget test checks they each fit on one line
       on a 360 dp phone.
+37. **Make the shade of green of the primary color a little darker.**
+    - [Theme](theme.md): olive, the primary, is `#8F9B5D` (was
+      `#A3B06A`), about 12% darker; dark text on it (`night`) keeps a
+      contrast of about 5.9:1.
