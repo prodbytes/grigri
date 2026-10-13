@@ -58,6 +58,9 @@ dependencies:
   # which can't build under devbox's Nix toolchain on macOS (so
   # `flutter test` would fail there). The app doesn't use it.
   path_provider_foundation: 2.5.1
+  # Where the log file is kept on Android and iOS (lib/log_file_io.dart).
+  path_provider: ^2.1.5
+  mqtt_client: 10.11.11
 
 dev_dependencies:
   flutter_test:

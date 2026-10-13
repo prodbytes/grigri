@@ -52,6 +52,7 @@ export class Store implements SessionStore {
         subject: s.subject,
         ...(s.email ? { email: s.email } : {}),
         emailVerified: s.emailVerified,
+        ...(s.name ? { name: s.name } : {}),
         createdAt: s.createdAt,
         lastUsedAt: s.lastUsedAt,
         // The table's TTL attribute: DynamoDB deletes the item after it.
@@ -76,6 +77,7 @@ export class Store implements SessionStore {
       subject: Item.subject as string,
       ...(typeof Item.email === 'string' ? { email: Item.email } : {}),
       emailVerified: Item.emailVerified === true,
+      ...(typeof Item.name === 'string' ? { name: Item.name } : {}),
       createdAt: Item.createdAt as string,
       lastUsedAt: Item.lastUsedAt as string,
       ttl: Item.ttl as number,

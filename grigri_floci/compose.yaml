@@ -56,6 +56,11 @@ services:
       # Lambda containers are named grigri-lambda-*, so shutdown can find
       # them (process-compose.yaml).
       FLOCI_SERVICES_LAMBDA_CONTAINER_NAME_PREFIX: grigri-lambda
+      # Live updates: Floci's MQTT broker, which serves MQTT over WebSocket
+      # at /mqtt on its HTTP and HTTPS ports (wss://local.grigri.nu01.com:2543/mqtt),
+      # started with Floci rather than on the first IoT call (05-api.sh
+      # makes one too).
+      FLOCI_SERVICES_IOT_MQTT_AUTO_START: "true"
       # 05-api.sh deploys a stack and starts the function (pulling the
       # Lambda image on a first run): longer than the default 30 s.
       FLOCI_INIT_HOOKS_TIMEOUT_SECONDS: "300"

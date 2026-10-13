@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { Api } from '../src/api.js';
+import { Api, NO_NAME } from '../src/api.js';
 import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { FakeStore } from './fake-store.js';
@@ -59,7 +59,7 @@ beforeEach(async () => {
   };
   auth = new Auth({
     store: store.asStore(),
-    verify: async () => ({ subject: 'https://accounts.google.com#42', email: 'ada@example.com', emailVerified: true }),
+    verify: async () => ({ subject: 'https://accounts.google.com#42', email: 'ada@example.com', emailVerified: true, name: 'Ada Example' }),
     config: { devMode: false, isAdmin: async (email) => email === 'root@example.com' },
     clock: () => now,
   });
@@ -77,11 +77,26 @@ describe('access', () => {
   });
 
   it('a caller without a profile gets 409 no profile, except me and photos', async () => {
-    expect(await call(ada, 'GET', '/api/me')).toEqual({ climber: null, admin: false });
     await fails(call(ada, 'GET', '/api/discover'), 409, /no profile/);
     await fails(call(ada, 'GET', '/api/plans'), 409, /no profile/);
     const photo = await call(ada, 'POST', '/api/photos', { kind: 'profile', contentType: 'image/jpeg' });
     expect(photo.key).toMatch(new RegExp(`^${subjectHash(ada.subject)}/profile/[A-Za-z0-9_-]{16}\\.jpg$`));
+  });
+
+  it('GET /api/me creates my profile the first time, from my Google name', async () => {
+    const named = { ...ada, name: 'Ada Example' };
+    const { climber, admin } = await call(named, 'GET', '/api/me');
+    expect(admin).toBe(false);
+    expect(climber).toEqual({ id: expect.stringMatching(/^[A-Za-z0-9_-]{16}$/), name: 'Ada Example', bio: '', levels: {}, gear: [], gearPhotos: [] });
+    expect((await call(named, 'GET', '/api/me')).climber).toEqual(climber);
+    expect(await call(named, 'GET', '/api/discover')).toBeDefined();
+    // No name from Google (a session from before names were kept).
+    expect((await call(ben, 'GET', '/api/me')).climber.name).toBe(NO_NAME);
+  });
+
+  it('two first loads at once make one profile', async () => {
+    const [a, b] = await Promise.all([call(ada, 'GET', '/api/me'), call(ada, 'GET', '/api/me')]);
+    expect(a.climber.id).toBe(b.climber.id);
   });
 
   it('admin routes are admins only', async () => {
@@ -289,9 +304,9 @@ describe('sessions through the API', () => {
     expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(expiresAt).toBe('2031-05-01T10:00:00.000Z');
     const bearer = { authorization: `Bearer ${token}` };
-    expect(await request('GET', '/api/me', bearer)).toEqual({ climber: null, admin: false });
-    await request('PUT', '/api/me', bearer, profile('Ada'));
+    expect(await request('GET', '/api/me', bearer)).toMatchObject({ climber: { name: 'Ada Example' }, admin: false });
     expect(store.subjects.has('https://accounts.google.com#42')).toBe(true);
+    await request('PUT', '/api/me', bearer, profile('Ada'));
     expect(await request('DELETE', '/api/session', bearer)).toEqual({});
     await fails(request('GET', '/api/me', bearer), 401, /signed out/);
   });

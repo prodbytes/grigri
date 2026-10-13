@@ -147,7 +147,7 @@ update, leave, send, save the profile, and the admin's approve and
 reject), which call the API and update the cache with the answers. A
 failed action shows the server's message at the bottom of the screen; a
 401 tries fresh credentials once, then signs out; a 409 "no profile"
-goes back to creating one.
+loads my profile again (`GET /api/me`, which makes a new one).
 
 - **Production (GA) starts empty**: only real people's profiles and plans.
   RC and local get made-up climbers and plans from the backend's seed
@@ -164,17 +164,23 @@ goes back to creating one.
 
 ## Refreshing
 
-Until push notifications (MQTT) come, the app polls, and only what's on
-screen, while the app is in the foreground:
+While the app is in the foreground, [live updates](live-updates.md) (a
+hint over MQTT after each change that concerns me) refresh what changed,
+and the app also polls, only what's on screen, as a safety net:
 
 - after signing in: my profile, then my plans, my requests, the requests
   waiting for me, the deck, notifications (and, for admins, every open
   request);
 - a tab, when I open it (Discover its deck, Chats every chat's latest
   messages, Admin its requests), and every **15 seconds** my plans,
-  requests to review and notifications, plus the open tab;
+  requests to review and notifications, plus the open tab; every
+  **2 minutes** instead while the live connection is up;
 - an open **chat every 3 seconds**, asking only for messages after the
-  last one it has;
+  last one it has; every **minute** instead while the live connection is
+  up;
+- on a live update's hint, just what it names (a chat, requests,
+  notifications, my plans), and after the live connection comes back from
+  a drop, my plans, requests, notifications and loaded chats;
 - a plan's screen and chat load the plan (and its open requests) when
   they open.
 

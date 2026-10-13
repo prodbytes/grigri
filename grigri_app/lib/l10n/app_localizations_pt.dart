@@ -242,9 +242,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Seu perfil é sobre você: o que você escala e o equipamento que tem. O quando e o onde ficam para os planos, criados à parte em Planos.';
 
   @override
-  String get createProfile => 'Crie seu perfil';
-
-  @override
   String get takePhoto => 'Tirar uma foto';
 
   @override
@@ -255,10 +252,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get photoFailed => 'Não foi possível pegar essa foto';
-
-  @override
-  String get welcomeIntro =>
-      'Boas-vindas ao Grigri! Conte aos escaladores quem você é e o que escala: eles veem isso quando você pede para entrar nos planos deles.';
 
   @override
   String get addPhoto => 'Adicionar uma foto';
@@ -308,9 +301,6 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get addGearPhoto => 'Adicionar uma foto do equipamento';
-
-  @override
-  String get startClimbing => 'Começar a escalar';
 
   @override
   String get whereYouClimb => 'Onde você escala';

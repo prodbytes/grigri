@@ -5,7 +5,8 @@
 #   1. builds the Flutter web app for /app/ (make web, WEB_BASE_HREF=/app/)
 #   2. tests, builds and deploys the API (grigri_api/template.yaml, stack
 #      grigri-api / grigri-rc-api: the Lambda, its HTTP API and the
-#      DynamoDB table). Production starts empty and is never seeded; the
+#      DynamoDB table, and the live updates' IoT custom authorizer, with the
+#      account's IoT Data-ATS endpoint). Production starts empty and is never seeded; the
 #      RC is seeded with made-up test data after each deploy
 #      (scripts/seed.sh)
 #   3. deploys the site (CloudFormation grigri_infra/site.yaml:
@@ -36,6 +37,9 @@
 #                confirm AWS's subscription email.
 #   GOOGLE_WEB_CLIENT_ID the Google web OAuth client whose ID tokens the
 #                API accepts (also from .env; a public identifier)
+#   GOOGLE_IOS_CLIENT_IDS the Google iOS clients whose ID tokens the API
+#                accepts too, comma-separated (optional; an iPhone's
+#                token is its iOS client's)
 #   GRIGRI_RBACR_TOKEN an rbacr API token owned by an rbacr root, with
 #                which the API asks rbacr who holds grigri's admin role
 #                (also from .env; a secret in CI). Optional: without it
@@ -128,11 +132,32 @@ stack_output() { # stack_output <stack> <output key>
     --query "Stacks[0].Outputs[?OutputKey=='$2'].OutputValue" --output text
 }
 
+# A stack whose first create failed (ROLLBACK_COMPLETE) can't be updated,
+# only deleted; it holds nothing (its resources were rolled back, and
+# retained ones aren't in it), so it's deleted before deploying again.
+clear_failed_create() { # clear_failed_create <stack>
+  local status
+  status="$(aws cloudformation describe-stacks --stack-name "$1" \
+    --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)"
+  if [[ "$status" == ROLLBACK_COMPLETE ]]; then
+    echo "    $1 failed its first create; deleting it to create it again"
+    aws cloudformation delete-stack --stack-name "$1"
+    aws cloudformation wait stack-delete-complete --stack-name "$1"
+  fi
+}
+
 # Private settings: from the environment, else the private .env.
 if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
 fi
 GRIGRI_RBACR_TOKEN="${GRIGRI_RBACR_TOKEN:-}"
+# The iOS clients whose ID tokens the API also takes (an iPhone's token is
+# its iOS client's): optional, comma-separated; empties and spaces dropped.
+GOOGLE_IOS_CLIENT_IDS="$(tr -d ' ' <<<"${GOOGLE_IOS_CLIENT_IDS:-}" | tr -s ',' | sed 's/^,//; s/,$//')"
+if [[ -n "$GOOGLE_IOS_CLIENT_IDS" && ! "$GOOGLE_IOS_CLIENT_IDS" =~ ^[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com(,[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com)*$ ]]; then
+  echo "error: GOOGLE_IOS_CLIENT_IDS must be comma-separated Google OAuth client IDs" >&2
+  exit 1
+fi
 for name in HOSTED_ZONE_ID GRIGRI_HEALTH_EMAILS GOOGLE_WEB_CLIENT_ID; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
@@ -180,6 +205,15 @@ if ! aws s3api head-bucket --bucket "$ARTIFACT_BUCKET" >/dev/null 2>&1; then
   echo "  Redeploy grigri_infra/github-deploy.yaml (grigri_infra/README.md, one-time setup)." >&2
   exit 1
 fi
+# Live updates: the account's IoT Data-ATS endpoint, where the app connects
+# (MQTT over WebSocket). The API tells the app (GET /api/realtime) and the
+# site's CSP allows it (connect-src).
+IOT_ENDPOINT="$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --query endpointAddress --output text)"
+if [[ ! "$IOT_ENDPOINT" =~ ^[a-z0-9-]+\.iot\.[a-z0-9-]+\.amazonaws\.com$ ]]; then
+  echo "error: unexpected IoT endpoint '$IOT_ENDPOINT'" >&2
+  exit 1
+fi
+echo "    IoT endpoint: $IOT_ENDPOINT"
 # The site stack's photos bucket (site.yaml names it so), which the API,
 # deployed first, presigns uploads to.
 PHOTOS_BUCKET="$SITE_STACK-photos-$account"
@@ -227,12 +261,15 @@ aws cloudformation package --template-file grigri_api/template.yaml \
   --output-template-file "$packaged" >/dev/null
 # NAMED_IAM: the function's role is named <stack>-function (the deploy
 # roles may only manage <prefix>-* roles, with the boundary).
+clear_failed_create "$API_STACK"
 aws cloudformation deploy --stack-name "$API_STACK" \
   --template-file "$packaged" --capabilities CAPABILITY_NAMED_IAM \
   --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
+    "GoogleIosClientIds=$GOOGLE_IOS_CLIENT_IDS" \
     "RbacrToken=$GRIGRI_RBACR_TOKEN" "PhotosBucket=$PHOTOS_BUCKET" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
+    "IotEndpoint=$IOT_ENDPOINT" \
   --no-fail-on-empty-changeset
 rm -f "$packaged"
 api_domain="$(stack_output "$API_STACK" ApiDomain)"
@@ -247,11 +284,12 @@ fi
 # 3. The site
 echo "==> deploying $SITE_STACK"
 # AUTO_EXPAND: the template's Fn::ForEach (AWS::LanguageExtensions).
+clear_failed_create "$SITE_STACK"
 aws cloudformation deploy --stack-name "$SITE_STACK" \
   --template-file grigri_infra/site.yaml --capabilities CAPABILITY_AUTO_EXPAND \
   --parameter-overrides "DomainName=$DOMAIN" "Stage=$STAGE" \
     "HostedZoneId=$HOSTED_ZONE_ID" "ApiDomainName=$api_domain" \
-    "HealthNotificationEmails=$GRIGRI_HEALTH_EMAILS" \
+    "HealthNotificationEmails=$GRIGRI_HEALTH_EMAILS" "IotEndpoint=$IOT_ENDPOINT" \
   --no-fail-on-empty-changeset
 bucket="$(stack_output "$SITE_STACK" SiteBucketName)"
 distribution="$(stack_output "$SITE_STACK" DistributionId)"

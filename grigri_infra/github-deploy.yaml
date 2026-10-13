@@ -118,6 +118,14 @@ Resources:
                   - s3:DeleteObjectTagging
                   - s3:DeleteObject
                 Resource: !Sub arn:${AWS::Partition}:s3:::${Prefix}-web-photos-*/photos/*
+              # Live updates: the API publishes hints to the stage's
+              # climbers' MQTT topics only (grigri/<stage>/climbers/*).
+              - Sid: Hints
+                Effect: Allow
+                Action: iot:Publish
+                Resource: !Sub
+                  - arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:topic/grigri/${Stage}/climbers/*
+                  - Stage: !FindInMap [Stages, !Ref Prefix, Stage]
 
       # Where scripts/deploy.sh uploads the API's code (aws cloudformation
       # package --s3-bucket), one bucket per stage: the RC role can't write
@@ -153,7 +161,8 @@ Resources:
                   DaysAfterInitiation: 1
 
       # The stage's API stack (grigri_api/template.yaml): its Lambda
-      # function, HTTP API, DynamoDB table, log group and function role. A
+      # functions (the API's and the live updates' IoT authorizer), IoT
+      # authorizer, HTTP API, DynamoDB table, log groups and roles. A
       # second policy, since one managed policy holds at most 6,144
       # characters.
       ApiDeployPolicy&{Prefix}:
@@ -205,12 +214,33 @@ Resources:
                   - apigateway:POST
                   - apigateway:PUT
                   - apigateway:PATCH
-                  # Tagging is POST and DELETE on /tags/*.
+                  # Tagging is POST and DELETE on /tags/*, plus these on
+                  # creates (the HTTP API's stage).
                   - apigateway:DELETE
+                  - apigateway:TagResource
+                  - apigateway:UntagResource
                 Resource:
                   - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis
                   - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/apis/*
                   - !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}::/tags/*
+              # Live updates: the IoT custom authorizer (<prefix>-api-realtime),
+              # by name; the endpoint lookup (scripts/deploy.sh) has no
+              # resource to scope by.
+              - Sid: IotAuthorizers
+                Effect: Allow
+                Action:
+                  - iot:CreateAuthorizer
+                  - iot:UpdateAuthorizer
+                  - iot:DeleteAuthorizer
+                  - iot:DescribeAuthorizer
+                  - iot:TagResource
+                  - iot:UntagResource
+                  - iot:ListTagsForResource
+                Resource: !Sub arn:${AWS::Partition}:iot:${AWS::Region}:${AWS::AccountId}:authorizer/${Prefix}-*
+              - Sid: IotEndpoint
+                Effect: Allow
+                Action: iot:DescribeEndpoint
+                Resource: '*'
               # The table, by name. No DeleteTable and no item access: a
               # deploy can't drop or read people's data (the table is
               # DeletionPolicy Retain, so CloudFormation never deletes it).
