@@ -25,6 +25,7 @@ class Plan {
     this.lon,
     this.area = '',
     this.notes = '',
+    this.demo = false,
   });
 
   /// Given by the server; empty for a plan not created yet.
@@ -55,6 +56,10 @@ class Plan {
   final List<String> memberIds;
   final String notes;
 
+  /// Made up, to show how Grigri works (RC's and local's seed data): the
+  /// app says so wherever it shows it. Only the server sets it.
+  final bool demo;
+
   /// What the plan is called in lists and chats: where it is.
   String get title => place;
 
@@ -84,6 +89,7 @@ class Plan {
     grades: grades ?? this.grades,
     memberIds: memberIds ?? this.memberIds,
     notes: notes ?? this.notes,
+    demo: demo,
   );
 
   /// The plan as the API takes it (`POST /api/plans`, `PUT
@@ -116,6 +122,7 @@ class Plan {
     grades: GradeRange.fromJson((json['grades']! as Map).cast()),
     memberIds: [for (final m in json['memberIds']! as List) m as String],
     notes: json['notes'] as String? ?? '',
+    demo: json['demo'] == true,
   );
 }
 

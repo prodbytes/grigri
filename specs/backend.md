@@ -101,7 +101,9 @@ who are members, or by an admin.
 [grigri_api/seed/](../grigri_api/seed): nine made-up climbers (never real
 people), seven plans relative to now (always upcoming) and three open
 requests between them, ported from the app's former on-device demo
-without its answer "policies". Ids start with `seed-`. It runs inside the
+without its answer "policies". Ids start with `seed-`, and every seed
+profile and plan is marked `"demo": true` (stored on the item; the API
+never takes it from a request), so the app shows it as a demonstration. It runs inside the
 stage's function, invoked directly with `{"grigriSeed": true}` (the HTTP
 API can't send that event) by [scripts/seed.sh](../scripts/seed.sh):
 

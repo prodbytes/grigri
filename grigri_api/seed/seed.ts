@@ -30,7 +30,8 @@ export async function seed(store: Store, now: Date): Promise<SeedCounts> {
   const { doc, table } = store;
   const nowIso = now.toISOString();
 
-  for (const c of data.climbers) await store.saveProfile(c, undefined, now);
+  // All of it is made up: marked demo, so the app says so.
+  for (const c of data.climbers) await store.saveProfile({ ...c, demo: true }, undefined, now);
 
   for (const p of data.plans) {
     const { Item } = await doc.send(new GetCommand({ TableName: table, Key: key.plan(p.id) }));
@@ -38,7 +39,7 @@ export async function seed(store: Store, now: Date): Promise<SeedCounts> {
     // Real people who joined stay (after the seed's members).
     const real = (existing?.memberIds ?? []).filter((m) => !isSeed(m) && !p.memberIds.includes(m));
     const memberIds = [...p.memberIds, ...real];
-    const plan = { ...p, memberIds };
+    const plan = { ...p, memberIds, demo: true as const };
     await doc.send(new PutCommand({ TableName: table, Item: planItem(plan, ((Item?.version as number) ?? 0) + 1) }));
     for (const m of p.memberIds) {
       await doc.send(new PutCommand({ TableName: table, Item: { ...key.member(m, p.id), type: 'member', planId: p.id, time: nowIso } }));

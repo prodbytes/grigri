@@ -51,6 +51,8 @@
   "tabProfile": "Yo",
   "tabAdmin": "Admin",
   "thePlan": "El plan",
+  "demoTag": "Demo",
+  "demoNotice": "Demo: no son datos reales, solo una demostración para que veas cómo funciona Grigri.",
   "yourGrades": "Tu grado",
   "profileClimbs": "Escala",
   "profileGear": "Material",

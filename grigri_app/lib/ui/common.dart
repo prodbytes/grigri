@@ -151,6 +151,39 @@ class Tag extends StatelessWidget {
   }
 }
 
+/// Says a plan or profile is made up (`demo`): not real data, just a
+/// demonstration of how Grigri works.
+class DemoNotice extends StatelessWidget {
+  const DemoNotice({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Mountain.tan.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Mountain.tan.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.science_outlined, size: 18, color: Mountain.tan),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l.demoNotice,
+              style: const TextStyle(color: Mountain.sand, fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The plan, highlighted: what, where, when and which grades. On the
 /// swipe cards, the match screen and the chat.
 class PlanHighlight extends StatelessWidget {
@@ -191,6 +224,7 @@ class PlanHighlight extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (plan.demo) ...[const DemoNotice(), const SizedBox(height: 10)],
           Row(
             children: [
               Text(
@@ -410,12 +444,22 @@ class ClimberHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                climber.nameAndAge,
-                style: text.titleMedium?.copyWith(
-                  color: Mountain.sand,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      climber.nameAndAge,
+                      style: text.titleMedium?.copyWith(
+                        color: Mountain.sand,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  if (climber.demo) ...[
+                    const SizedBox(width: 8),
+                    Tag(context.l10n.demoTag, color: Mountain.tan),
+                  ],
+                ],
               ),
               if (subtitle != null && subtitle!.isNotEmpty)
                 Text(
@@ -431,26 +475,29 @@ class ClimberHeader extends StatelessWidget {
 }
 
 /// A climber's whole profile in a bottom sheet.
-Future<void> showProfileSheet(BuildContext context, Climber climber) =>
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Mountain.surface,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClimberHeader(climber, radius: 30),
-              const SizedBox(height: 14),
-              ProfileDetails(climber),
-            ],
-          ),
-        ),
+Future<void> showProfileSheet(
+  BuildContext context,
+  Climber climber,
+) => showModalBottomSheet(
+  context: context,
+  isScrollControlled: true,
+  backgroundColor: Mountain.surface,
+  showDragHandle: true,
+  builder: (context) => SafeArea(
+    child: SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (climber.demo) ...[const DemoNotice(), const SizedBox(height: 14)],
+          ClimberHeader(climber, radius: 30),
+          const SizedBox(height: 14),
+          ProfileDetails(climber),
+        ],
       ),
-    );
+    ),
+  ),
+);
 
 /// A big round swipe button.
 class DeckButton extends StatelessWidget {

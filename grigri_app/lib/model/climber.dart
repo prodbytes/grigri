@@ -16,6 +16,7 @@ class Climber {
     this.gearPhotos = const [],
     this.location,
     this.areas = const [],
+    this.demo = false,
   });
 
   /// The most gear photos a profile keeps.
@@ -50,6 +51,10 @@ class Climber {
   /// else's comes without.
   final Location? location;
   final List<Location> areas;
+
+  /// Made up, to show how Grigri works (RC's and local's seed data): the
+  /// app says so wherever it shows them. Only the server sets it.
+  final bool demo;
 
   Set<Discipline> get disciplines => levels.keys.toSet();
 
@@ -92,6 +97,7 @@ class Climber {
         ? this.location
         : location as Location?,
     areas: areas ?? this.areas,
+    demo: demo,
   );
 
   /// The profile as the API takes it (`PUT /api/me`): without the id.
@@ -134,5 +140,6 @@ class Climber {
       for (final a in json['areas'] as List? ?? [])
         Location.fromJson((a as Map).cast()),
     ],
+    demo: json['demo'] == true,
   );
 }

@@ -118,7 +118,7 @@ the web, so the API issues its own sessions:
 Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
 `<site origin>/photos/<key>`.
 
-- **Climber** (profile):
+- **Climber** (profile; `"demo"?: true` when made up, like a Plan's):
   `{"id", "name", "age"?: int, "bio", "photo"?: key, "levels": {"sport": {"scale": "routes", "min": 6, "max": 11}, ...}, "gear": ["rope", ...], "gearPhotos": [key, ...], "location"?: Location, "areas": [Location, ...]}`
   `location` (where I am) and `areas` (up to 5 other places I'd climb
   near) are **private**: only my own profile (`GET`/`PUT /api/me`)
@@ -134,7 +134,7 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   crashPad, car.
 - **Location**: `{"name", "lat", "lon"}`: a named point (a crag, gym
   or town), name 1–120 characters, lat −90..90, lon −180..180.
-- **Plan**: `{"id", "organizerId", "discipline", "place", "area", "sectorId"?, "lat"?, "lon"?, "start", "end", "grades": {"scale","min","max"}, "memberIds": [organizer first, then in join order], "notes"}`.
+- **Plan**: `{"id", "organizerId", "discipline", "place", "area", "sectorId"?, "lat"?, "lon"?, "start", "end", "grades": {"scale","min","max"}, "memberIds": [organizer first, then in join order], "notes", "demo"?: true}`. `demo`: made up (the seed's), see [backend](backend.md#the-seed); only the seed sets it (the API's input ignores it).
   No title (the app names a plan by its place), no length in hours (start
   and end), and **no group size: a group is as big as the people who match,
   so nothing is ever "full"**. `place` is a sector, crag or gym; `area` is

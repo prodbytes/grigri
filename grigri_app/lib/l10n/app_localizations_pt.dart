@@ -182,6 +182,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get thePlan => 'O plano';
 
   @override
+  String get demoTag => 'Demo';
+
+  @override
+  String get demoNotice =>
+      'Demo: não são dados reais, só uma demonstração para você ver como o Grigri funciona.';
+
+  @override
   String get yourGrades => 'Seu grau';
 
   @override
