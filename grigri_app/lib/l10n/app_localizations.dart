@@ -706,12 +706,6 @@ abstract class AppLocalizations {
   /// **'Where I am'**
   String get currentLocation;
 
-  /// How far a plan is from me, in kilometres (0 means under 1 km).
-  ///
-  /// In en, this message translates to:
-  /// **'{km, plural, =0{Under 1 km from you} other{{km} km from you}}'**
-  String distanceKm(int km);
-
   /// Discover hint when I have no location or areas.
   ///
   /// In en, this message translates to:
@@ -730,17 +724,11 @@ abstract class AppLocalizations {
   /// **'Discover plans'**
   String get discoverTitle;
 
-  /// Snackbar after asking to join a plan with one member.
+  /// Snackbar after asking to join a plan.
   ///
   /// In en, this message translates to:
-  /// **'Asked to join: pending. {organizer} will decide; you\'ll get a notification.'**
-  String askedToJoinPending(String organizer);
-
-  /// Snackbar after asking to join a plan with a group.
-  ///
-  /// In en, this message translates to:
-  /// **'Asked to join: pending. {organizer} and the group will decide; you\'ll get a notification.'**
-  String askedToJoinPendingGroup(String organizer);
+  /// **'Asked to join. You\'ll get an alert when you\'re accepted.'**
+  String get askedToJoinSent;
 
   /// Discover, empty: title.
   ///
@@ -789,6 +777,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Also in the group'**
   String get alsoInGroup;
+
+  /// Tooltip: show the others in the plan (the "+3" button on a card).
+  ///
+  /// In en, this message translates to:
+  /// **'Show the group'**
+  String get showGroup;
+
+  /// Tooltip: hide the others in the plan again.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the group'**
+  String get hideGroup;
 
   /// Title of the Chats tab.
   ///

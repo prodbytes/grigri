@@ -348,17 +348,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get currentLocation => 'Where I am';
 
   @override
-  String distanceKm(int km) {
-    String _temp0 = intl.Intl.pluralLogic(
-      km,
-      locale: localeName,
-      other: '$km km from you',
-      zero: 'Under 1 km from you',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get setWhereYouClimbHint =>
       'Set where you climb to see plans near you first.';
 
@@ -369,14 +358,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get discoverTitle => 'Discover plans';
 
   @override
-  String askedToJoinPending(String organizer) {
-    return 'Asked to join: pending. $organizer will decide; you\'ll get a notification.';
-  }
-
-  @override
-  String askedToJoinPendingGroup(String organizer) {
-    return 'Asked to join: pending. $organizer and the group will decide; you\'ll get a notification.';
-  }
+  String get askedToJoinSent =>
+      'Asked to join. You\'ll get an alert when you\'re accepted.';
 
   @override
   String get noPlansToJoinTitle => 'No plans to join right now';
@@ -402,6 +385,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get alsoInGroup => 'Also in the group';
+
+  @override
+  String get showGroup => 'Show the group';
+
+  @override
+  String get hideGroup => 'Hide the group';
 
   @override
   String get chatsTitle => 'Chats';
