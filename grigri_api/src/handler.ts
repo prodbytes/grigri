@@ -9,7 +9,7 @@ import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 import { Api, type Photos } from './api.js';
 import { Auth, type AuthConfig } from './auth.js';
-import { rbacrAdminCheck } from './rbacr.js';
+import { rbacrAdminCheck, rbacrRoles } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
 import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
@@ -74,11 +74,13 @@ const photos: Photos = {
   },
 };
 
+// rbacr, with a root's API token: admins, and my roles on my profile.
+const rbacr = { url: env.RBACR_URL ?? '', token: env.RBACR_TOKEN ?? '' };
 const authConfig: AuthConfig = {
   // The template refuses DevMode unless Stage is local; checked here too.
   devMode: env.DEV_MODE === 'true' && stage === 'local',
   // Admins are whoever rbacr says holds grigri's admin role.
-  isAdmin: rbacrAdminCheck({ url: env.RBACR_URL ?? '', token: env.RBACR_TOKEN ?? '' }),
+  isAdmin: rbacrAdminCheck(rbacr),
 };
 const auth = new Auth({ store, verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? '', undefined, parseClientIds(env.GOOGLE_IOS_CLIENT_IDS)), config: authConfig });
 // Live updates: hints to IoT Core in AWS; locally, over MQTT to Floci's
@@ -91,7 +93,7 @@ const publisher = !iotEndpoint
     ? mqttWebSocketPublisher(`${env.AWS_ENDPOINT_URL!.replace(/^http/, 'ws').replace(/\/+$/, '')}/mqtt`)
     : iotDataPublisher(iotEndpoint);
 const realtime = new Realtime({ stage, endpoint: iotEndpoint, authorizer: env.IOT_AUTHORIZER ?? '' }, publisher);
-const api = new Api({ store, photos, auth, realtime, config: { stage, version: env.VERSION ?? 'dev' } });
+const api = new Api({ store, photos, auth, realtime, roles: rbacrRoles(rbacr), config: { stage, version: env.VERSION ?? 'dev' } });
 
 type Event = APIGatewayProxyEventV2 | { grigriSeed?: boolean };
 

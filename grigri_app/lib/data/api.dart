@@ -133,10 +133,14 @@ class ApiException implements Exception {
 typedef Climbers = Map<String, Climber>;
 
 class Me {
-  const Me({required this.climber, required this.admin});
+  const Me({required this.climber, required this.admin, this.roles});
 
   final Climber? climber;
   final bool admin;
+
+  /// My roles in Grigri, from rbacr (the API asks it); null when rbacr
+  /// couldn't say.
+  final List<String>? roles;
 }
 
 class PlanList {
@@ -268,6 +272,9 @@ abstract final class ApiJson {
         ? null
         : Climber.fromJson(_map(json['climber'])),
     admin: json['admin'] == true,
+    roles: json['roles'] is List
+        ? [for (final r in json['roles']! as List) r as String]
+        : null,
   );
 
   static Climber climber(Map<String, Object?> json) =>

@@ -21,14 +21,12 @@
     answers. Stopping it also stops whatever listens on the port.
   - `1-rbacr`: rbacr's dev server (the `prodbytes/rbacr-local` image, in
     Docker, as the `grigri-rbacr` container with the `grigri-rbacr-data`
-    volume) on http://localhost:2115, for the [roles](roles.md). It takes
+    volume) on http://localhost:2115, which the local API asks for admins
+    and [roles](roles.md) (the app never calls it). It takes
     `RBACR_TOKEN` from `.env` as its root token (owner
-    `dev@rbacr.local`), or generates one and logs it, and lets the web
-    app call it (`RBACR_CORS_ORIGINS`): directly (http://localhost:7189)
-    and through Floci (https://local.grigri.nu01.com:2543); that needs an
-    image from 12 Oct 2026 or later (`docker pull prodbytes/rbacr-local`).
-    Ready when `/health` answers; nothing waits for it, so the app runs
-    without Docker (its roles then fail, with Retry).
+    `dev@rbacr.local`), or generates one and logs it. Ready when
+    `/health` answers; nothing waits for it, so the app runs without it
+    (its roles then fail, with Retry, and nobody is an admin).
   - `5-index`: [grigri_index/site](../grigri_index) on
     http://localhost:2113/.
   - `4-floci`: [Floci](https://floci.io/) as the local CloudFront and the
@@ -68,8 +66,6 @@
     asks for a WebSocket upgrade (subprotocol `mqtt`) at
     `wss://local.grigri.nu01.com:2543/mqtt` and expects 101; `🔑 rbacr`
     asks the local rbacr's `/health`.
-  - `2-flutter-web` gets `RBACR_URL=http://localhost:2115` (unless `.env`
-    sets it), so the web app asks the local rbacr.
   - The ports (7189, 2113, 2114, 2115, 2543) differ from presence's and TabScan's, so the
     projects can run side by side. Servers bind to 127.0.0.1;
     `GRIGRI_BIND_HOST=0.0.0.0` serves other devices (a phone's browser).
@@ -103,9 +99,7 @@
   more and exercises the same app code, URL shape, hints and API path.
 - **Android** (USB, debugging on; `ANDROID_SERIAL` picks one of several):
   `devbox run android` runs a debug build attached
-  (`scripts/flutter-android.sh`), with `adb reverse` so the phone's
-  localhost:2115 reaches the local rbacr (debug builds allow plain http;
-  set `RBACR_URL=http://localhost:2115` in `.env`); `devbox run android-release` installs a
+  (`scripts/flutter-android.sh`); `devbox run android-release` installs a
   release build over the app (keeping its data), starts it and checks it
   runs (`scripts/android-install.sh`); `devbox run android-log` streams the
   app's log lines and the system's related errors
@@ -119,8 +113,7 @@
   (`grigri.nu01/`) by `scripts/link-private.sh`. Only names listed in
   `scripts/dart-defines.sh` reach the app (`GRIGRI_STAGE`,
   `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID`: see
-  [sign-in](sign-in.md); `RBACR_URL`, and `RBACR_TOKEN` only to the dev
-  run scripts, when `RBACR_URL` is a localhost rbacr and no stage is set);
+  [sign-in](sign-in.md); no rbacr token: roles come from the API);
   the version is passed as `GRIGRI_VERSION`. The app always signs in
   with Google, so a local build needs `GOOGLE_WEB_CLIENT_ID` to sign in.
 - **Checks**: `flutter analyze` and `flutter test` in `grigri_app/`; the

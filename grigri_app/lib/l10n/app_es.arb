@@ -208,8 +208,6 @@
   "approveMessage": "Se une a {plan} ahora, como si todo el grupo hubiera dicho que sí.",
   "adminJoined": "{name} se ha unido a {plan}.",
   "roles": "Roles",
-  "rolesSignedOut": "Sin sesión iniciada: tus roles aparecerán aquí cuando inicies sesión.",
   "rolesFailed": "No se han podido obtener tus roles de rbacr.",
-  "noRoles": "Aún no tienes roles en Grigri.",
-  "rolesAs": "Como {email}"
+  "noRoles": "Aún no tienes roles en Grigri."
 }

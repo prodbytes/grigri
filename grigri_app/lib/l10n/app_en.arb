@@ -1089,26 +1089,12 @@
   "@roles": {
     "description": "Heading of the roles card (shown uppercased)."
   },
-  "rolesSignedOut": "Not signed in: your roles show here once you sign in.",
-  "@rolesSignedOut": {
-    "description": "Roles card when signed out."
-  },
   "rolesFailed": "Couldn't get your roles from rbacr.",
   "@rolesFailed": {
-    "description": "Roles card when loading the roles failed. rbacr is the roles service: keep its name."
+    "description": "Roles card: the API couldn't get my roles from rbacr (with Retry)."
   },
   "noRoles": "No roles in Grigri yet.",
   "@noRoles": {
     "description": "Roles card when the user has no roles."
-  },
-  "rolesAs": "As {email}",
-  "@rolesAs": {
-    "description": "Which account the roles belong to.",
-    "placeholders": {
-      "email": {
-        "type": "String",
-        "example": "someone@example.com"
-      }
-    }
   }
 }

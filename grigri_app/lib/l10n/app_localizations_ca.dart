@@ -748,17 +748,8 @@ class AppLocalizationsCa extends AppLocalizations {
   String get roles => 'Rols';
 
   @override
-  String get rolesSignedOut =>
-      'Sense sessió iniciada: els teus rols apareixeran aquí quan iniciïs la sessió.';
-
-  @override
   String get rolesFailed => 'No s\'han pogut obtenir els teus rols de rbacr.';
 
   @override
   String get noRoles => 'Encara no tens rols a Grigri.';
-
-  @override
-  String rolesAs(String email) {
-    return 'Com a $email';
-  }
 }

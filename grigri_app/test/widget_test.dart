@@ -6,14 +6,12 @@ import 'package:grigri_app/data/device_location.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/sector_index.dart';
-import 'package:grigri_app/data/roles.dart';
 import 'package:grigri_app/main.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/location.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
-import 'package:rbacr/rbacr.dart' as rbacr;
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
@@ -26,7 +24,6 @@ Future<GrigriStore> pumpApp(
   FakeApi api, {
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
-  Roles roles = const Roles.none(),
   DeviceLocation deviceLocation = const DeviceLocation.none(),
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
@@ -38,7 +35,7 @@ Future<GrigriStore> pumpApp(
     mode: mode,
     deviceLocation: deviceLocation,
   );
-  await tester.pumpWidget(GrigriApp(store: store, roles: roles));
+  await tester.pumpWidget(GrigriApp(store: store));
   await store.start();
   await tester.pumpAndSettle();
   return store;
@@ -732,61 +729,32 @@ void main() {
     });
   });
 
-  group('the profile ends with my roles, from rbacr', () {
-    Future<void> openProfile(WidgetTester tester, Roles roles) async {
-      await pumpApp(tester, sampleApi(), roles: roles);
+  group('the profile ends with my roles, from rbacr through the API', () {
+    Future<void> openProfile(WidgetTester tester, FakeApi api) async {
+      await pumpApp(tester, api);
       await tapTab(tester, 'Me');
       await tester.scrollUntilVisible(find.text('ROLES'), 200);
     }
 
-    testWidgets('as Grigri roles and global ones', (tester) async {
-      await openProfile(
-        tester,
-        Roles(
-          () async => const rbacr.Me(
-            email: 'pat.example@example.com',
-            root: false,
-            globalRoles: ['staff'],
-            roles: {
-              'grigri': ['premium', 'free'],
-              'tabscan': ['owner'],
-            },
-          ),
-        ),
-      );
-      expect(find.text('free'), findsOneWidget);
-      expect(find.text('premium'), findsOneWidget);
-      expect(find.text('staff'), findsOneWidget);
-      expect(find.text('owner'), findsNothing);
-      expect(find.text('As pat.example@example.com'), findsOneWidget);
+    testWidgets('as the API gives them', (tester) async {
+      await openProfile(tester, sampleApi()..roles = ['admin', 'root']);
+      expect(find.text('admin'), findsOneWidget);
+      expect(find.text('root'), findsOneWidget);
     });
 
-    testWidgets('or that nobody is signed in', (tester) async {
-      await openProfile(tester, const Roles.none());
-      expect(
-        find.text('Not signed in: your roles show here once you sign in.'),
-        findsOneWidget,
-      );
+    testWidgets('or that I have none', (tester) async {
+      await openProfile(tester, sampleApi()..roles = []);
+      expect(find.text('No roles in Grigri yet.'), findsOneWidget);
     });
 
     testWidgets("or that rbacr didn't answer, with Retry", (tester) async {
-      var calls = 0;
-      await openProfile(
-        tester,
-        Roles(() async {
-          if (++calls == 1) throw const rbacr.RbacrException('unreachable');
-          return const rbacr.Me(
-            email: 'pat.example@example.com',
-            root: false,
-            globalRoles: [],
-            roles: {},
-          );
-        }),
-      );
+      final api = sampleApi()..roles = null;
+      await openProfile(tester, api);
       expect(find.text("Couldn't get your roles from rbacr."), findsOneWidget);
+      api.roles = ['admin'];
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
-      expect(find.text('No roles in Grigri yet.'), findsOneWidget);
+      expect(find.text('admin'), findsOneWidget);
     });
   });
 

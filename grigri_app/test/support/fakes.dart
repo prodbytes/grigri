@@ -62,6 +62,10 @@ class FakeApi implements GrigriApi, SessionApi {
   String googleName = 'Pat Quill';
   bool admin;
 
+  /// My roles from rbacr, as `GET /api/me` gives them; null: rbacr
+  /// couldn't say.
+  List<String>? roles = const [];
+
   final climbers = <String, Climber>{};
   final plans = <String, Plan>{};
   final requestsById = <String, JoinRequest>{};
@@ -264,7 +268,7 @@ class FakeApi implements GrigriApi, SessionApi {
       meId = 'me';
       climbers['me'] = Climber(id: 'me', name: googleName);
     }
-    return Me(climber: climbers[meId], admin: admin);
+    return Me(climber: climbers[meId], admin: admin, roles: roles);
   });
 
   @override

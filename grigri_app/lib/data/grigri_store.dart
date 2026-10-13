@@ -155,6 +155,7 @@ class GrigriStore extends ChangeNotifier {
 
   Climber? _me;
   bool _admin = false;
+  List<String>? _roles;
   bool _signedIn = false;
 
   final _climbers = <String, Climber>{};
@@ -223,6 +224,7 @@ class GrigriStore extends ChangeNotifier {
     _session++;
     _me = null;
     _admin = false;
+    _roles = null;
     _locating = false;
     _climbers.clear();
     _plans.clear();
@@ -253,6 +255,7 @@ class GrigriStore extends ChangeNotifier {
       final climber = me.climber;
       if (climber == null) throw const ApiException(409, 'no profile');
       _admin = me.admin;
+      _roles = me.roles;
       _me = climber;
       _climbers[climber.id] = climber;
       _phase = Phase.ready;
@@ -281,6 +284,24 @@ class GrigriStore extends ChangeNotifier {
   // --- Reading -----------------------------------------------------------
 
   bool get admin => _admin;
+
+  /// My roles in Grigri, from rbacr through the API, sorted; null when
+  /// rbacr couldn't say.
+  List<String>? get roles => _roles;
+
+  /// Asks the API for my roles (and whether I'm an admin) again.
+  Future<void> refreshRoles() async {
+    final session = _session;
+    try {
+      final me = await _call(api.me);
+      if (session != _session) return;
+      _roles = me.roles;
+      _admin = me.admin;
+      notifyListeners();
+    } on ApiException {
+      // The card keeps offering Retry.
+    }
+  }
 
   /// My profile (a blank one until it's loaded, so screens on their way
   /// out after a sign-out still build).

@@ -13,7 +13,7 @@ PORT="${FLUTTER_WEB_PORT:-7189}"
 HOST="${GRIGRI_BIND_HOST:-127.0.0.1}"
 
 cd "$(dirname "$0")/../grigri_app"
-GRIGRI_DEV_RUN=1 source ../scripts/dart-defines.sh
+source ../scripts/dart-defines.sh
 source ../scripts/version.sh
 flutter pub get
 # The About dialog shows X.Y.Z, Z being when this server started.

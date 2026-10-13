@@ -749,17 +749,8 @@ class AppLocalizationsPt extends AppLocalizations {
   String get roles => 'Funções';
 
   @override
-  String get rolesSignedOut =>
-      'Você não entrou: suas funções aparecem aqui quando você entrar.';
-
-  @override
   String get rolesFailed => 'Não foi possível buscar suas funções no rbacr.';
 
   @override
   String get noRoles => 'Nenhuma função no Grigri ainda.';
-
-  @override
-  String rolesAs(String email) {
-    return 'Como $email';
-  }
 }

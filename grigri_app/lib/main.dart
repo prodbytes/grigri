@@ -11,7 +11,6 @@ import 'data/grigri_store.dart';
 import 'data/http_api.dart';
 import 'data/mqtt_transport.dart';
 import 'data/preferences.dart';
-import 'data/roles.dart';
 import 'data/session_storage.dart';
 import 'log.dart';
 import 'log_file.dart';
@@ -19,7 +18,6 @@ import 'theme.dart';
 import 'ui/common.dart';
 import 'ui/document_language/document_language.dart';
 import 'ui/home_shell.dart';
-import 'ui/roles_card.dart';
 import 'ui/sign_in_screen.dart';
 
 Future<void> main() async {
@@ -65,21 +63,14 @@ Future<void> main() async {
     realtime: const MqttRealtimeTransport(),
     deviceLocation: const GeolocatorDeviceLocation(),
   );
-  runApp(GrigriApp(store: store, roles: Roles.fromSettings()));
+  runApp(GrigriApp(store: store));
   unawaited(store.start());
 }
 
 class GrigriApp extends StatefulWidget {
-  const GrigriApp({
-    super.key,
-    required this.store,
-    this.roles = const Roles.none(),
-  });
+  const GrigriApp({super.key, required this.store});
 
   final GrigriStore store;
-
-  /// The user's roles, from rbacr.
-  final Roles roles;
 
   @override
   State<GrigriApp> createState() => _GrigriAppState();
@@ -130,28 +121,25 @@ class _GrigriAppState extends State<GrigriApp> {
     // Dark only, for now: the mountain palette (theme.dart).
     return StoreScope(
       store: widget.store,
-      child: RolesScope(
-        roles: widget.roles,
-        child: MaterialApp(
-          title: AppVersion.title,
-          debugShowCheckedModeBanner: false,
-          theme: mountainTheme(),
-          // The language picked in the profile, or the device's (English
-          // when the app doesn't speak it): specs/i18n.md.
-          locale: _locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          builder: (context, child) {
-            // The store words some messages itself (what failed).
-            final l10n = AppLocalizations.of(context);
-            widget.store.l10n = l10n;
-            setDocumentLanguage(l10n.localeName);
-            return child!;
-          },
-          scaffoldMessengerKey: _messenger,
-          navigatorKey: _navigator,
-          home: const Root(),
-        ),
+      child: MaterialApp(
+        title: AppVersion.title,
+        debugShowCheckedModeBanner: false,
+        theme: mountainTheme(),
+        // The language picked in the profile, or the device's (English
+        // when the app doesn't speak it): specs/i18n.md.
+        locale: _locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) {
+          // The store words some messages itself (what failed).
+          final l10n = AppLocalizations.of(context);
+          widget.store.l10n = l10n;
+          setDocumentLanguage(l10n.localeName);
+          return child!;
+        },
+        scaffoldMessengerKey: _messenger,
+        navigatorKey: _navigator,
+        home: const Root(),
       ),
     );
   }
