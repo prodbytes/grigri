@@ -481,3 +481,12 @@ spec.
       "Create your profile" step, its welcome line, **Start climbing** and
       its strings are gone. **Edit profile** on the Profile tab fills in
       the rest. A 409 "no profile" now loads the profile again.
+
+## 2026-10-13
+
+31. **(Follow-up to 25: make sign-in work on the iPhone.)** The deployed
+    sites didn't exist yet: the site stack refused the API's host name.
+    - [Deploy](deploy.md): the API stack's `ApiDomain` output is
+      `<id>.execute-api.<region>.amazonaws.com` (it lacked the region),
+      the `/api/*` origin the site stack takes as `ApiDomainName`.
+
