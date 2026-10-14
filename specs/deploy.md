@@ -31,7 +31,7 @@ for that tag:
    boundary on the functions' roles, and the account's IoT Data-ATS
    endpoint, looked up with
    `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
-   both stacks. Production is **never seeded**: it starts empty;
+   both stacks. Production never gets the test seed (it holds real people's data and the demo showcase, which the API writes itself, see [backend](backend.md#the-demo-showcase));
 3. deploys the `grigri-web` stack: certificate, site and photos buckets,
    CloudFront (with `/api/*` to the API's domain), DNS records, and two
    Route 53 health checks, each with an alarm that emails

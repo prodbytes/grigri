@@ -189,7 +189,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get demoNotice =>
-      'Demo: keine echten Daten, nur eine Vorführung, damit du siehst, wie Grigri funktioniert.';
+      'Demo: automatisch erzeugt, keine echten Personen oder Pläne. Es zeigt, wie Grigri funktioniert.';
 
   @override
   String get yourGrades => 'Dein Grad';

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { planInput, profileInput } from '../src/domain/validate.js';
 import { seedData } from '../seed/data.js';
 import { assertSeedable } from '../seed/seed.js';
+import { showcaseData } from '../seed/showcase.js';
 
 describe('seed data', () => {
   const now = new Date('2030-05-01T10:00:00.000Z');
@@ -30,6 +31,35 @@ describe('seed data', () => {
       expect(plan.memberIds).not.toContain(r.climberId);
       // Not already accepted by everyone (nobody answers automatically).
       expect(plan.memberIds.every((m) => r.acceptedBy.includes(m))).toBe(false);
+    }
+  });
+});
+
+describe('demo showcase', () => {
+  const now = new Date('2030-05-01T10:00:00.000Z');
+  const data = showcaseData(now);
+
+  it('seed- ids apart from the test seed\'s, organizers in their plans', () => {
+    const test = new Set([...seedData(now).climbers, ...seedData(now).plans].map((x) => x.id));
+    const climbers = new Set(data.climbers.map((c) => c.id));
+    for (const x of [...data.climbers, ...data.plans]) {
+      expect(x.id).toMatch(/^seed-/);
+      expect(test.has(x.id)).toBe(false);
+    }
+    for (const p of data.plans) {
+      expect(p.memberIds[0]).toBe(p.organizerId);
+      for (const m of p.memberIds) expect(climbers.has(m)).toBe(true);
+    }
+    // Every showcase climber organizes something.
+    for (const c of data.climbers) expect(data.plans.some((p) => p.organizerId === c.id)).toBe(true);
+  });
+
+  it('passes the same validation as real input, upcoming within a week', () => {
+    for (const { id: _id, ...c } of data.climbers) expect(() => profileInput(c, [])).not.toThrow();
+    for (const { id: _id, organizerId: _o, memberIds: _m, ...p } of data.plans) {
+      expect(planInput(p, now)).toEqual(p);
+      expect(Date.parse(p.start) - now.getTime()).toBeGreaterThan(0);
+      expect(Date.parse(p.start) - now.getTime()).toBeLessThan(8 * 86_400_000);
     }
   });
 });

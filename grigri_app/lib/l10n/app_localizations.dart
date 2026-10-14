@@ -418,10 +418,10 @@ abstract class AppLocalizations {
   /// **'Demo'**
   String get demoTag;
 
-  /// Disclaimer on a made-up (demo) plan or profile.
+  /// Discreet line on a demo (automatically generated) plan or profile.
   ///
   /// In en, this message translates to:
-  /// **'Demo: this isn\'t real data, just a demonstration to help you see how Grigri works.'**
+  /// **'Demo: automatically generated, not real people or plans. It\'s here to show how Grigri works.'**
   String get demoNotice;
 
   /// Badge: the plan is at grades the user climbs.

@@ -246,9 +246,9 @@
   "@demoTag": {
     "description": "Tag next to a made-up (demo) person's name."
   },
-  "demoNotice": "Demo: this isn't real data, just a demonstration to help you see how Grigri works.",
+  "demoNotice": "Demo: automatically generated, not real people or plans. It's here to show how Grigri works.",
   "@demoNotice": {
-    "description": "Disclaimer on a made-up (demo) plan or profile."
+    "description": "Discreet line on a demo (automatically generated) plan or profile."
   },
   "yourGrades": "Your grades",
   "@yourGrades": {

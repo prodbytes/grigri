@@ -159,23 +159,29 @@ class DemoNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: Mountain.tan.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Mountain.tan.withValues(alpha: 0.5)),
-      ),
+    // Clear but discreet: one quiet line, not a banner.
+    return Semantics(
+      container: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.science_outlined, size: 18, color: Mountain.tan),
-          const SizedBox(width: 8),
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.auto_awesome_outlined,
+              size: 14,
+              color: Mountain.tan,
+            ),
+          ),
+          const SizedBox(width: 6),
           Expanded(
             child: Text(
               l.demoNotice,
-              style: const TextStyle(color: Mountain.sand, fontSize: 12.5),
+              style: const TextStyle(
+                color: Mountain.tan,
+                fontSize: 11.5,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
         ],
