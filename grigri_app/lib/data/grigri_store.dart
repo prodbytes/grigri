@@ -737,6 +737,19 @@ class GrigriStore extends ChangeNotifier {
     ]);
   }
 
+  /// I remind the members who haven't answered my request to join a plan.
+  /// True when they were nudged; my request then knows when (the button
+  /// waits out the cooldown).
+  Future<bool> nudge(JoinRequest request) async {
+    final answer = await _act(() => api.nudge(request.planId));
+    if (answer == null) return false;
+    _asked = [
+      for (final r in _asked) r.id == answer.request.id ? answer.request : r,
+    ];
+    notifyListeners();
+    return true;
+  }
+
   /// I clear a group's "no" from my plans; the plan stays out of my deck.
   Future<void> dismiss(JoinRequest request) async {
     _asked = [..._asked.where((r) => r.id != request.id)];

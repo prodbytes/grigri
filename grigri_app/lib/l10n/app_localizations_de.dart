@@ -772,4 +772,29 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noRoles => 'Noch keine Rollen in Grigri.';
+
+  @override
+  String get nudge => 'Erinnern';
+
+  @override
+  String get nudged => 'Erinnert';
+
+  @override
+  String get nudgeTooltip =>
+      'Erinnere die Gruppe an eine Antwort (einmal alle 12 Stunden)';
+
+  @override
+  String nudgeSent(String names) {
+    return 'Erinnerung an $names gesendet';
+  }
+
+  @override
+  String noticeNudgeTitle(String name) {
+    return '$name wartet auf deine Antwort';
+  }
+
+  @override
+  String noticeNudgeBody(String plan) {
+    return 'Um bei $plan mitzumachen · nimm im Gruppenchat an oder lehne ab';
+  }
 }

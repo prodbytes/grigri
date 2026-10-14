@@ -132,7 +132,13 @@ callout; its card in the messages stays as the record.
 
 Swiping right on a plan makes it **pending** ("Asked to join: pending…").
 Plans lists it under **Asked to join**, tagged **Pending**, with who it's
-still waiting for. When the whole group has said yes, it moves up to the
+still waiting for, and a **Nudge** button: it reminds the members who
+haven't answered yet (a [notification](#notifications) each, asking them
+to accept or decline) and confirms "Nudge sent to <names>". A request can
+be nudged once every **12 hours**: until then the button reads **Nudged**
+and is disabled (the server refuses an earlier one, and the app shows its
+message). There's no Nudge on a declined request or once the plan has
+started. When the whole group has said yes, it moves up to the
 plans I'm in, tagged **Accepted**. When one member says no, it's tagged
 **Declined** until I dismiss it (✕); it doesn't come back to my deck. Its
 plan screen shows the same status.
@@ -152,6 +158,10 @@ newest first, with when it happened:
 
 - **"<name> wants to join"** a plan I'm in (tap for its group chat, to
   answer);
+- **"<name> is waiting for your answer"** ("To join <plan> · accept or
+  decline in the group chat") when they nudged the members who haven't
+  answered (tap for the chat); a later nudge replaces it, new and unread
+  again;
 - **"You're in: <plan>"** when a group accepted me (tap for the chat);
 - **"Not this time: <plan>"** when one declined me (tap for the plan).
 

@@ -144,8 +144,10 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   (e.g. "osm:n123456"), absent for a place typed by hand. `lat` and
   `lon` are where the place is, from the sector index (both or neither,
   kept to 4 decimals); absent for a place typed by hand.
-- **JoinRequest**: `{"id": "<planId>/<climberId>", "planId", "climberId", "acceptedBy": [climberIds], "rejected": bool, "time"}`
-- **Notice**: `{"id", "kind": "accepted"|"declined"|"request", "planId", "planTitle" (the plan's place when the notice was made), "climberId"?, "time", "read": bool}`
+- **JoinRequest**: `{"id": "<planId>/<climberId>", "planId", "climberId", "acceptedBy": [climberIds], "rejected": bool, "time", "nudgedAt"?}`
+  (`nudgedAt`: when the requester last [nudged](#routes) the group; absent until they do.)
+- **Notice**: `{"id", "kind": "accepted"|"declined"|"request"|"nudge", "planId", "planTitle" (the plan's place when the notice was made), "climberId"? (who asked, for request and nudge), "time", "read": bool}`.
+  Apps skip kinds they don't know, so a new kind never breaks an older app.
 - **Message**: `{"id", "planId", "authorId": climberId|null, "text", "time", "requestId"?}`
   (authorId null: the chat's own notes: someone joined, left, asked to join;
   a request note carries requestId so the chat shows it as a card.)
@@ -161,7 +163,8 @@ unknown or expired session token; or a bad Google ID token at
 `POST /api/session`),
 403 (not allowed), 404 (no such thing or route), 409 (conflict: already
 asked, already a member, changed meanwhile), 413 (body over 64 KB), 415
-(a body that isn't `application/json`), 500 (`{"error": "internal error"}`;
+(a body that isn't `application/json`), 429 (too soon: a nudge within 12
+hours of the last), 500 (`{"error": "internal error"}`;
 details only in the function's log). A signed-in caller without a profile
 yet (before their first `GET /api/me`) gets 409 `{"error": "no profile"}`
 from every route except `GET/PUT /api/me`, `POST /api/photos`, the
@@ -187,6 +190,7 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `PUT /api/plans/{id}` | organizer only; same body and rules as POST (the whole plan: a `sectorId` left out is cleared). → `{"plan"}` |
 | `POST /api/plans/{id}/leave` | I leave (the app's "Cancel the plan"). Organizer leaves → a remaining member picked at random organizes. Last member leaves → the plan, its requests and its chat are gone. Open requests stop waiting for me (so one may now have every yes, and join). A "left" note in the chat. The plan stays out of my deck. → `{}` |
 | `POST /api/plans/{id}/join` | swipe right: a join request. Notifies every member (Notice kind request) and posts a request note in the chat. 409 if I'm a member, already asked (whatever became of that request), the plan has started, or 30 requests are already waiting on it. On a **demo** plan, whose made-up members can't answer, the group then says yes at once (as an admin's yes): I join, get the accepted notice, and the chat gets the joined note; the request comes back accepted by every member. → `{"request"}` |
+| `POST /api/plans/{id}/nudge` | the requester reminds the group: a Notice kind nudge (`climberId`: me) for each member who hasn't said yes to my open request on the plan. 404 if I haven't asked; 409 if it was declined, I'm already in, or the plan has started; **429** "you nudged the group less than 12 hours ago; try again later" within 12 hours of my last nudge (saved on the request as `nudgedAt`, with a conditional write, so two at once can't both pass). → `{"request"` (with its new `nudgedAt`)`, "nudged": <how many members>}` |
 | `POST /api/plans/{id}/pass` | swipe left: out of my deck. → `{}` |
 | `DELETE /api/passes` | Discover's refresh: forgets my passes, so those plans are on my deck again; not on plans I asked to join (a declined request I dismissed stays hidden) or left (cancelled: leaving marks its pass `left`). → `{}` |
 | `GET /api/requests` | to review: open requests (not rejected) on plans I'm in that I haven't accepted. → `{"requests", "plans": {id: Plan}, "climbers"}` |
@@ -242,6 +246,7 @@ Details: [live-updates.md](live-updates.md).
 | accept (member or admin), not everyone yet | `request` to the members |
 | accept, everyone said yes (or an admin) | `match` to the newcomer, `plan` to the other members |
 | reject (member or admin) | `notice` to the requester, `request` to the members |
+| `POST /api/plans/{id}/nudge` | `notice` to the members who haven't said yes |
 | `PUT /api/plans/{id}`, `POST /api/plans/{id}/leave` | `plan` to the (remaining) members |
 
 Publishing is best effort: it waits at most 1.5 s and never fails the
@@ -269,8 +274,9 @@ HTTP API can't send), through [scripts/seed.sh](../scripts/seed.sh).
   (up to 4 times), then answered 409 "changed meanwhile; try again". A
   double join is refused by a conditional put.
 - Notices are written after the change commits (best effort, idempotent:
-  a notice's id is `<planId>/request/<climberId>` or
-  `<planId>/accepted|declined`, so a repeat replaces it).
+  a notice's id is `<planId>/request/<climberId>`,
+  `<planId>/nudge/<climberId>` or `<planId>/accepted|declined`, so a
+  repeat replaces it: a new nudge overwrites the last one, unread again).
 - When a newcomer joins, they get a request notice for each request still
   waiting on the plan, dated when that person asked.
 - The chat's notes: "<name> created the plan. People who match will show

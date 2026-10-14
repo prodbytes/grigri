@@ -182,6 +182,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       ApiJson.request(await _post(['plans', planId, 'join']));
 
   @override
+  Future<({JoinRequest request, int nudged})> nudge(String planId) async =>
+      ApiJson.nudge(await _post(['plans', planId, 'nudge']));
+
+  @override
   Future<void> pass(String planId) => _post(['plans', planId, 'pass']);
 
   @override

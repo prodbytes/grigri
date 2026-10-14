@@ -211,5 +211,11 @@
   "adminJoined": "{name} entrou em {plan}.",
   "roles": "Funções",
   "rolesFailed": "Não foi possível buscar suas funções no rbacr.",
-  "noRoles": "Nenhuma função no Grigri ainda."
+  "noRoles": "Nenhuma função no Grigri ainda.",
+  "nudge": "Lembrar",
+  "nudged": "Lembrado",
+  "nudgeTooltip": "Lembre o grupo de responder (uma vez a cada 12 horas)",
+  "nudgeSent": "Lembrete enviado para {names}",
+  "noticeNudgeTitle": "{name} está esperando sua resposta",
+  "noticeNudgeBody": "Para entrar em {plan} · aceite ou recuse na conversa do grupo"
 }

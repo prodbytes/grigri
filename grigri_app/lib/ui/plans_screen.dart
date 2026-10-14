@@ -167,15 +167,34 @@ class _PlanTile extends StatelessWidget {
   }
 }
 
-/// A plan I asked to join: pending, and who it's waiting for, or
-/// declined, which I can dismiss.
-class _RequestTile extends StatelessWidget {
+/// A plan I asked to join: pending, and who it's waiting for, with a
+/// Nudge button that reminds them (once every 12 hours); or declined,
+/// which I can dismiss.
+class _RequestTile extends StatefulWidget {
   const _RequestTile({required this.request});
 
   final JoinRequest request;
 
   @override
+  State<_RequestTile> createState() => _RequestTileState();
+}
+
+class _RequestTileState extends State<_RequestTile> {
+  bool _nudging = false;
+
+  Future<void> _nudge(String names) async {
+    final store = StoreScope.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final sent = context.l10n.nudgeSent(names);
+    setState(() => _nudging = true);
+    final ok = await store.nudge(widget.request);
+    if (mounted) setState(() => _nudging = false);
+    if (ok) messenger.showSnackBar(SnackBar(content: Text(sent)));
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final request = widget.request;
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
     final plan = store.plan(request.planId);
@@ -185,6 +204,8 @@ class _RequestTile extends StatelessWidget {
       for (final id in plan.memberIds)
         if (!request.acceptedBy.contains(id)) store.climber(id).firstName,
     ];
+    final now = DateTime.now();
+    final canNudge = request.canNudge(now);
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
@@ -203,13 +224,40 @@ class _RequestTile extends StatelessWidget {
               style: text.bodyMedium?.copyWith(color: Mountain.granite),
             ),
             const SizedBox(height: 6),
-            request.rejected
-                ? Tag(l.declined, icon: Icons.close, color: Mountain.clay)
-                : Tag(
-                    l.pending,
-                    icon: Icons.hourglass_top,
-                    color: Mountain.sky,
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                request.rejected
+                    ? Tag(l.declined, icon: Icons.close, color: Mountain.clay)
+                    : Tag(
+                        l.pending,
+                        icon: Icons.hourglass_top,
+                        color: Mountain.sky,
+                      ),
+                // Nudge: while it waits for someone and the plan hasn't
+                // started; "Nudged" (disabled) for 12 hours after.
+                if (!request.rejected &&
+                    pending.isNotEmpty &&
+                    plan.start.isAfter(now))
+                  Tooltip(
+                    message: l.nudgeTooltip,
+                    child: TextButton.icon(
+                      icon: Icon(
+                        canNudge
+                            ? Icons.notifications_active_outlined
+                            : Icons.check,
+                        size: 18,
+                      ),
+                      label: Text(canNudge ? l.nudge : l.nudged),
+                      onPressed: canNudge && !_nudging
+                          ? () => _nudge(pending.join(', '))
+                          : null,
+                    ),
                   ),
+              ],
+            ),
           ],
         ),
         trailing: request.rejected

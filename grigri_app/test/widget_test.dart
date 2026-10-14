@@ -209,6 +209,69 @@ void main() {
       expect(find.text('Pending'), findsOneWidget);
     });
 
+    testWidgets('a pending request nudges the group, then waits 12 hours', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      await store.like('crag-day');
+      await tapTab(tester, 'Plans');
+      expect(find.text('Pending'), findsOneWidget);
+      await tester.tap(find.text('Nudge'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/plans/crag-day/nudge'));
+      expect(find.text('Nudge sent to Robin'), findsOneWidget);
+      expect(
+        api.noticesFor['robin']!.where((n) => n.kind == NoticeKind.nudge),
+        hasLength(1),
+      );
+      // Now "Nudged", and disabled until the 12 hours are up.
+      expect(find.text('Nudge'), findsNothing);
+      final nudged = find.widgetWithText(TextButton, 'Nudged');
+      expect(tester.widget<TextButton>(nudged).onPressed, isNull);
+      expect(store.waiting.single.canNudge(DateTime.now()), isFalse);
+      expect(
+        store.waiting.single.canNudge(
+          DateTime.now().add(JoinRequest.nudgeCooldown),
+        ),
+        isTrue,
+      );
+    });
+
+    testWidgets('a refused nudge shows the server\'s words', (tester) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      await store.like('crag-day');
+      await tapTab(tester, 'Plans');
+      api.failNext = const ApiException(
+        429,
+        'you nudged the group less than 12 hours ago; try again later',
+      );
+      await tester.tap(find.text('Nudge'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'you nudged the group less than 12 hours ago; try again later',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Nudge sent to Robin'), findsNothing);
+      expect(find.text('Nudge'), findsOneWidget);
+    });
+
+    testWidgets('a declined request has no Nudge', (tester) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      await store.like('crag-day');
+      api.requestsById['crag-day/me'] = api.requestsById['crag-day/me']!
+          .copyWith(rejected: true);
+      await store.refreshPlans();
+      await tapTab(tester, 'Plans');
+      expect(find.text('Declined'), findsOneWidget);
+      expect(find.text('Nudge'), findsNothing);
+      expect(find.text('Nudged'), findsNothing);
+    });
+
     testWidgets('the small share button shares the top plan, with a link', (
       tester,
     ) async {
@@ -374,6 +437,34 @@ void main() {
   });
 
   group('requests in the chat', () {
+    testWidgets('a nudge notification asks me to answer; it opens the chat', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      api.nudgeAs('my-gym', 'jules');
+      final store = await pumpApp(tester, api);
+      // Counted with the other unread notices (the request and the nudge).
+      expect(store.unreadNotices, 2);
+      await tapTab(tester, 'Alerts');
+      expect(
+        find.text('Jules Fern is waiting for your answer'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'To join ${api.plans['my-gym']!.title} · accept or decline in the '
+          'group chat',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Jules Fern is waiting for your answer'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('request my-gym/jules')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a request notification opens the chat; accepting matches', (
       tester,
     ) async {

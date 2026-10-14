@@ -1382,6 +1382,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No roles in Grigri yet.'**
   String get noRoles;
+
+  /// Button on my pending join request: remind the members who have not answered.
+  ///
+  /// In en, this message translates to:
+  /// **'Nudge'**
+  String get nudge;
+
+  /// Disabled button: I nudged the group less than 12 hours ago.
+  ///
+  /// In en, this message translates to:
+  /// **'Nudged'**
+  String get nudged;
+
+  /// Tooltip of the Nudge button.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind the group to answer (once every 12 hours)'**
+  String get nudgeTooltip;
+
+  /// Snackbar after a nudge: who was reminded (first names).
+  ///
+  /// In en, this message translates to:
+  /// **'Nudge sent to {names}'**
+  String nudgeSent(String names);
+
+  /// Notification title: someone asking to join my plan nudged me to answer.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is waiting for your answer'**
+  String noticeNudgeTitle(String name);
+
+  /// Notification body for a nudge.
+  ///
+  /// In en, this message translates to:
+  /// **'To join {plan} · accept or decline in the group chat'**
+  String noticeNudgeBody(String plan);
 }
 
 class _AppLocalizationsDelegate

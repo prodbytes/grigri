@@ -264,6 +264,14 @@ describe('hints from the API', () => {
     expect(await hintsOf(() => call(ada, 'POST', `/api/plans/${planId}/pass`))).toEqual([]);
   });
 
+  it('a nudge tells the members who have not said yes', async () => {
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/accept`);
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    await call(ben, 'POST', `/api/requests/${planId}/${ids.Cy}/accept`);
+    expect(await hintsOf(() => call(cy, 'POST', `/api/plans/${planId}/nudge`))).toEqual(['Ada notice']);
+  });
+
   it("a failed publish doesn't fail the request", async () => {
     pub.mode = 'fail';
     const { message } = await call(ada, 'POST', `/api/plans/${planId}/messages`, { text: 'Still works' });

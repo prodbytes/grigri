@@ -136,7 +136,11 @@ class JoinRequest {
     this.acceptedBy = const {},
     this.rejected = false,
     this.time,
+    this.nudgedAt,
   });
+
+  /// How long I wait between nudges (the server's limit).
+  static const nudgeCooldown = Duration(hours: 12);
 
   final String planId;
   final String climberId;
@@ -150,17 +154,33 @@ class JoinRequest {
   /// Whether a member (or an admin) turned them down.
   final bool rejected;
 
+  /// When the requester last nudged the members who haven't answered;
+  /// null until they do.
+  final DateTime? nudgedAt;
+
+  /// Whether the requester may nudge the group now: still waiting, and
+  /// not nudged in the last [nudgeCooldown].
+  bool canNudge(DateTime now) {
+    if (rejected) return false;
+    final last = nudgedAt;
+    return last == null || !now.isBefore(last.add(nudgeCooldown));
+  }
+
   /// `<planId>/<climberId>`, as the API names it.
   String get id => '$planId/$climberId';
 
-  JoinRequest copyWith({Set<String>? acceptedBy, bool? rejected}) =>
-      JoinRequest(
-        planId: planId,
-        climberId: climberId,
-        acceptedBy: acceptedBy ?? this.acceptedBy,
-        rejected: rejected ?? this.rejected,
-        time: time,
-      );
+  JoinRequest copyWith({
+    Set<String>? acceptedBy,
+    bool? rejected,
+    DateTime? nudgedAt,
+  }) => JoinRequest(
+    planId: planId,
+    climberId: climberId,
+    acceptedBy: acceptedBy ?? this.acceptedBy,
+    rejected: rejected ?? this.rejected,
+    time: time,
+    nudgedAt: nudgedAt ?? this.nudgedAt,
+  );
 
   static JoinRequest fromJson(Map<String, Object?> json) => JoinRequest(
     planId: json['planId']! as String,
@@ -170,6 +190,7 @@ class JoinRequest {
     },
     rejected: json['rejected'] as bool? ?? false,
     time: json['time'] == null ? null : _time(json['time']),
+    nudgedAt: json['nudgedAt'] == null ? null : _time(json['nudgedAt']),
   );
 }
 
@@ -183,11 +204,15 @@ enum NoticeKind {
 
   /// Someone asked to join a plan I'm in.
   request,
+
+  /// Someone who asked to join a plan I'm in is still waiting for my
+  /// answer (they nudged the members who haven't answered).
+  nudge,
 }
 
 /// A notification for me: a group answered my request to join its plan,
-/// or someone asked to join a plan I'm in. It keeps the plan's title (its
-/// place), in case the plan ends.
+/// or someone asked to join a plan I'm in (or nudged me to answer). It
+/// keeps the plan's title (its place), in case the plan ends.
 class Notice {
   const Notice({
     required this.id,
@@ -202,7 +227,7 @@ class Notice {
   final String id;
   final NoticeKind kind;
 
-  /// Who asked to join, for a [NoticeKind.request].
+  /// Who asked to join, for a [NoticeKind.request] or [NoticeKind.nudge].
   final String? climberId;
   final String planId;
   final String planTitle;
