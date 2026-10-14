@@ -117,8 +117,12 @@ callout; its card in the messages stays as the record.
   them. **One "no" turns them down.**
 - When someone joins, the members who are still to decide on other open
   requests now include them: the group as it is then decides.
-- When a member leaves, the requests stop waiting for them. The organizer
-  leaving hands the plan to the next member; the last member leaving ends
+- Cancelling a plan I'm in (from Plans or the plan screen) is leaving it:
+  it's out of my plans and chats at once, and the others keep it. When a
+  member leaves, the requests stop waiting for them. The organizer leaving
+  hands the plan to one of the remaining members **picked at random**, and
+  the chat says so ("Ada left the plan; Ben organizes it now"); a member
+  leaving just leaves ("Ada left the plan"). The last member leaving ends
   the plan, its requests and its chat. A plan I left never comes back to
   my deck.
 

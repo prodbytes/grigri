@@ -24,6 +24,8 @@ export interface Context {
   newId: () => string;
   /** A climber's name, for the chat's notes. */
   name: (climberId: string) => string;
+  /** A number in [0, 1), like Math.random (a new organizer's pick). */
+  random: () => number;
 }
 
 /** A notice for one climber. */
@@ -177,9 +179,9 @@ export function updatePlan(plan: Plan, actorId: string, input: PlanInput): Plan 
 }
 
 /**
- * I leave a plan. The organizer leaving hands it to the next member; the
- * last member leaving ends the plan (and its requests). Open requests stop
- * waiting for me, so someone may now join.
+ * I leave (cancel) a plan. The organizer leaving hands it to a member picked
+ * at random; the last member leaving ends the plan (and its requests). Open
+ * requests stop waiting for me, so someone may now join.
  */
 export function leave(state: PlanState, actorId: string, ctx: Context): Effects {
   const { plan } = state;
@@ -188,11 +190,11 @@ export function leave(state: PlanState, actorId: string, ctx: Context): Effects 
   if (members.length === 0) {
     return { plan: null, requests: [], notices: [], messages: [], matches: [] };
   }
-  const after: Plan = {
-    ...plan,
-    memberIds: members,
-    organizerId: plan.organizerId === actorId ? members[0]! : plan.organizerId,
-  };
+  const handOver = plan.organizerId === actorId;
+  const organizerId = handOver
+    ? members[Math.min(members.length - 1, Math.floor(ctx.random() * members.length))]!
+    : plan.organizerId;
+  const after: Plan = { ...plan, memberIds: members, organizerId };
   // My acceptances no longer count: I'm not a member.
   const changed = new Map<string, JoinRequest>();
   const requests = state.requests.map((r) => {
@@ -205,7 +207,15 @@ export function leave(state: PlanState, actorId: string, ctx: Context): Effects 
     plan: after,
     requests: [],
     notices: [],
-    messages: [note(plan.id, `${ctx.name(actorId)} left the plan`, ctx)],
+    messages: [
+      note(
+        plan.id,
+        handOver
+          ? `${ctx.name(actorId)} left the plan; ${ctx.name(organizerId)} organizes it now`
+          : `${ctx.name(actorId)} left the plan`,
+        ctx,
+      ),
+    ],
     matches: [],
   };
   settleInto(effects, requests, changed, ctx);

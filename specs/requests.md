@@ -607,3 +607,21 @@ spec.
       and the chat gets the joined note. The app refreshes its
       notifications right after, so the match screen opens (no "you'll
       get an alert" snackbar). Real plans are unchanged.
+
+## 2026-10-14
+
+43. **In the plans view, let a user cancel a plan. If a user cancels a
+    plan, remove it from the view and from the chats, but keep it open for
+    the others: they may keep the plan, and automatically select a random
+    new person as the organizer.**
+    - [Screens](screens.md): each plan I'm in on Plans has a ⋮ menu with
+      **Cancel the plan**; the plan screen's button is now always **Cancel
+      the plan**. Both use one confirmation (**Keep it** / **Cancel it**)
+      that says whether the plan ends (I'm alone) or the others keep it
+      and, if I organize it, who organizes now is picked at random. The
+      old leave strings went; new ones in every language.
+    - [Matching](matching.md), [API](api.md): cancelling is the existing
+      `POST /api/plans/{id}/leave`. The organizer leaving now hands the
+      plan to a random remaining member (was: the next one), and the chat
+      note says who organizes now. The plan leaves my Plans and Chats at
+      once and stays out of my deck. No new resource or cost.

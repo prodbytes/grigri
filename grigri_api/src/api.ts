@@ -55,6 +55,8 @@ export interface Deps {
   /** My roles in Grigri, from rbacr (rbacr.ts); none: unknown. */
   roles?: RolesLookup;
   clock?: () => Date;
+  /** In [0, 1): picks a new organizer when one leaves; default Math.random. */
+  random?: () => number;
 }
 
 export interface Request {
@@ -105,10 +107,12 @@ export class Api {
   private readonly router = new Router<Route>();
   private readonly store: Store;
   private readonly clock: () => Date;
+  private readonly random: () => number;
 
   constructor(private readonly deps: Deps) {
     this.store = deps.store;
     this.clock = deps.clock ?? (() => new Date());
+    this.random = deps.random ?? Math.random;
     const r = (pattern: string, access: Access, handler: Handler) => this.router.add(pattern, { access, handler });
 
     r('GET /api/health', 'public', async () => ({ ok: true, stage: deps.config.stage, version: deps.config.version }));
@@ -177,7 +181,7 @@ export class Api {
     const now = this.clock();
     if (route.access === 'session') {
       const names = new Map<string, string>();
-      const ctx = { now, newId: messageIds(), name: () => 'Someone' };
+      const ctx = { now, newId: messageIds(), name: () => 'Someone', random: this.random };
       return route.handler(full, { caller: req.caller, me: undefined as never, now, ctx, names });
     }
     const climberId = await this.store.climberIdFor(req.caller.subject);
@@ -190,7 +194,7 @@ export class Api {
       // Undefined only on 'caller' routes, before the first GET or PUT /api/me.
       me: me as Climber,
       now,
-      ctx: { now, newId: messageIds(), name: (cid) => names.get(cid) ?? 'Someone' },
+      ctx: { now, newId: messageIds(), name: (cid) => names.get(cid) ?? 'Someone', random: this.random },
       names,
     };
     if (me) names.set(me.id, me.name);

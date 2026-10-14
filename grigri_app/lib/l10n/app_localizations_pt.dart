@@ -611,30 +611,24 @@ class AppLocalizationsPt extends AppLocalizations {
   String get cancelPlan => 'Cancelar o plano';
 
   @override
-  String get leavePlan => 'Sair do plano';
-
-  @override
   String get cancelPlanQuestion => 'Cancelar o plano?';
-
-  @override
-  String get leavePlanQuestion => 'Sair do plano?';
 
   @override
   String get cancelPlanMessage => 'O plano e a conversa vão sumir.';
 
   @override
-  String leaveOrganizerMessage(String name) {
-    return '$name vai organizar.';
-  }
+  String get cancelPlanOthersMessage =>
+      'Ele sai dos seus planos e conversas; os outros continuam com ele. Você não vai poder entrar de novo.';
 
   @override
-  String get leaveMessage => 'Você não vai poder entrar de novo.';
+  String get cancelPlanOrganizerMessage =>
+      'Ele sai dos seus planos e conversas; os outros continuam com ele, e um deles, sorteado, vai organizar. Você não vai poder entrar de novo.';
 
   @override
-  String get stay => 'Ficar';
+  String get keepPlan => 'Manter';
 
   @override
-  String get leave => 'Sair';
+  String get confirmCancelPlan => 'Cancelar';
 
   @override
   String get editPlan => 'Editar plano';

@@ -775,8 +775,9 @@ class GrigriStore extends ChangeNotifier {
     ),
   );
 
-  /// I leave a plan's group. When the organizer leaves, the next member
-  /// organizes it; when the last member leaves, the plan is gone.
+  /// I leave (cancel) a plan: it's out of my plans and chats. When the
+  /// organizer leaves, a member picked at random (by the API) organizes it;
+  /// when the last member leaves, the plan is gone.
   Future<bool> leave(String planId) async {
     if (!await _ok(() => api.leave(planId))) return false;
     _mine = [..._mine.where((id) => id != planId)];

@@ -532,13 +532,57 @@ void main() {
       await tapTab(tester, 'Plans');
       await tester.tap(find.text('Grey Cliffs'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Leave the plan'));
+      await tester.tap(find.text('Cancel the plan'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Leave'));
+      expect(find.textContaining('the others keep it.'), findsOneWidget);
+      await tester.tap(find.text('Cancel it'));
       await tester.pumpAndSettle();
       expect(api.calls, contains('POST /api/plans/crag-day/leave'));
       expect(find.text('Grey Cliffs'), findsNothing);
       expect(find.text('Wall Works'), findsOneWidget);
+    });
+
+    testWidgets('cancelling from the Plans list takes it out of Plans and '
+        'Chats; the others keep it', (tester) async {
+      final api = sampleApi();
+      // I organize it, with Robin in it.
+      api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
+        organizerId: 'me',
+        memberIds: ['me', 'robin'],
+      );
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Plans');
+      final menu = find.descendant(
+        of: find.ancestor(
+          of: find.text('Grey Cliffs'),
+          matching: find.byType(Card),
+        ),
+        matching: find.byIcon(Icons.more_vert),
+      );
+      // Changing my mind keeps it.
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel the plan'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('picked at random'), findsOneWidget);
+      await tester.tap(find.text('Keep it'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isNot(contains('POST /api/plans/crag-day/leave')));
+      expect(find.text('Grey Cliffs'), findsOneWidget);
+      // Cancelled: out of Plans and Chats.
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel the plan'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel it'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/plans/crag-day/leave'));
+      expect(find.text('Grey Cliffs'), findsNothing);
+      await tapTab(tester, 'Chats');
+      expect(find.text('Grey Cliffs'), findsNothing);
+      // Robin keeps it, and organizes it now.
+      expect(api.plans['crag-day']!.memberIds, ['robin']);
+      expect(api.plans['crag-day']!.organizerId, 'robin');
     });
   });
 
