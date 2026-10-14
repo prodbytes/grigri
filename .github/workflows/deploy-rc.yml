@@ -143,9 +143,6 @@ jobs:
           STAGE: rc
           TAG: ${{ steps.tag.outputs.tag }}
           HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
-          # Who is emailed when the site's health check fails or recovers:
-          # a secret, not a variable, so the public run logs never show it.
-          GRIGRI_HEALTH_EMAILS: ${{ secrets.GRIGRI_HEALTH_EMAILS }}
           # Google sign-in's web client ID: compiled into the web app, and the
           # client whose ID tokens the API accepts. The RC has its own
           # client (its JavaScript origin is the RC site): a public
@@ -156,6 +153,7 @@ jobs:
           # phone builds that talk to the RC keep production's bundle ID.
           GOOGLE_IOS_CLIENT_IDS: ${{ vars.GOOGLE_IOS_CLIENT_ID }},${{ vars.GOOGLE_IOS_CLIENT_ID_RC }}
           # An rbacr root's API token: the API asks rbacr who holds
-          # grigri's admin role. A secret, like the health emails.
+          # grigri's admin role. A secret, so the public run logs never
+          # show it.
           GRIGRI_RBACR_TOKEN: ${{ secrets.GRIGRI_RBACR_TOKEN }}
         run: bash scripts/deploy.sh

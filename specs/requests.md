@@ -699,3 +699,32 @@ spec.
       Cost: storage at $0.023/GB-month (about $0.80/month at steady state
       for 100 plans a month with a video each, $8 for 1,000), transfer
       within CloudFront's free 1 TB; nothing while idle.
+
+## 2026-10-14
+
+49. **Tag every AWS resource with the cost-allocation tags `project` and
+    `tenancy`, so Cost Explorer can split the bill by product and stage.**
+    - [Deploy](deploy.md): `scripts/deploy.sh` deploys both stacks with
+      the stack tags `project=grigri` and `tenancy=GA` (`RC` for
+      `STAGE=rc`). The administrator deploys `grigri-github-deploy` with
+      `tenancy=shared` and tags the `grigri.nu01.com` zone the same way
+      ([grigri_infra/README.md](../grigri_infra/README.md)).
+    - The deploy roles may add `project` and `tenancy` to their stage's
+      distribution and certificate (tagged changes there were scoped to
+      requests carrying `grigri:stage`). No new resource or cost.
+50. **Replace the site's Route 53 health checks with the central
+    nu01-monitor, to cut their cost.** Route 53 health checks bill per
+    check, more for HTTPS and string matching; one shared monitor for all
+    nu01 projects (the `nu01-monitor` stack, nu01 repo) checks every 5
+    minutes instead.
+    - [Deploy](deploy.md): `grigri_infra/site.yaml` drops both health
+      checks (`/app/version.json`, `/api/health`), their alarms, the SNS
+      health topic and its email subscriptions, the
+      `HealthNotificationEmails` parameter and the health outputs (and the
+      `AWS::LanguageExtensions` transform, used only for the subscriptions);
+      the next deploy of each stage deletes them. The endpoints stay.
+    - `scripts/deploy.sh`, the Deploy and Deploy RC workflows and
+      `.env.example` no longer take `GRIGRI_HEALTH_EMAILS`; the repository
+      secret is unused and can be deleted.
+    - The deploy roles keep their health check, alarm and topic
+      permissions until the next GA and RC deploys have deleted them.

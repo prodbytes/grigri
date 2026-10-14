@@ -5,7 +5,7 @@ templates.
 
 | Template | Stack | Holds |
 |---|---|---|
-| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), the Route 53 A/AAAA aliases, and Route 53 health checks of `/app/version.json` and `/api/health` whose alarms email `GRIGRI_HEALTH_EMAILS` when they fail |
+| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), and the Route 53 A/AAAA aliases. Uptime (`/app/version.json`, `/api/health`) is checked from outside by the central `nu01-monitor` stack (nu01 repo), not here |
 | [../grigri_api/template.yaml](../grigri_api/template.yaml) | `grigri-api` | The API: its Lambda (which verifies Google ID tokens and issues the API's own sessions), HTTP API, DynamoDB table (with TTL) and log group ([specs/backend.md](../specs/backend.md)) |
 | [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition: the deploy policies (site, API), the permissions boundary of the stage's roles (`<prefix>-app-boundary`) and the artifact bucket (`<prefix>-artifacts-<account>`) |
 
@@ -14,6 +14,10 @@ templates.
 (seeded with made-up test data) and `grigri-rc-web`, for
 https://rc.grigri.nu01.com; `*RC*` tags do that through
 [deploy-rc.yml](../.github/workflows/deploy-rc.yml).
+
+Every stack carries the cost-allocation stack tags `project=grigri` and
+`tenancy` (`GA` for `grigri-*`, `RC` for `grigri-rc-*`, `shared` for
+`grigri-github-deploy`), which CloudFormation copies onto its resources.
 
 ## The distribution
 
@@ -60,6 +64,10 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
 
    ```bash
    aws route53 create-hosted-zone --name grigri.nu01.com --caller-reference "grigri-$(date -u +%s)"
+   # cost-allocation tags (both stages' records live in it)
+   aws route53 change-tags-for-resource --resource-type hostedzone \
+     --resource-id "$HOSTED_ZONE_ID" \
+     --add-tags Key=project,Value=grigri Key=tenancy,Value=shared
    # then, in the nu01.com zone, an NS record for grigri.nu01.com with
    # the new zone's four name servers
    ```
@@ -74,7 +82,8 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
      --stack-name grigri-github-deploy \
      --template-file grigri_infra/github-deploy.yaml \
      --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-     --parameter-overrides "HostedZoneId=$HOSTED_ZONE_ID"
+     --parameter-overrides "HostedZoneId=$HOSTED_ZONE_ID" \
+     --tags project=grigri tenancy=shared
    ```
 
    The prod role trusts only tokens for `*GA` tags, the RC role `*RC*`
@@ -135,7 +144,6 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    gh variable set GOOGLE_IOS_CLIENT_ID_RC --body "<number>-<id>.apps.googleusercontent.com"
    # Secrets, not variables: the repository is public, and run logs show
    # variables.
-   gh secret set GRIGRI_HEALTH_EMAILS --body "<who gets health alarms>"
    # An API token owned by an rbacr root (rbacr.nu01.com > Global > API
    # tokens), with which the API asks rbacr who holds grigri's admin role.
    gh secret set GRIGRI_RBACR_TOKEN

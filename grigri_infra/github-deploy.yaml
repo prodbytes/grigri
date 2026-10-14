@@ -43,16 +43,20 @@ Parameters:
 # bucket, function, alarm and topic of the stage starts with it). Stage is
 # the grigri:stage tag on the resources that have no name to scope by
 # (CloudFront distributions, ACM certificates); Domain is the site, whose
-# records (and subdomains' records) the stage may change. prod's prefix
-# also covers grigri-rc-*: the production role is the more trusted one.
+# records (and subdomains' records) the stage may change; Tenancy is its
+# tenancy cost-allocation tag (scripts/deploy.sh's stack tags, with
+# project=grigri). prod's prefix also covers grigri-rc-*: the production
+# role is the more trusted one.
 Mappings:
   Stages:
     grigri:
       Stage: prod
       Domain: grigri.nu01.com
+      Tenancy: GA
     grigri-rc:
       Stage: rc
       Domain: rc.grigri.nu01.com
+      Tenancy: RC
 
 Conditions:
   CreateProvider: !Equals [!Ref CreateOidcProvider, 'true']
@@ -364,8 +368,8 @@ Resources:
                   - !Sub arn:${AWS::Partition}:s3:::grigri-rc-web-photos-${AWS::AccountId}/*
 
       # The stage's site stack (grigri_infra/site.yaml): CloudFormation, its
-      # bucket, the health check's alarm and topic, its DNS records, and
-      # CloudFront and ACM by the stage's grigri:stage tag.
+      # bucket, its DNS records, and CloudFront and ACM by the stage's
+      # grigri:stage tag.
       DeployPolicy&{Prefix}:
         Type: AWS::IAM::ManagedPolicy
         Properties:
@@ -400,8 +404,12 @@ Resources:
                 Resource:
                   - !Sub arn:${AWS::Partition}:s3:::${Prefix}-*
                   - !Sub arn:${AWS::Partition}:s3:::${Prefix}-*/*
-              # The site's health check: Route 53 health checks have no
-              # names to scope by, so any in the account.
+              # The site's former Route 53 health checks, their alarms and
+              # SNS topic (now the central nu01-monitor's job): kept only so
+              # CloudFormation can delete them on the next deploy. Drop
+              # HealthCheckCreate, HealthChecks, Alarms and Topics after the
+              # next GA (and RC) deploy. Health checks have no names to
+              # scope by, so any in the account.
               - Sid: HealthCheckCreate
                 Effect: Allow
                 Action: route53:CreateHealthCheck
@@ -573,6 +581,26 @@ Resources:
                     aws:ResourceTag/grigri:stage: !FindInMap [Stages, !Ref Prefix, Stage]
                   ForAllValues:StringNotEquals:
                     aws:TagKeys: grigri:stage
+              # The cost-allocation stack tags (project, tenancy), which
+              # CloudFormation adds to an existing distribution or certificate
+              # without its grigri:stage tag in the same request.
+              - Sid: CostTags
+                Effect: Allow
+                Action:
+                  - cloudfront:TagResource
+                  - acm:AddTagsToCertificate
+                Resource:
+                  - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/*
+                  - !Sub arn:${AWS::Partition}:acm:${AWS::Region}:${AWS::AccountId}:certificate/*
+                Condition:
+                  StringEquals:
+                    aws:ResourceTag/grigri:stage: !FindInMap [Stages, !Ref Prefix, Stage]
+                  StringEqualsIfExists:
+                    aws:RequestTag/grigri:stage: !FindInMap [Stages, !Ref Prefix, Stage]
+                    aws:RequestTag/project: grigri
+                    aws:RequestTag/tenancy: !FindInMap [Stages, !Ref Prefix, Tenancy]
+                  ForAllValues:StringEquals:
+                    aws:TagKeys: [grigri:stage, project, tenancy]
               # Never this stack or its roles.
               - Sid: DenyDeployStack
                 Effect: Deny
