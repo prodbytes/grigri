@@ -1130,5 +1130,59 @@
   "noRoles": "No roles in Grigri yet.",
   "@noRoles": {
     "description": "Roles card when the user has no roles."
+  },
+  "attachMedia": "Add a photo or video",
+  "@attachMedia": {
+    "description": "Tooltip of the chat button that adds a photo or video to a message."
+  },
+  "recordVideo": "Record a video",
+  "@recordVideo": {
+    "description": "Chat attach sheet: record a video with the camera."
+  },
+  "chooseVideo": "Choose a video",
+  "@chooseVideo": {
+    "description": "Chat attach sheet: pick a video from the gallery."
+  },
+  "photoMessage": "Photo",
+  "@photoMessage": {
+    "description": "Chat list preview of a message that is only a photo."
+  },
+  "videoMessage": "Video",
+  "@videoMessage": {
+    "description": "Chat list preview of a message that is only a video; label on a video in the chat."
+  },
+  "removeAttachment": "Remove the attachment",
+  "@removeAttachment": {
+    "description": "Tooltip: drop the photo or video picked for the next message."
+  },
+  "uploadingMedia": "Uploading…",
+  "@uploadingMedia": {
+    "description": "Chat composer while a photo or video uploads."
+  },
+  "playVideo": "Play the video",
+  "@playVideo": {
+    "description": "Tooltip/semantics of a video in the chat: opens the player."
+  },
+  "videoUnavailable": "This video can't be played.",
+  "@videoUnavailable": {
+    "description": "Video player: the video could not be loaded or played."
+  },
+  "mediaUnavailable": "Not available",
+  "@mediaUnavailable": {
+    "description": "A chat photo that could not be loaded (expired or offline)."
+  },
+  "errorMediaType": "Use a JPEG, PNG or WebP photo, or an MP4 or MOV video.",
+  "@errorMediaType": {
+    "description": "The picked chat attachment is in a format the app cannot send."
+  },
+  "errorVideoTooBig": "Videos can be at most {mb} MB: send a shorter one.",
+  "@errorVideoTooBig": {
+    "description": "The picked chat video is over the size limit; mb is the limit in megabytes.",
+    "placeholders": {
+      "mb": {
+        "type": "int",
+        "example": "50"
+      }
+    }
   }
 }

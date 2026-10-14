@@ -69,14 +69,24 @@ abstract interface class GrigriApi {
   /// `GET /api/plans/{id}/messages[?after=]`: oldest first.
   Future<MessageList> messages(String planId, {DateTime? after});
 
-  /// `POST /api/plans/{id}/messages`.
-  Future<Message> send(String planId, String text);
+  /// `POST /api/plans/{id}/messages`: text, an [attachment] (a key from
+  /// [newChatMedia]), or both.
+  Future<Message> send(String planId, String text, {String? attachment});
 
   /// `POST /api/photos`: where to upload a new photo.
   Future<PhotoUpload> newPhoto(PhotoKind kind, String contentType);
 
-  /// Uploads a photo to the presigned POST [newPhoto] gave.
-  Future<void> uploadPhoto(PhotoUpload upload, Uint8List bytes);
+  /// `POST /api/plans/{id}/media`: where to upload a photo or video for
+  /// the plan's chat.
+  Future<PhotoUpload> newChatMedia(String planId, String contentType);
+
+  /// Uploads a photo or video to the presigned POST [newPhoto] or
+  /// [newChatMedia] gave; [onProgress] hears the share sent so far (0 to 1).
+  Future<void> uploadPhoto(
+    PhotoUpload upload,
+    Uint8List bytes, {
+    void Function(double sent)? onProgress,
+  });
 
   /// `GET /api/admin/requests`: every open request (admins only).
   Future<RequestList> adminRequests();
@@ -107,7 +117,24 @@ enum ClientError {
 
   /// A photo the app can't upload (not JPEG, PNG or WebP).
   photoType,
+
+  /// Chat media the app can't send (not a JPEG, PNG or WebP photo, or an
+  /// MP4 or MOV video).
+  mediaType,
+
+  /// A chat video over [maxVideoBytes].
+  videoTooBig,
 }
+
+/// The largest photo the API takes (the pickers downsize well under it).
+const maxPhotoBytes = 2 * 1024 * 1024;
+
+/// The largest chat video the API takes.
+const maxVideoBytes = 50 * 1024 * 1024;
+
+/// The longest video the camera records for a chat (where the device
+/// lets the app say).
+const maxVideoDuration = Duration(seconds: 30);
 
 /// An error answer from the API: its status and the server's message.
 class ApiException implements Exception {
@@ -245,6 +272,23 @@ String? photoContentType(Uint8List bytes) {
     return 'image/webp';
   }
   return null;
+}
+
+/// The type of a chat photo's or video's bytes, as
+/// `POST /api/plans/{id}/media` takes it: a photo as [photoContentType],
+/// or an MP4 or QuickTime (MOV) video. Null for anything else (3GP
+/// videos included: browsers can't play them).
+String? mediaContentType(Uint8List bytes) {
+  final photo = photoContentType(bytes);
+  if (photo != null) return photo;
+  if (bytes.length < 12) return null;
+  // ISO base media files: a size, then 'ftyp' and the major brand.
+  final ftyp = String.fromCharCodes(bytes.sublist(4, 8));
+  if (ftyp != 'ftyp') return null;
+  final brand = String.fromCharCodes(bytes.sublist(8, 12));
+  if (brand == 'qt  ') return 'video/quicktime';
+  if (brand.startsWith('3g')) return null;
+  return 'video/mp4';
 }
 
 // --- JSON ------------------------------------------------------------------

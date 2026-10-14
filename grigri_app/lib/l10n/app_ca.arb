@@ -213,5 +213,17 @@
   "adminJoined": "{name} s'ha unit a {plan}.",
   "roles": "Rols",
   "rolesFailed": "No s'han pogut obtenir els teus rols de rbacr.",
-  "noRoles": "Encara no tens rols a Grigri."
+  "noRoles": "Encara no tens rols a Grigri.",
+  "attachMedia": "Afegeix una foto o un vídeo",
+  "recordVideo": "Grava un vídeo",
+  "chooseVideo": "Tria un vídeo",
+  "photoMessage": "Foto",
+  "videoMessage": "Vídeo",
+  "removeAttachment": "Treu l'adjunt",
+  "uploadingMedia": "S'està pujant…",
+  "playVideo": "Reprodueix el vídeo",
+  "videoUnavailable": "Aquest vídeo no es pot reproduir.",
+  "mediaUnavailable": "No disponible",
+  "errorMediaType": "Fes servir una foto JPEG, PNG o WebP, o un vídeo MP4 o MOV.",
+  "errorVideoTooBig": "Els vídeos poden ocupar com a màxim {mb} MB: envia'n un de més curt."
 }

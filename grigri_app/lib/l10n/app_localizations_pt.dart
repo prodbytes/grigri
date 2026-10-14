@@ -773,4 +773,43 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get noRoles => 'Nenhuma função no Grigri ainda.';
+
+  @override
+  String get attachMedia => 'Adicionar uma foto ou um vídeo';
+
+  @override
+  String get recordVideo => 'Gravar um vídeo';
+
+  @override
+  String get chooseVideo => 'Escolher um vídeo';
+
+  @override
+  String get photoMessage => 'Foto';
+
+  @override
+  String get videoMessage => 'Vídeo';
+
+  @override
+  String get removeAttachment => 'Remover o anexo';
+
+  @override
+  String get uploadingMedia => 'Enviando…';
+
+  @override
+  String get playVideo => 'Reproduzir o vídeo';
+
+  @override
+  String get videoUnavailable => 'Não é possível reproduzir este vídeo.';
+
+  @override
+  String get mediaUnavailable => 'Indisponível';
+
+  @override
+  String get errorMediaType =>
+      'Use uma foto JPEG, PNG ou WebP, ou um vídeo MP4 ou MOV.';
+
+  @override
+  String errorVideoTooBig(int mb) {
+    return 'Os vídeos podem ter no máximo $mb MB: envie um mais curto.';
+  }
 }

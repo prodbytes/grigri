@@ -149,6 +149,15 @@ export interface Message {
   time: string;
   /** On a request note: the request it shows as a card. */
   requestId?: string;
+  /** A member's photo or video (POST /api/plans/{id}/media). */
+  attachment?: Attachment;
+}
+
+/** What a chat message can carry: one photo or one video, nothing else. */
+export interface Attachment {
+  /** Its key (served at /photos/<key>): `chat/<planId>/<id>.<ext>`. */
+  key: string;
+  kind: 'image' | 'video';
 }
 
 export interface Match {

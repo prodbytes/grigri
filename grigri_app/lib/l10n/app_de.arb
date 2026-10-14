@@ -213,5 +213,17 @@
   "adminJoined": "{name} ist jetzt bei {plan} dabei.",
   "roles": "Rollen",
   "rolesFailed": "Deine Rollen konnten nicht von rbacr geladen werden.",
-  "noRoles": "Noch keine Rollen in Grigri."
+  "noRoles": "Noch keine Rollen in Grigri.",
+  "attachMedia": "Foto oder Video hinzufügen",
+  "recordVideo": "Video aufnehmen",
+  "chooseVideo": "Video auswählen",
+  "photoMessage": "Foto",
+  "videoMessage": "Video",
+  "removeAttachment": "Anhang entfernen",
+  "uploadingMedia": "Wird hochgeladen…",
+  "playVideo": "Video abspielen",
+  "videoUnavailable": "Dieses Video kann nicht abgespielt werden.",
+  "mediaUnavailable": "Nicht verfügbar",
+  "errorMediaType": "Nimm ein Foto im Format JPEG, PNG oder WebP oder ein Video im Format MP4 oder MOV.",
+  "errorVideoTooBig": "Videos dürfen höchstens {mb} MB groß sein: Schick ein kürzeres."
 }

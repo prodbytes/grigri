@@ -45,10 +45,17 @@ iOS takes its client ID and URL scheme from `Info.plist`, filled from
 `Private.xcconfig` like the team; the web renders Google's button, which
 the site's CSP allows.
 
-**Photos** (profile and gear) come from
-[image_picker](https://pub.dev/packages/image_picker): Android's photo
+**Photos** (profile and gear, and the chat's photos and videos) come
+from [image_picker](https://pub.dev/packages/image_picker): Android's photo
 picker and camera app (no permissions to declare), iOS's with
-`NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` in
-`Info.plist`, and a file chooser on the web (the site's CSP already allows
-`data:` and `blob:` images). They're uploaded to the backend's photo store
+`NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` and, for the
+sound of recorded videos, `NSMicrophoneUsageDescription` in `Info.plist`,
+and a file chooser on the web (the site's CSP already allows `data:` and
+`blob:` images). They're uploaded to the backend's photo store
 ([matching](matching.md#data-the-backend-api)).
+
+**Chat videos** play with [video_player](https://pub.dev/packages/video_player)
+(Flutter's own plugin: ExoPlayer on Android, AVPlayer on iOS, a `<video>`
+element on the web), streamed from the site's `/photos/` (same origin on
+the web, so the CSP's `default-src 'self'` covers it). It adds no
+native-assets hook, so `flutter test` still runs under devbox.

@@ -3,7 +3,7 @@
 # scripts/build-api.sh and mounted at /opt/grigri-api) into Floci as the
 # stack grigri-local-api: the same Lambda, HTTP API and DynamoDB table as
 # in AWS, plus the photos bucket (site.yaml's, in AWS, with the same
-# lifecycle rule for photos never saved to a profile). Floci runs the
+# lifecycle rules for uploads never saved, and for chat media). Floci runs the
 # function in a Docker container (hence the Docker socket in compose.yaml);
 # the function verifies Google ID tokens itself (POST /api/session) against
 # Google's keys and issues its own sessions. Then it loads the made-up test
@@ -72,13 +72,19 @@ aws s3api put-bucket-cors --bucket "$PHOTOS" --cors-configuration "{
   }]
 }"
 # As in AWS (site.yaml): uploads are tagged pending until a profile saves
-# them; pending ones expire after a day.
+# them or a chat message sends them; pending ones expire after a day, and
+# chat media 400 days after its upload.
 aws s3api put-bucket-lifecycle-configuration --bucket "$PHOTOS" --lifecycle-configuration '{
   "Rules": [{
     "ID": "expire-pending-photos",
     "Status": "Enabled",
     "Filter": {"And": {"Prefix": "photos/", "Tags": [{"Key": "grigri-pending", "Value": "true"}]}},
     "Expiration": {"Days": 1}
+  }, {
+    "ID": "expire-chat-media",
+    "Status": "Enabled",
+    "Filter": {"Prefix": "photos/chat/"},
+    "Expiration": {"Days": 400}
   }]
 }'
 

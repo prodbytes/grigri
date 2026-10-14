@@ -10,6 +10,7 @@ import {
   type JoinRequest,
   type Match,
   type Message,
+  type Attachment,
   type Notice,
   type NoticeKind,
   type Plan,
@@ -367,7 +368,14 @@ function note(planId: string, text: string, ctx: Context): Message {
 }
 
 /** A member's chat message. */
-export function chatMessage(plan: Plan, authorId: string, text: string, ctx: Context): Message {
+export function chatMessage(plan: Plan, authorId: string, text: string, ctx: Context, attachment?: Attachment): Message {
   if (!plan.memberIds.includes(authorId)) throw forbidden("you're not in this plan");
-  return { id: ctx.newId(), planId: plan.id, authorId, text, time: ctx.now.toISOString() };
+  return {
+    id: ctx.newId(),
+    planId: plan.id,
+    authorId,
+    text,
+    time: ctx.now.toISOString(),
+    ...(attachment ? { attachment } : {}),
+  };
 }

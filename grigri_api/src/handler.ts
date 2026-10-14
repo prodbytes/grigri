@@ -18,7 +18,6 @@ import { Store } from './store/store.js';
 import { assertSeedable, seed } from '../seed/seed.js';
 
 const MAX_BODY = 64 * 1024;
-const MAX_PHOTO = 2 * 1024 * 1024;
 
 const env = process.env;
 const stage = env.STAGE ?? 'local';
@@ -35,23 +34,25 @@ const bucket = env.PHOTOS_BUCKET ?? '';
 
 // Every upload is tagged pending; the bucket's lifecycle rule (site.yaml,
 // and 05-api.sh locally) expires pending photos after a day, so photos
-// never saved to a profile go away. PUT /api/me clears the tag.
+// never saved to a profile, and chat media never sent, go away. PUT
+// /api/me and POST /api/plans/{id}/messages clear the tag.
 const PENDING_TAGGING = '<Tagging><TagSet><Tag><Key>grigri-pending</Key><Value>true</Value></Tag></TagSet></Tagging>';
 
 const photos: Photos = {
-  async presign(key, contentType) {
+  async presign(key, contentType, maxBytes) {
     const { url, fields } = await createPresignedPost(s3, {
       Bucket: bucket,
       Key: `photos/${key}`,
       Conditions: [
-        ['content-length-range', 1, MAX_PHOTO],
+        ['content-length-range', 1, maxBytes],
         ['eq', '$Content-Type', contentType],
         ['eq', '$Cache-Control', 'public, max-age=31536000, immutable'],
         ['eq', '$tagging', PENDING_TAGGING],
       ],
       // Keys are never reused, so the photo can be cached for good.
       Fields: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable', tagging: PENDING_TAGGING },
-      Expires: 300,
+      // 15 minutes to start: room for a 50 MB video on a slow phone line.
+      Expires: 900,
     });
     // Locally the browser can't reach the endpoint the function uses.
     return { url: env.PHOTOS_UPLOAD_URL || url, fields };

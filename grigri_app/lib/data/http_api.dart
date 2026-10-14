@@ -218,8 +218,15 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       );
 
   @override
-  Future<Message> send(String planId, String text) async => ApiJson.message(
-    await _post(['plans', planId, 'messages'], {'text': text}),
+  Future<Message> send(
+    String planId,
+    String text, {
+    String? attachment,
+  }) async => ApiJson.message(
+    await _post(
+      ['plans', planId, 'messages'],
+      {'text': text, 'attachment': ?attachment},
+    ),
   );
 
   @override
@@ -232,22 +239,48 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
         contentType,
       );
 
-  /// A multipart POST straight to S3: the presigned fields, then the file.
-  /// No Authorization header: the signature is in the fields.
   @override
-  Future<void> uploadPhoto(PhotoUpload upload, Uint8List bytes) async {
+  Future<PhotoUpload> newChatMedia(String planId, String contentType) async =>
+      ApiJson.photoUpload(
+        await _post(['plans', planId, 'media'], {'contentType': contentType}),
+        contentType,
+      );
+
+  /// A multipart POST straight to S3: the presigned fields, then the file.
+  /// No Authorization header: the signature is in the fields. The file goes
+  /// in chunks, so [onProgress] hears how much has gone (on the web the
+  /// browser takes it all at once, then sends it).
+  @override
+  Future<void> uploadPhoto(
+    PhotoUpload upload,
+    Uint8List bytes, {
+    void Function(double sent)? onProgress,
+  }) async {
+    const chunk = 64 * 1024;
+    Stream<List<int>> chunks() async* {
+      for (var at = 0; at < bytes.length; at += chunk) {
+        final end = at + chunk < bytes.length ? at + chunk : bytes.length;
+        yield Uint8List.sublistView(bytes, at, end);
+        onProgress?.call(end / bytes.length);
+      }
+    }
+
     final request = http.MultipartRequest('POST', upload.url)
       ..fields.addAll(upload.fields)
       ..files.add(
-        http.MultipartFile.fromBytes(
+        http.MultipartFile(
           'file',
-          bytes,
-          filename: 'photo.${upload.contentType.split('/').last}',
+          chunks(),
+          bytes.length,
+          filename: 'upload.${upload.contentType.split('/').last}',
         ),
       );
+    // Videos are big: the usual time, plus 10 s per MB (about 100 KB/s at
+    // worst), so a 50 MB one gets about 9 minutes.
+    final limit = timeout + Duration(seconds: 10 * (bytes.length >> 20));
     final http.StreamedResponse response;
     try {
-      response = await _client.send(request).timeout(timeout);
+      response = await _client.send(request).timeout(limit);
       await response.stream.drain<void>();
     } on TimeoutException {
       throw const ApiException(

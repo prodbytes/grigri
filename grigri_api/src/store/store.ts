@@ -17,7 +17,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Delivery, Effects } from '../domain/rules.js';
-import { type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, isOpen } from '../domain/model.js';
+import { type Attachment, type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, isOpen } from '../domain/model.js';
 import { index, key, prefix } from './keys.js';
 
 type Item = Record<string, unknown>;
@@ -603,6 +603,7 @@ export function messageItem(m: Message): Item {
     text: m.text,
     time: m.time,
     ...(m.requestId ? { requestId: m.requestId } : {}),
+    ...(m.attachment ? { attachment: { key: m.attachment.key, kind: m.attachment.kind } } : {}),
   };
 }
 
@@ -614,5 +615,6 @@ function toMessage(i: Item): Message {
     text: i.text as string,
     time: i.time as string,
     ...(i.requestId ? { requestId: i.requestId as string } : {}),
+    ...(i.attachment ? { attachment: i.attachment as Attachment } : {}),
   };
 }

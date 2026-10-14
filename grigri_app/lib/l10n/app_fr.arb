@@ -213,5 +213,17 @@
   "adminJoined": "{name} a rejoint {plan}.",
   "roles": "Rôles",
   "rolesFailed": "Impossible de récupérer tes rôles depuis rbacr.",
-  "noRoles": "Pas encore de rôle dans Grigri."
+  "noRoles": "Pas encore de rôle dans Grigri.",
+  "attachMedia": "Ajouter une photo ou une vidéo",
+  "recordVideo": "Filmer une vidéo",
+  "chooseVideo": "Choisir une vidéo",
+  "photoMessage": "Photo",
+  "videoMessage": "Vidéo",
+  "removeAttachment": "Retirer la pièce jointe",
+  "uploadingMedia": "Envoi…",
+  "playVideo": "Lire la vidéo",
+  "videoUnavailable": "Impossible de lire cette vidéo.",
+  "mediaUnavailable": "Indisponible",
+  "errorMediaType": "Utilise une photo JPEG, PNG ou WebP, ou une vidéo MP4 ou MOV.",
+  "errorVideoTooBig": "Les vidéos font au plus {mb} Mo : envoies-en une plus courte."
 }

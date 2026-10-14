@@ -16,9 +16,9 @@ An admin can approve or reject any join request.
   app, so no CORS in prod).
 - One DynamoDB table, on-demand (PAY_PER_REQUEST), single-table design,
   point-in-time recovery on in prod only.
-- Photos in S3 (private), uploaded with presigned POSTs, served by the same
-  CloudFront under `/photos/*` (origin access control). Never in DynamoDB
-  (400 KB item limit).
+- Photos, and the chat's photos and videos, in S3 (private), uploaded with
+  presigned POSTs, served by the same CloudFront under `/photos/*` (origin
+  access control). Never in DynamoDB (400 KB item limit).
 - Auth: the API's own **sessions** (see [Sessions](#sessions)). The app
   trades a Google ID token for a session token once (`POST /api/session`,
   where the function verifies the token), then sends
@@ -144,9 +144,11 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   kept to 4 decimals); absent for a place typed by hand.
 - **JoinRequest**: `{"id": "<planId>/<climberId>", "planId", "climberId", "acceptedBy": [climberIds], "rejected": bool, "time"}`
 - **Notice**: `{"id", "kind": "accepted"|"declined"|"request", "planId", "planTitle" (the plan's place when the notice was made), "climberId"?, "time", "read": bool}`
-- **Message**: `{"id", "planId", "authorId": climberId|null, "text", "time", "requestId"?}`
+- **Message**: `{"id", "planId", "authorId": climberId|null, "text", "time", "requestId"?, "attachment"?: {"key", "kind": "image"|"video"}}`
   (authorId null: the chat's own notes: someone joined, left, asked to join;
-  a request note carries requestId so the chat shows it as a card.)
+  a request note carries requestId so the chat shows it as a card. A
+  member's message has text, an attachment, or both; `text` is `""` for an
+  attachment alone. The attachment is served at `/photos/<key>`.)
 - **Match**: `{"plan": Plan, "newcomerId"}`
 - Responses that list plans, requests, notices or messages also return
   `"climbers": {id: Climber}` for every climber they mention, so the app
@@ -193,8 +195,9 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `GET /api/notices` | mine, newest first: `{"notices", "climbers"}` |
 | `POST /api/notices/read` | marks all mine read. → `{}` |
 | `GET /api/plans/{id}/messages?after=<time>` | members only, oldest first, those after `after` when given. → `{"messages", "climbers"}` |
-| `POST /api/plans/{id}/messages` | members only; body `{"text"}` 1–2000 chars. → `{"message"}` |
-| `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 5 minutes. The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
+| `POST /api/plans/{id}/messages` | members only; body `{"text"?, "attachment"?: key}`: text up to 2000 chars, 1–2000 without an attachment. The attachment must be a key `POST /api/plans/{id}/media` issued for this plan (`chat/<this planId>/<random>.<jpg\|png\|webp\|mp4\|mov>`; 400 otherwise) and uploaded: it loses its pending tag, only after the caller is known to be a member (400 if it isn't uploaded, or already expired). → `{"message"}` |
+| `POST /api/plans/{id}/media` | members only (403; 404 for no such plan); body `{"contentType"}`: `image/jpeg`, `image/png`, `image/webp`, `video/mp4` or `video/quicktime`, nothing else (400). → `{"key", "url", "fields", "maxBytes"}`: a presigned S3 POST as `POST /api/photos` gives, ≤ 2 MB for a photo and ≤ 50 MB for a video (`maxBytes`), its content type fixed by the policy. Keys are `chat/<planId>/<random>.<ext>` (object `photos/chat/...`, served at `/photos/chat/...`), tagged pending: an upload no message sends expires after a day. Sent ones expire 400 days after their upload ([backend](backend.md#chat-media)). |
+| `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 15 minutes (room for a chat video on a slow line). The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
 | `GET /api/admin/requests` | admin only: every open request (not rejected, not joined) → `{"requests", "plans": {id: Plan}, "climbers"}` |
 | `POST /api/admin/requests/{planId}/{climberId}/accept` | admin only: they join now, as if every member accepted; same notes and Notice. → `{"match"}` |
 | `POST /api/admin/requests/{planId}/{climberId}/reject` | admin only: rejected, Notice declined. → `{}` |
