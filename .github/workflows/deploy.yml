@@ -104,9 +104,6 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
           HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
-          # Who is emailed when the site's health check fails or recovers:
-          # a secret, not a variable, so the public run logs never show it.
-          GRIGRI_HEALTH_EMAILS: ${{ secrets.GRIGRI_HEALTH_EMAILS }}
           # Google sign-in's web client ID: compiled into the web app, and the
           # client whose ID tokens the API accepts. A public repository
           # variable, not a secret (specs/sign-in.md).
@@ -115,6 +112,7 @@ jobs:
           # too (public identifiers).
           GOOGLE_IOS_CLIENT_IDS: ${{ vars.GOOGLE_IOS_CLIENT_ID }}
           # An rbacr root's API token: the API asks rbacr who holds
-          # grigri's admin role. A secret, like the health emails.
+          # grigri's admin role. A secret, so the public run logs never
+          # show it.
           GRIGRI_RBACR_TOKEN: ${{ secrets.GRIGRI_RBACR_TOKEN }}
         run: bash scripts/deploy.sh

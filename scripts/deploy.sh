@@ -11,8 +11,8 @@
 #      (scripts/seed.sh)
 #   3. deploys the site (CloudFormation grigri_infra/site.yaml:
 #      grigri-web: certificate, buckets (site and photos), CloudFront with
-#      /api/* to the API, DNS, and the Route 53 health check of
-#      /app/version.json with its alarm emails)
+#      /api/* to the API, and DNS; uptime is watched by the central
+#      nu01-monitor stack in the nu01 repo, not by this stack)
 #   4. uploads the index page (/) and the web build (/app/), and
 #      invalidates the CloudFront cache
 #   5. smoke-tests the live site: /app/version.json must report this
@@ -32,9 +32,6 @@
 #   SKIP_BUILD   1 to deploy an existing grigri_app/build/web
 #   HOSTED_ZONE_ID       the Route 53 zone of grigri.nu01.com (default:
 #                the repo's .env, from the private repo)
-#   GRIGRI_HEALTH_EMAILS who is emailed when the health check fails or
-#                recovers, comma-separated (also from .env). Each must
-#                confirm AWS's subscription email.
 #   GOOGLE_WEB_CLIENT_ID the Google web OAuth client whose ID tokens the
 #                API accepts (also from .env; a public identifier)
 #   GOOGLE_IOS_CLIENT_IDS the Google iOS clients whose ID tokens the API
@@ -60,15 +57,20 @@ case "$STAGE" in
   prod)
     stack_prefix=grigri
     DOMAIN=grigri.nu01.com
+    tenancy=GA
     ;;
   rc)
     stack_prefix=grigri-rc
     DOMAIN=rc.grigri.nu01.com
+    tenancy=RC
     ;;
   *) echo "error: STAGE must be prod or rc (got '$STAGE')" >&2; exit 2 ;;
 esac
 SITE_STACK=$stack_prefix-web
 API_STACK=$stack_prefix-api
+# Cost-allocation tags, which CloudFormation copies onto every resource of
+# both stacks (Cost Explorer splits the bill by them).
+stack_tags=(project=grigri "tenancy=$tenancy")
 
 if [[ "${TAG:-}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$ ]]; then
   export VERSION_Z="${BASH_REMATCH[3]}"
@@ -158,7 +160,7 @@ if [[ -n "$GOOGLE_IOS_CLIENT_IDS" && ! "$GOOGLE_IOS_CLIENT_IDS" =~ ^[0-9]+-[0-9a
   echo "error: GOOGLE_IOS_CLIENT_IDS must be comma-separated Google OAuth client IDs" >&2
   exit 1
 fi
-for name in HOSTED_ZONE_ID GRIGRI_HEALTH_EMAILS GOOGLE_WEB_CLIENT_ID; do
+for name in HOSTED_ZONE_ID GOOGLE_WEB_CLIENT_ID; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
   fi
@@ -171,10 +173,6 @@ if [[ ! "$HOSTED_ZONE_ID" =~ ^Z[A-Z0-9]+$ ]]; then
   echo "error: HOSTED_ZONE_ID must be a Route 53 zone ID" >&2
   exit 1
 fi
-if [[ ! "$GRIGRI_HEALTH_EMAILS" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+(,[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+)*$ ]]; then
-  echo "error: GRIGRI_HEALTH_EMAILS must be comma-separated emails" >&2
-  exit 1
-fi
 if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com$ ]]; then
   echo "error: GOOGLE_WEB_CLIENT_ID must be a Google OAuth client ID (<number>-<id>.apps.googleusercontent.com)" >&2
   exit 1
@@ -183,8 +181,6 @@ if [[ -n "$GRIGRI_RBACR_TOKEN" && ! "$GRIGRI_RBACR_TOKEN" =~ ^rbacr_[A-Za-z0-9_-
   echo "error: GRIGRI_RBACR_TOKEN must be an rbacr API token (rbacr_...)" >&2
   exit 1
 fi
-# Emails are people's: logged only as a count.
-echo "    health alarm emails: $(tr ',' '\n' <<<"$GRIGRI_HEALTH_EMAILS" | grep -c .)"
 if [[ -n "$GRIGRI_RBACR_TOKEN" ]]; then
   echo "    admins: whoever rbacr says holds grigri's admin role"
 else
@@ -270,6 +266,7 @@ aws cloudformation deploy --stack-name "$API_STACK" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
     "IotEndpoint=$IOT_ENDPOINT" \
+  --tags "${stack_tags[@]}" \
   --no-fail-on-empty-changeset
 rm -f "$packaged"
 api_domain="$(stack_output "$API_STACK" ApiDomain)"
@@ -284,13 +281,13 @@ fi
 
 # 3. The site
 echo "==> deploying $SITE_STACK"
-# AUTO_EXPAND: the template's Fn::ForEach (AWS::LanguageExtensions).
 clear_failed_create "$SITE_STACK"
 aws cloudformation deploy --stack-name "$SITE_STACK" \
-  --template-file grigri_infra/site.yaml --capabilities CAPABILITY_AUTO_EXPAND \
+  --template-file grigri_infra/site.yaml \
   --parameter-overrides "DomainName=$DOMAIN" "Stage=$STAGE" \
     "HostedZoneId=$HOSTED_ZONE_ID" "ApiDomainName=$api_domain" \
-    "HealthNotificationEmails=$GRIGRI_HEALTH_EMAILS" "IotEndpoint=$IOT_ENDPOINT" \
+    "IotEndpoint=$IOT_ENDPOINT" \
+  --tags "${stack_tags[@]}" \
   --no-fail-on-empty-changeset
 bucket="$(stack_output "$SITE_STACK" SiteBucketName)"
 distribution="$(stack_output "$SITE_STACK" DistributionId)"

@@ -33,11 +33,7 @@ for that tag:
    `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
    both stacks. Production never gets the test seed (it holds real people's data and the demo showcase, which the API writes itself, see [backend](backend.md#the-demo-showcase));
 3. deploys the `grigri-web` stack: certificate, site and photos buckets,
-   CloudFront (with `/api/*` to the API's domain), DNS records, and two
-   Route 53 health checks, each with an alarm that emails
-   `GRIGRI_HEALTH_EMAILS` when it fails or recovers: `/app/version.json`
-   (it must name `grigri_app`) for the web app and `/api/health` (it must
-   say `"ok":true`) for the API;
+   CloudFront (with `/api/*` to the API's domain) and DNS records;
 4. uploads the index page and the web build (`Cache-Control: no-cache`,
    Flutter's files aren't content-hashed) and invalidates `/*`;
 5. checks, for up to 10 minutes, that `/app/version.json` reports the
@@ -49,6 +45,24 @@ back (re-run the workflow for its tag, or deploy it by hand). One
 production deploy runs at a time; a newer tag waits. A stack whose first
 create failed (`ROLLBACK_COMPLETE`, empty) is deleted before the next
 deploy creates it again.
+
+Both stacks are deployed with the cost-allocation stack tags
+`project=grigri` and `tenancy=GA` (`tenancy=RC` for the RC), which
+CloudFormation copies onto every resource that takes tags, so Cost
+Explorer can split the bill by product and stage; `grigri-github-deploy`
+and the `grigri.nu01.com` zone, which serve both stages, carry
+`tenancy=shared`.
+
+## Monitoring
+
+The stacks hold no health checks or alarms. One central monitor for all
+nu01 projects, the `nu01-monitor` stack in the nu01 repository, requests
+each stage's `/app/version.json` (the web app) and `/api/health` (the
+API) every 5 minutes and emails julio+health@nu01.com when one fails.
+Both endpoints stay public for it. (Each site stack had two Route 53
+HTTPS string-match health checks with CloudWatch alarms and an SNS email
+topic; the next deploy of each stage deletes them, and the deploy roles
+keep the permissions to do so until then.)
 
 ## Release candidates (rc.grigri.nu01.com)
 
@@ -105,9 +119,8 @@ separated by stage. The RC seed is the only invoke allowed
 `AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
 (production's Google web client) and `GOOGLE_WEB_CLIENT_ID_RC` (the
 RC's);
-repository secrets: `GRIGRI_HEALTH_EMAILS` and `GRIGRI_RBACR_TOKEN`
-(secrets because the repository is public and run logs show
-variables). One-time setup:
+repository secret: `GRIGRI_RBACR_TOKEN` (a secret because the
+repository is public and run logs show variables). One-time setup:
 [grigri_infra/README.md](../grigri_infra/README.md).
 
 By hand, with admin credentials: `TAG=0.1.<Z>-GA bash scripts/deploy.sh`
