@@ -428,6 +428,12 @@ class FakeApi implements GrigriApi, SessionApi {
       _route('POST /api/plans/$planId/pass', () => passed.add(planId));
 
   @override
+  Future<void> clearPasses() => _route('DELETE /api/passes', () {
+    // Not the ones I asked to join (a dismissed "no" stays hidden).
+    passed.removeWhere((p) => !requestsById.containsKey('$p/$meId'));
+  });
+
+  @override
   Future<RequestList> requests() => _route('GET /api/requests', () {
     final list = [
       for (final r in requestsById.values)

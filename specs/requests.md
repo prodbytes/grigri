@@ -612,3 +612,9 @@ spec.
     - [Screens](screens.md), [matching](matching.md): the share button is
       36 dp (was 44) and sits to the right of ✓; a spacer as wide on the
       left keeps ✕ and ✓ centered. A widget test checks both.
+44. **On Find, the refresh button reloads the plans, the ones I already
+    passed on too: I may have changed my mind.**
+    - [API](api.md): `DELETE /api/passes` forgets my passes, except on
+      plans I asked to join. [Matching](matching.md),
+      [screens](screens.md): Discover's ⟳ calls it, then reloads the deck.
+      No new resource; one query and a batch delete per refresh.

@@ -80,7 +80,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           IconButton(
             tooltip: l.refresh,
             icon: const Icon(Icons.refresh),
-            onPressed: store.refreshDiscover,
+            onPressed: () => store.refreshDiscover(again: true),
           ),
         ],
       ),

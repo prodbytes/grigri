@@ -65,6 +65,7 @@ export class FakeStore {
   async memberPlanIds(cid: string) { return [...this.plans.values()].filter((p) => p.plan.memberIds.includes(cid)).map((p) => p.plan.id); }
   async passedPlanIds(cid: string) { return [...this.passes].filter((k) => k.startsWith(`${cid}|`)).map((k) => k.split('|')[1]!); }
   async addPass(cid: string, planId: string) { this.passes.add(`${cid}|${planId}`); }
+  async deletePasses(cid: string, planIds: string[]) { for (const p of planIds) this.passes.delete(`${cid}|${p}`); }
   async askedRequests(cid: string) { return [...this.requests.values()].filter((r) => r.climberId === cid); }
   async openRequests() { return [...this.requests.values()].filter(isOpen); }
   async saveDismissed(r: JoinRequest) {
