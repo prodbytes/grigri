@@ -607,3 +607,8 @@ spec.
       and the chat gets the joined note. The app refreshes its
       notifications right after, so the match screen opens (no "you'll
       get an alert" snackbar). Real plans are unchanged.
+43. **On Find, make the share button a bit smaller and put it to the right
+    of the accept and reject buttons.**
+    - [Screens](screens.md), [matching](matching.md): the share button is
+      36 dp (was 44) and sits to the right of ✓; a spacer as wide on the
+      left keeps ✕ and ✓ centered. A widget test checks both.
