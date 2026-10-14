@@ -35,9 +35,10 @@ who are members, or by an admin.
 - **DynamoDB**, one table, on demand, single-table design.
 - **Photos** in a private S3 bucket in the site stack
   (`<site stack>-photos-<account>`), uploaded straight from the app with
-  presigned POSTs (≤ 2 MB, JPEG/PNG/WebP, 5 minutes) that the API issues
+  presigned POSTs (≤ 2 MB, JPEG/PNG/WebP, 15 minutes) that the API issues
   for the caller's own folder, and read through CloudFront with origin
-  access control. Keys are random and never reused, so photos are cached
+  access control. The chat's photos and videos live there too
+  ([chat media](#chat-media)). Keys are random and never reused, so photos are cached
   at the edge and in browsers for a year. The bucket allows POST uploads
   from the stage's site origin (CORS); the web app's CSP allows the
   bucket's URL in `connect-src`. Uploads arrive tagged
@@ -46,6 +47,7 @@ who are members, or by an admin.
   uses, and a lifecycle rule expires pending photos after a day, so photos
   never saved to a profile go away. Saved photos stay until replaced;
   failed multipart uploads are cleaned up too.
+- **Chat media**: see [below](#chat-media).
 - **Auth: the API's own sessions** ([api.md](api.md#sessions)). Sign-in
   sends a Google ID token once to `POST /api/session`; the function
   verifies it (with [jose](https://github.com/panva/jose): RS256 against
@@ -148,7 +150,7 @@ and use is billed per request. Prices are us-east-1's.
 | HTTP API | $1.00 per million requests | $0 | REST APIs cost $3.50 per million. No authorizer: the function checks sessions itself. |
 | Sessions (in the table) | One eventually consistent read per request (about $0.06 per million requests), one write per session per day of use, a write to sign in or out; the subject index is keys-only, so the daily slide doesn't write to it | $0 | An HTTP API JWT authorizer would be free per request, but it can only check Google's one-hour tokens. A Lambda authorizer would add a second invocation per request; Cognito would add a service and its own pricing beyond its free tier. |
 | One Lambda, arm64, 256 MB | $0.20 per million requests + $0.0000133 per GB-second (1 million requests and 400,000 GB-seconds a month free) | $0 | One function with an internal router: one cold start to warm, one log group, one role. arm64 is 20% cheaper than x86. 256 MB keeps a ~50 ms request at well under a cent per thousand. |
-| S3 photos bucket | $0.023/GB-month, $0.005 per 1,000 uploads (and per 1,000 tag clears, one per new photo saved); deletes and lifecycle expirations free | $0 when empty | Photos stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has, cached for a year. Unsaved uploads expire after a day, so they don't pile up. |
+| S3 photos bucket | $0.023/GB-month, $0.005 per 1,000 uploads (and per 1,000 tag clears, one per new photo saved or chat attachment sent); deletes and lifecycle expirations free | $0 when empty | Photos and chat media stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has, cached for a year. Unsaved uploads expire after a day, so they don't pile up; chat media after 400 days. See [chat media](#chat-media). |
 | CloudWatch Logs | $0.50/GB ingested; 14 days kept | $0 | The function logs only errors (plus Lambda's own lines per request), and the retention keeps storage near zero. |
 | Artifact bucket (per stage) | S3 storage of each deploy's ~200 KB zip, expired after 30 days | ~$0 | Where `aws cloudformation package` uploads the code. |
 | IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
@@ -158,6 +160,61 @@ No NAT gateways, VPCs, provisioned capacity, KMS keys (AWS-owned keys
 encrypt the table and buckets) or always-on compute. A month with a few
 thousand users' worth of requests (say a million API calls) costs about a
 dollar for the API and a little more for DynamoDB.
+
+### Chat media
+
+A chat message can carry **one photo or one video**, nothing else: JPEG,
+PNG or WebP photos (≤ 2 MB; the app downsizes them to 1600 px at 75%
+quality, a few hundred KB) and MP4 or QuickTime (MOV) videos (≤ 50 MB;
+the camera records at most 30 s where the device lets the app say).
+
+- **Upload**: a member asks `POST /api/plans/{id}/media` (members only,
+  only those types) for a presigned POST, as profile photos do. The
+  policy fixes the content type and the size cap, so S3 itself refuses
+  anything else. The object is `photos/chat/<planId>/<random>.<ext>`,
+  tagged pending.
+- **Send**: `POST /api/plans/{id}/messages` with the key, which must be
+  this plan's; the API clears its pending tag (after checking membership)
+  and saves the message. An upload never sent expires after a day (the
+  same lifecycle rule as photos).
+- **Serve**: like profile photos, through the site's CloudFront at
+  `/photos/chat/...`: **public to whoever has the URL, and the URL is
+  unguessable** (96 random bits). Only members learn keys, from the
+  members-only messages route, but someone who left, or anyone a member
+  passes the link to, can still open it until it expires. Objects are
+  served with the content type the policy fixed and `nosniff`, so an
+  upload can't pass for a page. Cached for a year (keys are never
+  reused); videos stream with range requests.
+- **Expire**: a lifecycle rule deletes everything under `photos/chat/` 400
+  days after its upload. A plan starts at most a year after it's made, so
+  that's at least a month after the plan is over. A plan whose last
+  member leaves loses its messages at once; its media stays until then
+  (deleting it would need list permission on the bucket, for a few cents).
+
+**Why this way.** Serving through CloudFront costs nothing extra: its
+always-free tier covers 1 TB out and 10 million requests a month, then
+$0.085/GB; S3 to CloudFront is free. The alternatives cost more or add
+moving parts: **presigned S3 GETs** pay S3's $0.09/GB beyond the 100 GB a
+month AWS gives free, can't be cached at the edge or across loads (a new
+URL each time), and need the app to refresh URLs as they expire;
+**CloudFront signed URLs or cookies** are free, but need a key pair, its
+private key kept as a secret for the function, and a key group in the
+distribution, per stage and locally. Keeping chat media consistent with
+profile photos was the cheapest option that meets "members see it".
+
+**Estimate.** Say a plan's chat gets 5 photos (~300 KB each) and one
+25 MB video, each seen by 4 members:
+
+| | 100 plans a month | 1,000 plans a month |
+|---|---|---|
+| New storage | 2.7 GB/month | 27 GB/month |
+| Storage at steady state (400 days kept) | ~35 GB: **~$0.80/month** | ~350 GB: **~$8/month** |
+| Uploads + tag clears + presign requests | 1,200 each: ~$0.01 | ~$0.12 |
+| CloudFront transfer (members viewing) | ~11 GB: $0 (free tier) | ~106 GB: $0 (free tier) |
+
+Idle it costs only the storage already there. Pending uploads cost a
+day's storage at most. A member flooding a chat with 50 MB videos costs
+$0.00115 a month per video kept (the API's throttle caps the rate).
 
 ### Live updates' cost
 

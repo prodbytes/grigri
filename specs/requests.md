@@ -673,3 +673,29 @@ spec.
       conditional write, one notice write and one IoT hint per waiting
       member (fractions of a cent per thousand), and the 12-hour limit
       caps it at two per request per day.
+48. **In the chat, make sure that users can add images and put those on
+    S3, videos as well, but not other files.**
+    - [Matching](matching.md#group-chat), [screens](screens.md): a chat
+      message can carry one photo or one video, with or without text.
+      The composer's attach button offers only photos and videos (take
+      or choose a photo, record or choose a video); the picked one shows
+      above the box with its size, then "Uploading…" with a progress bar.
+      Photos show inline (tap for full screen), videos as a poster that
+      plays full screen with `video_player`. Other files are refused in
+      the app (by their bytes) and by the API (by content type). Strings
+      in every language; iOS asks for the microphone too, for recorded
+      videos ([platforms](platforms.md)).
+    - [API](api.md): `POST /api/plans/{id}/media` (members only) issues a
+      presigned POST for `image/jpeg|png|webp` (≤ 2 MB) or
+      `video/mp4|quicktime` (≤ 50 MB), key `chat/<planId>/<random>.<ext>`,
+      tagged pending. `POST /api/plans/{id}/messages` takes
+      `{"text"?, "attachment"?}`; the attachment must be this plan's and
+      uploaded, and loses its pending tag. Messages return
+      `attachment: {key, kind}`. Presigned POSTs now last 15 minutes.
+    - [Backend](backend.md#chat-media): same photos bucket (under
+      `photos/chat/`), same CloudFront `/photos/*` behavior, served
+      public-by-unguessable-key like profile photos. One new lifecycle
+      rule (also in Floci) expires chat media 400 days after upload.
+      Cost: storage at $0.023/GB-month (about $0.80/month at steady state
+      for 100 plans a month with a video each, $8 for 1,000), transfer
+      within CloudFront's free 1 TB; nothing while idle.

@@ -83,9 +83,10 @@ Resources:
         Rules:
           - ObjectOwnership: BucketOwnerEnforced
 
-  # People's photos (profile and gear), uploaded by the app with presigned
-  # POSTs the API issues (under photos/), and served by this distribution
-  # under /photos/* (the path is the key, so objects live under photos/).
+  # People's photos (profile and gear) and chat media (photos and videos,
+  # under photos/chat/<plan>/), uploaded by the app with presigned POSTs
+  # the API issues (under photos/), and served by this distribution under
+  # /photos/* (the path is the key, so objects live under photos/).
   # Private: only this distribution reads it. Deterministic name, so the
   # API stack, deployed first, can grant its function uploads to it. Kept
   # when the stack goes (Retain): it's people's data.
@@ -117,9 +118,12 @@ Resources:
             MaxAge: 3000
       # Uploads arrive tagged grigri-pending=true (the API's presigned
       # POSTs); saving a profile clears the tag of its photos, and deletes
-      # the ones it drops. Photos never saved to a profile expire after a
-      # day. Saved photos stay until their owner replaces them. Failed
-      # multipart uploads are cleaned up too.
+      # the ones it drops; sending a chat message clears its attachment's.
+      # Uploads never saved or sent expire after a day. Saved photos stay
+      # until their owner replaces them. Chat media expires 400 days after
+      # its upload: a plan starts at most a year after it's made, so that's
+      # at least a month after the plan is over. Failed multipart uploads
+      # are cleaned up too.
       LifecycleConfiguration:
         Rules:
           - Id: abort-incomplete-uploads
@@ -133,6 +137,10 @@ Resources:
               - Key: grigri-pending
                 Value: 'true'
             ExpirationInDays: 1
+          - Id: expire-chat-media
+            Status: Enabled
+            Prefix: photos/chat/
+            ExpirationInDays: 400
       Tags:
         - Key: grigri:stage
           Value: !Ref Stage

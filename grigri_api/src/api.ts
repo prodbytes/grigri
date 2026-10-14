@@ -16,7 +16,7 @@ import {
   requestJson,
 } from './domain/model.js';
 import * as rules from './domain/rules.js';
-import { asObject, id, messageText, parseDate, planInput, profileInput } from './domain/validate.js';
+import { asObject, id, messageInput, parseDate, planInput, profileInput } from './domain/validate.js';
 import type { RolesLookup } from './rbacr.js';
 import { type Params, Router } from './router.js';
 import { type Delivery, type Realtime, hintsFor } from './realtime.js';
@@ -28,13 +28,19 @@ export const MAX_OPEN_REQUESTS = 30;
 /** A new profile's name when Google didn't give one (sessions from before names were kept). */
 export const NO_NAME = 'Climber';
 
+/** Largest photo upload (profile, gear, chat): the app downsizes them well under it. */
+export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
+/** Largest chat video upload. */
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
 export interface Photos {
   /**
-   * A presigned POST for `key` (S3 object photos/<key>). The object is
-   * tagged pending: the bucket expires it after a day unless kept.
+   * A presigned POST for `key` (S3 object photos/<key>) of `contentType`,
+   * at most `maxBytes`. The object is tagged pending: the bucket expires it
+   * after a day unless kept.
    */
-  presign(key: string, contentType: string): Promise<{ url: string; fields: Record<string, string> }>;
-  /** Clears the pending tag of photos a profile now uses; false for one that isn't there. */
+  presign(key: string, contentType: string, maxBytes: number): Promise<{ url: string; fields: Record<string, string> }>;
+  /** Clears the pending tag of photos a profile or a chat message now uses; false for one that isn't there. */
   keep(key: string): Promise<boolean>;
   /** Deletes photos a profile no longer uses. */
   remove(keys: string[]): Promise<void>;
@@ -104,6 +110,9 @@ function messageIds(): () => string {
 }
 
 const CONTENT_TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+/** What a chat can carry: photos as above, and MP4 or QuickTime videos. Nothing else. */
+const VIDEO_TYPES: Record<string, string> = { 'video/mp4': 'mp4', 'video/quicktime': 'mov' };
+const CHAT_TYPES: Record<string, string> = { ...CONTENT_TYPES, ...VIDEO_TYPES };
 
 export class Api {
   private readonly router = new Router<Route>();
@@ -154,6 +163,7 @@ export class Api {
     r('DELETE /api/passes', 'profile', (_req, s) => this.clearPasses(s));
     r('GET /api/plans/{id}/messages', 'profile', (req, s) => this.messages(req, s));
     r('POST /api/plans/{id}/messages', 'profile', (req, s) => this.send(req, s));
+    r('POST /api/plans/{id}/media', 'profile', (req, s) => this.presignChatMedia(req, s));
 
     r('GET /api/requests', 'profile', (_req, s) => this.toReview(s));
     r('POST /api/requests/{planId}/{climberId}/accept', 'profile', (req, s) => this.answer(req, s, 'accept', false));
@@ -277,11 +287,31 @@ export class Api {
   private async presignPhoto(req: Request, s: Session) {
     const o = asObject(req.body);
     if (o.kind !== 'profile' && o.kind !== 'gear') throw badRequest('kind must be profile or gear');
-    const ext = typeof o.contentType === 'string' ? CONTENT_TYPES[o.contentType] : undefined;
+    const ext = typeof o.contentType === 'string' && Object.hasOwn(CONTENT_TYPES, o.contentType) ? CONTENT_TYPES[o.contentType] : undefined;
     if (!ext) throw badRequest(`contentType must be one of ${Object.keys(CONTENT_TYPES).join(', ')}`);
     const key = `${subjectHash(s.caller.subject)}/${o.kind}/${newId()}.${ext}`;
-    const { url, fields } = await this.deps.photos.presign(key, o.contentType as string);
+    const { url, fields } = await this.deps.photos.presign(key, o.contentType as string, MAX_PHOTO_BYTES);
     return { key, url, fields };
+  }
+
+  /**
+   * POST /api/plans/{id}/media: where a member uploads a photo or video for
+   * the plan's chat (key `chat/<planId>/<id>.<ext>`, pending until a
+   * message uses it).
+   */
+  private async presignChatMedia(req: Request, s: Session) {
+    const planId = id(req.params.id, 'plan id');
+    const o = asObject(req.body);
+    const contentType = typeof o.contentType === 'string' ? o.contentType : '';
+    const ext = Object.hasOwn(CHAT_TYPES, contentType) ? CHAT_TYPES[contentType] : undefined;
+    if (!ext) throw badRequest(`contentType must be one of ${Object.keys(CHAT_TYPES).join(', ')}`);
+    const current = await this.store.getPlan(planId);
+    if (!current) throw notFound('no such plan');
+    if (!current.plan.memberIds.includes(s.me.id)) throw forbidden("you're not in this plan");
+    const key = `chat/${planId}/${newId()}.${ext}`;
+    const maxBytes = Object.hasOwn(VIDEO_TYPES, contentType) ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
+    const { url, fields } = await this.deps.photos.presign(key, contentType, maxBytes);
+    return { key, url, fields, maxBytes };
   }
 
   // --- Decks and plans ------------------------------------------------------
@@ -534,10 +564,15 @@ export class Api {
 
   private async send(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
-    const text = messageText(req.body);
+    const input = messageInput(req.body, planId);
     const current = await this.store.getPlan(planId);
     if (!current) throw notFound('no such plan');
-    const message = rules.chatMessage(current.plan, s.me.id, text, s.ctx);
+    const message = rules.chatMessage(current.plan, s.me.id, input.text, s.ctx, input.attachment);
+    // The upload loses its pending tag (else the bucket would expire it)
+    // only once I'm known to be a member; one that isn't there is refused.
+    if (input.attachment && !(await this.deps.photos.keep(input.attachment.key))) {
+      throw badRequest("the attachment isn't uploaded (or expired): upload it again");
+    }
     await this.store.putMessage(message);
     await this.hint(hintsFor(current.plan.memberIds, { kind: 'message', planId }, s.me.id));
     return { message };

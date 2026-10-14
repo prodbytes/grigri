@@ -10,6 +10,8 @@ let api: Api;
 let auth: Auth;
 /** S3 as the fake photos see it: key -> pending tag. */
 let objects: Map<string, boolean>;
+/** Each presigned upload: its key, type and size cap. */
+let presigned: { key: string; contentType: string; maxBytes: number }[];
 let removed: string[];
 
 const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
@@ -48,8 +50,12 @@ beforeEach(async () => {
   store = new FakeStore();
   objects = new Map();
   removed = [];
+  presigned = [];
   const photos = {
-    presign: async (key: string) => ({ url: 'https://upload.example.com/', fields: { key: `photos/${key}` } }),
+    presign: async (key: string, contentType: string, maxBytes: number) => {
+      presigned.push({ key, contentType, maxBytes });
+      return { url: 'https://upload.example.com/', fields: { key: `photos/${key}` } };
+    },
     keep: async (key: string) => {
       if (!objects.has(key)) return false;
       objects.set(key, false);
@@ -361,6 +367,49 @@ describe('the matchmaking flow', () => {
     expect((await call(ben, 'GET', '/api/plans')).asked).toEqual([]);
     expect((await call(ben, 'GET', '/api/discover')).plans).toEqual([]);
     await fails(call(ben, 'POST', `/api/plans/${planId}/join`), 409);
+  });
+
+  it('chat media: members upload photos and videos, and send them', async () => {
+    const media = `/api/plans/${planId}/media`;
+    // Members only; photos and MP4 or QuickTime videos only.
+    await fails(call(ben, 'POST', media, { contentType: 'image/jpeg' }), 403);
+    await fails(call(ada, 'POST', '/api/plans/nope/media', { contentType: 'image/jpeg' }), 404);
+    for (const contentType of ['image/gif', 'application/pdf', 'video/webm', 'text/html', 'toString', undefined]) {
+      await fails(call(ada, 'POST', media, { contentType }), 400, /contentType/);
+    }
+    const photo = await call(ada, 'POST', media, { contentType: 'image/webp' });
+    expect(photo.key).toMatch(new RegExp(`^chat/${planId}/[A-Za-z0-9_-]{16}\\.webp$`));
+    const video = await call(ada, 'POST', media, { contentType: 'video/quicktime' });
+    expect(video).toMatchObject({ key: expect.stringMatching(/\.mov$/), maxBytes: 50 * 1024 * 1024 });
+    expect(presigned.map((p) => [p.contentType, p.maxBytes])).toEqual([
+      ['image/webp', 2 * 1024 * 1024],
+      ['video/quicktime', 50 * 1024 * 1024],
+    ]);
+
+    // Not uploaded yet: refused. Uploaded: sent, and no longer pending.
+    const send = `/api/plans/${planId}/messages`;
+    await fails(call(ada, 'POST', send, { attachment: photo.key }), 400, /isn't uploaded/);
+    objects.set(photo.key, true);
+    objects.set(video.key, true);
+    const { message } = await call(ada, 'POST', send, { attachment: photo.key });
+    expect(message).toMatchObject({ text: '', attachment: { key: photo.key, kind: 'image' } });
+    expect(objects.get(photo.key)).toBe(false);
+    await call(ada, 'POST', send, { text: 'Our crag', attachment: video.key });
+    const chat = await call(ada, 'GET', send);
+    expect(chat.messages.slice(-2).map((m: any) => [m.text, m.attachment])).toEqual([
+      ['', { key: photo.key, kind: 'image' }],
+      ['Our crag', { key: video.key, kind: 'video' }],
+    ]);
+
+    // Another plan's media, or an outsider sending it, is refused (and stays pending).
+    const other = (await call(ben, 'POST', '/api/plans', planBody)).plan.id;
+    await fails(call(ben, 'POST', `/api/plans/${other}/messages`, { attachment: photo.key }), 400, /this plan/);
+    const late = await call(ada, 'POST', media, { contentType: 'image/png' });
+    objects.set(late.key, true);
+    await fails(call(ben, 'POST', send, { attachment: late.key }), 403);
+    expect(objects.get(late.key)).toBe(true);
+    // Neither text nor attachment: nothing to send.
+    await fails(call(ada, 'POST', send, {}), 400, /text is required/);
   });
 
   it('only the organizer edits', async () => {

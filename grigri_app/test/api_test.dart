@@ -331,6 +331,114 @@ void main() {
         'https://grigri.test/photos/pat/profile-1',
       );
     });
+
+    test('chat media: the plan\'s presigned POST, the upload with its '
+        'progress, then the message with its key', () async {
+      final seen = <http.Request>[];
+      final client = MockClient((request) async {
+        seen.add(request);
+        if (request.url.path == '/api/plans/p1/media') {
+          return json({
+            'key': 'chat/p1/abc.mp4',
+            'url': 'https://bucket.test/',
+            'fields': {'key': 'photos/chat/p1/abc.mp4'},
+          });
+        }
+        if (request.url.path == '/api/plans/p1/messages') {
+          return json({
+            'message': {
+              'id': 'm1',
+              'planId': 'p1',
+              'authorId': 'pat',
+              'text': '',
+              'time': '2030-05-01T10:00:00.000Z',
+              'attachment': {'key': 'chat/p1/abc.mp4', 'kind': 'video'},
+            },
+          });
+        }
+        return http.Response('', 204);
+      });
+      final api = HttpGrigriApi(
+        origin: site,
+        headers: () async => {'Authorization': 'Bearer t0ken'},
+        client: client,
+      );
+      final upload = await api.newChatMedia('p1', 'video/mp4');
+      expect(jsonDecode(seen.first.body), {'contentType': 'video/mp4'});
+      final video = Uint8List(200 * 1024);
+      final progress = <double>[];
+      await api.uploadPhoto(upload, video, onProgress: progress.add);
+      expect(progress.last, 1.0);
+      expect(progress.length, greaterThan(1));
+      expect(seen.last.bodyBytes.length, greaterThan(video.length));
+      final message = await api.send('p1', '', attachment: upload.key);
+      expect(jsonDecode(seen.last.body), {
+        'text': '',
+        'attachment': 'chat/p1/abc.mp4',
+      });
+      expect(message.attachment?.kind, MediaKind.video);
+      expect(message.attachment?.key, 'chat/p1/abc.mp4');
+      // Text only: no attachment field.
+      await api.send('p1', 'hi');
+      expect(jsonDecode(seen.last.body), {'text': 'hi'});
+    });
+  });
+
+  group('chat media types', () {
+    Uint8List box(String brand) => Uint8List.fromList([
+      0,
+      0,
+      0,
+      0x18,
+      ...'ftyp'.codeUnits,
+      ...brand.codeUnits,
+      0,
+      0,
+      0,
+      0,
+    ]);
+
+    test('photos as profile photos, and MP4 or MOV videos only', () {
+      expect(mediaContentType(png), 'image/png');
+      expect(mediaContentType(box('isom')), 'video/mp4');
+      expect(mediaContentType(box('mp42')), 'video/mp4');
+      expect(mediaContentType(box('qt  ')), 'video/quicktime');
+      // 3GP, PDFs, GIFs, text: refused.
+      expect(mediaContentType(box('3gp4')), isNull);
+      expect(
+        mediaContentType(Uint8List.fromList('%PDF-1.7'.codeUnits)),
+        isNull,
+      );
+      expect(mediaContentType(Uint8List.fromList('GIF89a'.codeUnits)), isNull);
+      expect(
+        mediaContentType(Uint8List.fromList('hello, world'.codeUnits)),
+        isNull,
+      );
+      expect(mediaContentType(Uint8List(0)), isNull);
+    });
+
+    test(
+      'a message reads its attachment, and ignores kinds it doesn\'t know',
+      () {
+        Message read(Object? attachment) => Message.fromJson({
+          'id': 'm',
+          'planId': 'p',
+          'authorId': 'a',
+          'text': '',
+          'time': '2030-05-01T10:00:00.000Z',
+          'attachment': attachment,
+        });
+        expect(
+          read({'key': 'chat/p/x.jpg', 'kind': 'image'}).attachment?.kind,
+          MediaKind.image,
+        );
+        expect(
+          read({'key': 'chat/p/x.pdf', 'kind': 'file'}).attachment,
+          isNull,
+        );
+        expect(read(null).attachment, isNull);
+      },
+    );
   });
 
   group('demo', () {

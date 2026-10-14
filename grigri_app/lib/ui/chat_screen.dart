@@ -3,9 +3,11 @@ import 'dart:math' show max;
 
 import 'package:flutter/material.dart';
 
+import '../data/grigri_store.dart';
 import '../data/realtime.dart';
 import '../model/plan.dart';
 import '../theme.dart';
+import 'chat_media.dart';
 import 'common.dart';
 import 'match_screen.dart';
 import 'plan_screen.dart';
@@ -13,16 +15,21 @@ import 'plan_screen.dart';
 /// A plan's group chat: everyone in the plan, with the plan pinned on top.
 /// Join requests show in it as cards the group answers: everyone must say
 /// yes, and one no turns them down. The ones still waiting for my answer
-/// are also called out on top, under the plan.
+/// are also called out on top, under the plan. A message can carry one
+/// photo or video (nothing else), shown in its bubble.
 class ChatScreen extends StatefulWidget {
   const ChatScreen({
     super.key,
     required this.planId,
     this.pollEvery = const Duration(seconds: 3),
     this.livePollEvery = const Duration(minutes: 1),
+    this.pick = pickChatMedia,
   });
 
   final String planId;
+
+  /// Picks the photo or video to send.
+  final ChatMediaPicker pick;
 
   /// How often it checks for new messages while it's open.
   final Duration pollEvery;
@@ -39,6 +46,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final _input = TextEditingController();
   Timer? _poll;
   bool _sending = false;
+
+  /// The photo or video picked for the next message.
+  ChatMedia? _media;
+
+  /// How much of it has uploaded (0 to 1) while sending.
+  double? _progress;
   late final Cadence _cadence = Cadence(
     liveEvery: max(
       1,
@@ -74,14 +87,41 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  Future<void> _attach() async {
+    final source = await chooseChatMediaSource(context);
+    if (source == null || !mounted) return;
+    final media = await widget.pick(source);
+    if (media == null || !mounted) return;
+    setState(() => _media = media);
+  }
+
   Future<void> _send() async {
     final text = _input.text;
-    if (text.trim().isEmpty || _sending) return;
-    setState(() => _sending = true);
-    final sent = await StoreScope.read(context).send(widget.planId, text);
+    final media = _media;
+    if ((text.trim().isEmpty && media == null) || _sending) return;
+    setState(() {
+      _sending = true;
+      _progress = media == null ? null : 0;
+    });
+    final sent = await StoreScope.read(context).send(
+      widget.planId,
+      text,
+      media: media,
+      onProgress: media == null
+          ? null
+          : (sent) {
+              if (mounted) setState(() => _progress = sent);
+            },
+    );
     if (!mounted) return;
-    setState(() => _sending = false);
-    if (sent) _input.clear();
+    setState(() {
+      _sending = false;
+      _progress = null;
+    });
+    if (sent) {
+      _input.clear();
+      setState(() => _media = null);
+    }
   }
 
   @override
@@ -168,12 +208,23 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
+          if (_media case final media?)
+            _PickedMedia(
+              media: media,
+              progress: _sending ? _progress : null,
+              onRemove: _sending ? null : () => setState(() => _media = null),
+            ),
           SafeArea(
             top: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 4, 8, 10),
+              padding: const EdgeInsets.fromLTRB(4, 4, 8, 10),
               child: Row(
                 children: [
+                  IconButton(
+                    tooltip: l.attachMedia,
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    onPressed: _sending ? null : _attach,
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _input,
@@ -579,7 +630,13 @@ class _Bubble extends StatelessWidget {
                       author.firstName,
                       style: text.labelMedium?.copyWith(color: Mountain.tan),
                     ),
-                  Text(message.text, style: text.bodyMedium),
+                  if (message.attachment case final attachment?)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: ChatAttachment(attachment),
+                    ),
+                  if (message.text.isNotEmpty)
+                    Text(message.text, style: text.bodyMedium),
                   Align(
                     alignment: Alignment.bottomRight,
                     child: Text(
@@ -591,6 +648,84 @@ class _Bubble extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The photo or video picked for the next message, above the input: a
+/// preview, Remove, and how much has uploaded while it sends.
+class _PickedMedia extends StatelessWidget {
+  const _PickedMedia({
+    required this.media,
+    required this.progress,
+    required this.onRemove,
+  });
+
+  final ChatMedia media;
+
+  /// Null while not sending.
+  final double? progress;
+  final VoidCallback? onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    final text = Theme.of(context).textTheme;
+    final video = media.kind == MediaKind.video;
+    final mb = (media.bytes.length / (1024 * 1024)).toStringAsFixed(1);
+    return Container(
+      key: const ValueKey('picked media'),
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Mountain.surfaceHigh,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox.square(
+                  dimension: 56,
+                  child: video
+                      ? const ColoredBox(
+                          color: Colors.black54,
+                          child: Icon(Icons.videocam, color: Mountain.snow),
+                        )
+                      : Image.memory(
+                          media.bytes,
+                          fit: BoxFit.cover,
+                          cacheWidth: 168,
+                          errorBuilder: (_, _, _) =>
+                              const Icon(Icons.broken_image_outlined),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  progress != null
+                      ? l.uploadingMedia
+                      : '${video ? l.videoMessage : l.photoMessage} · $mb MB',
+                  style: text.bodyMedium,
+                ),
+              ),
+              IconButton(
+                tooltip: l.removeAttachment,
+                icon: const Icon(Icons.close),
+                onPressed: onRemove,
+              ),
+            ],
+          ),
+          if (progress != null) ...[
+            const SizedBox(height: 6),
+            // Indeterminate once it's all gone, while S3 answers.
+            LinearProgressIndicator(value: progress! < 1 ? progress : null),
+          ],
         ],
       ),
     );

@@ -176,6 +176,17 @@ It notes who joined and who left, and holds the
 [join requests](#join-requests-in-the-group-chat) for the group to
 answer. Chats lists them, most recent first.
 
+A message is text, **one photo or one video**, or both. The attach button
+offers only photos and videos: take a photo or record a video (where the
+device has a camera; recordings stop at 30 s where the device lets the
+app say), or choose one from the gallery. No other kind of file can be
+sent: the app checks the picked bytes (JPEG, PNG or WebP; MP4 or MOV) and
+the API only issues uploads of those types. Photos are downsized to
+1600 px as they're picked; videos must be at most 50 MB ("Videos can be at
+most 50 MB: send a shorter one"). Only the plan's members can upload to
+its chat or read its messages; the media is kept 400 days
+([backend](backend.md#chat-media)).
+
 ## Data: the backend API
 
 Everything comes from the database, through the backend's API

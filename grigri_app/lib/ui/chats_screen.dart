@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/grigri_store.dart';
+import '../model/plan.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
@@ -18,6 +19,13 @@ class ChatsScreen extends StatelessWidget {
     final store = StoreScope.of(context);
     final text = Theme.of(context).textTheme;
     final l = context.l10n;
+    // A photo or video says so (its text, if any, after).
+    String preview(Message m) => switch (m.attachment?.kind) {
+      null => m.text,
+      final kind =>
+        '${kind == MediaKind.video ? '🎬' : '📷'} '
+            '${m.text.isEmpty ? (kind == MediaKind.video ? l.videoMessage : l.photoMessage) : m.text}',
+    };
     final chats =
         [
           for (final plan in store.myPlans)
@@ -75,8 +83,8 @@ class ChatsScreen extends StatelessWidget {
                     last == null
                         ? l.climberCount(plan.memberIds.length)
                         : author == null
-                        ? last.text
-                        : l.messagePreview(author, last.text),
+                        ? preview(last)
+                        : l.messagePreview(author, preview(last)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: Mountain.granite),

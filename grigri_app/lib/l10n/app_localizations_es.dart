@@ -793,4 +793,43 @@ class AppLocalizationsEs extends AppLocalizations {
   String noticeNudgeBody(String plan) {
     return 'Para unirse a $plan · acepta o rechaza en el chat del grupo';
   }
+
+  @override
+  String get attachMedia => 'Añadir una foto o un vídeo';
+
+  @override
+  String get recordVideo => 'Grabar un vídeo';
+
+  @override
+  String get chooseVideo => 'Elegir un vídeo';
+
+  @override
+  String get photoMessage => 'Foto';
+
+  @override
+  String get videoMessage => 'Vídeo';
+
+  @override
+  String get removeAttachment => 'Quitar el adjunto';
+
+  @override
+  String get uploadingMedia => 'Subiendo…';
+
+  @override
+  String get playVideo => 'Reproducir el vídeo';
+
+  @override
+  String get videoUnavailable => 'Este vídeo no se puede reproducir.';
+
+  @override
+  String get mediaUnavailable => 'No disponible';
+
+  @override
+  String get errorMediaType =>
+      'Usa una foto JPEG, PNG o WebP, o un vídeo MP4 o MOV.';
+
+  @override
+  String errorVideoTooBig(int mb) {
+    return 'Los vídeos pueden ocupar como mucho $mb MB: envía uno más corto.';
+  }
 }

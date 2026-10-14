@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { messageText, planInput, profileInput } from '../src/domain/validate.js';
+import { messageInput, planInput, profileInput } from '../src/domain/validate.js';
 
 const owner = 'a'.repeat(32);
 const now = new Date('2030-05-01T10:00:00.000Z');
@@ -144,11 +144,33 @@ describe('planInput', () => {
   });
 });
 
-describe('messageText', () => {
+describe('messageInput', () => {
+  const key = 'chat/plan-1/abcdefgh12345678.jpg';
+
   it('is 1 to 2000 characters, trimmed', () => {
-    expect(messageText({ text: ' hi ' })).toBe('hi');
-    expect(() => messageText({ text: '   ' })).toThrow(/required/);
-    expect(() => messageText({ text: 'x'.repeat(2001) })).toThrow(/2000/);
-    expect(() => messageText({ text: 5 })).toThrow(/string/);
+    expect(messageInput({ text: ' hi ' }, 'plan-1')).toEqual({ text: 'hi' });
+    expect(() => messageInput({ text: '   ' }, 'plan-1')).toThrow(/required/);
+    expect(() => messageInput({ text: 'x'.repeat(2001) }, 'plan-1')).toThrow(/2000/);
+    expect(() => messageInput({ text: 5 }, 'plan-1')).toThrow(/string/);
+  });
+
+  it('may carry this plan\'s photo or video, with or without text', () => {
+    expect(messageInput({ attachment: key }, 'plan-1')).toEqual({ text: '', attachment: { key, kind: 'image' } });
+    const video = 'chat/plan-1/abcdefgh12345678.mov';
+    expect(messageInput({ text: 'Look', attachment: video }, 'plan-1')).toEqual({
+      text: 'Look',
+      attachment: { key: video, kind: 'video' },
+    });
+  });
+
+  it.each([
+    ['another plan\'s', 'chat/plan-2/abcdefgh12345678.jpg', /this plan/],
+    ['a profile photo', 'abcdefgh/profile/abcdefgh12345678.jpg', /media/],
+    ['another type', 'chat/plan-1/abcdefgh12345678.gif', /media/],
+    ['a document', 'chat/plan-1/abcdefgh12345678.pdf', /media/],
+    ['a path', 'chat/plan-1/../x/abcdefgh12345678.jpg', /media/],
+    ['not a string', 42, /media/],
+  ])('refuses %s', (_what, attachment, error) => {
+    expect(() => messageInput({ text: 'hi', attachment }, 'plan-1')).toThrow(error);
   });
 });

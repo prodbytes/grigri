@@ -6,8 +6,9 @@ Description: >
   grigri_api/README.md). The function authenticates every request itself:
   POST /api/session verifies a Google ID token and issues the API's own
   session (365 days without use, sliding), which every other route but
-  GET /api/health takes as a bearer token. Photos live in the site stack's bucket
-  (PhotosBucket), uploaded with presigned POSTs. The site's CloudFront
+  GET /api/health takes as a bearer token. Photos and chat media (photos and
+  videos) live in the site stack's bucket (PhotosBucket), uploaded with
+  presigned POSTs. The site's CloudFront
   serves the HTTP API under /api/*. Live updates: the function publishes
   hints to IoT Core MQTT topics, and a second small function is the IoT
   custom authorizer that lets the app subscribe to its own topic with its
@@ -220,8 +221,8 @@ Resources:
 
   # Only what the function does: its table, its logs, and under the photos
   # bucket's photos/ prefix: uploads (presigned POSTs, tagged pending),
-  # clearing the pending tag of photos a profile saves, and deleting the
-  # ones it drops. Its name is
+  # clearing the pending tag of photos a profile saves and of chat media a
+  # message sends, and deleting the photos a profile drops. Its name is
   # <stack>-function, inside the deploy role's <prefix>-* scope, and it
   # carries the stage's permissions boundary.
   FunctionRole:

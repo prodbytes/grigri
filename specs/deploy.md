@@ -71,7 +71,8 @@ and a Content Security Policy:
   styles (Flutter injects them), fonts from `fonts.gstatic.com`, Google
   Identity Services (`accounts.google.com/gsi/`: script, style, frame and
   calls) and Google account pictures (`lh3.googleusercontent.com`), the
-  API and photos from the site itself (`'self'`), photo uploads to the
+  API, photos and chat videos from the site itself (`'self'`; videos
+  fall back to `default-src`), photo and video uploads to the
   photos bucket (`https://<bucket>.s3.us-east-1.amazonaws.com`), [live
   updates](live-updates.md) over WebSocket to the account's IoT endpoint
   (`wss://<id>-ats.iot.us-east-1.amazonaws.com`, the `IotEndpoint`

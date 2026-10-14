@@ -588,15 +588,27 @@ class FakeApi implements GrigriApi, SessionApi {
   );
 
   @override
-  Future<Message> send(String planId, String text) =>
+  Future<Message> send(String planId, String text, {String? attachment}) =>
       _route('POST /api/plans/$planId/messages', () {
         _member(planId);
+        if (attachment != null && !uploads.containsKey(attachment)) {
+          throw const ApiException(400, "The attachment isn't uploaded.");
+        }
         final m = Message(
           id: _id('m'),
           planId: planId,
           authorId: meId,
           text: text,
           time: _now(),
+          attachment: attachment == null
+              ? null
+              : Attachment(
+                  key: attachment,
+                  kind:
+                      attachment.endsWith('.mp4') || attachment.endsWith('.mov')
+                      ? MediaKind.video
+                      : MediaKind.image,
+                ),
         );
         allMessages.add(m);
         return m;
@@ -615,8 +627,39 @@ class FakeApi implements GrigriApi, SessionApi {
       });
 
   @override
-  Future<void> uploadPhoto(PhotoUpload upload, Uint8List bytes) async {
+  Future<PhotoUpload> newChatMedia(String planId, String contentType) =>
+      _route('POST /api/plans/$planId/media', () {
+        _member(planId);
+        const ext = {
+          'image/jpeg': 'jpg',
+          'image/png': 'png',
+          'image/webp': 'webp',
+          'video/mp4': 'mp4',
+          'video/quicktime': 'mov',
+        };
+        final key = 'chat/$planId/media-${++_ids}.${ext[contentType]}';
+        return PhotoUpload(
+          key: key,
+          url: Uri.parse('https://bucket.test/'),
+          fields: {'key': key, 'policy': 'made-up'},
+          contentType: contentType,
+        );
+      });
+
+  /// What uploads reported as they went (0 to 1).
+  final progress = <double>[];
+
+  @override
+  Future<void> uploadPhoto(
+    PhotoUpload upload,
+    Uint8List bytes, {
+    void Function(double sent)? onProgress,
+  }) async {
     calls.add('POST ${upload.url} (${upload.fields['key']})');
+    for (final p in [0.5, 1.0]) {
+      progress.add(p);
+      onProgress?.call(p);
+    }
     uploads[upload.key] = bytes;
   }
 

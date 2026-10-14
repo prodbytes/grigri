@@ -217,5 +217,17 @@
   "nudgeTooltip": "Lembre o grupo de responder (uma vez a cada 12 horas)",
   "nudgeSent": "Lembrete enviado para {names}",
   "noticeNudgeTitle": "{name} está esperando sua resposta",
-  "noticeNudgeBody": "Para entrar em {plan} · aceite ou recuse na conversa do grupo"
+  "noticeNudgeBody": "Para entrar em {plan} · aceite ou recuse na conversa do grupo",
+  "attachMedia": "Adicionar uma foto ou um vídeo",
+  "recordVideo": "Gravar um vídeo",
+  "chooseVideo": "Escolher um vídeo",
+  "photoMessage": "Foto",
+  "videoMessage": "Vídeo",
+  "removeAttachment": "Remover o anexo",
+  "uploadingMedia": "Enviando…",
+  "playVideo": "Reproduzir o vídeo",
+  "videoUnavailable": "Não é possível reproduzir este vídeo.",
+  "mediaUnavailable": "Indisponível",
+  "errorMediaType": "Use uma foto JPEG, PNG ou WebP, ou um vídeo MP4 ou MOV.",
+  "errorVideoTooBig": "Os vídeos podem ter no máximo {mb} MB: envie um mais curto."
 }

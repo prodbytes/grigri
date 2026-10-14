@@ -75,7 +75,17 @@ is "Alerts" in English.
   my answer ("Wants to join · your answer", their avatar and name, N of M
   said yes, ✕ / ✓; tap them for their profile), then the messages (mine on
   the right in pine, others' on the left with their name), the join and
-  leave notes, the join request cards, and a message box.
+  leave notes, the join request cards, and a message box with an attach
+  button ("Add a photo or video": take a photo, choose a photo, record a
+  video, choose a video; the camera options only where there's a camera).
+  The picked photo or video shows above the box (a thumbnail, or a video
+  icon, with its size and ✕), and while it sends, "Uploading…" and a
+  progress bar. In the messages a photo shows inline, cropped to a
+  240×180 frame (tap to see it whole, pinch to zoom); a video shows as a
+  poster with ▶ that loads nothing until tapped, then plays full screen
+  (tap to pause; a scrubbable progress bar; "This video can't be played."
+  if it fails). Chats previews them as "📷 Photo" or "🎬 Video" (or 📷/🎬
+  and their text).
 - Tapping a person anywhere opens their whole profile in a sheet.
 - While something loads, a spinner; when an action fails, the server's
   message at the bottom of the screen (or the app's own, in the user's

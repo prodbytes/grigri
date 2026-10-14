@@ -217,5 +217,17 @@
   "nudgeTooltip": "Rappelle au groupe de répondre (une fois toutes les 12 heures)",
   "nudgeSent": "Relance envoyée à {names}",
   "noticeNudgeTitle": "{name} attend ta réponse",
-  "noticeNudgeBody": "Pour rejoindre {plan} · accepte ou refuse dans la discussion du groupe"
+  "noticeNudgeBody": "Pour rejoindre {plan} · accepte ou refuse dans la discussion du groupe",
+  "attachMedia": "Ajouter une photo ou une vidéo",
+  "recordVideo": "Filmer une vidéo",
+  "chooseVideo": "Choisir une vidéo",
+  "photoMessage": "Photo",
+  "videoMessage": "Vidéo",
+  "removeAttachment": "Retirer la pièce jointe",
+  "uploadingMedia": "Envoi…",
+  "playVideo": "Lire la vidéo",
+  "videoUnavailable": "Impossible de lire cette vidéo.",
+  "mediaUnavailable": "Indisponible",
+  "errorMediaType": "Utilise une photo JPEG, PNG ou WebP, ou une vidéo MP4 ou MOV.",
+  "errorVideoTooBig": "Les vidéos font au plus {mb} Mo : envoies-en une plus courte."
 }

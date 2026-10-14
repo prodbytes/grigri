@@ -2,6 +2,7 @@
 // wrong. Unknown fields are ignored (never stored).
 import { badRequest } from './errors.js';
 import {
+  type Attachment,
   type Climber,
   DISCIPLINES,
   type Discipline,
@@ -203,9 +204,36 @@ export function planInput(body: unknown, now: Date): PlanInput {
   };
 }
 
-/** A chat message's text: 1–2000 characters. */
-export function messageText(body: unknown): string {
-  return text(asObject(body).text, 'text', { min: 1, max: 2000 });
+/**
+ * A chat message (POST /api/plans/{id}/messages): text (up to 2000
+ * characters), an attachment (a key from POST /api/plans/{id}/media for
+ * this plan), or both; never neither.
+ */
+export function messageInput(body: unknown, planId: string): { text: string; attachment?: Attachment } {
+  const o = asObject(body);
+  const attachment =
+    o.attachment === undefined || o.attachment === null || o.attachment === '' ? undefined : chatMediaKey(o.attachment, planId);
+  const message = text(o.text, 'text', { min: attachment ? 0 : 1, max: 2000 });
+  return { text: message, ...(attachment ? { attachment } : {}) };
+}
+
+/** Chat media's extensions: photos as profile photos take them, and MP4 or QuickTime videos. */
+export const CHAT_MEDIA_KINDS: Record<string, Attachment['kind']> = {
+  jpg: 'image',
+  png: 'image',
+  webp: 'image',
+  mp4: 'video',
+  mov: 'video',
+};
+const CHAT_KEY = /^chat\/([A-Za-z0-9_-]{1,64})\/[A-Za-z0-9_-]{8,64}\.([a-z0-9]{2,4})$/;
+
+/** A chat media key (as issued by POST /api/plans/{id}/media): `chat/<planId>/<name>.<ext>`, for this plan. */
+export function chatMediaKey(value: unknown, planId: string): Attachment {
+  const match = typeof value === 'string' ? CHAT_KEY.exec(value) : null;
+  const kind = match && Object.hasOwn(CHAT_MEDIA_KINDS, match[2]!) ? CHAT_MEDIA_KINDS[match[2]!] : undefined;
+  if (!match || !kind) throw badRequest("attachment isn't a key from /api/plans/{id}/media");
+  if (match[1] !== planId) throw badRequest("attachment isn't this plan's");
+  return { key: value as string, kind };
 }
 
 export function parseDate(value: string, field: string): Date {

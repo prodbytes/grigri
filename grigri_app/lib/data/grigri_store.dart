@@ -46,6 +46,14 @@ enum Phase {
 /// The parts of the app's data that load separately.
 enum Section { discover, plans, requests, notices, admin }
 
+/// A photo or video picked for a chat message.
+class ChatMedia {
+  const ChatMedia(this.bytes, this.kind);
+
+  final Uint8List bytes;
+  final MediaKind kind;
+}
+
 /// A photo in the profile editor: one already saved ([key]), or one just
 /// picked and not uploaded yet ([bytes]).
 class EditablePhoto {
@@ -145,6 +153,8 @@ class GrigriStore extends ChangeNotifier {
     ClientError.photoUnreachable => l10n.errorPhotoUnreachable,
     ClientError.photoFailed => l10n.errorPhotoStatus(e.status),
     ClientError.photoType => l10n.errorPhotoType,
+    ClientError.mediaType => l10n.errorMediaType,
+    ClientError.videoTooBig => l10n.errorVideoTooBig(maxVideoBytes >> 20),
   };
 
   Phase _phase = Phase.starting;
@@ -905,11 +915,44 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Chat --------------------------------------------------------------
 
-  /// Sends a message to a plan's group; false when it failed.
-  Future<bool> send(String planId, String text) async {
+  /// Sends a message to a plan's group: text, a photo or video
+  /// ([media]: uploaded first, [onProgress] hearing how much has gone), or
+  /// both. False when it failed.
+  Future<bool> send(
+    String planId,
+    String text, {
+    ChatMedia? media,
+    void Function(double sent)? onProgress,
+  }) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return false;
-    final message = await _act(() => api.send(planId, trimmed));
+    if (trimmed.isEmpty && media == null) return false;
+    final message = await _act(() async {
+      String? key;
+      if (media != null) {
+        final type = mediaContentType(media.bytes);
+        final kind = type?.startsWith('video/') == true
+            ? MediaKind.video
+            : MediaKind.image;
+        if (type == null || kind != media.kind) {
+          throw const ApiException(
+            400,
+            'Use a JPEG, PNG or WebP photo, or an MP4 or MOV video.',
+            client: ClientError.mediaType,
+          );
+        }
+        if (kind == MediaKind.video && media.bytes.length > maxVideoBytes) {
+          throw const ApiException(
+            413,
+            'The video is too big.',
+            client: ClientError.videoTooBig,
+          );
+        }
+        final upload = await _call(() => api.newChatMedia(planId, type));
+        await api.uploadPhoto(upload, media.bytes, onProgress: onProgress);
+        key = upload.key;
+      }
+      return api.send(planId, trimmed, attachment: key);
+    });
     if (message == null) return false;
     _addMessages(planId, [message]);
     return true;

@@ -12,6 +12,8 @@ import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/location.dart';
 import 'package:grigri_app/model/plan.dart';
+import 'package:grigri_app/ui/chat_media.dart';
+import 'package:grigri_app/ui/chat_screen.dart';
 import 'package:grigri_app/ui/common.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -564,6 +566,133 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Great, see you at 9'), findsOneWidget);
       expect(api.calls, contains('GET /api/plans/crag-day/messages?after'));
+    });
+  });
+
+  group('photos and videos in the chat', () {
+    final mp4 = Uint8List.fromList([
+      0,
+      0,
+      0,
+      0x18,
+      ...'ftypisom'.codeUnits,
+      ...List.filled(20, 0),
+    ]);
+
+    /// The chat of crag-day (Robin's and mine), picking what [pick] gives.
+    Future<(FakeApi, GrigriStore, List<String>)> openChat(
+      WidgetTester tester,
+      List<ChatMedia?> picks,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 2.6;
+      addTearDown(tester.view.reset);
+      final api = sampleApi();
+      api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
+        memberIds: ['robin', 'me'],
+      );
+      final store = storeFor(api);
+      await store.start();
+      final errors = <String>[];
+      final listening = store.errors.listen(errors.add);
+      addTearDown(listening.cancel);
+      final sources = <ChatMediaSource>[];
+      await tester.pumpWidget(
+        StoreScope(
+          store: store,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ChatScreen(
+              planId: 'crag-day',
+              pick: (source) async {
+                sources.add(source);
+                return picks.removeAt(0);
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return (api, store, errors);
+    }
+
+    Future<void> attach(WidgetTester tester, String option) async {
+      await tester.tap(find.byTooltip('Add a photo or video'));
+      await tester.pumpAndSettle();
+      // Photos and videos only: no other kind of file is offered.
+      expect(find.text('Choose a photo'), findsOneWidget);
+      expect(find.text('Choose a video'), findsOneWidget);
+      await tester.tap(find.text(option));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a photo with text, then a video alone, are uploaded and '
+        'shown', (tester) async {
+      final (api, _, errors) = await openChat(tester, [
+        ChatMedia(png, MediaKind.image),
+        ChatMedia(mp4, MediaKind.video),
+      ]);
+      await attach(tester, 'Choose a photo');
+      expect(find.byKey(const ValueKey('picked media')), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'Our crag');
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      final sent = api.calls.where((c) => c.startsWith('POST ')).toList();
+      expect(sent, [
+        'POST /api/plans/crag-day/media',
+        'POST https://bucket.test/ (${api.uploads.keys.single})',
+        'POST /api/plans/crag-day/messages',
+      ]);
+      expect(api.uploads.values.single, png);
+      expect(api.progress, [0.5, 1.0]);
+      expect(find.text('Our crag'), findsOneWidget);
+      expect(
+        find.byKey(ValueKey('photo ${api.uploads.keys.single}')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('picked media')), findsNothing);
+
+      // Tapping the photo shows it whole.
+      await tester.tap(
+        find.byKey(ValueKey('photo ${api.uploads.keys.single}')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(PhotoViewer), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+
+      await attach(tester, 'Choose a video');
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      final video = api.uploads.keys.last;
+      expect(video, endsWith('.mp4'));
+      expect(find.byKey(ValueKey('video $video')), findsOneWidget);
+      expect(api.allMessages.last.text, '');
+      expect(errors, isEmpty);
+    });
+
+    testWidgets('other files and videos over the limit are refused before '
+        'any upload', (tester) async {
+      final big = Uint8List(maxVideoBytes + 1)..setAll(0, mp4);
+      final (api, _, errors) = await openChat(tester, [
+        ChatMedia(Uint8List.fromList('%PDF-1.7'.codeUnits), MediaKind.image),
+        ChatMedia(big, MediaKind.video),
+      ]);
+      await attach(tester, 'Choose a photo');
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      expect(errors, [
+        'Use a JPEG, PNG or WebP photo, or an MP4 or MOV video.',
+      ]);
+      await tester.tap(find.byTooltip('Remove the attachment'));
+      await tester.pumpAndSettle();
+      await attach(tester, 'Choose a video');
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      expect(errors.last, 'Videos can be at most 50 MB: send a shorter one.');
+      expect(api.calls, isNot(contains('POST /api/plans/crag-day/media')));
+      expect(api.uploads, isEmpty);
     });
   });
 

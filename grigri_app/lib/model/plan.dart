@@ -270,13 +270,19 @@ class Message {
     required this.text,
     required this.time,
     this.requestId,
+    this.attachment,
   });
 
   final String id;
   final String planId;
   final String? authorId;
+
+  /// May be empty when the message carries an [attachment].
   final String text;
   final DateTime time;
+
+  /// A member's photo or video.
+  final Attachment? attachment;
 
   /// For a join request's note: the [JoinRequest.id], so the chat shows it
   /// as a card the group answers.
@@ -289,5 +295,30 @@ class Message {
     text: json['text']! as String,
     time: _time(json['time']),
     requestId: json['requestId'] as String?,
+    attachment: Attachment.fromJson(json['attachment']),
   );
+}
+
+/// What a chat message can carry: one photo or one video.
+enum MediaKind { image, video }
+
+/// A chat message's photo or video, served at `<site>/photos/<key>`.
+class Attachment {
+  const Attachment({required this.key, required this.kind});
+
+  final String key;
+  final MediaKind kind;
+
+  /// Null for none, or for a kind this app doesn't know.
+  static Attachment? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final key = json['key'];
+    final kind = switch (json['kind']) {
+      'image' => MediaKind.image,
+      'video' => MediaKind.video,
+      _ => null,
+    };
+    if (key is! String || kind == null) return null;
+    return Attachment(key: key, kind: kind);
+  }
 }

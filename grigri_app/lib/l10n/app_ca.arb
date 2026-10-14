@@ -217,5 +217,17 @@
   "nudgeTooltip": "Recorda al grup que respongui (un cop cada 12 hores)",
   "nudgeSent": "Recordatori enviat a {names}",
   "noticeNudgeTitle": "{name} espera la teva resposta",
-  "noticeNudgeBody": "Per unir-se a {plan} · accepta o rebutja al xat del grup"
+  "noticeNudgeBody": "Per unir-se a {plan} · accepta o rebutja al xat del grup",
+  "attachMedia": "Afegeix una foto o un vídeo",
+  "recordVideo": "Grava un vídeo",
+  "chooseVideo": "Tria un vídeo",
+  "photoMessage": "Foto",
+  "videoMessage": "Vídeo",
+  "removeAttachment": "Treu l'adjunt",
+  "uploadingMedia": "S'està pujant…",
+  "playVideo": "Reprodueix el vídeo",
+  "videoUnavailable": "Aquest vídeo no es pot reproduir.",
+  "mediaUnavailable": "No disponible",
+  "errorMediaType": "Fes servir una foto JPEG, PNG o WebP, o un vídeo MP4 o MOV.",
+  "errorVideoTooBig": "Els vídeos poden ocupar com a màxim {mb} MB: envia'n un de més curt."
 }
