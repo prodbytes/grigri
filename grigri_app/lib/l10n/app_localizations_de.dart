@@ -615,30 +615,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get cancelPlan => 'Plan absagen';
 
   @override
-  String get leavePlan => 'Plan verlassen';
-
-  @override
   String get cancelPlanQuestion => 'Plan absagen?';
-
-  @override
-  String get leavePlanQuestion => 'Plan verlassen?';
 
   @override
   String get cancelPlanMessage => 'Der Plan und sein Chat werden gelöscht.';
 
   @override
-  String leaveOrganizerMessage(String name) {
-    return '$name organisiert ihn dann.';
-  }
+  String get cancelPlanOthersMessage =>
+      'Er verschwindet aus deinen Plänen und Chats; die anderen behalten ihn. Du kannst später nicht wieder beitreten.';
 
   @override
-  String get leaveMessage => 'Du kannst später nicht wieder beitreten.';
+  String get cancelPlanOrganizerMessage =>
+      'Er verschwindet aus deinen Plänen und Chats; die anderen behalten ihn, und eine zufällig gewählte Person organisiert ihn. Du kannst später nicht wieder beitreten.';
 
   @override
-  String get stay => 'Bleiben';
+  String get keepPlan => 'Behalten';
 
   @override
-  String get leave => 'Verlassen';
+  String get confirmCancelPlan => 'Absagen';
 
   @override
   String get editPlan => 'Plan bearbeiten';

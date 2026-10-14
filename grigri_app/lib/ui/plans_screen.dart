@@ -6,8 +6,9 @@ import '../theme.dart';
 import 'common.dart';
 import 'plan_screen.dart';
 
-/// My plans: the ones I'm in (organizing, or accepted into), and the ones
-/// I asked to join: pending while the group decides, or declined.
+/// My plans: the ones I'm in (organizing, or accepted into), each with a
+/// menu to cancel it, and the ones I asked to join: pending while the
+/// group decides, or declined.
 class PlansScreen extends StatelessWidget {
   const PlansScreen({super.key, required this.onCreatePlan});
 
@@ -140,6 +141,23 @@ class _PlanTile extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Mountain.granite),
+                onSelected: (_) => cancelPlan(context, plan),
+                itemBuilder: (_) => [
+                  PopupMenuItem<String>(
+                    value: 'cancel',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.logout, color: Mountain.clay),
+                      title: Text(
+                        l.cancelPlan,
+                        style: const TextStyle(color: Mountain.clay),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

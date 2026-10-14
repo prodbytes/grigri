@@ -47,6 +47,10 @@ abstract interface class GrigriApi {
   /// `POST /api/plans/{id}/pass`: swipe left.
   Future<void> pass(String planId);
 
+  /// `DELETE /api/passes`: the plans I passed on come back to the deck
+  /// (not ones I asked to join).
+  Future<void> clearPasses();
+
   /// `GET /api/requests`: requests on my plans waiting for my answer.
   Future<RequestList> requests();
 
