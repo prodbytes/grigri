@@ -5,9 +5,9 @@ templates.
 
 | Template | Stack | Holds |
 |---|---|---|
-| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `grigri.nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), a CloudFront distribution with its response headers policies (CSP, Permissions-Policy), and the Route 53 A/AAAA aliases. Uptime (`/app/version.json`, `/api/health`) is checked from outside by the central `nu01-monitor` stack (nu01 repo), not here |
+| [site.yaml](site.yaml) | `grigri-web` | https://grigri.nu01.com: the ACM certificate (DNS-validated in the `nu01.com` zone), a private S3 bucket, the private photos bucket (`grigri-web-photos-<account>`), and a CloudFront distribution with its response headers policies (CSP, Permissions-Policy). No DNS records: the site's A/AAAA aliases are the nu01 repo's (see [DNS](#dns)). Uptime (`/app/version.json`, `/api/health`) is checked from outside by the central `nu01-monitor` stack (nu01 repo), not here |
 | [../grigri_api/template.yaml](../grigri_api/template.yaml) | `grigri-api` | The API: its Lambda (which verifies Google ID tokens and issues the API's own sessions), HTTP API, DynamoDB table (with TTL) and log group ([specs/backend.md](../specs/backend.md)) |
-| [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition: the deploy policies (site, API), the permissions boundary of the stage's roles (`<prefix>-app-boundary`) and the artifact bucket (`<prefix>-artifacts-<account>`) |
+| [github-deploy.yaml](github-deploy.yaml) | `grigri-github-deploy` | The `grigri-github-deploy` role (Deploy workflow, `*GA` tags) and the `grigri-github-deploy-rc` role (Deploy RC workflow: `*RC*` tags and manual runs from `main`), trusting GitHub's OIDC provider; per stage, from one `Fn::ForEach` definition: the deploy policies (site, its Route 53 records, API), the permissions boundary of the stage's roles (`<prefix>-app-boundary`) and the artifact bucket (`<prefix>-artifacts-<account>`) |
 
 `scripts/deploy.sh` deploys `grigri-api`, then `grigri-web`. With
 `STAGE=rc` it deploys the release candidate's own copies, `grigri-rc-api`
@@ -53,24 +53,89 @@ redeploy it. `scripts/deploy.sh` also runs by hand with admin credentials
 
 ## DNS
 
-`grigri.nu01.com` has its own public Route 53 zone (`HOSTED_ZONE_ID`),
-delegated from the `nu01.com` zone by an NS record (TTL 3600), like
-`tabscan`, `rbacr` and `uplink`. Both stages' records live in it:
-`grigri.nu01.com`, `rc.grigri.nu01.com`, and their ACM validation names.
+grigri's DNS lives in the **nu01 repo**: the apex zone `nu01.com`
+(`Z04838091YTBIM6PNI1XK`, stack `nu01-route53-zone`) holds every name, and
+its `nu01-dns` stack owns the A/AAAA aliases of `grigri.nu01.com` and
+`rc.grigri.nu01.com` (to each stage's distribution) and
+`local.grigri.nu01.com` (127.0.0.1 and ::1, for local HTTPS). This repo
+only validates the site certificates there: `site.yaml`'s
+`ValidationZoneId` (which `scripts/deploy.sh` passes as
+`Z04838091YTBIM6PNI1XK`) makes CloudFormation write each certificate's
+`_<token>` CNAME into `nu01.com`, and the deploy roles may change only
+those (`_*.grigri.nu01.com` for production, which also covers the RC's;
+`_*.rc.grigri.nu01.com` for the RC; CNAMEs only).
+
+`grigri.nu01.com` used to have its own zone (`Z087054988V7QH92N1FX`,
+created with the CLI), delegated from `nu01.com`. It's being merged into
+`nu01.com` (to save its $0.50/month) in two rounds:
+
+1. **Round 1** (an administrator, nu01 repo: `scripts/migrate-subzone.sh`
+   then a deploy of `nu01-dns`): removes the `grigri.nu01.com` NS
+   delegation from `nu01.com`, copies the validation CNAMEs there, and
+   adds the aliases. The old zone stays, untouched, while resolvers may
+   still cache its NS records.
+2. **Round 2** (this repo, the first release with this `site.yaml`):
+   each stage's certificate moves to `nu01.com` and the site stacks
+   delete their old aliases from the old zone. **Don't release it
+   before round 1 + 48 hours** (`migrate-subzone.sh` prints the exact
+   time). Before releasing, check that round 1 happened (the `nu01-dns`
+   stack exists, and `nu01.com` has `grigri.nu01.com`'s A/AAAA and no NS):
+
+   ```bash
+   aws route53 list-resource-record-sets --hosted-zone-id Z04838091YTBIM6PNI1XK \
+     --query "ResourceRecordSets[?ends_with(Name, 'grigri.nu01.com.')].[Name,Type]" --output text
+   ```
+
+   Then, in this order:
+   1. an administrator redeploys `grigri-github-deploy` (the command in
+      [One-time setup](#one-time-setup), step 1), so the deploy roles may
+      write the validation records in `nu01.com`;
+   2. release an RC, then a GA. Each site stack's certificate is
+      **replaced** (changing its validation zone requires it):
+      CloudFormation requests a new one, validates it through `nu01.com`
+      with the same deterministic `_<token>` CNAME round 1 already copied
+      (it UPSERTs it, so it's already there and resolving), points the
+      distribution at it, then deletes the old certificate. The
+      distribution and its domain name stay, so the aliases in `nu01-dns`
+      keep working. The stacks' `DnsRecordA`/`DnsRecordAAAA` are deleted
+      from the old zone, which nobody asks anymore.
+
+### Retiring the old zone (after round 2, on both stages)
+
+Once both `grigri-web` and `grigri-rc-web` have deployed round 2 and
+https://grigri.nu01.com and https://rc.grigri.nu01.com work, an
+administrator deletes the old zone. It was created with the CLI (no
+stack), so empty it first: Route 53 deletes only a zone with nothing but
+its NS and SOA records. What's left are the `local.grigri.nu01.com`
+records and the old validation CNAMEs (if CloudFormation didn't delete
+them):
+
+```bash
+ZONE=Z087054988V7QH92N1FX
+# 1. Check: what's left (expect local.grigri.nu01.com A/AAAA and the two
+#    _<token> CNAMEs; no grigri.nu01.com or rc.grigri.nu01.com A/AAAA).
+aws route53 list-resource-record-sets --hosted-zone-id "$ZONE" \
+  --query "ResourceRecordSets[?Type!='NS' && Type!='SOA'].[Name,Type]" --output text
+# 2. Delete every record but the NS and SOA, in one batch.
+aws route53 list-resource-record-sets --hosted-zone-id "$ZONE" --output json \
+  | python3 -c 'import json,sys; r=json.load(sys.stdin)["ResourceRecordSets"]; print(json.dumps({"Changes": [{"Action": "DELETE", "ResourceRecordSet": x} for x in r if x["Type"] not in ("NS", "SOA")]}))' \
+  > /tmp/grigri-zone-delete.json
+aws route53 change-resource-record-sets --hosted-zone-id "$ZONE" \
+  --change-batch file:///tmp/grigri-zone-delete.json
+# 3. Delete the zone.
+aws route53 delete-hosted-zone --id "$ZONE"
+```
+
+Then drop the old zone from the deploy roles (`github-deploy.yaml`: the
+`OldZoneRecords` statement, the old zone's ARN in `Zone`, and the
+`HostedZoneId` parameter), redeploy `grigri-github-deploy` without
+`HostedZoneId`, and delete the repository variable `HOSTED_ZONE_ID`
+(`gh variable delete HOSTED_ZONE_ID`), which nothing reads anymore.
 
 ## One-time setup
 
-0. Create the zone and its delegation:
-
-   ```bash
-   aws route53 create-hosted-zone --name grigri.nu01.com --caller-reference "grigri-$(date -u +%s)"
-   # cost-allocation tags (both stages' records live in it)
-   aws route53 change-tags-for-resource --resource-type hostedzone \
-     --resource-id "$HOSTED_ZONE_ID" \
-     --add-tags Key=project,Value=grigri Key=tenancy,Value=shared
-   # then, in the nu01.com zone, an NS record for grigri.nu01.com with
-   # the new zone's four name servers
-   ```
+0. DNS: nothing to do here. The site's names are in the `nu01.com`
+   zone, managed by the nu01 repo (see [DNS](#dns)).
 
 1. Deploy the GitHub roles. They're IAM resources, so an administrator
    deploys them, once. The account already has GitHub's OIDC provider
@@ -82,7 +147,7 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
      --stack-name grigri-github-deploy \
      --template-file grigri_infra/github-deploy.yaml \
      --capabilities CAPABILITY_NAMED_IAM CAPABILITY_AUTO_EXPAND \
-     --parameter-overrides "HostedZoneId=$HOSTED_ZONE_ID" \
+     --parameter-overrides "HostedZoneId=Z087054988V7QH92N1FX" \
      --tags project=grigri tenancy=shared
    ```
 
@@ -92,8 +157,12 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    (`GitHubImmutableRepository`; the repository uses immutable OIDC
    subject claims). Each stage's policies cover its own `<prefix>-*`
    stacks, buckets, alarms and topics; CloudFront distributions and ACM
-   certificates only with its `grigri:stage` tag; and DNS records only
-   under its domain. For the API (`ApiDeployPolicy`): its `<prefix>-*`
+   certificates only with its `grigri:stage` tag; and, in Route 53
+   (`DnsDeployPolicy`, `<prefix>-github-deploy-dns`), only its
+   certificate's validation CNAMEs in `nu01.com` (`_*.<its domain>`),
+   plus, until round 2 has deployed on both stages, its records in the
+   old `grigri.nu01.com` zone (`HostedZoneId`; drop it once the zone is
+   retired, see [DNS](#dns)). For the API (`ApiDeployPolicy`): its `<prefix>-*`
    Lambda functions, DynamoDB tables (create, update and describe only:
    no deleting, no item access), `/aws/lambda/<prefix>-*` log groups, HTTP
    APIs (they have only IDs, so any in the account, as in presence), and
@@ -115,24 +184,16 @@ delegated from the `nu01.com` zone by an NS record (TTL 3600), like
    fails at the endpoint lookup or the authorizer. The deploy scripts
    also check that the boundary and the artifact bucket exist.
 
-2. Add the local development name, `local.grigri.nu01.com`, pointing at
-   this machine (`127.0.0.1` and `::1`), for local HTTPS through Floci
-   ([grigri_floci/](../grigri_floci)) and OAuth origins that need a
-   public top-level domain:
-
-   ```bash
-   aws route53 change-resource-record-sets --hosted-zone-id "$HOSTED_ZONE_ID" \
-     --change-batch '{"Changes": [
-       {"Action": "UPSERT", "ResourceRecordSet": {"Name": "local.grigri.nu01.com", "Type": "A", "TTL": 300, "ResourceRecords": [{"Value": "127.0.0.1"}]}},
-       {"Action": "UPSERT", "ResourceRecordSet": {"Name": "local.grigri.nu01.com", "Type": "AAAA", "TTL": 300, "ResourceRecords": [{"Value": "::1"}]}}]}'
-   ```
+2. The local development name, `local.grigri.nu01.com` (127.0.0.1 and
+   `::1`, for local HTTPS through Floci, [grigri_floci/](../grigri_floci),
+   and OAuth origins that need a public top-level domain), is the nu01
+   repo's `nu01-dns` stack's, like the site's names.
 
 3. Set the repository variables and secrets:
 
    ```bash
    gh variable set AWS_DEPLOY_ROLE_ARN --body "<DeployRoleArn>"
    gh variable set AWS_DEPLOY_RC_ROLE_ARN --body "<RcDeployRoleArn>"
-   gh variable set HOSTED_ZONE_ID --body "<the grigri.nu01.com zone ID>"
    # Each stage's Google web OAuth client (Google Cloud console >
    # Credentials), whose ID tokens its API trades for sessions; public
    # identifiers. Authorized JavaScript origins: https://grigri.nu01.com

@@ -29,7 +29,18 @@ Parameters:
       repo:<this>:ref:... rather than repo:owner/name:ref:...
   HostedZoneId:
     Type: AWS::Route53::HostedZone::Id
-    Description: The site's zone, where its records and certificate validation live (HOSTED_ZONE_ID)
+    Description: >
+      grigri.nu01.com's own zone (Z087054988V7QH92N1FX), being retired: the
+      site stacks' old records there are deleted by the first deploy of
+      each stage after the merge into nu01.com. Drop it, and the
+      OldZoneRecords statement, once both stages have deployed.
+  ValidationZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Default: Z04838091YTBIM6PNI1XK
+    Description: >
+      The apex zone nu01.com (the nu01 repo's nu01-route53-zone stack),
+      where the site's certificates validate. The deploy roles may only
+      write their stage's _<token> validation CNAMEs in it.
   CreateOidcProvider:
     Type: String
     AllowedValues: ['true', 'false']
@@ -43,7 +54,8 @@ Parameters:
 # bucket, function, alarm and topic of the stage starts with it). Stage is
 # the grigri:stage tag on the resources that have no name to scope by
 # (CloudFront distributions, ACM certificates); Domain is the site, whose
-# records (and subdomains' records) the stage may change; Tenancy is its
+# certificate's validation records (_<token>.<Domain>) the stage may
+# change in nu01.com (the site's own records are nu01-dns's); Tenancy is its
 # tenancy cost-allocation tag (scripts/deploy.sh's stack tags, with
 # project=grigri). prod's prefix also covers grigri-rc-*: the production
 # role is the more trusted one.
@@ -367,9 +379,71 @@ Resources:
                   - !Sub arn:${AWS::Partition}:s3:::grigri-rc-web-photos-${AWS::AccountId}
                   - !Sub arn:${AWS::Partition}:s3:::grigri-rc-web-photos-${AWS::AccountId}/*
 
+      # The stage's site stack (grigri_infra/site.yaml): DNS, its own policy
+      # (managed policies stop at 6,144 characters): the certificate's
+      # validation records in nu01.com, and the old records in the retired
+      # grigri.nu01.com zone until round 2 has deployed on both stages.
+      DnsDeployPolicy&{Prefix}:
+        Type: AWS::IAM::ManagedPolicy
+        Properties:
+          ManagedPolicyName: !Sub ${Prefix}-github-deploy-dns
+          Description: !Sub What the ${Prefix} deploy role may do in Route 53 for the ${Prefix}-web stack
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              # DNS, in the apex zone nu01.com: only CNAMEs named
+              # _<something>.<Domain> (the certificate's _<token> validation
+              # record; for prod also the RC's, under rc.grigri.nu01.com),
+              # never the site's aliases (nu01-dns's) or any other record.
+              # The condition's names are normalized: lowercase, no
+              # trailing dot.
+              - Sid: ValidationRecords
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: !Sub arn:${AWS::Partition}:route53:::hostedzone/${ValidationZoneId}
+                Condition:
+                  ForAllValues:StringLike:
+                    route53:ChangeResourceRecordSetsNormalizedRecordNames:
+                      - !Sub
+                        - '_*.${Domain}'
+                        - Domain: !FindInMap [Stages, !Ref Prefix, Domain]
+                  ForAllValues:StringEquals:
+                    route53:ChangeResourceRecordSetsRecordTypes: CNAME
+              # The retired grigri.nu01.com zone: the stage's site and the
+              # names under it. Kept until round 2 has deployed on both
+              # stages: that release's deploys must delete the site stack's
+              # old A/AAAA aliases (and may touch the old validation
+              # records) there. Then drop this statement, the zone's ARN
+              # in Zone, and the HostedZoneId parameter.
+              - Sid: OldZoneRecords
+                Effect: Allow
+                Action: route53:ChangeResourceRecordSets
+                Resource: !Sub arn:${AWS::Partition}:route53:::hostedzone/${HostedZoneId}
+                Condition:
+                  ForAllValues:StringLike:
+                    route53:ChangeResourceRecordSetsNormalizedRecordNames:
+                      - !FindInMap [Stages, !Ref Prefix, Domain]
+                      - !Sub
+                        - '*.${Domain}'
+                        - Domain: !FindInMap [Stages, !Ref Prefix, Domain]
+              - Sid: Zone
+                Effect: Allow
+                Action:
+                  - route53:ListResourceRecordSets
+                  - route53:GetHostedZone
+                Resource:
+                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${ValidationZoneId}
+                  - !Sub arn:${AWS::Partition}:route53:::hostedzone/${HostedZoneId} # until round 2 has deployed on both stages
+              - Sid: ZoneReads
+                Effect: Allow
+                Action:
+                  - route53:GetChange
+                  - route53:ListHostedZones
+                Resource: '*'
+
       # The stage's site stack (grigri_infra/site.yaml): CloudFormation, its
-      # bucket, its DNS records, and CloudFront and ACM by the stage's
-      # grigri:stage tag.
+      # bucket, and CloudFront and ACM by the stage's grigri:stage tag (its
+      # DNS is DnsDeployPolicy's).
       DeployPolicy&{Prefix}:
         Type: AWS::IAM::ManagedPolicy
         Properties:
@@ -448,32 +522,6 @@ Resources:
                   - sns:UntagResource
                   - sns:ListTagsForResource
                 Resource: !Sub arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${Prefix}-*
-              # DNS: only the stage's site and the names under it (the
-              # certificate's _<token> validation record), never the zone's
-              # other records.
-              - Sid: Records
-                Effect: Allow
-                Action: route53:ChangeResourceRecordSets
-                Resource: !Sub arn:${AWS::Partition}:route53:::hostedzone/${HostedZoneId}
-                Condition:
-                  ForAllValues:StringLike:
-                    route53:ChangeResourceRecordSetsNormalizedRecordNames:
-                      - !FindInMap [Stages, !Ref Prefix, Domain]
-                      - !Sub
-                        - '*.${Domain}'
-                        - Domain: !FindInMap [Stages, !Ref Prefix, Domain]
-              - Sid: Zone
-                Effect: Allow
-                Action:
-                  - route53:ListResourceRecordSets
-                  - route53:GetHostedZone
-                Resource: !Sub arn:${AWS::Partition}:route53:::hostedzone/${HostedZoneId}
-              - Sid: ZoneReads
-                Effect: Allow
-                Action:
-                  - route53:GetChange
-                  - route53:ListHostedZones
-                Resource: '*'
               # CloudFront: reading is harmless; creating can't touch what
               # exists (an alias already in use is refused).
               - Sid: CloudFrontReads
@@ -637,6 +685,7 @@ Resources:
       ManagedPolicyArns:
         - !Ref DeployPolicygrigri
         - !Ref ApiDeployPolicygrigri
+        - !Ref DnsDeployPolicygrigri
 
   RcDeployRole:
     Type: AWS::IAM::Role
@@ -666,6 +715,7 @@ Resources:
       ManagedPolicyArns:
         - !Ref DeployPolicygrigrirc
         - !Ref ApiDeployPolicygrigrirc
+        - !Ref DnsDeployPolicygrigrirc
 
 Outputs:
   ArtifactBucket:

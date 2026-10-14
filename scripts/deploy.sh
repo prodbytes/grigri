@@ -11,8 +11,10 @@
 #      (scripts/seed.sh)
 #   3. deploys the site (CloudFormation grigri_infra/site.yaml:
 #      grigri-web: certificate, buckets (site and photos), CloudFront with
-#      /api/* to the API, and DNS; uptime is watched by the central
-#      nu01-monitor stack in the nu01 repo, not by this stack)
+#      /api/* to the API; the certificate validates in the nu01.com
+#      zone, and the site's DNS records are the nu01 repo's nu01-dns
+#      stack's; uptime is watched by the central nu01-monitor stack in
+#      the nu01 repo, not by this stack)
 #   4. uploads the index page (/) and the web build (/app/), and
 #      invalidates the CloudFront cache
 #   5. smoke-tests the live site: /app/version.json must report this
@@ -30,8 +32,6 @@
 #   STAGE        prod (default) or rc
 #   AWS_REGION   default us-east-1 (CloudFront certificates live there)
 #   SKIP_BUILD   1 to deploy an existing grigri_app/build/web
-#   HOSTED_ZONE_ID       the Route 53 zone of grigri.nu01.com (default:
-#                the repo's .env, from the private repo)
 #   GOOGLE_WEB_CLIENT_ID the Google web OAuth client whose ID tokens the
 #                API accepts (also from .env; a public identifier)
 #   GOOGLE_IOS_CLIENT_IDS the Google iOS clients whose ID tokens the API
@@ -148,6 +148,12 @@ clear_failed_create() { # clear_failed_create <stack>
   fi
 }
 
+# The site's certificate validates in the apex zone nu01.com (the nu01
+# repo's nu01-route53-zone stack), where the nu01-dns stack also holds the
+# site's A/AAAA aliases. grigri.nu01.com's own zone (HOSTED_ZONE_ID) is
+# retired: see grigri_infra/README.md, DNS.
+VALIDATION_ZONE_ID=Z04838091YTBIM6PNI1XK
+
 # Private settings: from the environment, else the private .env.
 if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
@@ -160,7 +166,7 @@ if [[ -n "$GOOGLE_IOS_CLIENT_IDS" && ! "$GOOGLE_IOS_CLIENT_IDS" =~ ^[0-9]+-[0-9a
   echo "error: GOOGLE_IOS_CLIENT_IDS must be comma-separated Google OAuth client IDs" >&2
   exit 1
 fi
-for name in HOSTED_ZONE_ID GOOGLE_WEB_CLIENT_ID; do
+for name in GOOGLE_WEB_CLIENT_ID; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
   fi
@@ -169,10 +175,6 @@ for name in HOSTED_ZONE_ID GOOGLE_WEB_CLIENT_ID; do
     exit 1
   fi
 done
-if [[ ! "$HOSTED_ZONE_ID" =~ ^Z[A-Z0-9]+$ ]]; then
-  echo "error: HOSTED_ZONE_ID must be a Route 53 zone ID" >&2
-  exit 1
-fi
 if [[ ! "$GOOGLE_WEB_CLIENT_ID" =~ ^[0-9]+-[0-9a-z]+\.apps\.googleusercontent\.com$ ]]; then
   echo "error: GOOGLE_WEB_CLIENT_ID must be a Google OAuth client ID (<number>-<id>.apps.googleusercontent.com)" >&2
   exit 1
@@ -285,7 +287,7 @@ clear_failed_create "$SITE_STACK"
 aws cloudformation deploy --stack-name "$SITE_STACK" \
   --template-file grigri_infra/site.yaml \
   --parameter-overrides "DomainName=$DOMAIN" "Stage=$STAGE" \
-    "HostedZoneId=$HOSTED_ZONE_ID" "ApiDomainName=$api_domain" \
+    "ValidationZoneId=$VALIDATION_ZONE_ID" "ApiDomainName=$api_domain" \
     "IotEndpoint=$IOT_ENDPOINT" \
   --tags "${stack_tags[@]}" \
   --no-fail-on-empty-changeset
