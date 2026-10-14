@@ -873,45 +873,31 @@
   },
   "cancelPlan": "Cancel the plan",
   "@cancelPlan": {
-    "description": "Button: cancel a plan I am alone in."
-  },
-  "leavePlan": "Leave the plan",
-  "@leavePlan": {
-    "description": "Button: leave the plan."
+    "description": "Button and menu item: cancel a plan I am in (others, if any, keep it)."
   },
   "cancelPlanQuestion": "Cancel the plan?",
   "@cancelPlanQuestion": {
     "description": "Dialog title: cancel the plan?"
   },
-  "leavePlanQuestion": "Leave the plan?",
-  "@leavePlanQuestion": {
-    "description": "Dialog title: leave the plan?"
-  },
   "cancelPlanMessage": "It and its chat will be gone.",
   "@cancelPlanMessage": {
     "description": "Dialog body: what cancelling does."
   },
-  "leaveOrganizerMessage": "{name} will organize it.",
-  "@leaveOrganizerMessage": {
-    "description": "Dialog body: the next member takes over as organizer.",
-    "placeholders": {
-      "name": {
-        "type": "String",
-        "example": "Marta Soler"
-      }
-    }
+  "cancelPlanOthersMessage": "It leaves your plans and chats; the others keep it. You can't rejoin it later.",
+  "@cancelPlanOthersMessage": {
+    "description": "Dialog body: cancelling a plan others are in; they keep it."
   },
-  "leaveMessage": "You can't rejoin it later.",
-  "@leaveMessage": {
-    "description": "Dialog body: leaving is final."
+  "cancelPlanOrganizerMessage": "It leaves your plans and chats; the others keep it, and one of them, picked at random, will organize it. You can't rejoin it later.",
+  "@cancelPlanOrganizerMessage": {
+    "description": "Dialog body: the organizer cancelling a plan others are in; they keep it and a random one of them organizes it."
   },
-  "stay": "Stay",
-  "@stay": {
-    "description": "Dialog button: do not leave."
+  "keepPlan": "Keep it",
+  "@keepPlan": {
+    "description": "Dialog button: do not cancel the plan."
   },
-  "leave": "Leave",
-  "@leave": {
-    "description": "Dialog button: leave the plan."
+  "confirmCancelPlan": "Cancel it",
+  "@confirmCancelPlan": {
+    "description": "Dialog button: cancel the plan."
   },
   "editPlan": "Edit plan",
   "@editPlan": {

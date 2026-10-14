@@ -16,7 +16,7 @@ is "Alerts" in English.
 | Tab | Shows |
 |---|---|
 | **Discover** | The plans deck ([matching](matching.md#the-deck)), best first, with ✕ and ✓ buttons (centered) and, to the right of ✓, a smaller share button, and ⟳ to refresh, which also brings back the plans I passed on (I may have changed my mind). Each card shows the plan (date and time on separate lines, no distance) and the organizer with **+N** for the rest of the group, whose list opens when tapped. Without a location or area on my profile, the app first takes my location from the phone or browser ([matching](matching.md)); only when the device can't tell does a line above the deck say "Set where you climb to see plans near you first." with **Set** (the profile editor). Empty: "No plans to join right now" and **New plan**. |
-| **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review"), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
+| **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review", and ⋮ with **Cancel the plan**, after the same confirmation as on the plan screen), then **Asked to join**: "Pending" and who it's waiting for, or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message and "N to answer" when join requests wait for my answer. The tab's badge counts those requests. Empty: "No chats yet" and **Find a plan** (to Discover). |
 | **Notifications** | Join requests for my plans, and the groups' answers to mine ([matching](matching.md#notifications)). The tab's badge counts the unread ones. Empty: "Nothing yet". |
 | **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; the **Language** picker ([languages](i18n.md)); in ⋯, **Sign out** and **Sign out everywhere** (on every phone and browser, this one too), each after a confirmation. Then my [roles](roles.md), from rbacr. The version at the bottom. |
@@ -30,9 +30,12 @@ is "Alerts" in English.
   M said yes, or Declined), the group (tap someone for their profile),
   who's asking to join and how many have said yes ("Answer in the chat",
   or "You said yes"). Members get
-  **Group chat** and **Leave the plan** (Cancel the plan when I'm alone in
-  it), after a confirmation. The organizer can **Edit**. "Plan gone" when
-  it no longer exists.
+  **Group chat** and **Cancel the plan**. Its confirmation ("Cancel the
+  plan?", **Keep it** or **Cancel it**) says what happens: alone, the plan
+  and its chat are gone; with others, it leaves my plans and chats while
+  they keep it, and, when I organize it, one of them picked at random
+  organizes it now; I can't rejoin it. The organizer can **Edit**. "Plan
+  gone" when it no longer exists.
 - **Plan editor**, top to bottom:
   - **Climbing**: the discipline.
   - **Where**: one search field, "Sector, crag or gym". As I type it

@@ -1107,17 +1107,11 @@ abstract class AppLocalizations {
   /// **'Group chat'**
   String get groupChat;
 
-  /// Button: cancel a plan I am alone in.
+  /// Button and menu item: cancel a plan I am in (others, if any, keep it).
   ///
   /// In en, this message translates to:
   /// **'Cancel the plan'**
   String get cancelPlan;
-
-  /// Button: leave the plan.
-  ///
-  /// In en, this message translates to:
-  /// **'Leave the plan'**
-  String get leavePlan;
 
   /// Dialog title: cancel the plan?
   ///
@@ -1125,41 +1119,35 @@ abstract class AppLocalizations {
   /// **'Cancel the plan?'**
   String get cancelPlanQuestion;
 
-  /// Dialog title: leave the plan?
-  ///
-  /// In en, this message translates to:
-  /// **'Leave the plan?'**
-  String get leavePlanQuestion;
-
   /// Dialog body: what cancelling does.
   ///
   /// In en, this message translates to:
   /// **'It and its chat will be gone.'**
   String get cancelPlanMessage;
 
-  /// Dialog body: the next member takes over as organizer.
+  /// Dialog body: cancelling a plan others are in; they keep it.
   ///
   /// In en, this message translates to:
-  /// **'{name} will organize it.'**
-  String leaveOrganizerMessage(String name);
+  /// **'It leaves your plans and chats; the others keep it. You can\'t rejoin it later.'**
+  String get cancelPlanOthersMessage;
 
-  /// Dialog body: leaving is final.
+  /// Dialog body: the organizer cancelling a plan others are in; they keep it and a random one of them organizes it.
   ///
   /// In en, this message translates to:
-  /// **'You can\'t rejoin it later.'**
-  String get leaveMessage;
+  /// **'It leaves your plans and chats; the others keep it, and one of them, picked at random, will organize it. You can\'t rejoin it later.'**
+  String get cancelPlanOrganizerMessage;
 
-  /// Dialog button: do not leave.
+  /// Dialog button: do not cancel the plan.
   ///
   /// In en, this message translates to:
-  /// **'Stay'**
-  String get stay;
+  /// **'Keep it'**
+  String get keepPlan;
 
-  /// Dialog button: leave the plan.
+  /// Dialog button: cancel the plan.
   ///
   /// In en, this message translates to:
-  /// **'Leave'**
-  String get leave;
+  /// **'Cancel it'**
+  String get confirmCancelPlan;
 
   /// Title of the plan editor for an existing plan.
   ///

@@ -8,6 +8,7 @@ const ctx: rules.Context = {
   now,
   newId: () => `m${n++}`,
   name: (id) => ({ ada: 'Ada', ben: 'Ben', cy: 'Cy', dee: 'Dee', eve: 'Eve' })[id] ?? 'Someone',
+  random: () => 0,
 };
 
 function plan(p: Partial<Plan> = {}): Plan {
@@ -192,10 +193,21 @@ describe('reject', () => {
 });
 
 describe('leave', () => {
-  it('hands the plan to the next member when the organizer leaves', () => {
-    const e = rules.leave({ plan: plan({ memberIds: ['ada', 'ben', 'cy'] }), requests: [] }, 'ada', ctx);
-    expect(e.plan).toMatchObject({ organizerId: 'ben', memberIds: ['ben', 'cy'] });
-    expect(e.messages.map((m) => m.text)).toEqual(['Ada left the plan']);
+  it('hands the plan to a random member when the organizer leaves', () => {
+    const state = { plan: plan({ memberIds: ['ada', 'ben', 'cy', 'dee'] }), requests: [] };
+    const pick = (r: number) => rules.leave(state, 'ada', { ...ctx, random: () => r });
+    expect(pick(0).plan).toMatchObject({ organizerId: 'ben', memberIds: ['ben', 'cy', 'dee'] });
+    expect(pick(0.5).plan!.organizerId).toBe('cy');
+    expect(pick(0.999).plan!.organizerId).toBe('dee');
+    // The new organizer comes first; the others keep their order.
+    expect(pick(0.999).plan!.memberIds).toEqual(['dee', 'ben', 'cy']);
+    expect(pick(0.5).messages.map((m) => m.text)).toEqual(['Ada left the plan; Cy organizes it now']);
+  });
+
+  it('a member leaving keeps the organizer', () => {
+    const e = rules.leave({ plan: plan({ memberIds: ['ada', 'ben', 'cy'] }), requests: [] }, 'cy', { ...ctx, random: () => 0.9 });
+    expect(e.plan).toMatchObject({ organizerId: 'ada', memberIds: ['ada', 'ben'] });
+    expect(e.messages.map((m) => m.text)).toEqual(['Cy left the plan']);
   });
 
   it('ends the plan when the last member leaves', () => {

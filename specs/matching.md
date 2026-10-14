@@ -76,7 +76,7 @@ person, and a plan can take a whole group.
     the group says yes at once (its made-up members can't answer): I
     join, and the match screen opens instead of the snackbar.
   - Left / ✕: I pass; the plan leaves my deck, until I tap ⟳ (refresh),
-    which brings passed plans back (not ones I asked to join).
+    which brings passed plans back (not ones I asked to join or cancelled).
   - Share (the small 36 dp button to the right of ✓; ✕ and ✓ stay
     centered): shares the top plan as
     text through the system's share sheet, "Climbing plan on Grigri:
@@ -119,8 +119,12 @@ callout; its card in the messages stays as the record.
   them. **One "no" turns them down.**
 - When someone joins, the members who are still to decide on other open
   requests now include them: the group as it is then decides.
-- When a member leaves, the requests stop waiting for them. The organizer
-  leaving hands the plan to the next member; the last member leaving ends
+- Cancelling a plan I'm in (from Plans or the plan screen) is leaving it:
+  it's out of my plans and chats at once, and the others keep it. When a
+  member leaves, the requests stop waiting for them. The organizer leaving
+  hands the plan to one of the remaining members **picked at random**, and
+  the chat says so ("Ada left the plan; Ben organizes it now"); a member
+  leaving just leaves ("Ada left the plan"). The last member leaving ends
   the plan, its requests and its chat. A plan I left never comes back to
   my deck.
 
