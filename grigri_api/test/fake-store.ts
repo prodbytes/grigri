@@ -71,6 +71,12 @@ export class FakeStore {
     if (!this.requests.get(r.id)?.rejected) throw new Conflict('changed');
     this.requests.set(r.id, r);
   }
+  async nudge(r: JoinRequest, previous: string | undefined, ds: Delivery[]) {
+    const current = this.requests.get(r.id);
+    if (!current || current.rejected || current.joined || current.nudgedAt !== previous) throw new Conflict('changed');
+    this.requests.set(r.id, { ...current, nudgedAt: r.nudgedAt });
+    await this.deliver(ds);
+  }
   async apply(previous: VersionedPlan | null, e: Effects) {
     const id = previous?.plan.id ?? e.plan!.id;
     const current = this.plans.get(id);

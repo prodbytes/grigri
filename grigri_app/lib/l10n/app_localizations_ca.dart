@@ -772,4 +772,29 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get noRoles => 'Encara no tens rols a Grigri.';
+
+  @override
+  String get nudge => 'Recorda';
+
+  @override
+  String get nudged => 'Recordat';
+
+  @override
+  String get nudgeTooltip =>
+      'Recorda al grup que respongui (un cop cada 12 hores)';
+
+  @override
+  String nudgeSent(String names) {
+    return 'Recordatori enviat a $names';
+  }
+
+  @override
+  String noticeNudgeTitle(String name) {
+    return '$name espera la teva resposta';
+  }
+
+  @override
+  String noticeNudgeBody(String plan) {
+    return 'Per unir-se a $plan · accepta o rebutja al xat del grup';
+  }
 }

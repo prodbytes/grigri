@@ -7,8 +7,9 @@ import 'chat_screen.dart';
 import 'common.dart';
 import 'plan_screen.dart';
 
-/// The Notifications tab: someone asked to join a plan I'm in, or a group
-/// accepted or declined my request, newest first. The tabs mark them read
+/// The Notifications tab: someone asked to join a plan I'm in (or nudged
+/// me to answer), or a group accepted or declined my request, newest
+/// first. The tabs mark them read
 /// when I open it; [fresh] are the ones that were unread then, highlighted
 /// along with any that arrive while it's open.
 class NoticesScreen extends StatelessWidget {
@@ -62,6 +63,12 @@ class _NoticeTile extends StatelessWidget {
         l.noticeWantsToJoin(store.climber(notice.climberId ?? '').name),
         l.noticeAnswerInChat(notice.planTitle),
       ),
+      NoticeKind.nudge => (
+        Icons.notifications_active,
+        Mountain.tan,
+        l.noticeNudgeTitle(store.climber(notice.climberId ?? '').name),
+        l.noticeNudgeBody(notice.planTitle),
+      ),
       NoticeKind.accepted => (
         Icons.check_circle,
         Mountain.olive,
@@ -77,6 +84,7 @@ class _NoticeTile extends StatelessWidget {
     };
     final Widget open = switch (notice.kind) {
       NoticeKind.request ||
+      NoticeKind.nudge ||
       NoticeKind.accepted => ChatScreen(planId: notice.planId),
       NoticeKind.declined => PlanScreen(planId: notice.planId),
     };

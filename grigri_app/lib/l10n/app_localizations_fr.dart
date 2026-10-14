@@ -772,4 +772,29 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get noRoles => 'Pas encore de rôle dans Grigri.';
+
+  @override
+  String get nudge => 'Relancer';
+
+  @override
+  String get nudged => 'Relancé';
+
+  @override
+  String get nudgeTooltip =>
+      'Rappelle au groupe de répondre (une fois toutes les 12 heures)';
+
+  @override
+  String nudgeSent(String names) {
+    return 'Relance envoyée à $names';
+  }
+
+  @override
+  String noticeNudgeTitle(String name) {
+    return '$name attend ta réponse';
+  }
+
+  @override
+  String noticeNudgeBody(String plan) {
+    return 'Pour rejoindre $plan · accepte ou refuse dans la discussion du groupe';
+  }
 }

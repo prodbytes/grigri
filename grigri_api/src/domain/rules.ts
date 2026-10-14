@@ -3,7 +3,7 @@
 // writes in one transaction. Ported from the app's on-device GrigriStore,
 // without its made-up auto-answering climbers: here every answer is a real
 // member's (or an admin's).
-import { conflict, forbidden, notFound } from './errors.js';
+import { conflict, forbidden, notFound, tooMany } from './errors.js';
 import type { PlanInput } from './validate.js';
 import {
   type Climber,
@@ -290,6 +290,46 @@ export function dismiss(request: JoinRequest | undefined, climberId: string): Jo
   return { ...request, dismissed: true };
 }
 
+/** How long a requester waits between nudges: 12 hours. */
+export const NUDGE_COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * The requester nudges the group: a nudge notice for each member who
+ * hasn't said yes yet, asking them to accept or decline. At most once
+ * per NUDGE_COOLDOWN_MS per request (429 until then). The returned
+ * request carries the new nudgedAt; the deliveries go to `notices`.
+ */
+export function nudge(state: PlanState, climberId: string, ctx: Context): Effects {
+  const { plan } = state;
+  const request = state.requests.find((r) => r.climberId === climberId);
+  if (!request) throw notFound("you haven't asked to join this plan");
+  if (request.rejected) throw conflict('the request was declined');
+  if (request.joined || plan.memberIds.includes(climberId)) throw conflict("you're already in this plan");
+  if (plan.start <= ctx.now.toISOString()) throw conflict('the plan has started');
+  if (request.nudgedAt && ctx.now.getTime() < Date.parse(request.nudgedAt) + NUDGE_COOLDOWN_MS) {
+    throw tooMany('you nudged the group less than 12 hours ago; try again later');
+  }
+  const waitingFor = plan.memberIds.filter((m) => !request.acceptedBy.includes(m));
+  if (waitingFor.length === 0) throw conflict('nobody left to answer');
+  const time = ctx.now.toISOString();
+  const notice: Notice = {
+    id: noticeId('nudge', plan.id, climberId),
+    kind: 'nudge',
+    planId: plan.id,
+    planTitle: plan.place,
+    climberId,
+    time,
+    read: false,
+  };
+  return {
+    plan,
+    requests: [{ ...request, nudgedAt: time }],
+    notices: waitingFor.map((to) => ({ to, notice })),
+    messages: [],
+    matches: [],
+  };
+}
+
 function openRequest(state: PlanState, climberId: string): JoinRequest {
   const request = state.requests.find((r) => r.climberId === climberId);
   if (!request) throw notFound('no such request');
@@ -334,9 +374,12 @@ function settleInto(effects: Effects, requests: JoinRequest[], changed: Map<stri
 
 // --- Notices and notes -------------------------------------------------------
 
-/** A group answers a request once, and nobody asks twice: ids are stable. */
+/**
+ * A group answers a request once, and nobody asks twice: ids are stable.
+ * A new nudge replaces the last one (unread again, with its new time).
+ */
 export function noticeId(kind: NoticeKind, planId: string, climberId?: string): string {
-  return kind === 'request' ? `${planId}/request/${climberId}` : `${planId}/${kind}`;
+  return kind === 'request' || kind === 'nudge' ? `${planId}/${kind}/${climberId}` : `${planId}/${kind}`;
 }
 
 function requestNotice(plan: Plan, climberId: string, ctx: Context, time?: string): Notice {

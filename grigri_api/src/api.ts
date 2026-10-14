@@ -143,6 +143,7 @@ export class Api {
     r('PUT /api/plans/{id}', 'profile', (req, s) => this.updatePlan(req, s));
     r('POST /api/plans/{id}/leave', 'profile', (req, s) => this.leave(req, s));
     r('POST /api/plans/{id}/join', 'profile', (req, s) => this.join(req, s));
+    r('POST /api/plans/{id}/nudge', 'profile', (req, s) => this.nudge(req, s));
     r('POST /api/plans/{id}/pass', 'profile', (req, s) => this.pass(req, s));
     r('GET /api/plans/{id}/messages', 'profile', (req, s) => this.messages(req, s));
     r('POST /api/plans/{id}/messages', 'profile', (req, s) => this.send(req, s));
@@ -393,6 +394,24 @@ export class Api {
       }
       await this.hint(hintsFor(loaded.plan.memberIds, { kind: 'request', planId }, s.me.id));
       return { request: effects.requests[0]!, demo: loaded.plan.demo === true };
+    });
+  }
+
+  /**
+   * I nudge the members who haven't answered my open request on this plan:
+   * each gets a nudge notice and a notice hint. Once per 12 hours (429).
+   */
+  private async nudge(req: Request, s: Session) {
+    const planId = id(req.params.id, 'plan id');
+    return this.retry(async () => {
+      const loaded = await this.loadPlan(planId);
+      const before = loaded.requests.find((r) => r.climberId === s.me.id);
+      const effects = rules.nudge(loaded, s.me.id, s.ctx);
+      const request = effects.requests[0]!;
+      await this.store.nudge(request, before?.nudgedAt, effects.notices);
+      const nudged = effects.notices.map((d) => d.to);
+      await this.hint(hintsFor(nudged, { kind: 'notice', planId }, s.me.id));
+      return { request: requestJson(request), nudged: nudged.length };
     });
   }
 

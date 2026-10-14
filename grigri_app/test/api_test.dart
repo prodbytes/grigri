@@ -160,6 +160,55 @@ void main() {
       expect(seen.last.url.path, '/api/admin/requests/p1/pat/reject');
     });
 
+    test('nudges a plan; reads when, and how many', () async {
+      final seen = <http.Request>[];
+      final api = apiWith(
+        (_) async => json({
+          'request': {
+            'id': 'p1/pat',
+            'planId': 'p1',
+            'climberId': 'pat',
+            'acceptedBy': ['robin'],
+            'rejected': false,
+            'time': '2026-10-12T10:00:00.000Z',
+            'nudgedAt': '2026-10-13T10:00:00.000Z',
+          },
+          'nudged': 2,
+        }),
+        seen: seen,
+      );
+      final answer = await api.nudge('p1');
+      expect(seen.single.method, 'POST');
+      expect(seen.single.url.path, '/api/plans/p1/nudge');
+      expect(answer.nudged, 2);
+      final nudgedAt = answer.request.nudgedAt!;
+      expect(nudgedAt.toUtc(), DateTime.utc(2026, 10, 13, 10));
+      expect(answer.request.canNudge(nudgedAt), isFalse);
+      expect(
+        answer.request.canNudge(nudgedAt.add(const Duration(hours: 12))),
+        isTrue,
+      );
+    });
+
+    test('reads nudge notices; skips kinds it doesn\'t know', () {
+      final list = ApiJson.noticeList({
+        'notices': [
+          for (final kind in ['nudge', 'someday'])
+            {
+              'id': 'p1/$kind/pat',
+              'kind': kind,
+              'planId': 'p1',
+              'planTitle': 'Grey Cliffs',
+              'climberId': 'pat',
+              'time': '2026-10-13T10:00:00.000Z',
+              'read': false,
+            },
+        ],
+      });
+      expect(list.notices.map((n) => n.kind), [NoticeKind.nudge]);
+      expect(list.notices.single.climberId, 'pat');
+    });
+
     test('polls messages after a time', () async {
       final seen = <http.Request>[];
       final api = apiWith(

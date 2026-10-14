@@ -773,4 +773,29 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get noRoles => 'Nenhuma função no Grigri ainda.';
+
+  @override
+  String get nudge => 'Lembrar';
+
+  @override
+  String get nudged => 'Lembrado';
+
+  @override
+  String get nudgeTooltip =>
+      'Lembre o grupo de responder (uma vez a cada 12 horas)';
+
+  @override
+  String nudgeSent(String names) {
+    return 'Lembrete enviado para $names';
+  }
+
+  @override
+  String noticeNudgeTitle(String name) {
+    return '$name está esperando sua resposta';
+  }
+
+  @override
+  String noticeNudgeBody(String plan) {
+    return 'Para entrar em $plan · aceite ou recuse na conversa do grupo';
+  }
 }

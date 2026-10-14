@@ -20,7 +20,7 @@ A hint says *what kind of thing changed*, never the thing itself:
 |---|---|---|---|
 | `message` | the plan's members | a chat message | that chat's new messages (if it's one of my plans) |
 | `request` | the plan's members | someone asks to join; a member says yes but not everyone has; a member or admin says no (the members) | requests to review, notifications; the plan's chat and open requests if loaded |
-| `notice` | the requester | their request was declined | notifications, my plans |
+| `notice` | the requester; the members who haven't answered a nudge | their request was declined; the requester nudged them | notifications, my plans |
 | `match` | the newcomer | everyone said yes (or an admin let them in) | my plans, requests, notifications (the match screen opens as before) |
 | `plan` | the plan's members | someone joined or left; the organizer edited the plan | my plans, requests; the plan's chat and open requests if loaded |
 

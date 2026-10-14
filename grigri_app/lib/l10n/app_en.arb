@@ -1130,5 +1130,47 @@
   "noRoles": "No roles in Grigri yet.",
   "@noRoles": {
     "description": "Roles card when the user has no roles."
+  },
+  "nudge": "Nudge",
+  "@nudge": {
+    "description": "Button on my pending join request: remind the members who have not answered."
+  },
+  "nudged": "Nudged",
+  "@nudged": {
+    "description": "Disabled button: I nudged the group less than 12 hours ago."
+  },
+  "nudgeTooltip": "Remind the group to answer (once every 12 hours)",
+  "@nudgeTooltip": {
+    "description": "Tooltip of the Nudge button."
+  },
+  "nudgeSent": "Nudge sent to {names}",
+  "@nudgeSent": {
+    "description": "Snackbar after a nudge: who was reminded (first names).",
+    "placeholders": {
+      "names": {
+        "type": "String",
+        "example": "Marta, Joan"
+      }
+    }
+  },
+  "noticeNudgeTitle": "{name} is waiting for your answer",
+  "@noticeNudgeTitle": {
+    "description": "Notification title: someone asking to join my plan nudged me to answer.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta Soler"
+      }
+    }
+  },
+  "noticeNudgeBody": "To join {plan} · accept or decline in the group chat",
+  "@noticeNudgeBody": {
+    "description": "Notification body for a nudge.",
+    "placeholders": {
+      "plan": {
+        "type": "String",
+        "example": "El Pati"
+      }
+    }
   }
 }

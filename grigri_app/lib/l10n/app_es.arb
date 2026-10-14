@@ -213,5 +213,11 @@
   "adminJoined": "{name} se ha unido a {plan}.",
   "roles": "Roles",
   "rolesFailed": "No se han podido obtener tus roles de rbacr.",
-  "noRoles": "Aún no tienes roles en Grigri."
+  "noRoles": "Aún no tienes roles en Grigri.",
+  "nudge": "Recordar",
+  "nudged": "Recordado",
+  "nudgeTooltip": "Recuerda al grupo que responda (una vez cada 12 horas)",
+  "nudgeSent": "Recordatorio enviado a {names}",
+  "noticeNudgeTitle": "{name} espera tu respuesta",
+  "noticeNudgeBody": "Para unirse a {plan} · acepta o rechaza en el chat del grupo"
 }

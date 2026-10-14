@@ -213,5 +213,11 @@
   "adminJoined": "{name} a rejoint {plan}.",
   "roles": "Rôles",
   "rolesFailed": "Impossible de récupérer tes rôles depuis rbacr.",
-  "noRoles": "Pas encore de rôle dans Grigri."
+  "noRoles": "Pas encore de rôle dans Grigri.",
+  "nudge": "Relancer",
+  "nudged": "Relancé",
+  "nudgeTooltip": "Rappelle au groupe de répondre (une fois toutes les 12 heures)",
+  "nudgeSent": "Relance envoyée à {names}",
+  "noticeNudgeTitle": "{name} attend ta réponse",
+  "noticeNudgeBody": "Pour rejoindre {plan} · accepte ou refuse dans la discussion du groupe"
 }

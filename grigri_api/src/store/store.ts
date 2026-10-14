@@ -254,6 +254,34 @@ export class Store implements SessionStore {
     }
   }
 
+  /**
+   * The requester nudged the members: saves when, only while the request
+   * is still open and nobody nudged meanwhile (`previous`: the nudgedAt it
+   * was read with), so two nudges at once can't both pass the cooldown.
+   * Then puts the notices.
+   */
+  async nudge(request: JoinRequest, previous: string | undefined, deliveries: Delivery[]): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.request(request.planId, request.climberId),
+        UpdateExpression: 'SET nudgedAt = :at',
+        ConditionExpression:
+          'attribute_exists(pk) AND #rejected = :false AND #joined = :false AND ' +
+          (previous ? 'nudgedAt = :previous' : 'attribute_not_exists(nudgedAt)'),
+        ExpressionAttributeNames: { '#rejected': 'rejected', '#joined': 'joined' },
+        ExpressionAttributeValues: {
+          ':at': request.nudgedAt,
+          ':false': false,
+          ...(previous ? { ':previous': previous } : {}),
+        },
+      }));
+    } catch (e) {
+      throw asConflict(e);
+    }
+    await this.deliver(deliveries);
+  }
+
   // --- Writing effects ------------------------------------------------------
 
   /**
@@ -563,6 +591,7 @@ export function requestItem(r: JoinRequest): Item {
     acceptedBy: r.acceptedBy,
     rejected: r.rejected,
     time: r.time,
+    ...(r.nudgedAt ? { nudgedAt: r.nudgedAt } : {}),
     joined: r.joined === true,
     dismissed: r.dismissed === true,
   };
@@ -576,6 +605,7 @@ export function toRequest(i: Item): JoinRequest {
     acceptedBy: (i.acceptedBy as string[]) ?? [],
     rejected: i.rejected === true,
     time: i.time as string,
+    ...(typeof i.nudgedAt === 'string' ? { nudgedAt: i.nudgedAt } : {}),
     joined: i.joined === true,
     dismissed: i.dismissed === true,
   };

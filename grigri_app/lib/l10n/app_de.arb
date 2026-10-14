@@ -213,5 +213,11 @@
   "adminJoined": "{name} ist jetzt bei {plan} dabei.",
   "roles": "Rollen",
   "rolesFailed": "Deine Rollen konnten nicht von rbacr geladen werden.",
-  "noRoles": "Noch keine Rollen in Grigri."
+  "noRoles": "Noch keine Rollen in Grigri.",
+  "nudge": "Erinnern",
+  "nudged": "Erinnert",
+  "nudgeTooltip": "Erinnere die Gruppe an eine Antwort (einmal alle 12 Stunden)",
+  "nudgeSent": "Erinnerung an {names} gesendet",
+  "noticeNudgeTitle": "{name} wartet auf deine Antwort",
+  "noticeNudgeBody": "Um bei {plan} mitzumachen · nimm im Gruppenchat an oder lehne ab"
 }

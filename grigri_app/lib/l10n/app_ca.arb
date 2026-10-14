@@ -213,5 +213,11 @@
   "adminJoined": "{name} s'ha unit a {plan}.",
   "roles": "Rols",
   "rolesFailed": "No s'han pogut obtenir els teus rols de rbacr.",
-  "noRoles": "Encara no tens rols a Grigri."
+  "noRoles": "Encara no tens rols a Grigri.",
+  "nudge": "Recorda",
+  "nudged": "Recordat",
+  "nudgeTooltip": "Recorda al grup que respongui (un cop cada 12 hores)",
+  "nudgeSent": "Recordatori enviat a {names}",
+  "noticeNudgeTitle": "{name} espera la teva resposta",
+  "noticeNudgeBody": "Per unir-se a {plan} · accepta o rebutja al xat del grup"
 }

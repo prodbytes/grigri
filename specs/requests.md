@@ -607,3 +607,28 @@ spec.
       and the chat gets the joined note. The app refreshes its
       notifications right after, so the match screen opens (no "you'll
       get an alert" snackbar). Real plans are unchanged.
+
+## 2026-10-14
+
+43. **Add a nudge button to send a notification to all members of the plan
+    to either accept or reject the given membership.**
+    - [API](api.md): `POST /api/plans/{id}/nudge`, for the requester of an
+      open request: a new Notice kind `nudge` ("they're still waiting for
+      your answer", `climberId` the requester) for each member who hasn't
+      said yes, and a `notice` [hint](live-updates.md) to them. At most
+      once every 12 hours per request: the request keeps `nudgedAt`
+      (written with a conditional update, so racing nudges can't both
+      pass) and an earlier nudge gets **429**. 404 without a request; 409
+      when declined, already in, or the plan has started. A new nudge
+      replaces the last one's notice (stable id
+      `<planId>/nudge/<climberId>`), unread again.
+    - [Matching](matching.md), [screens](screens.md): Plans' pending
+      requests have **Nudge** (then **Nudged**, disabled, for 12 hours;
+      none on a declined request or a started plan) and a snackbar "Nudge
+      sent to <names>"; members see "<name> is waiting for your answer" in
+      Notifications, counted in the badge, opening the group chat. Older
+      apps skip the unknown notice kind. Strings in every language.
+    - Cost: no new resource. A nudge is one plan-and-requests read, one
+      conditional write, one notice write and one IoT hint per waiting
+      member (fractions of a cent per thousand), and the 12-hour limit
+      caps it at two per request per day.

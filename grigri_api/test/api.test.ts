@@ -268,6 +268,58 @@ describe('the matchmaking flow', () => {
     expect(climbers[ids.Ben!]).not.toHaveProperty('areas');
   });
 
+  it('nudge: the members who have not said yes are notified, once per 12 hours', async () => {
+    // Ben joins first, so Cy's request waits for Ada and Ben.
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/accept`);
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 404, /haven't asked/);
+    await fails(call(ada, 'POST', `/api/plans/${planId}/nudge`), 404);
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Cy}/accept`);
+    await call(ada, 'POST', '/api/notices/read');
+    await call(ben, 'POST', '/api/notices/read');
+
+    now = new Date(now.getTime() + 60_000);
+    const first = await call(cy, 'POST', `/api/plans/${planId}/nudge`);
+    expect(first).toEqual({ request: expect.objectContaining({ climberId: ids.Cy, nudgedAt: now.toISOString() }), nudged: 1 });
+    // Only Ben, who hasn't answered; Ada already said yes.
+    expect((await call(ada, 'GET', '/api/notices')).notices.filter((n: any) => !n.read)).toEqual([]);
+    const benNotices = await call(ben, 'GET', '/api/notices');
+    expect(benNotices.notices[0]).toEqual({
+      id: `${planId}/nudge/${ids.Cy}`, kind: 'nudge', planId, planTitle: 'Somewhere', climberId: ids.Cy, time: now.toISOString(), read: false,
+    });
+    expect(benNotices.climbers[ids.Cy!].name).toBe('Cy');
+    // My plans show when I last nudged.
+    expect((await call(cy, 'GET', '/api/plans')).asked[0].request.nudgedAt).toBe(now.toISOString());
+
+    // Too soon: 429, nothing sent.
+    await call(ben, 'POST', '/api/notices/read');
+    now = new Date(now.getTime() + 11 * 3600_000);
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 429, /less than 12 hours ago/);
+    expect((await call(ben, 'GET', '/api/notices')).notices.filter((n: any) => !n.read)).toEqual([]);
+
+    // 12 hours on: again, replacing the last nudge (unread again).
+    now = new Date(now.getTime() + 3600_000);
+    expect((await call(cy, 'POST', `/api/plans/${planId}/nudge`)).nudged).toBe(1);
+    const again = (await call(ben, 'GET', '/api/notices')).notices.filter((n: any) => n.kind === 'nudge');
+    expect(again).toEqual([expect.objectContaining({ read: false, time: now.toISOString() })]);
+
+    // An answered request can't be nudged.
+    now = new Date(now.getTime() + 13 * 3600_000);
+    await call(ben, 'POST', `/api/requests/${planId}/${ids.Cy}/reject`);
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 409, /declined/);
+  });
+
+  it('nudge: not once joined, nor after the plan started', async () => {
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/accept`);
+    await fails(call(ben, 'POST', `/api/plans/${planId}/nudge`), 409, /already in this plan/);
+    now = new Date('2030-05-10T09:00:00Z');
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 409, /started/);
+    await fails(call(cy, 'POST', '/api/plans/nope/nudge'), 404);
+  });
+
   it('one no: declined notice, then dismiss', async () => {
     await call(ben, 'POST', `/api/plans/${planId}/join`);
     await fails(call(cy, 'POST', `/api/requests/${planId}/${ids.Ben}/dismiss`), 403);
