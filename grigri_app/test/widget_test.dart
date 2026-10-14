@@ -211,6 +211,69 @@ void main() {
       expect(find.text('Pending'), findsOneWidget);
     });
 
+    testWidgets('a pending request nudges the group, then waits 12 hours', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      await store.like('crag-day');
+      await tapTab(tester, 'Plans');
+      expect(find.text('Pending'), findsOneWidget);
+      await tester.tap(find.text('Nudge'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/plans/crag-day/nudge'));
+      expect(find.text('Nudge sent to Robin'), findsOneWidget);
+      expect(
+        api.noticesFor['robin']!.where((n) => n.kind == NoticeKind.nudge),
+        hasLength(1),
+      );
+      // Now "Nudged", and disabled until the 12 hours are up.
+      expect(find.text('Nudge'), findsNothing);
+      final nudged = find.widgetWithText(TextButton, 'Nudged');
+      expect(tester.widget<TextButton>(nudged).onPressed, isNull);
+      expect(store.waiting.single.canNudge(DateTime.now()), isFalse);
+      expect(
+        store.waiting.single.canNudge(
+          DateTime.now().add(JoinRequest.nudgeCooldown),
+        ),
+        isTrue,
+      );
+    });
+
+    testWidgets('a refused nudge shows the server\'s words', (tester) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      await store.like('crag-day');
+      await tapTab(tester, 'Plans');
+      api.failNext = const ApiException(
+        429,
+        'you nudged the group less than 12 hours ago; try again later',
+      );
+      await tester.tap(find.text('Nudge'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'you nudged the group less than 12 hours ago; try again later',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Nudge sent to Robin'), findsNothing);
+      expect(find.text('Nudge'), findsOneWidget);
+    });
+
+    testWidgets('a declined request has no Nudge', (tester) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      await store.like('crag-day');
+      api.requestsById['crag-day/me'] = api.requestsById['crag-day/me']!
+          .copyWith(rejected: true);
+      await store.refreshPlans();
+      await tapTab(tester, 'Plans');
+      expect(find.text('Declined'), findsOneWidget);
+      expect(find.text('Nudge'), findsNothing);
+      expect(find.text('Nudged'), findsNothing);
+    });
+
     testWidgets('the small share button shares the top plan, with a link', (
       tester,
     ) async {
@@ -234,6 +297,14 @@ void main() {
         tester.getSize(find.byTooltip('Share this plan')).width,
         lessThan(tester.getSize(find.byTooltip('Ask to join')).width),
       );
+      // Right of ✓, with ✕ and ✓ still centered on the screen.
+      final share = tester.getCenter(find.byTooltip('Share this plan'));
+      final pass = tester.getCenter(find.byTooltip('Pass'));
+      final join = tester.getCenter(find.byTooltip('Ask to join'));
+      expect(share.dx, greaterThan(join.dx));
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      expect((pass.dx + join.dx) / 2, moreOrLessEquals(width / 2, epsilon: 1));
       await tester.tap(find.byTooltip('Share this plan'));
       await tester.pumpAndSettle();
       final text = shared.single['text']! as String;
@@ -250,8 +321,8 @@ void main() {
 
     testWidgets('demo plans and people say they are made up', (tester) async {
       const notice =
-          "Demo: this isn't real data, just a demonstration to help you see "
-          'how Grigri works.';
+          'Demo: automatically generated, not real people or plans. '
+          "It's here to show how Grigri works.";
       final api = sampleApi();
       final plan = api.plans['boulder-night']!;
       api
@@ -310,6 +381,18 @@ void main() {
       expect(store.waiting, isEmpty);
     });
 
+    testWidgets('refresh brings back the plans I passed on', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      expect(find.text('Block Hall'), findsNothing);
+      await tester.tap(find.byTooltip('Refresh'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('DELETE /api/passes'));
+      expect(find.text('Block Hall'), findsOneWidget);
+    });
+
     testWidgets('dragging a card left passes on the plan', (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);
@@ -356,6 +439,34 @@ void main() {
   });
 
   group('requests in the chat', () {
+    testWidgets('a nudge notification asks me to answer; it opens the chat', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      api.nudgeAs('my-gym', 'jules');
+      final store = await pumpApp(tester, api);
+      // Counted with the other unread notices (the request and the nudge).
+      expect(store.unreadNotices, 2);
+      await tapTab(tester, 'Alerts');
+      expect(
+        find.text('Jules Fern is waiting for your answer'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining(
+          'To join ${api.plans['my-gym']!.title} · accept or decline in the '
+          'group chat',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Jules Fern is waiting for your answer'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('request my-gym/jules')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a request notification opens the chat; accepting matches', (
       tester,
     ) async {
@@ -661,13 +772,57 @@ void main() {
       await tapTab(tester, 'Plans');
       await tester.tap(find.text('Grey Cliffs'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Leave the plan'));
+      await tester.tap(find.text('Cancel the plan'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Leave'));
+      expect(find.textContaining('the others keep it.'), findsOneWidget);
+      await tester.tap(find.text('Cancel it'));
       await tester.pumpAndSettle();
       expect(api.calls, contains('POST /api/plans/crag-day/leave'));
       expect(find.text('Grey Cliffs'), findsNothing);
       expect(find.text('Wall Works'), findsOneWidget);
+    });
+
+    testWidgets('cancelling from the Plans list takes it out of Plans and '
+        'Chats; the others keep it', (tester) async {
+      final api = sampleApi();
+      // I organize it, with Robin in it.
+      api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
+        organizerId: 'me',
+        memberIds: ['me', 'robin'],
+      );
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Plans');
+      final menu = find.descendant(
+        of: find.ancestor(
+          of: find.text('Grey Cliffs'),
+          matching: find.byType(Card),
+        ),
+        matching: find.byIcon(Icons.more_vert),
+      );
+      // Changing my mind keeps it.
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel the plan'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('picked at random'), findsOneWidget);
+      await tester.tap(find.text('Keep it'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isNot(contains('POST /api/plans/crag-day/leave')));
+      expect(find.text('Grey Cliffs'), findsOneWidget);
+      // Cancelled: out of Plans and Chats.
+      await tester.tap(menu);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel the plan'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel it'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/plans/crag-day/leave'));
+      expect(find.text('Grey Cliffs'), findsNothing);
+      await tapTab(tester, 'Chats');
+      expect(find.text('Grey Cliffs'), findsNothing);
+      // Robin keeps it, and organizes it now.
+      expect(api.plans['crag-day']!.memberIds, ['robin']);
+      expect(api.plans['crag-day']!.organizerId, 'robin');
     });
   });
 

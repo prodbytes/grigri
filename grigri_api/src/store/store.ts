@@ -213,11 +213,29 @@ export class Store implements SessionStore {
     return this.climberChildren(climberId, prefix.pass);
   }
 
-  async addPass(climberId: string, planId: string, now: Date): Promise<void> {
+  /** I passed on a plan; [left]: because I left (cancelled) it, which a refresh never undoes. */
+  async addPass(climberId: string, planId: string, now: Date, left = false): Promise<void> {
     await this.doc.send(new PutCommand({
       TableName: this.table,
-      Item: { ...key.pass(climberId, planId), type: 'pass', planId, time: now.toISOString() },
+      Item: { ...key.pass(climberId, planId), type: 'pass', planId, time: now.toISOString(), ...(left ? { left: true } : {}) },
     }));
+  }
+
+  /** The plans I left (cancelled): passes a refresh keeps. */
+  async leftPlanIds(climberId: string): Promise<string[]> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+      FilterExpression: '#left = :yes',
+      ExpressionAttributeNames: { '#left': 'left' },
+      ExpressionAttributeValues: { ':pk': prefix.climber(climberId), ':sk': prefix.pass, ':yes': true },
+      ProjectionExpression: 'planId',
+    });
+    return items.map((i) => i.planId as string);
+  }
+
+  /** Forgets the climber's passes on these plans: they're on the deck again. */
+  async deletePasses(climberId: string, planIds: string[]): Promise<void> {
+    await this.batchWrite(planIds.map((p) => ({ DeleteRequest: { Key: key.pass(climberId, p) } })));
   }
 
   /** The climber's own requests (any state). */
@@ -252,6 +270,34 @@ export class Store implements SessionStore {
     } catch (e) {
       throw asConflict(e);
     }
+  }
+
+  /**
+   * The requester nudged the members: saves when, only while the request
+   * is still open and nobody nudged meanwhile (`previous`: the nudgedAt it
+   * was read with), so two nudges at once can't both pass the cooldown.
+   * Then puts the notices.
+   */
+  async nudge(request: JoinRequest, previous: string | undefined, deliveries: Delivery[]): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.request(request.planId, request.climberId),
+        UpdateExpression: 'SET nudgedAt = :at',
+        ConditionExpression:
+          'attribute_exists(pk) AND #rejected = :false AND #joined = :false AND ' +
+          (previous ? 'nudgedAt = :previous' : 'attribute_not_exists(nudgedAt)'),
+        ExpressionAttributeNames: { '#rejected': 'rejected', '#joined': 'joined' },
+        ExpressionAttributeValues: {
+          ':at': request.nudgedAt,
+          ':false': false,
+          ...(previous ? { ':previous': previous } : {}),
+        },
+      }));
+    } catch (e) {
+      throw asConflict(e);
+    }
+    await this.deliver(deliveries);
   }
 
   // --- Writing effects ------------------------------------------------------
@@ -563,6 +609,7 @@ export function requestItem(r: JoinRequest): Item {
     acceptedBy: r.acceptedBy,
     rejected: r.rejected,
     time: r.time,
+    ...(r.nudgedAt ? { nudgedAt: r.nudgedAt } : {}),
     joined: r.joined === true,
     dismissed: r.dismissed === true,
   };
@@ -576,6 +623,7 @@ export function toRequest(i: Item): JoinRequest {
     acceptedBy: (i.acceptedBy as string[]) ?? [],
     rejected: i.rejected === true,
     time: i.time as string,
+    ...(typeof i.nudgedAt === 'string' ? { nudgedAt: i.nudgedAt } : {}),
     joined: i.joined === true,
     dismissed: i.dismissed === true,
   };

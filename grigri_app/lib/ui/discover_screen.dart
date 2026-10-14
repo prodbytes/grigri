@@ -22,6 +22,10 @@ class DiscoverScreen extends StatefulWidget {
 }
 
 class _DiscoverScreenState extends State<DiscoverScreen> {
+  /// The share button: small, to the right of ✓.
+  static const _shareSize = 36.0;
+  static const _shareGap = 16.0;
+
   final _controller = SwipeController();
 
   Future<void> _swiped(
@@ -76,7 +80,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
           IconButton(
             tooltip: l.refresh,
             icon: const Icon(Icons.refresh),
-            onPressed: store.refreshDiscover,
+            onPressed: () => store.refreshDiscover(again: true),
           ),
         ],
       ),
@@ -150,29 +154,32 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // As wide as the share button and its gap, so ✕
+                      // and ✓ stay centered.
+                      const SizedBox(width: _shareSize + _shareGap),
                       DeckButton(
                         icon: Icons.close,
                         color: Mountain.clay,
                         tooltip: l.pass,
                         onPressed: () => _controller.swipe(right: false),
                       ),
-                      const SizedBox(width: 24),
-                      Builder(
-                        builder: (context) => DeckButton(
-                          icon: Icons.share_outlined,
-                          color: Mountain.sky,
-                          size: 44,
-                          tooltip: l.sharePlan,
-                          onPressed: () => _share(context, plans.first),
-                        ),
-                      ),
-                      const SizedBox(width: 24),
+                      const SizedBox(width: 40),
                       DeckButton(
                         icon: Icons.check,
                         color: Mountain.olive,
                         filled: true,
                         tooltip: l.askToJoin,
                         onPressed: () => _controller.swipe(right: true),
+                      ),
+                      const SizedBox(width: _shareGap),
+                      Builder(
+                        builder: (context) => DeckButton(
+                          icon: Icons.share_outlined,
+                          color: Mountain.sky,
+                          size: _shareSize,
+                          tooltip: l.sharePlan,
+                          onPressed: () => _share(context, plans.first),
+                        ),
                       ),
                     ],
                   ),

@@ -187,7 +187,7 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get demoNotice =>
-      'Demo: no són dades reals, només una demostració perquè vegis com funciona Grigri.';
+      'Demo: generat automàticament, no són persones ni plans reals. És aquí per mostrar com funciona Grigri.';
 
   @override
   String get yourGrades => 'El teu grau';
@@ -610,30 +610,24 @@ class AppLocalizationsCa extends AppLocalizations {
   String get cancelPlan => 'Cancel·la el pla';
 
   @override
-  String get leavePlan => 'Deixa el pla';
-
-  @override
   String get cancelPlanQuestion => 'Vols cancel·lar el pla?';
-
-  @override
-  String get leavePlanQuestion => 'Vols deixar el pla?';
 
   @override
   String get cancelPlanMessage => 'El pla i el seu xat desapareixeran.';
 
   @override
-  String leaveOrganizerMessage(String name) {
-    return '$name l\'organitzarà.';
-  }
+  String get cancelPlanOthersMessage =>
+      'Sortirà dels teus plans i xats; els altres el mantenen. No t\'hi podràs tornar a unir.';
 
   @override
-  String get leaveMessage => 'No t\'hi podràs tornar a unir.';
+  String get cancelPlanOrganizerMessage =>
+      'Sortirà dels teus plans i xats; els altres el mantenen i un d\'ells, triat a l\'atzar, l\'organitzarà. No t\'hi podràs tornar a unir.';
 
   @override
-  String get stay => 'M\'hi quedo';
+  String get keepPlan => 'Mantén-lo';
 
   @override
-  String get leave => 'Deixa-ho';
+  String get confirmCancelPlan => 'Cancel·la\'l';
 
   @override
   String get editPlan => 'Edita el pla';
@@ -774,41 +768,27 @@ class AppLocalizationsCa extends AppLocalizations {
   String get noRoles => 'Encara no tens rols a Grigri.';
 
   @override
-  String get attachMedia => 'Afegeix una foto o un vídeo';
+  String get nudge => 'Recorda';
 
   @override
-  String get recordVideo => 'Grava un vídeo';
+  String get nudged => 'Recordat';
 
   @override
-  String get chooseVideo => 'Tria un vídeo';
+  String get nudgeTooltip =>
+      'Recorda al grup que respongui (un cop cada 12 hores)';
 
   @override
-  String get photoMessage => 'Foto';
+  String nudgeSent(String names) {
+    return 'Recordatori enviat a $names';
+  }
 
   @override
-  String get videoMessage => 'Vídeo';
+  String noticeNudgeTitle(String name) {
+    return '$name espera la teva resposta';
+  }
 
   @override
-  String get removeAttachment => 'Treu l\'adjunt';
-
-  @override
-  String get uploadingMedia => 'S\'està pujant…';
-
-  @override
-  String get playVideo => 'Reprodueix el vídeo';
-
-  @override
-  String get videoUnavailable => 'Aquest vídeo no es pot reproduir.';
-
-  @override
-  String get mediaUnavailable => 'No disponible';
-
-  @override
-  String get errorMediaType =>
-      'Fes servir una foto JPEG, PNG o WebP, o un vídeo MP4 o MOV.';
-
-  @override
-  String errorVideoTooBig(int mb) {
-    return 'Els vídeos poden ocupar com a màxim $mb MB: envia\'n un de més curt.';
+  String noticeNudgeBody(String plan) {
+    return 'Per unir-se a $plan · accepta o rebutja al xat del grup';
   }
 }

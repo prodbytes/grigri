@@ -12,7 +12,7 @@ has no built-in demo data. The routes and JSON shapes are in
 |---|---|---|---|
 | Site | https://grigri.nu01.com | https://rc.grigri.nu01.com | https://local.grigri.nu01.com:2543 |
 | API stack | `grigri-api` | `grigri-rc-api` | `grigri-local-api`, in Floci |
-| Data | **Starts empty: only real people's data.** Never seeded | Made-up test data, re-seeded after each RC deploy, beside testers' real data | Made-up test data, seeded on every Floci start (Floci keeps nothing) |
+| Data | **Real people's data, plus the demo showcase** (fictional, marked demo). Never gets the test seed | Made-up test data, re-seeded after each RC deploy, beside testers' real data | Made-up test data, seeded on every Floci start (Floci keeps nothing) |
 | Sign-in | A Google ID token (`GOOGLE_WEB_CLIENT_ID`) for the API's own session | Same | Same when `.env` has `GOOGLE_WEB_CLIENT_ID`; otherwise **dev mode** |
 | Admins | rbacr's `grigri` `admin` role, asked with `GRIGRI_RBACR_TOKEN` (repository secret) | Same | The local rbacr's, asked with `RBACR_TOKEN` in `.env` |
 | Backups | Point-in-time recovery (35 days), deletion protection | None | None |
@@ -119,7 +119,25 @@ API can't send that event) by [scripts/seed.sh](../scripts/seed.sh):
 It's idempotent: re-running rewrites the seed's own profiles, plans,
 requests and chat lines with fresh dates. Real people's data stays: their
 profiles, requests, notices and messages, and their membership of a seed
-plan.
+plan. It writes the demo showcase too.
+
+## The demo showcase
+
+[grigri_api/seed/showcase.ts](../grigri_api/seed/showcase.ts): six
+fictional climbers whose names nod to late climbing legends without being
+them (Wolf Gullick, Patrice Edlin, Kurt Alberts, Roy Robbin, Uli Stack,
+Dean Potts: nobody real is portrayed, and their bios are made up), each
+organizing a plan at a well-known crag (Frankenjura, Buoux, Kalymnos,
+Yosemite, Rio de Janeiro, Fontainebleau) two to six days ahead, so the app
+has plans to show while there are few real ones. On **every stage,
+production included**; all marked `demo`, with `seed-` ids.
+
+The API keeps it upcoming itself: before building a deck
+(`GET /api/discover`), it reads one marker item (`META#SHOWCASE`) and, when
+it's over 12 hours old, rewrites the showcase's climbers and plans with
+fresh dates (as the seed does: real members stay). A failure is logged and
+never fails the deck. No scheduler or new resource: one extra read per
+deck and about 20 writes twice a day, well under a cent a month.
 
 ## Cost
 

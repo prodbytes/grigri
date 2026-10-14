@@ -1,6 +1,8 @@
 // The Lambda entry point: HTTP API (payload 2.0) events to the router, and
 // one direct-invoke event, {"grigriSeed": true}, that loads the made-up
 // test data (RC and local only: refused in prod; see seed/seed.ts). The
+// demo showcase (seed/showcase.ts) is on every stage, refreshed by the
+// deck itself. The
 // HTTP API can't send that event: its events always carry requestContext.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DeleteObjectCommand, DeleteObjectTaggingCommand, S3Client } from '@aws-sdk/client-s3';
@@ -15,7 +17,7 @@ import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
 import { Store } from './store/store.js';
-import { assertSeedable, seed } from '../seed/seed.js';
+import { assertSeedable, seed, seedShowcase, showcaseIsStale } from '../seed/seed.js';
 
 const MAX_BODY = 64 * 1024;
 
@@ -94,7 +96,12 @@ const publisher = !iotEndpoint
     ? mqttWebSocketPublisher(`${env.AWS_ENDPOINT_URL!.replace(/^http/, 'ws').replace(/\/+$/, '')}/mqtt`)
     : iotDataPublisher(iotEndpoint);
 const realtime = new Realtime({ stage, endpoint: iotEndpoint, authorizer: env.IOT_AUTHORIZER ?? '' }, publisher);
-const api = new Api({ store, photos, auth, realtime, roles: rbacrRoles(rbacr), config: { stage, version: env.VERSION ?? 'dev' } });
+// The demo showcase, on every stage: re-dated when over 12 h old (one read
+// per deck; a dozen writes twice a day).
+const showcase = async (now: Date) => {
+  if (await showcaseIsStale(store, now)) await seedShowcase(store, now);
+};
+const api = new Api({ store, photos, auth, realtime, roles: rbacrRoles(rbacr), showcase, config: { stage, version: env.VERSION ?? 'dev' } });
 
 type Event = APIGatewayProxyEventV2 | { grigriSeed?: boolean };
 

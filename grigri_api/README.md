@@ -24,7 +24,7 @@ are in [specs/backend.md](../specs/backend.md).
 | [src/publishers.ts](src/publishers.ts) | How hints leave: `iot-data:Publish` in AWS; locally a minimal MQTT 3.1.1 client over WebSocket to Floci's broker |
 | [src/realtime-auth.ts](src/realtime-auth.ts), [src/authorizer.ts](src/authorizer.ts) | The IoT custom authorizer: the session token (from the WebSocket URL's query or the MQTT password) to a policy allowing only `<climberId>-*` client ids and that climber's own topics; denies on anything else |
 | [src/google.ts](src/google.ts) | Google ID token verification (jose: Google's JWKS, cached; RS256, issuer, audience, expiry) |
-| [src/domain/](src/domain) | Pure, unit-tested rules: the shapes (`model.ts`), input validation (`validate.ts`), and matchmaking (`rules.ts`: deck sorting, unanimous yes, one no, leave and organizer handover, notices, chat notes, admin accept/reject) |
+| [src/domain/](src/domain) | Pure, unit-tested rules: the shapes (`model.ts`), input validation (`validate.ts`), and matchmaking (`rules.ts`: deck sorting, unanimous yes, one no, leave and organizer handover, notices, chat notes, admin accept/reject, nudges) |
 | [src/store/](src/store) | DynamoDB access (`store.ts`) and the table's keys (`keys.ts`) |
 | [seed/](seed) | The made-up test data for RC and local (`data.ts`) and its idempotent loader (`seed.ts`), which refuses prod |
 | [test/](test) | vitest: rules, validation, token verification (locally made keys, never real tokens), sessions and routing, the seed, every route against an in-memory store (`fake-store.ts`), and live updates (authorizer policies, hint fan-out, publish failures, MQTT packets) |
@@ -61,7 +61,7 @@ indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
 | Pass | `CLIMBER#<id>` | `PASS#<planId>` | | out of my deck (swiped left, left, or dismissed) |
 | Notice | `CLIMBER#<id>` | `NOTICE#<noticeId>` | | the Notice |
 | Plan | `PLAN#<id>` | `PLAN` | gsi1: `PLANS`, `<start>#<id>` | the Plan, and `version` (incremented by every change to its members or requests) |
-| Join request | `PLAN#<id>` | `REQ#<climberId>` | gsi2: `ASKED#<climberId>`, `<time>#<planId>`; gsi1 while open: `OPENREQ`, `<time>#<planId>#<climberId>` | the JoinRequest, plus `joined` and `dismissed` |
+| Join request | `PLAN#<id>` | `REQ#<climberId>` | gsi2: `ASKED#<climberId>`, `<time>#<planId>`; gsi1 while open: `OPENREQ`, `<time>#<planId>#<climberId>` | the JoinRequest (with `nudgedAt` once nudged), plus `joined` and `dismissed` |
 | Message | `PLAN#<id>` | `MSG#<time>#<messageId>` | | the Message |
 
 Access patterns: every authenticated request gets its session (an

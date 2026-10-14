@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Api, NO_NAME } from '../src/api.js';
 import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
@@ -42,8 +42,11 @@ const planBody = {
   notes: '',
 };
 
+let random = () => 0;
+
 beforeEach(async () => {
   now = new Date('2030-05-01T10:00:00.000Z');
+  random = () => 0;
   store = new FakeStore();
   objects = new Map();
   removed = [];
@@ -69,7 +72,7 @@ beforeEach(async () => {
     config: { devMode: false, isAdmin: async (email) => email === 'root@example.com' },
     clock: () => now,
   });
-  api = new Api({ store: store.asStore(), photos, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now });
+  api = new Api({ store: store.asStore(), photos, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now, random: () => random() });
 });
 
 describe('access', () => {
@@ -198,6 +201,22 @@ describe('the matchmaking flow', () => {
     await fails(call(ben, 'POST', `/api/plans/${planId}/join`), 409, /already in this plan/);
   });
 
+  it("refreshing brings passed plans back, but not ones I asked to join", async () => {
+    await call(ben, 'POST', `/api/plans/${planId}/pass`);
+    expect((await call(ben, 'GET', '/api/discover')).plans).toEqual([]);
+    expect(await call(ben, 'DELETE', '/api/passes')).toEqual({});
+    expect((await call(ben, 'GET', '/api/discover')).plans.map((p: any) => p.id)).toEqual([planId]);
+
+    // Cy asks, is turned down and dismisses it: it stays out of the deck
+    // and out of Cy's requests.
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Cy}/reject`);
+    await call(cy, 'POST', `/api/requests/${planId}/${ids.Cy}/dismiss`);
+    await call(cy, 'DELETE', '/api/passes');
+    expect((await call(cy, 'GET', '/api/discover')).plans).toEqual([]);
+    expect((await call(cy, 'GET', '/api/plans')).asked).toEqual([]);
+  });
+
   it('discover, join, unanimous accept, chat, leave', async () => {
     const deck = await call(ben, 'GET', '/api/discover');
     expect(deck.plans.map((p: any) => p.id)).toEqual([planId]);
@@ -246,9 +265,20 @@ describe('the matchmaking flow', () => {
     expect(after.messages).toEqual([message]);
     await fails(call(ada, 'GET', `/api/plans/${planId}/messages`, undefined, { after: 'yesterday' }), 400);
 
-    // The organizer leaves: Ben organizes. Everyone leaves: it's gone.
+    // The organizer leaves: a random member (here the last) organizes, and
+    // the chat says so; the plan is out of Ada's list. Everyone leaves: it's gone.
+    random = () => 0.99;
     await call(ada, 'POST', `/api/plans/${planId}/leave`);
-    expect((await call(ben, 'GET', `/api/plans/${planId}`)).plan).toMatchObject({ organizerId: ids.Ben, memberIds: [ids.Ben, ids.Cy] });
+    // The organizer comes first in memberIds, as always.
+    expect((await call(ben, 'GET', `/api/plans/${planId}`)).plan).toMatchObject({ organizerId: ids.Cy, memberIds: [ids.Cy, ids.Ben] });
+    const notes = (await call(ben, 'GET', `/api/plans/${planId}/messages`)).messages.map((m: { text: string }) => m.text);
+    expect(notes.at(-1)).toBe('Ada left the plan; Cy organizes it now');
+    const adas = await call(ada, 'GET', '/api/plans');
+    expect([...adas.plans, ...adas.asked.map((a: any) => a.plan)].map((p: any) => p.id)).not.toContain(planId);
+    // Out of Ada's deck, even after a refresh (she created it: no request
+    // of hers keeps it out, the left mark does).
+    await call(ada, 'DELETE', '/api/passes');
+    expect((await call(ada, 'GET', '/api/discover')).plans.map((p: any) => p.id)).not.toContain(planId);
     await fails(call(ada, 'POST', `/api/plans/${planId}/leave`), 403);
     await call(ben, 'POST', `/api/plans/${planId}/leave`);
     await call(cy, 'POST', `/api/plans/${planId}/leave`);
@@ -272,6 +302,58 @@ describe('the matchmaking flow', () => {
     expect(climbers[ids.Ben!]).toMatchObject({ name: 'Ben' });
     expect(climbers[ids.Ben!]).not.toHaveProperty('location');
     expect(climbers[ids.Ben!]).not.toHaveProperty('areas');
+  });
+
+  it('nudge: the members who have not said yes are notified, once per 12 hours', async () => {
+    // Ben joins first, so Cy's request waits for Ada and Ben.
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/accept`);
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 404, /haven't asked/);
+    await fails(call(ada, 'POST', `/api/plans/${planId}/nudge`), 404);
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Cy}/accept`);
+    await call(ada, 'POST', '/api/notices/read');
+    await call(ben, 'POST', '/api/notices/read');
+
+    now = new Date(now.getTime() + 60_000);
+    const first = await call(cy, 'POST', `/api/plans/${planId}/nudge`);
+    expect(first).toEqual({ request: expect.objectContaining({ climberId: ids.Cy, nudgedAt: now.toISOString() }), nudged: 1 });
+    // Only Ben, who hasn't answered; Ada already said yes.
+    expect((await call(ada, 'GET', '/api/notices')).notices.filter((n: any) => !n.read)).toEqual([]);
+    const benNotices = await call(ben, 'GET', '/api/notices');
+    expect(benNotices.notices[0]).toEqual({
+      id: `${planId}/nudge/${ids.Cy}`, kind: 'nudge', planId, planTitle: 'Somewhere', climberId: ids.Cy, time: now.toISOString(), read: false,
+    });
+    expect(benNotices.climbers[ids.Cy!].name).toBe('Cy');
+    // My plans show when I last nudged.
+    expect((await call(cy, 'GET', '/api/plans')).asked[0].request.nudgedAt).toBe(now.toISOString());
+
+    // Too soon: 429, nothing sent.
+    await call(ben, 'POST', '/api/notices/read');
+    now = new Date(now.getTime() + 11 * 3600_000);
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 429, /less than 12 hours ago/);
+    expect((await call(ben, 'GET', '/api/notices')).notices.filter((n: any) => !n.read)).toEqual([]);
+
+    // 12 hours on: again, replacing the last nudge (unread again).
+    now = new Date(now.getTime() + 3600_000);
+    expect((await call(cy, 'POST', `/api/plans/${planId}/nudge`)).nudged).toBe(1);
+    const again = (await call(ben, 'GET', '/api/notices')).notices.filter((n: any) => n.kind === 'nudge');
+    expect(again).toEqual([expect.objectContaining({ read: false, time: now.toISOString() })]);
+
+    // An answered request can't be nudged.
+    now = new Date(now.getTime() + 13 * 3600_000);
+    await call(ben, 'POST', `/api/requests/${planId}/${ids.Cy}/reject`);
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 409, /declined/);
+  });
+
+  it('nudge: not once joined, nor after the plan started', async () => {
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/accept`);
+    await fails(call(ben, 'POST', `/api/plans/${planId}/nudge`), 409, /already in this plan/);
+    now = new Date('2030-05-10T09:00:00Z');
+    await fails(call(cy, 'POST', `/api/plans/${planId}/nudge`), 409, /started/);
+    await fails(call(cy, 'POST', '/api/plans/nope/nudge'), 404);
   });
 
   it('one no: declined notice, then dismiss', async () => {
@@ -399,5 +481,20 @@ describe('sessions through the API', () => {
 
   it('health needs no token', async () => {
     expect((await request('GET', '/api/health')).ok).toBe(true);
+  });
+});
+
+describe('the demo showcase', () => {
+  it('is refreshed before the deck, and its failure never fails the deck', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await call(ada, 'PUT', '/api/me', profile('Ada'));
+    const asked: Date[] = [];
+    const photos = { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} };
+    const make = (showcase: (now: Date) => Promise<void>) =>
+      new Api({ store: store.asStore(), photos, auth, showcase, config: { stage: 'local', version: '0.1.2' }, clock: () => now });
+    await make(async (at) => { asked.push(at); }).handle('GET', '/api/discover', { caller: ada, body: undefined, query: {} });
+    expect(asked).toEqual([now]);
+    const deck = await make(async () => { throw new Error('table busy'); }).handle('GET', '/api/discover', { caller: ada, body: undefined, query: {} });
+    expect(deck).toMatchObject({ plans: [] });
   });
 });

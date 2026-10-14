@@ -418,10 +418,10 @@ abstract class AppLocalizations {
   /// **'Demo'**
   String get demoTag;
 
-  /// Disclaimer on a made-up (demo) plan or profile.
+  /// Discreet line on a demo (automatically generated) plan or profile.
   ///
   /// In en, this message translates to:
-  /// **'Demo: this isn\'t real data, just a demonstration to help you see how Grigri works.'**
+  /// **'Demo: automatically generated, not real people or plans. It\'s here to show how Grigri works.'**
   String get demoNotice;
 
   /// Badge: the plan is at grades the user climbs.
@@ -1107,17 +1107,11 @@ abstract class AppLocalizations {
   /// **'Group chat'**
   String get groupChat;
 
-  /// Button: cancel a plan I am alone in.
+  /// Button and menu item: cancel a plan I am in (others, if any, keep it).
   ///
   /// In en, this message translates to:
   /// **'Cancel the plan'**
   String get cancelPlan;
-
-  /// Button: leave the plan.
-  ///
-  /// In en, this message translates to:
-  /// **'Leave the plan'**
-  String get leavePlan;
 
   /// Dialog title: cancel the plan?
   ///
@@ -1125,41 +1119,35 @@ abstract class AppLocalizations {
   /// **'Cancel the plan?'**
   String get cancelPlanQuestion;
 
-  /// Dialog title: leave the plan?
-  ///
-  /// In en, this message translates to:
-  /// **'Leave the plan?'**
-  String get leavePlanQuestion;
-
   /// Dialog body: what cancelling does.
   ///
   /// In en, this message translates to:
   /// **'It and its chat will be gone.'**
   String get cancelPlanMessage;
 
-  /// Dialog body: the next member takes over as organizer.
+  /// Dialog body: cancelling a plan others are in; they keep it.
   ///
   /// In en, this message translates to:
-  /// **'{name} will organize it.'**
-  String leaveOrganizerMessage(String name);
+  /// **'It leaves your plans and chats; the others keep it. You can\'t rejoin it later.'**
+  String get cancelPlanOthersMessage;
 
-  /// Dialog body: leaving is final.
+  /// Dialog body: the organizer cancelling a plan others are in; they keep it and a random one of them organizes it.
   ///
   /// In en, this message translates to:
-  /// **'You can\'t rejoin it later.'**
-  String get leaveMessage;
+  /// **'It leaves your plans and chats; the others keep it, and one of them, picked at random, will organize it. You can\'t rejoin it later.'**
+  String get cancelPlanOrganizerMessage;
 
-  /// Dialog button: do not leave.
+  /// Dialog button: do not cancel the plan.
   ///
   /// In en, this message translates to:
-  /// **'Stay'**
-  String get stay;
+  /// **'Keep it'**
+  String get keepPlan;
 
-  /// Dialog button: leave the plan.
+  /// Dialog button: cancel the plan.
   ///
   /// In en, this message translates to:
-  /// **'Leave'**
-  String get leave;
+  /// **'Cancel it'**
+  String get confirmCancelPlan;
 
   /// Title of the plan editor for an existing plan.
   ///
@@ -1395,77 +1383,41 @@ abstract class AppLocalizations {
   /// **'No roles in Grigri yet.'**
   String get noRoles;
 
-  /// Tooltip of the chat button that adds a photo or video to a message.
+  /// Button on my pending join request: remind the members who have not answered.
   ///
   /// In en, this message translates to:
-  /// **'Add a photo or video'**
-  String get attachMedia;
+  /// **'Nudge'**
+  String get nudge;
 
-  /// Chat attach sheet: record a video with the camera.
+  /// Disabled button: I nudged the group less than 12 hours ago.
   ///
   /// In en, this message translates to:
-  /// **'Record a video'**
-  String get recordVideo;
+  /// **'Nudged'**
+  String get nudged;
 
-  /// Chat attach sheet: pick a video from the gallery.
+  /// Tooltip of the Nudge button.
   ///
   /// In en, this message translates to:
-  /// **'Choose a video'**
-  String get chooseVideo;
+  /// **'Remind the group to answer (once every 12 hours)'**
+  String get nudgeTooltip;
 
-  /// Chat list preview of a message that is only a photo.
+  /// Snackbar after a nudge: who was reminded (first names).
   ///
   /// In en, this message translates to:
-  /// **'Photo'**
-  String get photoMessage;
+  /// **'Nudge sent to {names}'**
+  String nudgeSent(String names);
 
-  /// Chat list preview of a message that is only a video; label on a video in the chat.
+  /// Notification title: someone asking to join my plan nudged me to answer.
   ///
   /// In en, this message translates to:
-  /// **'Video'**
-  String get videoMessage;
+  /// **'{name} is waiting for your answer'**
+  String noticeNudgeTitle(String name);
 
-  /// Tooltip: drop the photo or video picked for the next message.
+  /// Notification body for a nudge.
   ///
   /// In en, this message translates to:
-  /// **'Remove the attachment'**
-  String get removeAttachment;
-
-  /// Chat composer while a photo or video uploads.
-  ///
-  /// In en, this message translates to:
-  /// **'Uploading…'**
-  String get uploadingMedia;
-
-  /// Tooltip/semantics of a video in the chat: opens the player.
-  ///
-  /// In en, this message translates to:
-  /// **'Play the video'**
-  String get playVideo;
-
-  /// Video player: the video could not be loaded or played.
-  ///
-  /// In en, this message translates to:
-  /// **'This video can\'t be played.'**
-  String get videoUnavailable;
-
-  /// A chat photo that could not be loaded (expired or offline).
-  ///
-  /// In en, this message translates to:
-  /// **'Not available'**
-  String get mediaUnavailable;
-
-  /// The picked chat attachment is in a format the app cannot send.
-  ///
-  /// In en, this message translates to:
-  /// **'Use a JPEG, PNG or WebP photo, or an MP4 or MOV video.'**
-  String get errorMediaType;
-
-  /// The picked chat video is over the size limit; mb is the limit in megabytes.
-  ///
-  /// In en, this message translates to:
-  /// **'Videos can be at most {mb} MB: send a shorter one.'**
-  String errorVideoTooBig(int mb);
+  /// **'To join {plan} · accept or decline in the group chat'**
+  String noticeNudgeBody(String plan);
 }
 
 class _AppLocalizationsDelegate

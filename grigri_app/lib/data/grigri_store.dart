@@ -553,7 +553,14 @@ class GrigriStore extends ChangeNotifier {
     await refreshNotices();
   }
 
-  Future<void> refreshDiscover() => _refresh(api.discover, (list) {
+  /// The deck again, with [again] the plans I passed on too (Discover's
+  /// refresh button: I may have changed my mind).
+  Future<void> refreshDiscover({bool again = false}) async {
+    if (again) await _ok(api.clearPasses);
+    await _refreshDeck();
+  }
+
+  Future<void> _refreshDeck() => _refresh(api.discover, (list) {
     _learn(list.climbers);
     for (final p in list.plans) {
       _plans[p.id] = p;
@@ -740,6 +747,19 @@ class GrigriStore extends ChangeNotifier {
     ]);
   }
 
+  /// I remind the members who haven't answered my request to join a plan.
+  /// True when they were nudged; my request then knows when (the button
+  /// waits out the cooldown).
+  Future<bool> nudge(JoinRequest request) async {
+    final answer = await _act(() => api.nudge(request.planId));
+    if (answer == null) return false;
+    _asked = [
+      for (final r in _asked) r.id == answer.request.id ? answer.request : r,
+    ];
+    notifyListeners();
+    return true;
+  }
+
   /// I clear a group's "no" from my plans; the plan stays out of my deck.
   Future<void> dismiss(JoinRequest request) async {
     _asked = [..._asked.where((r) => r.id != request.id)];
@@ -785,8 +805,9 @@ class GrigriStore extends ChangeNotifier {
     ),
   );
 
-  /// I leave a plan's group. When the organizer leaves, the next member
-  /// organizes it; when the last member leaves, the plan is gone.
+  /// I leave (cancel) a plan: it's out of my plans and chats. When the
+  /// organizer leaves, a member picked at random (by the API) organizes it;
+  /// when the last member leaves, the plan is gone.
   Future<bool> leave(String planId) async {
     if (!await _ok(() => api.leave(planId))) return false;
     _mine = [..._mine.where((id) => id != planId)];

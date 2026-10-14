@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../model/plan.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
@@ -149,49 +150,15 @@ class _PlanScreenState extends State<PlanScreen> {
             OutlinedButton.icon(
               icon: const Icon(Icons.logout, color: Mountain.clay),
               label: Text(
-                plan.memberIds.length == 1 ? l.cancelPlan : l.leavePlan,
+                l.cancelPlan,
                 style: const TextStyle(color: Mountain.clay),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Mountain.clay),
               ),
               onPressed: () async {
-                final sure = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: Text(
-                      plan.memberIds.length == 1
-                          ? l.cancelPlanQuestion
-                          : l.leavePlanQuestion,
-                    ),
-                    content: Text(
-                      plan.memberIds.length == 1
-                          ? l.cancelPlanMessage
-                          : organizing
-                          ? l.leaveOrganizerMessage(
-                              store.climber(plan.memberIds[1]).name,
-                            )
-                          : l.leaveMessage,
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: Text(l.stay),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        child: Text(
-                          l.leave,
-                          style: const TextStyle(color: Mountain.clay),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-                if (sure == true && context.mounted) {
-                  final navigator = Navigator.of(context);
-                  if (await store.leave(plan.id)) navigator.pop();
-                }
+                final navigator = Navigator.of(context);
+                if (await cancelPlan(context, plan)) navigator.pop();
               },
             ),
           ],
@@ -199,4 +166,41 @@ class _PlanScreenState extends State<PlanScreen> {
       ),
     );
   }
+}
+
+/// I cancel a plan I'm in, once I confirm: it leaves my plans and chats.
+/// Alone, the plan is gone; otherwise the others keep it and, when I
+/// organized it, one of them, picked at random, organizes it now. True
+/// when cancelled.
+Future<bool> cancelPlan(BuildContext context, Plan plan) async {
+  final store = StoreScope.read(context);
+  final l = context.l10n;
+  final sure = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(l.cancelPlanQuestion),
+      content: Text(
+        plan.memberIds.length == 1
+            ? l.cancelPlanMessage
+            : plan.organizerId == store.me.id
+            ? l.cancelPlanOrganizerMessage
+            : l.cancelPlanOthersMessage,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l.keepPlan),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(
+            l.confirmCancelPlan,
+            style: const TextStyle(color: Mountain.clay),
+          ),
+        ),
+      ],
+    ),
+  );
+  if (sure != true || !context.mounted) return false;
+  return store.leave(plan.id);
 }

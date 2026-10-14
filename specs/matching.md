@@ -75,8 +75,10 @@ person, and a plan can take a whole group.
     join. You'll get an alert when you're accepted." On a **demo** plan
     the group says yes at once (its made-up members can't answer): I
     join, and the match screen opens instead of the snackbar.
-  - Left / ✕: I pass; the plan leaves my deck.
-  - Share (the smaller button between ✕ and ✓): shares the top plan as
+  - Left / ✕: I pass; the plan leaves my deck, until I tap ⟳ (refresh),
+    which brings passed plans back (not ones I asked to join or cancelled).
+  - Share (the small 36 dp button to the right of ✓; ✕ and ✓ stay
+    centered): shares the top plan as
     text through the system's share sheet, "Climbing plan on Grigri:
     Bouldering at Block Hall, Sat 18 Oct · 19:00–22:00." and a link to
     the app at the API's origin (`/app/`; there are no links to one plan
@@ -117,8 +119,12 @@ callout; its card in the messages stays as the record.
   them. **One "no" turns them down.**
 - When someone joins, the members who are still to decide on other open
   requests now include them: the group as it is then decides.
-- When a member leaves, the requests stop waiting for them. The organizer
-  leaving hands the plan to the next member; the last member leaving ends
+- Cancelling a plan I'm in (from Plans or the plan screen) is leaving it:
+  it's out of my plans and chats at once, and the others keep it. When a
+  member leaves, the requests stop waiting for them. The organizer leaving
+  hands the plan to one of the remaining members **picked at random**, and
+  the chat says so ("Ada left the plan; Ben organizes it now"); a member
+  leaving just leaves ("Ada left the plan"). The last member leaving ends
   the plan, its requests and its chat. A plan I left never comes back to
   my deck.
 
@@ -126,7 +132,13 @@ callout; its card in the messages stays as the record.
 
 Swiping right on a plan makes it **pending** ("Asked to join: pending…").
 Plans lists it under **Asked to join**, tagged **Pending**, with who it's
-still waiting for. When the whole group has said yes, it moves up to the
+still waiting for, and a **Nudge** button: it reminds the members who
+haven't answered yet (a [notification](#notifications) each, asking them
+to accept or decline) and confirms "Nudge sent to <names>". A request can
+be nudged once every **12 hours**: until then the button reads **Nudged**
+and is disabled (the server refuses an earlier one, and the app shows its
+message). There's no Nudge on a declined request or once the plan has
+started. When the whole group has said yes, it moves up to the
 plans I'm in, tagged **Accepted**. When one member says no, it's tagged
 **Declined** until I dismiss it (✕); it doesn't come back to my deck. Its
 plan screen shows the same status.
@@ -146,6 +158,10 @@ newest first, with when it happened:
 
 - **"<name> wants to join"** a plan I'm in (tap for its group chat, to
   answer);
+- **"<name> is waiting for your answer"** ("To join <plan> · accept or
+  decline in the group chat") when they nudged the members who haven't
+  answered (tap for the chat); a later nudge replaces it, new and unread
+  again;
 - **"You're in: <plan>"** when a group accepted me (tap for the chat);
 - **"Not this time: <plan>"** when one declined me (tap for the plan).
 
@@ -186,13 +202,15 @@ failed action shows the server's message at the bottom of the screen; a
 401 tries fresh credentials once, then signs out; a 409 "no profile"
 loads my profile again (`GET /api/me`, which makes a new one).
 
-- **Production (GA) starts empty**: only real people's profiles and plans.
-  RC and local get made-up climbers and plans from the backend's seed
-  (never in GA), marked **demo**: a demo plan (on the deck, its screen,
-  the match screen) and a demo person's profile sheet begin with
-  "Demo: this isn't real data, just a demonstration to help you see how
-  Grigri works.", and a demo person's name has a **Demo** tag. Nobody answers by a rule: every request waits for real
-  members (or an [admin](sign-in.md#admins)), in every environment.
+- **Demo data**: every stage, production included, has the demo showcase
+  (fictional climbers and their plans, [backend](backend.md#the-demo-showcase));
+  RC and local also get made-up test data from the backend's seed (never
+  in GA). All of it is marked **demo**: a demo plan (on the deck, its
+  screen, the match screen) and a demo person's profile sheet begin with
+  one discreet line, "Demo: automatically generated, not real people or
+  plans. It's here to show how Grigri works.", and a demo person's name
+  has a **Demo** tag. A real plan's requests wait for its real members
+  (or an [admin](sign-in.md#admins)); a demo plan's group says yes at once.
 - **Photos** are in the backend's photo store, never in the database or on
   the device: picked as before (my photo downsized to 640 px, gear photos
   to 1080 px, JPEG quality 75), uploaded when the profile is saved (`POST

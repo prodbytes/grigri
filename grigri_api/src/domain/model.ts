@@ -121,13 +121,19 @@ export interface JoinRequest {
   acceptedBy: string[];
   rejected: boolean;
   time: string;
+  /** When the requester last nudged the members who haven't answered (ISO 8601 UTC); absent until they do. */
+  nudgedAt?: string;
   /** Internal: they joined (the request is closed). Not in the JSON. */
   joined?: boolean;
   /** Internal: the requester cleared the "no". Not in the JSON. */
   dismissed?: boolean;
 }
 
-export type NoticeKind = 'accepted' | 'declined' | 'request';
+/**
+ * accepted/declined: a group answered my request; request: someone asked
+ * to join a plan I'm in; nudge: they're still waiting for my answer.
+ */
+export type NoticeKind = 'accepted' | 'declined' | 'request' | 'nudge';
 
 export interface Notice {
   id: string;
@@ -183,5 +189,6 @@ export function requestJson(r: JoinRequest): JoinRequest {
     acceptedBy: [...r.acceptedBy],
     rejected: r.rejected,
     time: r.time,
+    ...(r.nudgedAt ? { nudgedAt: r.nudgedAt } : {}),
   };
 }

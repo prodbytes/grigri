@@ -44,8 +44,18 @@ abstract interface class GrigriApi {
   /// `POST /api/plans/{id}/join`: swipe right.
   Future<JoinRequest> join(String planId);
 
+  /// `POST /api/plans/{id}/nudge`: reminds the members who haven't
+  /// answered my open request on the plan (once every 12 hours; 429
+  /// sooner). My request, with its new [JoinRequest.nudgedAt], and how
+  /// many members were nudged.
+  Future<({JoinRequest request, int nudged})> nudge(String planId);
+
   /// `POST /api/plans/{id}/pass`: swipe left.
   Future<void> pass(String planId);
+
+  /// `DELETE /api/passes`: the plans I passed on come back to the deck
+  /// (not ones I asked to join).
+  Future<void> clearPasses();
 
   /// `GET /api/requests`: requests on my plans waiting for my answer.
   Future<RequestList> requests();
@@ -356,6 +366,9 @@ abstract final class ApiJson {
 
   static JoinRequest request(Map<String, Object?> json) =>
       JoinRequest.fromJson(_map(json['request']));
+
+  static ({JoinRequest request, int nudged}) nudge(Map<String, Object?> json) =>
+      (request: request(json), nudged: (json['nudged'] as num?)?.toInt() ?? 0);
 
   static RequestList requestList(Map<String, Object?> json) => RequestList(
     _list(json['requests']).map(JoinRequest.fromJson).toList(),

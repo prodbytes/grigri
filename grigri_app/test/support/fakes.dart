@@ -72,6 +72,9 @@ class FakeApi implements GrigriApi, SessionApi {
   final noticesFor = <String, List<Notice>>{};
   final allMessages = <Message>[];
   final passed = <String>{};
+
+  /// Plans I left: a refresh keeps them out of my deck.
+  final left = <String>{};
   final dismissed = <String>{};
 
   /// What the deck says about how far each plan is (the server works it
@@ -161,6 +164,59 @@ class FakeApi implements GrigriApi, SessionApi {
     final r = requestsById[id]!;
     requestsById[id] = r.copyWith(acceptedBy: {...r.acceptedBy, memberId});
     return _settle(id);
+  }
+
+  /// [climberId] nudges the members who haven't answered their request on
+  /// [planId], as the server does: a nudge notice each (one per request,
+  /// replaced by the next), at most once every 12 hours. How many were
+  /// nudged.
+  int nudgeAs(String planId, String climberId) {
+    final plan = plans[planId];
+    if (plan == null) throw const ApiException(404, 'no such plan');
+    if (plan.memberIds.contains(climberId)) {
+      throw const ApiException(409, "you're already in this plan");
+    }
+    final id = '$planId/$climberId';
+    final r = requestsById[id];
+    if (r == null) {
+      throw const ApiException(404, "you haven't asked to join this plan");
+    }
+    if (r.rejected) throw const ApiException(409, 'the request was declined');
+    final now = _now();
+    if (!plan.start.isAfter(now)) {
+      throw const ApiException(409, 'the plan has started');
+    }
+    if (!r.canNudge(now)) {
+      throw const ApiException(
+        429,
+        'you nudged the group less than 12 hours ago; try again later',
+      );
+    }
+    final waitingFor = [
+      for (final m in plan.memberIds)
+        if (!r.acceptedBy.contains(m)) m,
+    ];
+    if (waitingFor.isEmpty) {
+      throw const ApiException(409, 'nobody left to answer');
+    }
+    requestsById[id] = r.copyWith(nudgedAt: now);
+    final noticeId = '$planId/nudge/$climberId';
+    for (final m in waitingFor) {
+      final list = noticesFor[m] ??= [];
+      list
+        ..removeWhere((n) => n.id == noticeId)
+        ..add(
+          Notice(
+            id: noticeId,
+            kind: NoticeKind.nudge,
+            planId: planId,
+            planTitle: plan.title,
+            climberId: climberId,
+            time: now,
+          ),
+        );
+    }
+    return waitingFor.length;
   }
 
   /// Someone says something in a chat.
@@ -387,22 +443,29 @@ class FakeApi implements GrigriApi, SessionApi {
   });
 
   @override
-  Future<void> leave(String planId) =>
-      _route('POST /api/plans/$planId/leave', () {
-        final p = plans[planId]!;
-        final members = [...p.memberIds]..remove(meId);
-        if (members.isEmpty) {
-          plans.remove(planId);
-          requestsById.removeWhere((_, r) => r.planId == planId);
-        } else {
-          plans[planId] = p.copyWith(
-            organizerId: p.organizerId == meId ? members.first : p.organizerId,
-            memberIds: members,
-          );
-          _note(planId, '${climbers[meId]!.name} left the plan');
-        }
-        passed.add(planId);
-      });
+  Future<void> leave(
+    String planId,
+  ) => _route('POST /api/plans/$planId/leave', () {
+    final p = plans[planId]!;
+    final members = [...p.memberIds]..remove(meId);
+    if (members.isEmpty) {
+      plans.remove(planId);
+      requestsById.removeWhere((_, r) => r.planId == planId);
+    } else {
+      // The API picks the new organizer at random; here, the first.
+      final organizerId = p.organizerId == meId ? members.first : p.organizerId;
+      plans[planId] = p.copyWith(organizerId: organizerId, memberIds: members);
+      _note(
+        planId,
+        organizerId == p.organizerId
+            ? '${climbers[meId]!.name} left the plan'
+            : '${climbers[meId]!.name} left the plan; '
+                  '${climbers[organizerId]!.name} organizes it now',
+      );
+    }
+    passed.add(planId);
+    left.add(planId);
+  });
 
   @override
   Future<JoinRequest> join(String planId) =>
@@ -424,8 +487,23 @@ class FakeApi implements GrigriApi, SessionApi {
       });
 
   @override
+  Future<({JoinRequest request, int nudged})> nudge(String planId) =>
+      _route('POST /api/plans/$planId/nudge', () {
+        final nudged = nudgeAs(planId, meId!);
+        return (request: requestsById['$planId/$meId']!, nudged: nudged);
+      });
+
+  @override
   Future<void> pass(String planId) =>
       _route('POST /api/plans/$planId/pass', () => passed.add(planId));
+
+  @override
+  Future<void> clearPasses() => _route('DELETE /api/passes', () {
+    // Not the ones I asked to join (a dismissed "no" stays hidden).
+    passed.removeWhere(
+      (p) => !requestsById.containsKey('$p/$meId') && !left.contains(p),
+    );
+  });
 
   @override
   Future<RequestList> requests() => _route('GET /api/requests', () {

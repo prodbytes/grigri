@@ -189,7 +189,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get demoNotice =>
-      'Demo: keine echten Daten, nur eine Vorführung, damit du siehst, wie Grigri funktioniert.';
+      'Demo: automatisch erzeugt, keine echten Personen oder Pläne. Es zeigt, wie Grigri funktioniert.';
 
   @override
   String get yourGrades => 'Dein Grad';
@@ -615,30 +615,24 @@ class AppLocalizationsDe extends AppLocalizations {
   String get cancelPlan => 'Plan absagen';
 
   @override
-  String get leavePlan => 'Plan verlassen';
-
-  @override
   String get cancelPlanQuestion => 'Plan absagen?';
-
-  @override
-  String get leavePlanQuestion => 'Plan verlassen?';
 
   @override
   String get cancelPlanMessage => 'Der Plan und sein Chat werden gelöscht.';
 
   @override
-  String leaveOrganizerMessage(String name) {
-    return '$name organisiert ihn dann.';
-  }
+  String get cancelPlanOthersMessage =>
+      'Er verschwindet aus deinen Plänen und Chats; die anderen behalten ihn. Du kannst später nicht wieder beitreten.';
 
   @override
-  String get leaveMessage => 'Du kannst später nicht wieder beitreten.';
+  String get cancelPlanOrganizerMessage =>
+      'Er verschwindet aus deinen Plänen und Chats; die anderen behalten ihn, und eine zufällig gewählte Person organisiert ihn. Du kannst später nicht wieder beitreten.';
 
   @override
-  String get stay => 'Bleiben';
+  String get keepPlan => 'Behalten';
 
   @override
-  String get leave => 'Verlassen';
+  String get confirmCancelPlan => 'Absagen';
 
   @override
   String get editPlan => 'Plan bearbeiten';
@@ -780,41 +774,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get noRoles => 'Noch keine Rollen in Grigri.';
 
   @override
-  String get attachMedia => 'Foto oder Video hinzufügen';
+  String get nudge => 'Erinnern';
 
   @override
-  String get recordVideo => 'Video aufnehmen';
+  String get nudged => 'Erinnert';
 
   @override
-  String get chooseVideo => 'Video auswählen';
+  String get nudgeTooltip =>
+      'Erinnere die Gruppe an eine Antwort (einmal alle 12 Stunden)';
 
   @override
-  String get photoMessage => 'Foto';
+  String nudgeSent(String names) {
+    return 'Erinnerung an $names gesendet';
+  }
 
   @override
-  String get videoMessage => 'Video';
+  String noticeNudgeTitle(String name) {
+    return '$name wartet auf deine Antwort';
+  }
 
   @override
-  String get removeAttachment => 'Anhang entfernen';
-
-  @override
-  String get uploadingMedia => 'Wird hochgeladen…';
-
-  @override
-  String get playVideo => 'Video abspielen';
-
-  @override
-  String get videoUnavailable => 'Dieses Video kann nicht abgespielt werden.';
-
-  @override
-  String get mediaUnavailable => 'Nicht verfügbar';
-
-  @override
-  String get errorMediaType =>
-      'Nimm ein Foto im Format JPEG, PNG oder WebP oder ein Video im Format MP4 oder MOV.';
-
-  @override
-  String errorVideoTooBig(int mb) {
-    return 'Videos dürfen höchstens $mb MB groß sein: Schick ein kürzeres.';
+  String noticeNudgeBody(String plan) {
+    return 'Um bei $plan mitzumachen · nimm im Gruppenchat an oder lehne ab';
   }
 }

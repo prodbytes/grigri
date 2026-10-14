@@ -607,10 +607,73 @@ spec.
       and the chat gets the joined note. The app refreshes its
       notifications right after, so the match screen opens (no "you'll
       get an alert" snackbar). Real plans are unchanged.
-
-## 2026-10-14
-
-43. **In the chat, make sure that users can add images and put those on
+43. **On Find, make the share button a bit smaller and put it to the right
+    of the accept and reject buttons.**
+    - [Screens](screens.md), [matching](matching.md): the share button is
+      36 dp (was 44) and sits to the right of ✓; a spacer as wide on the
+      left keeps ✕ and ✓ centered. A widget test checks both.
+44. **On Find, the refresh button reloads the plans, the ones I already
+    passed on too: I may have changed my mind.**
+    - [API](api.md): `DELETE /api/passes` forgets my passes, except on
+      plans I asked to join. [Matching](matching.md),
+      [screens](screens.md): Discover's ⟳ calls it, then reloads the deck.
+      No new resource; one query and a batch delete per refresh.
+45. **In the plans view, let a user cancel a plan. If a user cancels a
+    plan, remove it from the view and from the chats, but keep it open for
+    the others: they may keep the plan, and automatically select a random
+    new person as the organizer.**
+    - [Screens](screens.md): each plan I'm in on Plans has a ⋮ menu with
+      **Cancel the plan**; the plan screen's button is now always **Cancel
+      the plan**. Both use one confirmation (**Keep it** / **Cancel it**)
+      that says whether the plan ends (I'm alone) or the others keep it
+      and, if I organize it, who organizes now is picked at random. The
+      old leave strings went; new ones in every language.
+    - [Matching](matching.md), [API](api.md): cancelling is the existing
+      `POST /api/plans/{id}/leave`. The organizer leaving now hands the
+      plan to a random remaining member (was: the next one), and the chat
+      note says who organizes now. The plan leaves my Plans and Chats at
+      once and stays out of my deck. No new resource or cost.
+    - Refresh on Find never brings back a plan I cancelled: leaving marks
+      its pass `left`, which `DELETE /api/passes` keeps; and the new
+      organizer comes first in `memberIds`, as the model requires.
+46. **Show clearly but discreetly when data is fake (automatically
+    generated); generate a few profiles, preferably famous late climbers,
+    owning a few plans, so users can see how the app works while there
+    are few events.** Decided with the user: fictional names that nod to
+    the legends (nobody real is portrayed), and on GA too.
+    - [Backend](backend.md#the-demo-showcase): the demo showcase, six
+      fictional climbers each organizing a plan at a well-known crag, on
+      every stage including production, marked demo; the API re-dates it
+      before a deck when it's over 12 hours old (no new resource; under a
+      cent a month). RC and local keep their test seed too.
+    - [Matching](matching.md): the demo notice is one discreet italic line,
+      "Demo: automatically generated, not real people or plans. It's here
+      to show how Grigri works.", in every language.
+    - [API](api.md), [deploy](deploy.md), [README](README.md): GA no
+      longer "starts empty".
+47. **Add a nudge button to send a notification to all members of the plan
+    to either accept or reject the given membership.**
+    - [API](api.md): `POST /api/plans/{id}/nudge`, for the requester of an
+      open request: a new Notice kind `nudge` ("they're still waiting for
+      your answer", `climberId` the requester) for each member who hasn't
+      said yes, and a `notice` [hint](live-updates.md) to them. At most
+      once every 12 hours per request: the request keeps `nudgedAt`
+      (written with a conditional update, so racing nudges can't both
+      pass) and an earlier nudge gets **429**. 404 without a request; 409
+      when declined, already in, or the plan has started. A new nudge
+      replaces the last one's notice (stable id
+      `<planId>/nudge/<climberId>`), unread again.
+    - [Matching](matching.md), [screens](screens.md): Plans' pending
+      requests have **Nudge** (then **Nudged**, disabled, for 12 hours;
+      none on a declined request or a started plan) and a snackbar "Nudge
+      sent to <names>"; members see "<name> is waiting for your answer" in
+      Notifications, counted in the badge, opening the group chat. Older
+      apps skip the unknown notice kind. Strings in every language.
+    - Cost: no new resource. A nudge is one plan-and-requests read, one
+      conditional write, one notice write and one IoT hint per waiting
+      member (fractions of a cent per thousand), and the 12-hour limit
+      caps it at two per request per day.
+48. **In the chat, make sure that users can add images and put those on
     S3, videos as well, but not other files.**
     - [Matching](matching.md#group-chat), [screens](screens.md): a chat
       message can carry one photo or one video, with or without text.

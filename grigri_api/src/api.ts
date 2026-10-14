@@ -60,7 +60,11 @@ export interface Deps {
   realtime?: Realtime;
   /** My roles in Grigri, from rbacr (rbacr.ts); none: unknown. */
   roles?: RolesLookup;
+  /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
+  showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
+  /** In [0, 1): picks a new organizer when one leaves; default Math.random. */
+  random?: () => number;
 }
 
 export interface Request {
@@ -114,10 +118,12 @@ export class Api {
   private readonly router = new Router<Route>();
   private readonly store: Store;
   private readonly clock: () => Date;
+  private readonly random: () => number;
 
   constructor(private readonly deps: Deps) {
     this.store = deps.store;
     this.clock = deps.clock ?? (() => new Date());
+    this.random = deps.random ?? Math.random;
     const r = (pattern: string, access: Access, handler: Handler) => this.router.add(pattern, { access, handler });
 
     r('GET /api/health', 'public', async () => ({ ok: true, stage: deps.config.stage, version: deps.config.version }));
@@ -152,7 +158,9 @@ export class Api {
     r('PUT /api/plans/{id}', 'profile', (req, s) => this.updatePlan(req, s));
     r('POST /api/plans/{id}/leave', 'profile', (req, s) => this.leave(req, s));
     r('POST /api/plans/{id}/join', 'profile', (req, s) => this.join(req, s));
+    r('POST /api/plans/{id}/nudge', 'profile', (req, s) => this.nudge(req, s));
     r('POST /api/plans/{id}/pass', 'profile', (req, s) => this.pass(req, s));
+    r('DELETE /api/passes', 'profile', (_req, s) => this.clearPasses(s));
     r('GET /api/plans/{id}/messages', 'profile', (req, s) => this.messages(req, s));
     r('POST /api/plans/{id}/messages', 'profile', (req, s) => this.send(req, s));
     r('POST /api/plans/{id}/media', 'profile', (req, s) => this.presignChatMedia(req, s));
@@ -187,7 +195,7 @@ export class Api {
     const now = this.clock();
     if (route.access === 'session') {
       const names = new Map<string, string>();
-      const ctx = { now, newId: messageIds(), name: () => 'Someone' };
+      const ctx = { now, newId: messageIds(), name: () => 'Someone', random: this.random };
       return route.handler(full, { caller: req.caller, me: undefined as never, now, ctx, names });
     }
     const climberId = await this.store.climberIdFor(req.caller.subject);
@@ -200,7 +208,7 @@ export class Api {
       // Undefined only on 'caller' routes, before the first GET or PUT /api/me.
       me: me as Climber,
       now,
-      ctx: { now, newId: messageIds(), name: (cid) => names.get(cid) ?? 'Someone' },
+      ctx: { now, newId: messageIds(), name: (cid) => names.get(cid) ?? 'Someone', random: this.random },
       names,
     };
     if (me) names.set(me.id, me.name);
@@ -309,6 +317,11 @@ export class Api {
   // --- Decks and plans ------------------------------------------------------
 
   private async discover(s: Session) {
+    // The demo plans' dates move with time: re-dated twice a day, by the
+    // first deck asked for after that. Never fails the deck.
+    await this.deps.showcase?.(s.now).catch((e: unknown) => {
+      console.error(JSON.stringify({ level: 'warn', msg: 'showcase refresh failed', error: String(e) }));
+    });
     const [upcoming, passed, asked] = await Promise.all([
       this.store.upcomingPlans(s.now.toISOString()),
       this.store.passedPlanIds(s.me.id),
@@ -380,8 +393,8 @@ export class Api {
       await this.store.apply(loaded, effects, s.now);
       return effects.plan?.memberIds ?? [];
     });
-    // Out of my deck, now that I've left it.
-    await this.store.addPass(s.me.id, planId, s.now);
+    // Out of my deck for good, now that I've left it (a refresh keeps it out).
+    await this.store.addPass(s.me.id, planId, s.now, true);
     await this.hint(hintsFor(members, { kind: 'plan', planId }, s.me.id));
     return {};
   }
@@ -424,6 +437,40 @@ export class Api {
       await this.hint(hintsFor(loaded.plan.memberIds, { kind: 'request', planId }, s.me.id));
       return { request: effects.requests[0]!, demo: loaded.plan.demo === true };
     });
+  }
+
+  /**
+   * I nudge the members who haven't answered my open request on this plan:
+   * each gets a nudge notice and a notice hint. Once per 12 hours (429).
+   */
+  private async nudge(req: Request, s: Session) {
+    const planId = id(req.params.id, 'plan id');
+    return this.retry(async () => {
+      const loaded = await this.loadPlan(planId);
+      const before = loaded.requests.find((r) => r.climberId === s.me.id);
+      const effects = rules.nudge(loaded, s.me.id, s.ctx);
+      const request = effects.requests[0]!;
+      await this.store.nudge(request, before?.nudgedAt, effects.notices);
+      const nudged = effects.notices.map((d) => d.to);
+      await this.hint(hintsFor(nudged, { kind: 'notice', planId }, s.me.id));
+      return { request: requestJson(request), nudged: nudged.length };
+    });
+  }
+
+  /**
+   * Discover's refresh: the plans I passed on come back (I may have changed
+   * my mind). Not the ones I asked to join (a dismissed "no" stays hidden)
+   * or left (cancelled).
+   */
+  private async clearPasses(s: Session) {
+    const [passed, asked, left] = await Promise.all([
+      this.store.passedPlanIds(s.me.id),
+      this.store.askedRequests(s.me.id),
+      this.store.leftPlanIds(s.me.id),
+    ]);
+    const keep = new Set([...asked.map((r) => r.planId), ...left]);
+    await this.store.deletePasses(s.me.id, passed.filter((p) => !keep.has(p)));
+    return {};
   }
 
   private async pass(req: Request, s: Session) {

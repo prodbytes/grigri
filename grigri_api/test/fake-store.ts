@@ -64,12 +64,29 @@ export class FakeStore {
   async upcomingPlans(after: string) { return [...this.plans.values()].map((p) => p.plan).filter((p) => p.start > after); }
   async memberPlanIds(cid: string) { return [...this.plans.values()].filter((p) => p.plan.memberIds.includes(cid)).map((p) => p.plan.id); }
   async passedPlanIds(cid: string) { return [...this.passes].filter((k) => k.startsWith(`${cid}|`)).map((k) => k.split('|')[1]!); }
-  async addPass(cid: string, planId: string) { this.passes.add(`${cid}|${planId}`); }
+  left = new Set<string>();
+  async addPass(cid: string, planId: string, _now?: Date, left = false) {
+    this.passes.add(`${cid}|${planId}`);
+    if (left) this.left.add(`${cid}|${planId}`);
+  }
+  async leftPlanIds(cid: string) { return [...this.left].filter((k) => k.startsWith(`${cid}|`)).map((k) => k.split('|')[1]!); }
+  async deletePasses(cid: string, planIds: string[]) {
+    for (const p of planIds) {
+      this.passes.delete(`${cid}|${p}`);
+      this.left.delete(`${cid}|${p}`);
+    }
+  }
   async askedRequests(cid: string) { return [...this.requests.values()].filter((r) => r.climberId === cid); }
   async openRequests() { return [...this.requests.values()].filter(isOpen); }
   async saveDismissed(r: JoinRequest) {
     if (!this.requests.get(r.id)?.rejected) throw new Conflict('changed');
     this.requests.set(r.id, r);
+  }
+  async nudge(r: JoinRequest, previous: string | undefined, ds: Delivery[]) {
+    const current = this.requests.get(r.id);
+    if (!current || current.rejected || current.joined || current.nudgedAt !== previous) throw new Conflict('changed');
+    this.requests.set(r.id, { ...current, nudgedAt: r.nudgedAt });
+    await this.deliver(ds);
   }
   async apply(previous: VersionedPlan | null, e: Effects) {
     const id = previous?.plan.id ?? e.plan!.id;
