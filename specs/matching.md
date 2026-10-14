@@ -77,7 +77,8 @@ person, and a plan can take a whole group.
     join, and the match screen opens instead of the snackbar.
   - Left / ✕: I pass; the plan leaves my deck, until I tap ⟳ (refresh),
     which brings passed plans back (not ones I asked to join).
-  - Share (the smaller button between ✕ and ✓): shares the top plan as
+  - Share (the small 36 dp button to the right of ✓; ✕ and ✓ stay
+    centered): shares the top plan as
     text through the system's share sheet, "Climbing plan on Grigri:
     Bouldering at Block Hall, Sat 18 Oct · 19:00–22:00." and a link to
     the app at the API's origin (`/app/`; there are no links to one plan

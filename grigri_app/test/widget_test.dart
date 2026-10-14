@@ -232,6 +232,14 @@ void main() {
         tester.getSize(find.byTooltip('Share this plan')).width,
         lessThan(tester.getSize(find.byTooltip('Ask to join')).width),
       );
+      // Right of ✓, with ✕ and ✓ still centered on the screen.
+      final share = tester.getCenter(find.byTooltip('Share this plan'));
+      final pass = tester.getCenter(find.byTooltip('Pass'));
+      final join = tester.getCenter(find.byTooltip('Ask to join'));
+      expect(share.dx, greaterThan(join.dx));
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      expect((pass.dx + join.dx) / 2, moreOrLessEquals(width / 2, epsilon: 1));
       await tester.tap(find.byTooltip('Share this plan'));
       await tester.pumpAndSettle();
       final text = shared.single['text']! as String;
