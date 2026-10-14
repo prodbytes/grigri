@@ -791,4 +791,43 @@ class AppLocalizationsCa extends AppLocalizations {
   String noticeNudgeBody(String plan) {
     return 'Per unir-se a $plan · accepta o rebutja al xat del grup';
   }
+
+  @override
+  String get attachMedia => 'Afegeix una foto o un vídeo';
+
+  @override
+  String get recordVideo => 'Grava un vídeo';
+
+  @override
+  String get chooseVideo => 'Tria un vídeo';
+
+  @override
+  String get photoMessage => 'Foto';
+
+  @override
+  String get videoMessage => 'Vídeo';
+
+  @override
+  String get removeAttachment => 'Treu l\'adjunt';
+
+  @override
+  String get uploadingMedia => 'S\'està pujant…';
+
+  @override
+  String get playVideo => 'Reprodueix el vídeo';
+
+  @override
+  String get videoUnavailable => 'Aquest vídeo no es pot reproduir.';
+
+  @override
+  String get mediaUnavailable => 'No disponible';
+
+  @override
+  String get errorMediaType =>
+      'Fes servir una foto JPEG, PNG o WebP, o un vídeo MP4 o MOV.';
+
+  @override
+  String errorVideoTooBig(int mb) {
+    return 'Els vídeos poden ocupar com a màxim $mb MB: envia\'n un de més curt.';
+  }
 }

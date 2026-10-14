@@ -1418,6 +1418,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'To join {plan} · accept or decline in the group chat'**
   String noticeNudgeBody(String plan);
+
+  /// Tooltip of the chat button that adds a photo or video to a message.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo or video'**
+  String get attachMedia;
+
+  /// Chat attach sheet: record a video with the camera.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a video'**
+  String get recordVideo;
+
+  /// Chat attach sheet: pick a video from the gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a video'**
+  String get chooseVideo;
+
+  /// Chat list preview of a message that is only a photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get photoMessage;
+
+  /// Chat list preview of a message that is only a video; label on a video in the chat.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get videoMessage;
+
+  /// Tooltip: drop the photo or video picked for the next message.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the attachment'**
+  String get removeAttachment;
+
+  /// Chat composer while a photo or video uploads.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading…'**
+  String get uploadingMedia;
+
+  /// Tooltip/semantics of a video in the chat: opens the player.
+  ///
+  /// In en, this message translates to:
+  /// **'Play the video'**
+  String get playVideo;
+
+  /// Video player: the video could not be loaded or played.
+  ///
+  /// In en, this message translates to:
+  /// **'This video can\'t be played.'**
+  String get videoUnavailable;
+
+  /// A chat photo that could not be loaded (expired or offline).
+  ///
+  /// In en, this message translates to:
+  /// **'Not available'**
+  String get mediaUnavailable;
+
+  /// The picked chat attachment is in a format the app cannot send.
+  ///
+  /// In en, this message translates to:
+  /// **'Use a JPEG, PNG or WebP photo, or an MP4 or MOV video.'**
+  String get errorMediaType;
+
+  /// The picked chat video is over the size limit; mb is the limit in megabytes.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos can be at most {mb} MB: send a shorter one.'**
+  String errorVideoTooBig(int mb);
 }
 
 class _AppLocalizationsDelegate
