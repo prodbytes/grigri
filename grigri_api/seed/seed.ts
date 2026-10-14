@@ -7,7 +7,9 @@ import { DeleteCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { isOpen } from '../src/domain/model.js';
 import { key, prefix } from '../src/store/keys.js';
 import { type Store, messageItem, planItem, requestItem, toPlan, toRequest } from '../src/store/store.js';
+import type { Climber, Plan } from '../src/domain/model.js';
 import { seedData } from './data.js';
+import { showcaseData } from './showcase.js';
 
 export const SEED_PREFIX = 'seed-';
 const isSeed = (id: string) => id.startsWith(SEED_PREFIX);
@@ -28,12 +30,44 @@ export interface SeedCounts {
 export async function seed(store: Store, now: Date): Promise<SeedCounts> {
   const data = seedData(now);
   const { doc, table } = store;
+  await writeClimbers(store, data.climbers, now);
+  await writePlans(store, data.plans, now);
+  // RC and local show the demo showcase too.
+  await seedShowcase(store, now);
+
+  for (const r of data.requests) {
+    const { Item } = await doc.send(new GetCommand({ TableName: table, Key: key.request(r.planId, r.climberId) }));
+    const plan = data.plans.find((p) => p.id === r.planId)!;
+    // Testers' yeses on a still-open seed request stay.
+    const kept = Item && isOpen(toRequest(Item)) ? toRequest(Item).acceptedBy.filter((a) => !isSeed(a)) : [];
+    const acceptedBy = [...new Set([...r.acceptedBy, ...kept])].filter((a) => isSeed(a) ? plan.memberIds.includes(a) : true);
+    await doc.send(new PutCommand({ TableName: table, Item: requestItem({ ...r, acceptedBy }) }));
+  }
+
+  await store.batchWrite(data.messages.map((m) => ({ PutRequest: { Item: messageItem(m) } })));
+
+  return {
+    climbers: data.climbers.length,
+    plans: data.plans.length,
+    requests: data.requests.length,
+    messages: data.messages.length,
+  };
+}
+
+/** The seed's climbers, marked demo (all of them are made up). */
+async function writeClimbers(store: Store, climbers: Climber[], now: Date): Promise<void> {
+  for (const c of climbers) await store.saveProfile({ ...c, demo: true }, undefined, now);
+}
+
+/**
+ * The seed's plans, marked demo, with fresh dates and the seed's chat
+ * lines. Real people who joined one stay members; seed climbers who
+ * joined since (accepted by testers) back out.
+ */
+async function writePlans(store: Store, plans: Plan[], now: Date): Promise<void> {
+  const { doc, table } = store;
   const nowIso = now.toISOString();
-
-  // All of it is made up: marked demo, so the app says so.
-  for (const c of data.climbers) await store.saveProfile({ ...c, demo: true }, undefined, now);
-
-  for (const p of data.plans) {
+  for (const p of plans) {
     const { Item } = await doc.send(new GetCommand({ TableName: table, Key: key.plan(p.id) }));
     const existing = Item ? toPlan(Item) : undefined;
     // Real people who joined stay (after the seed's members).
@@ -60,22 +94,26 @@ export async function seed(store: Store, now: Date): Promise<SeedCounts> {
       old.filter((m) => isSeed(String(m.id))).map((m) => ({ DeleteRequest: { Key: { pk: m.pk, sk: m.sk } } })),
     );
   }
+}
 
-  for (const r of data.requests) {
-    const { Item } = await doc.send(new GetCommand({ TableName: table, Key: key.request(r.planId, r.climberId) }));
-    const plan = data.plans.find((p) => p.id === r.planId)!;
-    // Testers' yeses on a still-open seed request stay.
-    const kept = Item && isOpen(toRequest(Item)) ? toRequest(Item).acceptedBy.filter((a) => !isSeed(a)) : [];
-    const acceptedBy = [...new Set([...r.acceptedBy, ...kept])].filter((a) => isSeed(a) ? plan.memberIds.includes(a) : true);
-    await doc.send(new PutCommand({ TableName: table, Item: requestItem({ ...r, acceptedBy }) }));
-  }
+const SHOWCASE_EVERY_MS = 12 * 3_600_000;
 
-  await store.batchWrite(data.messages.map((m) => ({ PutRequest: { Item: messageItem(m) } })));
+/**
+ * The demo showcase (seed/showcase.ts), on every stage: its climbers and
+ * plans, re-dated. It writes only `seed-` records, so it's safe in
+ * production. Records when, so [showcaseIsStale] can tell.
+ */
+export async function seedShowcase(store: Store, now: Date): Promise<{ climbers: number; plans: number }> {
+  const data = showcaseData(now);
+  await writeClimbers(store, data.climbers, now);
+  await writePlans(store, data.plans, now);
+  await store.doc.send(new PutCommand({ TableName: store.table, Item: { ...key.showcase(), type: 'showcase', time: now.toISOString() } }));
+  return { climbers: data.climbers.length, plans: data.plans.length };
+}
 
-  return {
-    climbers: data.climbers.length,
-    plans: data.plans.length,
-    requests: data.requests.length,
-    messages: data.messages.length,
-  };
+/** Whether the showcase was last written over 12 hours ago (or never). */
+export async function showcaseIsStale(store: Store, now: Date): Promise<boolean> {
+  const { Item } = await store.doc.send(new GetCommand({ TableName: store.table, Key: key.showcase() }));
+  const time = typeof Item?.time === 'string' ? Date.parse(Item.time) : NaN;
+  return !(now.getTime() - time < SHOWCASE_EVERY_MS);
 }

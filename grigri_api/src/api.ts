@@ -54,6 +54,8 @@ export interface Deps {
   realtime?: Realtime;
   /** My roles in Grigri, from rbacr (rbacr.ts); none: unknown. */
   roles?: RolesLookup;
+  /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
+  showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
 }
 
@@ -279,6 +281,11 @@ export class Api {
   // --- Decks and plans ------------------------------------------------------
 
   private async discover(s: Session) {
+    // The demo plans' dates move with time: re-dated twice a day, by the
+    // first deck asked for after that. Never fails the deck.
+    await this.deps.showcase?.(s.now).catch((e: unknown) => {
+      console.error(JSON.stringify({ level: 'warn', msg: 'showcase refresh failed', error: String(e) }));
+    });
     const [upcoming, passed, asked] = await Promise.all([
       this.store.upcomingPlans(s.now.toISOString()),
       this.store.passedPlanIds(s.me.id),

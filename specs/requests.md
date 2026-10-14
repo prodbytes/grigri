@@ -607,3 +607,18 @@ spec.
       and the chat gets the joined note. The app refreshes its
       notifications right after, so the match screen opens (no "you'll
       get an alert" snackbar). Real plans are unchanged.
+43. **Show clearly but discreetly when data is fake (automatically
+    generated); generate a few profiles, preferably famous late climbers,
+    owning a few plans, so users can see how the app works while there
+    are few events.** Decided with the user: fictional names that nod to
+    the legends (nobody real is portrayed), and on GA too.
+    - [Backend](backend.md#the-demo-showcase): the demo showcase, six
+      fictional climbers each organizing a plan at a well-known crag, on
+      every stage including production, marked demo; the API re-dates it
+      before a deck when it's over 12 hours old (no new resource; under a
+      cent a month). RC and local keep their test seed too.
+    - [Matching](matching.md): the demo notice is one discreet italic line,
+      "Demo: automatically generated, not real people or plans. It's here
+      to show how Grigri works.", in every language.
+    - [API](api.md), [deploy](deploy.md), [README](README.md): GA no
+      longer "starts empty".

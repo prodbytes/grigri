@@ -3,9 +3,11 @@
 The contract between the backend ([grigri_api/](../grigri_api)) and the
 app. Architecture, data model and environments: [backend.md](backend.md).
 
-All data comes from the backend. GA (prod) starts EMPTY: only real people's
-data. RC and local get made-up data from a seed (never in GA). There are no
-auto-answering fake climbers anywhere: every environment behaves like GA.
+All data comes from the backend. GA (prod) holds real people's data plus
+the demo showcase (fictional climbers and their plans, marked `demo`); RC
+and local also get made-up test data from a seed (never in GA). Real
+plans' requests wait for real members everywhere; a demo plan's group says
+yes at once.
 An admin can approve or reject any join request.
 
 ## Architecture (cost first: $0 idle)

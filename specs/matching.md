@@ -175,13 +175,15 @@ failed action shows the server's message at the bottom of the screen; a
 401 tries fresh credentials once, then signs out; a 409 "no profile"
 loads my profile again (`GET /api/me`, which makes a new one).
 
-- **Production (GA) starts empty**: only real people's profiles and plans.
-  RC and local get made-up climbers and plans from the backend's seed
-  (never in GA), marked **demo**: a demo plan (on the deck, its screen,
-  the match screen) and a demo person's profile sheet begin with
-  "Demo: this isn't real data, just a demonstration to help you see how
-  Grigri works.", and a demo person's name has a **Demo** tag. Nobody answers by a rule: every request waits for real
-  members (or an [admin](sign-in.md#admins)), in every environment.
+- **Demo data**: every stage, production included, has the demo showcase
+  (fictional climbers and their plans, [backend](backend.md#the-demo-showcase));
+  RC and local also get made-up test data from the backend's seed (never
+  in GA). All of it is marked **demo**: a demo plan (on the deck, its
+  screen, the match screen) and a demo person's profile sheet begin with
+  one discreet line, "Demo: automatically generated, not real people or
+  plans. It's here to show how Grigri works.", and a demo person's name
+  has a **Demo** tag. A real plan's requests wait for its real members
+  (or an [admin](sign-in.md#admins)); a demo plan's group says yes at once.
 - **Photos** are in the backend's photo store, never in the database or on
   the device: picked as before (my photo downsized to 640 px, gear photos
   to 1080 px, JPEG quality 75), uploaded when the profile is saved (`POST

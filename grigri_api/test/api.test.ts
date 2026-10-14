@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Api, NO_NAME } from '../src/api.js';
 import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
@@ -350,5 +350,20 @@ describe('sessions through the API', () => {
 
   it('health needs no token', async () => {
     expect((await request('GET', '/api/health')).ok).toBe(true);
+  });
+});
+
+describe('the demo showcase', () => {
+  it('is refreshed before the deck, and its failure never fails the deck', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await call(ada, 'PUT', '/api/me', profile('Ada'));
+    const asked: Date[] = [];
+    const photos = { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} };
+    const make = (showcase: (now: Date) => Promise<void>) =>
+      new Api({ store: store.asStore(), photos, auth, showcase, config: { stage: 'local', version: '0.1.2' }, clock: () => now });
+    await make(async (at) => { asked.push(at); }).handle('GET', '/api/discover', { caller: ada, body: undefined, query: {} });
+    expect(asked).toEqual([now]);
+    const deck = await make(async () => { throw new Error('table busy'); }).handle('GET', '/api/discover', { caller: ada, body: undefined, query: {} });
+    expect(deck).toMatchObject({ plans: [] });
   });
 });

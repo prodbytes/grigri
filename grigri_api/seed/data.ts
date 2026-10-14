@@ -16,18 +16,18 @@ export interface SeedData {
 }
 
 /** A routes range, by French grades. */
-function routes(min: string, max: string): GradeRange {
+export function routes(min: string, max: string): GradeRange {
   const grades: readonly string[] = SCALES.routes;
   return { scale: 'routes', min: grades.indexOf(min), max: grades.indexOf(max) };
 }
 
 /** A boulders range, by V grades (the same indices as Font). */
 const V = ['VB', 'V0', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13'];
-function boulders(min: string, max: string): GradeRange {
+export function boulders(min: string, max: string): GradeRange {
   return { scale: 'boulders', min: V.indexOf(min), max: V.indexOf(max) };
 }
 
-const climber = (c: Omit<Climber, 'gearPhotos' | 'gear'> & { gear?: Climber['gear'] }): Climber => ({
+export const climber = (c: Omit<Climber, 'gearPhotos' | 'gear'> & { gear?: Climber['gear'] }): Climber => ({
   gear: [],
   gearPhotos: [],
   ...c,
