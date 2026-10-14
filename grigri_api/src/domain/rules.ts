@@ -194,7 +194,8 @@ export function leave(state: PlanState, actorId: string, ctx: Context): Effects 
   const organizerId = handOver
     ? members[Math.min(members.length - 1, Math.floor(ctx.random() * members.length))]!
     : plan.organizerId;
-  const after: Plan = { ...plan, memberIds: members, organizerId };
+  // The organizer first, as always; the others keep their join order.
+  const after: Plan = { ...plan, memberIds: [organizerId, ...members.filter((m) => m !== organizerId)], organizerId };
   // My acceptances no longer count: I'm not a member.
   const changed = new Map<string, JoinRequest>();
   const requests = state.requests.map((r) => {

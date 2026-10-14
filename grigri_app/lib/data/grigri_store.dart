@@ -543,7 +543,14 @@ class GrigriStore extends ChangeNotifier {
     await refreshNotices();
   }
 
-  Future<void> refreshDiscover() => _refresh(api.discover, (list) {
+  /// The deck again, with [again] the plans I passed on too (Discover's
+  /// refresh button: I may have changed my mind).
+  Future<void> refreshDiscover({bool again = false}) async {
+    if (again) await _ok(api.clearPasses);
+    await _refreshDeck();
+  }
+
+  Future<void> _refreshDeck() => _refresh(api.discover, (list) {
     _learn(list.climbers);
     for (final p in list.plans) {
       _plans[p.id] = p;

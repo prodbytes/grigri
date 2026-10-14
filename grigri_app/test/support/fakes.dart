@@ -72,6 +72,9 @@ class FakeApi implements GrigriApi, SessionApi {
   final noticesFor = <String, List<Notice>>{};
   final allMessages = <Message>[];
   final passed = <String>{};
+
+  /// Plans I left: a refresh keeps them out of my deck.
+  final left = <String>{};
   final dismissed = <String>{};
 
   /// What the deck says about how far each plan is (the server works it
@@ -408,6 +411,7 @@ class FakeApi implements GrigriApi, SessionApi {
       );
     }
     passed.add(planId);
+    left.add(planId);
   });
 
   @override
@@ -432,6 +436,14 @@ class FakeApi implements GrigriApi, SessionApi {
   @override
   Future<void> pass(String planId) =>
       _route('POST /api/plans/$planId/pass', () => passed.add(planId));
+
+  @override
+  Future<void> clearPasses() => _route('DELETE /api/passes', () {
+    // Not the ones I asked to join (a dismissed "no" stays hidden).
+    passed.removeWhere(
+      (p) => !requestsById.containsKey('$p/$meId') && !left.contains(p),
+    );
+  });
 
   @override
   Future<RequestList> requests() => _route('GET /api/requests', () {

@@ -148,6 +148,7 @@ export class Api {
     r('POST /api/plans/{id}/leave', 'profile', (req, s) => this.leave(req, s));
     r('POST /api/plans/{id}/join', 'profile', (req, s) => this.join(req, s));
     r('POST /api/plans/{id}/pass', 'profile', (req, s) => this.pass(req, s));
+    r('DELETE /api/passes', 'profile', (_req, s) => this.clearPasses(s));
     r('GET /api/plans/{id}/messages', 'profile', (req, s) => this.messages(req, s));
     r('POST /api/plans/{id}/messages', 'profile', (req, s) => this.send(req, s));
 
@@ -354,8 +355,8 @@ export class Api {
       await this.store.apply(loaded, effects, s.now);
       return effects.plan?.memberIds ?? [];
     });
-    // Out of my deck, now that I've left it.
-    await this.store.addPass(s.me.id, planId, s.now);
+    // Out of my deck for good, now that I've left it (a refresh keeps it out).
+    await this.store.addPass(s.me.id, planId, s.now, true);
     await this.hint(hintsFor(members, { kind: 'plan', planId }, s.me.id));
     return {};
   }
@@ -398,6 +399,22 @@ export class Api {
       await this.hint(hintsFor(loaded.plan.memberIds, { kind: 'request', planId }, s.me.id));
       return { request: effects.requests[0]!, demo: loaded.plan.demo === true };
     });
+  }
+
+  /**
+   * Discover's refresh: the plans I passed on come back (I may have changed
+   * my mind). Not the ones I asked to join (a dismissed "no" stays hidden)
+   * or left (cancelled).
+   */
+  private async clearPasses(s: Session) {
+    const [passed, asked, left] = await Promise.all([
+      this.store.passedPlanIds(s.me.id),
+      this.store.askedRequests(s.me.id),
+      this.store.leftPlanIds(s.me.id),
+    ]);
+    const keep = new Set([...asked.map((r) => r.planId), ...left]);
+    await this.store.deletePasses(s.me.id, passed.filter((p) => !keep.has(p)));
+    return {};
   }
 
   private async pass(req: Request, s: Session) {

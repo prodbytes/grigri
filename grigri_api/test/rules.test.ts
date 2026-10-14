@@ -199,6 +199,8 @@ describe('leave', () => {
     expect(pick(0).plan).toMatchObject({ organizerId: 'ben', memberIds: ['ben', 'cy', 'dee'] });
     expect(pick(0.5).plan!.organizerId).toBe('cy');
     expect(pick(0.999).plan!.organizerId).toBe('dee');
+    // The new organizer comes first; the others keep their order.
+    expect(pick(0.999).plan!.memberIds).toEqual(['dee', 'ben', 'cy']);
     expect(pick(0.5).messages.map((m) => m.text)).toEqual(['Ada left the plan; Cy organizes it now']);
   });
 

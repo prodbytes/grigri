@@ -232,6 +232,14 @@ void main() {
         tester.getSize(find.byTooltip('Share this plan')).width,
         lessThan(tester.getSize(find.byTooltip('Ask to join')).width),
       );
+      // Right of ✓, with ✕ and ✓ still centered on the screen.
+      final share = tester.getCenter(find.byTooltip('Share this plan'));
+      final pass = tester.getCenter(find.byTooltip('Pass'));
+      final join = tester.getCenter(find.byTooltip('Ask to join'));
+      expect(share.dx, greaterThan(join.dx));
+      final width =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      expect((pass.dx + join.dx) / 2, moreOrLessEquals(width / 2, epsilon: 1));
       await tester.tap(find.byTooltip('Share this plan'));
       await tester.pumpAndSettle();
       final text = shared.single['text']! as String;
@@ -306,6 +314,18 @@ void main() {
       expect(find.textContaining("You'll get an alert"), findsNothing);
       expect(api.plans['boulder-night']!.memberIds, contains('me'));
       expect(store.waiting, isEmpty);
+    });
+
+    testWidgets('refresh brings back the plans I passed on', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      expect(find.text('Block Hall'), findsNothing);
+      await tester.tap(find.byTooltip('Refresh'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('DELETE /api/passes'));
+      expect(find.text('Block Hall'), findsOneWidget);
     });
 
     testWidgets('dragging a card left passes on the plan', (tester) async {
