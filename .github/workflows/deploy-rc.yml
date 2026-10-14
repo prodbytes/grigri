@@ -142,7 +142,6 @@ jobs:
         env:
           STAGE: rc
           TAG: ${{ steps.tag.outputs.tag }}
-          HOSTED_ZONE_ID: ${{ vars.HOSTED_ZONE_ID }}
           # Google sign-in's web client ID: compiled into the web app, and the
           # client whose ID tokens the API accepts. The RC has its own
           # client (its JavaScript origin is the RC site): a public

@@ -7,8 +7,9 @@ The same distribution serves the [API](api.md) under `/api/*` (the
 `<prefix>-api` stack's HTTP API, [grigri_api/template.yaml](../grigri_api/template.yaml))
 and people's photos under `/photos/*` (a private bucket); see
 [backend.md](backend.md).
-Both names live in the `grigri.nu01.com` Route 53 zone, delegated from
-`nu01.com`. `/` is the [index page](../grigri_index), which redirects to
+Both names live in the apex Route 53 zone `nu01.com`, which the nu01
+repo manages (stacks `nu01-route53-zone` and `nu01-dns`, which owns their
+A/AAAA aliases and `local.grigri.nu01.com`'s); see [DNS](#dns). `/` is the [index page](../grigri_index), which redirects to
 `/app/`.
 
 ## Production
@@ -32,8 +33,9 @@ for that tag:
    endpoint, looked up with
    `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
    both stacks. Production never gets the test seed (it holds real people's data and the demo showcase, which the API writes itself, see [backend](backend.md#the-demo-showcase));
-3. deploys the `grigri-web` stack: certificate, site and photos buckets,
-   CloudFront (with `/api/*` to the API's domain) and DNS records;
+3. deploys the `grigri-web` stack: certificate (validated in
+   `nu01.com`), site and photos buckets, and CloudFront (with `/api/*` to
+   the API's domain);
 4. uploads the index page and the web build (`Cache-Control: no-cache`,
    Flutter's files aren't content-hashed) and invalidates `/*`;
 5. checks, for up to 10 minutes, that `/app/version.json` reports the
@@ -49,9 +51,27 @@ deploy creates it again.
 Both stacks are deployed with the cost-allocation stack tags
 `project=grigri` and `tenancy=GA` (`tenancy=RC` for the RC), which
 CloudFormation copies onto every resource that takes tags, so Cost
-Explorer can split the bill by product and stage; `grigri-github-deploy`
-and the `grigri.nu01.com` zone, which serve both stages, carry
-`tenancy=shared`.
+Explorer can split the bill by product and stage; `grigri-github-deploy`,
+which serves both stages, carries `tenancy=shared`.
+
+## DNS
+
+grigri has no Route 53 zone of its own anymore: `grigri.nu01.com`'s
+(`Z087054988V7QH92N1FX`) is being merged into the apex zone `nu01.com`
+(`Z04838091YTBIM6PNI1XK`) to save its $0.50/month. Round 1, in the nu01
+repo (`scripts/migrate-subzone.sh`, then the `nu01-dns` stack), removed
+the delegation and put the site's aliases and the certificates'
+validation CNAMEs in `nu01.com`. Round 2 is this repo's: `site.yaml`
+validates the certificate in `nu01.com` (the `ValidationZoneId`
+parameter, which `scripts/deploy.sh` passes; changing it replaces each
+stage's certificate, validated with the same `_<token>` CNAME round 1
+copied) and holds no DNS records. Round 2 must not be released before
+round 1 + 48 hours (`migrate-subzone.sh` prints the exact time), while
+resolvers may still cache the old zone's NS records; an administrator
+redeploys `grigri-github-deploy` first. After round 2 has deployed on
+both stages, an administrator empties and deletes the old zone and drops
+it from the deploy roles: the steps are in
+[grigri_infra/README.md](../grigri_infra/README.md#dns).
 
 ## Monitoring
 
@@ -104,7 +124,11 @@ AWS access is keyless: GitHub's OIDC token is exchanged for
 ([grigri_infra/github-deploy.yaml](../grigri_infra/github-deploy.yaml)).
 Each may only touch its stage's `<prefix>-*` stacks, buckets, alarms and
 topics, CloudFront distributions and ACM certificates tagged with its
-`grigri:stage`, and DNS records under its domain; for the API, its
+`grigri:stage`, and in Route 53 only its certificate's validation CNAMEs
+in `nu01.com` (`_*.grigri.nu01.com` for production, which covers the
+RC's too; `_*.rc.grigri.nu01.com` for the RC), plus its old records in
+the retired `grigri.nu01.com` zone until round 2 has deployed on both
+stages; for the API, its
 `<prefix>-*` Lambda functions, DynamoDB tables (create and update only:
 never delete, never read or write items), `/aws/lambda/<prefix>-*` log
 groups, and `<prefix>-*` IAM roles, which it may only create or change
@@ -116,7 +140,7 @@ buckets' objects. Origin access controls, response headers policies and
 HTTP APIs have only IDs (no names or tags to scope by), so they can't be
 separated by stage. The RC seed is the only invoke allowed
 (`grigri-rc-api`). Repository variables: `AWS_DEPLOY_ROLE_ARN`,
-`AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
+`AWS_DEPLOY_RC_ROLE_ARN`, `GOOGLE_WEB_CLIENT_ID`
 (production's Google web client) and `GOOGLE_WEB_CLIENT_ID_RC` (the
 RC's);
 repository secret: `GRIGRI_RBACR_TOKEN` (a secret because the

@@ -728,3 +728,26 @@ spec.
       secret is unused and can be deleted.
     - The deploy roles keep their health check, alarm and topic
       permissions until the next GA and RC deploys have deleted them.
+51. **Merge grigri.nu01.com's hosted zone into nu01.com (round 2), to save
+    its $0.50/month.** Round 1, in the nu01 repo, removed the delegation
+    and moved the site's names to `nu01.com` (stacks `nu01-route53-zone`
+    and `nu01-dns`).
+    - [Deploy](deploy.md#dns): `grigri_infra/site.yaml` no longer holds
+      the A/AAAA aliases (`nu01-dns` owns them); its certificate validates
+      in `nu01.com` through the new `ValidationZoneId` parameter
+      (replacing `HostedZoneId`), which `scripts/deploy.sh` passes as
+      `Z04838091YTBIM6PNI1XK`. That replaces each stage's certificate
+      once, validated with the CNAME round 1 already copied. The
+      `HOSTED_ZONE_ID` setting is gone from `scripts/deploy.sh`, the
+      Deploy and Deploy RC workflows and `.env.example`.
+    - The deploy roles get a Route 53 policy of their own
+      (`<prefix>-github-deploy-dns`; the site policy would pass the
+      6,144-character limit): validation CNAMEs only, `_*.grigri.nu01.com`
+      (production) or `_*.rc.grigri.nu01.com` (RC), in `nu01.com`, and
+      their old records in `grigri.nu01.com`'s zone until round 2 has
+      deployed on both stages.
+    - Not before round 1 + 48 hours; an administrator redeploys
+      `grigri-github-deploy` before the release, and after it has
+      deployed on both stages empties and deletes the old zone
+      ([grigri_infra/README.md](../grigri_infra/README.md#dns)). Cost:
+      $0.50/month less; no new resource.
