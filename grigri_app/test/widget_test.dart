@@ -308,6 +308,18 @@ void main() {
       expect(store.waiting, isEmpty);
     });
 
+    testWidgets('refresh brings back the plans I passed on', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      expect(find.text('Block Hall'), findsNothing);
+      await tester.tap(find.byTooltip('Refresh'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('DELETE /api/passes'));
+      expect(find.text('Block Hall'), findsOneWidget);
+    });
+
     testWidgets('dragging a card left passes on the plan', (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);

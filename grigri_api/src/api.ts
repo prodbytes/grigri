@@ -144,6 +144,7 @@ export class Api {
     r('POST /api/plans/{id}/leave', 'profile', (req, s) => this.leave(req, s));
     r('POST /api/plans/{id}/join', 'profile', (req, s) => this.join(req, s));
     r('POST /api/plans/{id}/pass', 'profile', (req, s) => this.pass(req, s));
+    r('DELETE /api/passes', 'profile', (_req, s) => this.clearPasses(s));
     r('GET /api/plans/{id}/messages', 'profile', (req, s) => this.messages(req, s));
     r('POST /api/plans/{id}/messages', 'profile', (req, s) => this.send(req, s));
 
@@ -394,6 +395,17 @@ export class Api {
       await this.hint(hintsFor(loaded.plan.memberIds, { kind: 'request', planId }, s.me.id));
       return { request: effects.requests[0]!, demo: loaded.plan.demo === true };
     });
+  }
+
+  /**
+   * Discover's refresh: the plans I passed on come back (I may have changed
+   * my mind). Not the ones I asked to join: a dismissed "no" stays hidden.
+   */
+  private async clearPasses(s: Session) {
+    const [passed, asked] = await Promise.all([this.store.passedPlanIds(s.me.id), this.store.askedRequests(s.me.id)]);
+    const askedIds = new Set(asked.map((r) => r.planId));
+    await this.store.deletePasses(s.me.id, passed.filter((p) => !askedIds.has(p)));
+    return {};
   }
 
   private async pass(req: Request, s: Session) {

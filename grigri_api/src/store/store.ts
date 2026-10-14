@@ -220,6 +220,11 @@ export class Store implements SessionStore {
     }));
   }
 
+  /** Forgets the climber's passes on these plans: they're on the deck again. */
+  async deletePasses(climberId: string, planIds: string[]): Promise<void> {
+    await this.batchWrite(planIds.map((p) => ({ DeleteRequest: { Key: key.pass(climberId, p) } })));
+  }
+
   /** The climber's own requests (any state). */
   async askedRequests(climberId: string): Promise<JoinRequest[]> {
     const items = await this.query({

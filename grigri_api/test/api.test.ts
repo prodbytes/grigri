@@ -192,6 +192,22 @@ describe('the matchmaking flow', () => {
     await fails(call(ben, 'POST', `/api/plans/${planId}/join`), 409, /already in this plan/);
   });
 
+  it("refreshing brings passed plans back, but not ones I asked to join", async () => {
+    await call(ben, 'POST', `/api/plans/${planId}/pass`);
+    expect((await call(ben, 'GET', '/api/discover')).plans).toEqual([]);
+    expect(await call(ben, 'DELETE', '/api/passes')).toEqual({});
+    expect((await call(ben, 'GET', '/api/discover')).plans.map((p: any) => p.id)).toEqual([planId]);
+
+    // Cy asks, is turned down and dismisses it: it stays out of the deck
+    // and out of Cy's requests.
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Cy}/reject`);
+    await call(cy, 'POST', `/api/requests/${planId}/${ids.Cy}/dismiss`);
+    await call(cy, 'DELETE', '/api/passes');
+    expect((await call(cy, 'GET', '/api/discover')).plans).toEqual([]);
+    expect((await call(cy, 'GET', '/api/plans')).asked).toEqual([]);
+  });
+
   it('discover, join, unanimous accept, chat, leave', async () => {
     const deck = await call(ben, 'GET', '/api/discover');
     expect(deck.plans.map((p: any) => p.id)).toEqual([planId]);
