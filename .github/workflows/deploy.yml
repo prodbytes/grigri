@@ -1,5 +1,5 @@
 # Deploys a *GA tag to production, https://grigri.nu01.com: the API
-# (/api/*, grigri_api: never seeded, production holds only real data), the
+# (/api/*, grigri_api: never the test seed: production holds real data and the demo showcase), the
 # Flutter web app (/app/) and the index page (/), through scripts/deploy.sh.
 # It ends by checking that the live site and API serve this tag's version.
 #

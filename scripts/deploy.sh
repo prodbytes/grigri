@@ -6,7 +6,7 @@
 #   2. tests, builds and deploys the API (grigri_api/template.yaml, stack
 #      grigri-api / grigri-rc-api: the Lambda, its HTTP API and the
 #      DynamoDB table, and the live updates' IoT custom authorizer, with the
-#      account's IoT Data-ATS endpoint). Production starts empty and is never seeded; the
+#      account's IoT Data-ATS endpoint). Production never gets the test seed (only the demo showcase, which the API writes itself); the
 #      RC is seeded with made-up test data after each deploy
 #      (scripts/seed.sh)
 #   3. deploys the site (CloudFormation grigri_infra/site.yaml:
@@ -274,8 +274,9 @@ aws cloudformation deploy --stack-name "$API_STACK" \
 rm -f "$packaged"
 api_domain="$(stack_output "$API_STACK" ApiDomain)"
 echo "    API: $api_domain"
-# Made-up test data: the RC only. Production starts empty and holds only
-# real people's data, so it's never seeded (the function refuses anyway).
+# Made-up test data: the RC only. Production holds real people's data and
+# the demo showcase (the API writes it), never the test seed (the function
+# refuses anyway).
 if [[ "$STAGE" == rc ]]; then
   echo "==> seeding the RC with made-up test data"
   STAGE=rc bash scripts/seed.sh

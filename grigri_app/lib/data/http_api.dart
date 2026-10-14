@@ -189,6 +189,9 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   Future<void> pass(String planId) => _post(['plans', planId, 'pass']);
 
   @override
+  Future<void> clearPasses() => _send('DELETE', ['passes']);
+
+  @override
   Future<RequestList> requests() async =>
       ApiJson.requestList(await _get(['requests']));
 

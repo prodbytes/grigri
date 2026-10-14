@@ -187,7 +187,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get demoNotice =>
-      'Demo: no son datos reales, solo una demostración para que veas cómo funciona Grigri.';
+      'Demo: generado automáticamente, no son personas ni planes reales. Está aquí para mostrar cómo funciona Grigri.';
 
   @override
   String get yourGrades => 'Tu grado';
@@ -612,30 +612,24 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cancelPlan => 'Cancelar el plan';
 
   @override
-  String get leavePlan => 'Dejar el plan';
-
-  @override
   String get cancelPlanQuestion => '¿Cancelar el plan?';
-
-  @override
-  String get leavePlanQuestion => '¿Dejar el plan?';
 
   @override
   String get cancelPlanMessage => 'El plan y su chat desaparecerán.';
 
   @override
-  String leaveOrganizerMessage(String name) {
-    return '$name lo organizará.';
-  }
+  String get cancelPlanOthersMessage =>
+      'Saldrá de tus planes y chats; los demás lo conservan. No podrás volver a unirte.';
 
   @override
-  String get leaveMessage => 'No podrás volver a unirte.';
+  String get cancelPlanOrganizerMessage =>
+      'Saldrá de tus planes y chats; los demás lo conservan y uno de ellos, elegido al azar, lo organizará. No podrás volver a unirte.';
 
   @override
-  String get stay => 'Quedarme';
+  String get keepPlan => 'Mantenerlo';
 
   @override
-  String get leave => 'Dejar';
+  String get confirmCancelPlan => 'Cancelarlo';
 
   @override
   String get editPlan => 'Editar plan';

@@ -5,7 +5,8 @@
 # {"grigriSeed": true}. Idempotent: re-running refreshes the seed's own
 # records and their dates; real people's data is never touched.
 #
-# Never production: GA starts empty and holds only real data. This script
+# Never production: GA holds real data and the demo showcase (which the API
+# writes itself), never the test seed. This script
 # refuses STAGE=prod, and so does the function (by its stage and its
 # table's name), and the production deploy role may not invoke it.
 #
@@ -29,7 +30,7 @@ case "$STAGE" in
       AWS_ENDPOINT_URL="http://localhost:${FLOCI_PORT:-2114}" aws)
     ;;
   prod)
-    echo "error: production is never seeded: it starts empty and holds only real people's data" >&2
+    echo "error: production never gets the test seed (the API writes the demo showcase itself)" >&2
     exit 2
     ;;
   *)

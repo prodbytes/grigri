@@ -187,7 +187,7 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get demoNotice =>
-      'Demo: no són dades reals, només una demostració perquè vegis com funciona Grigri.';
+      'Demo: generat automàticament, no són persones ni plans reals. És aquí per mostrar com funciona Grigri.';
 
   @override
   String get yourGrades => 'El teu grau';
@@ -610,30 +610,24 @@ class AppLocalizationsCa extends AppLocalizations {
   String get cancelPlan => 'Cancel·la el pla';
 
   @override
-  String get leavePlan => 'Deixa el pla';
-
-  @override
   String get cancelPlanQuestion => 'Vols cancel·lar el pla?';
-
-  @override
-  String get leavePlanQuestion => 'Vols deixar el pla?';
 
   @override
   String get cancelPlanMessage => 'El pla i el seu xat desapareixeran.';
 
   @override
-  String leaveOrganizerMessage(String name) {
-    return '$name l\'organitzarà.';
-  }
+  String get cancelPlanOthersMessage =>
+      'Sortirà dels teus plans i xats; els altres el mantenen. No t\'hi podràs tornar a unir.';
 
   @override
-  String get leaveMessage => 'No t\'hi podràs tornar a unir.';
+  String get cancelPlanOrganizerMessage =>
+      'Sortirà dels teus plans i xats; els altres el mantenen i un d\'ells, triat a l\'atzar, l\'organitzarà. No t\'hi podràs tornar a unir.';
 
   @override
-  String get stay => 'M\'hi quedo';
+  String get keepPlan => 'Mantén-lo';
 
   @override
-  String get leave => 'Deixa-ho';
+  String get confirmCancelPlan => 'Cancel·la\'l';
 
   @override
   String get editPlan => 'Edita el pla';

@@ -3,9 +3,11 @@
 The contract between the backend ([grigri_api/](../grigri_api)) and the
 app. Architecture, data model and environments: [backend.md](backend.md).
 
-All data comes from the backend. GA (prod) starts EMPTY: only real people's
-data. RC and local get made-up data from a seed (never in GA). There are no
-auto-answering fake climbers anywhere: every environment behaves like GA.
+All data comes from the backend. GA (prod) holds real people's data plus
+the demo showcase (fictional climbers and their plans, marked `demo`); RC
+and local also get made-up test data from a seed (never in GA). Real
+plans' requests wait for real members everywhere; a demo plan's group says
+yes at once.
 An admin can approve or reject any join request.
 
 ## Architecture (cost first: $0 idle)
@@ -186,10 +188,11 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `GET /api/plans` | mine: `{"plans": [plans I'm in, soonest first], "asked": [{"request", "plan"}] (my requests still waiting, or declined and not dismissed), "climbers"}` |
 | `GET /api/plans/{id}` | `{"plan", "requests": [open requests, only if I'm a member], "climbers"}` |
 | `PUT /api/plans/{id}` | organizer only; same body and rules as POST (the whole plan: a `sectorId` left out is cleared). → `{"plan"}` |
-| `POST /api/plans/{id}/leave` | I leave. Organizer leaves → next member organizes. Last member leaves → the plan, its requests and its chat are gone. Open requests stop waiting for me (so one may now have every yes, and join). A "left" note in the chat. The plan stays out of my deck. → `{}` |
+| `POST /api/plans/{id}/leave` | I leave (the app's "Cancel the plan"). Organizer leaves → a remaining member picked at random organizes. Last member leaves → the plan, its requests and its chat are gone. Open requests stop waiting for me (so one may now have every yes, and join). A "left" note in the chat. The plan stays out of my deck. → `{}` |
 | `POST /api/plans/{id}/join` | swipe right: a join request. Notifies every member (Notice kind request) and posts a request note in the chat. 409 if I'm a member, already asked (whatever became of that request), the plan has started, or 30 requests are already waiting on it. On a **demo** plan, whose made-up members can't answer, the group then says yes at once (as an admin's yes): I join, get the accepted notice, and the chat gets the joined note; the request comes back accepted by every member. → `{"request"}` |
 | `POST /api/plans/{id}/nudge` | the requester reminds the group: a Notice kind nudge (`climberId`: me) for each member who hasn't said yes to my open request on the plan. 404 if I haven't asked; 409 if it was declined, I'm already in, or the plan has started; **429** "you nudged the group less than 12 hours ago; try again later" within 12 hours of my last nudge (saved on the request as `nudgedAt`, with a conditional write, so two at once can't both pass). → `{"request"` (with its new `nudgedAt`)`, "nudged": <how many members>}` |
 | `POST /api/plans/{id}/pass` | swipe left: out of my deck. → `{}` |
+| `DELETE /api/passes` | Discover's refresh: forgets my passes, so those plans are on my deck again; not on plans I asked to join (a declined request I dismissed stays hidden) or left (cancelled: leaving marks its pass `left`). → `{}` |
 | `GET /api/requests` | to review: open requests (not rejected) on plans I'm in that I haven't accepted. → `{"requests", "plans": {id: Plan}, "climbers"}` |
 | `POST /api/requests/{planId}/{climberId}/accept` | member only. When every current member has accepted, they join: membership, a "joined" note, a Notice accepted for them; the requests still open on that plan now also wait for the newcomer. → `{"match": Match or null}` |
 | `POST /api/requests/{planId}/{climberId}/reject` | member only. One no is enough: rejected, Notice declined for them. → `{}` |
@@ -278,6 +281,7 @@ HTTP API can't send), through [scripts/seed.sh](../scripts/seed.sh).
   waiting on the plan, dated when that person asked.
 - The chat's notes: "<name> created the plan. People who match will show
   up here.", "<name> asked to join" (with `requestId`), "<name> joined the
-  plan 🎉", "<name> left the plan".
+  plan 🎉", "<name> left the plan", and, when the organizer leaves, "<name>
+  left the plan; <name> organizes it now".
 - Unknown fields in bodies are ignored, never stored. Text is trimmed;
   control characters other than newlines and tabs are refused.

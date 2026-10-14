@@ -14,6 +14,8 @@ export const key = {
   notice: (climberId: string, noticeId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `NOTICE#${noticeId}` }),
   request: (planId: string, climberId: string) => ({ pk: `PLAN#${planId}`, sk: `REQ#${climberId}` }),
   message: (planId: string, time: string, messageId: string) => ({ pk: `PLAN#${planId}`, sk: `MSG#${time}#${messageId}` }),
+  /** When the demo showcase was last written (seed/seed.ts). */
+  showcase: () => ({ pk: 'META#SHOWCASE', sk: 'META' }),
 };
 
 export const prefix = {

@@ -543,7 +543,14 @@ class GrigriStore extends ChangeNotifier {
     await refreshNotices();
   }
 
-  Future<void> refreshDiscover() => _refresh(api.discover, (list) {
+  /// The deck again, with [again] the plans I passed on too (Discover's
+  /// refresh button: I may have changed my mind).
+  Future<void> refreshDiscover({bool again = false}) async {
+    if (again) await _ok(api.clearPasses);
+    await _refreshDeck();
+  }
+
+  Future<void> _refreshDeck() => _refresh(api.discover, (list) {
     _learn(list.climbers);
     for (final p in list.plans) {
       _plans[p.id] = p;
@@ -788,8 +795,9 @@ class GrigriStore extends ChangeNotifier {
     ),
   );
 
-  /// I leave a plan's group. When the organizer leaves, the next member
-  /// organizes it; when the last member leaves, the plan is gone.
+  /// I leave (cancel) a plan: it's out of my plans and chats. When the
+  /// organizer leaves, a member picked at random (by the API) organizes it;
+  /// when the last member leaves, the plan is gone.
   Future<bool> leave(String planId) async {
     if (!await _ok(() => api.leave(planId))) return false;
     _mine = [..._mine.where((id) => id != planId)];

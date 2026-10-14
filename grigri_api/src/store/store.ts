@@ -213,11 +213,29 @@ export class Store implements SessionStore {
     return this.climberChildren(climberId, prefix.pass);
   }
 
-  async addPass(climberId: string, planId: string, now: Date): Promise<void> {
+  /** I passed on a plan; [left]: because I left (cancelled) it, which a refresh never undoes. */
+  async addPass(climberId: string, planId: string, now: Date, left = false): Promise<void> {
     await this.doc.send(new PutCommand({
       TableName: this.table,
-      Item: { ...key.pass(climberId, planId), type: 'pass', planId, time: now.toISOString() },
+      Item: { ...key.pass(climberId, planId), type: 'pass', planId, time: now.toISOString(), ...(left ? { left: true } : {}) },
     }));
+  }
+
+  /** The plans I left (cancelled): passes a refresh keeps. */
+  async leftPlanIds(climberId: string): Promise<string[]> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+      FilterExpression: '#left = :yes',
+      ExpressionAttributeNames: { '#left': 'left' },
+      ExpressionAttributeValues: { ':pk': prefix.climber(climberId), ':sk': prefix.pass, ':yes': true },
+      ProjectionExpression: 'planId',
+    });
+    return items.map((i) => i.planId as string);
+  }
+
+  /** Forgets the climber's passes on these plans: they're on the deck again. */
+  async deletePasses(climberId: string, planIds: string[]): Promise<void> {
+    await this.batchWrite(planIds.map((p) => ({ DeleteRequest: { Key: key.pass(climberId, p) } })));
   }
 
   /** The climber's own requests (any state). */
