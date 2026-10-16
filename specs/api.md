@@ -212,9 +212,9 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 
 ## The deck's ranking
 
-Each plan scores **fit + nearness**, each 0 to 1 (pure functions in
-[rules.ts](../grigri_api/src/domain/rules.ts)); higher first, then
-soonest:
+Each plan scores **fit + 2 × nearness**, each 0 to 1 (pure functions in
+[rules.ts](../grigri_api/src/domain/rules.ts)): distance weighs strongly,
+twice as much as fit (`NEAR_WEIGHT`). Higher first, then soonest:
 
 - **Fit** (my profile against the plan): 1 when my grades for its
   discipline overlap its grades; 0.6 when one grade apart, then less,
@@ -225,8 +225,9 @@ soonest:
   away) when it isn't known: the plan has no point (typed by hand) or
   I set no location or area.
 
-So a plan in my grades nearby comes first, and a plan in my grades
-150 km away still comes before one next door that I don't climb.
+So a plan in my grades nearby comes first (3), then one nearby a grade
+off (2.6), and even one next door that I don't climb (2) comes before one
+in my grades 50 km away (1.7) or 150 km away (1.1).
 
 ## Live updates
 

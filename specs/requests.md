@@ -761,6 +761,24 @@ spec.
     - Cost: about $0.00007 of aityx credits per score; nothing while
       idle ([backend](backend.md#cost)).
 
+53. **Plenty of demo plans in Siurana and Margalef; a shorter demo
+    disclaimer.**
+    - [Backend](backend.md#the-demo-showcase): the showcase grows to
+      eleven climbers and twenty plans, seven in Siurana (El Pati, L'Olla,
+      Can Piqué, La Siuranella, El Mirador, Grau dels Masets, Ca la
+      Isabel) and seven in Margalef (sport sectors and boulders), one to
+      seven days ahead. A `SHOWCASE_VERSION` on the showcase's marker
+      makes every stage rewrite it on the first deck after a deploy.
+    - [Matching](matching.md#data-the-backend-api): the demo line reads
+      "Demo: made-up people and plans." (in every language).
+54. **Make the distance from me to a plan a strong weight in scoring.**
+    - [API](api.md#the-decks-ranking): the deck ranks by fit + 2 ×
+      nearness (`NEAR_WEIGHT` in `rules.ts`), so nearby plans come before
+      far ones even a few grades off; a plan next door I don't climb now
+      comes before one in my grades 50 km away.
+    - [Match scores](match-scores.md#the-model): model v2,
+      match_likelihood = grade_fit × (0.2 + 0.8 × nearness) × group_odds
+      × timing (was 0.5 + 0.5 ×). No cost change.
 55. **Let me set my location on the profile screen, defaulting to where
     I am.**
     - [Screens](screens.md): the Profile tab has a **Where you climb**
