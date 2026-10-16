@@ -953,4 +953,127 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get errorOpenLink => 'Não foi possível abrir o link.';
+
+  @override
+  String get tabAds => 'Anúncios';
+
+  @override
+  String get adTag => 'Anúncio';
+
+  @override
+  String adBy(String name) {
+    return 'Anúncio de $name';
+  }
+
+  @override
+  String get swipeOpen => 'Abrir';
+
+  @override
+  String get swipeSkip => 'Pular';
+
+  @override
+  String get openAd => 'Abrir o link do anúncio';
+
+  @override
+  String get skipAd => 'Pular o anúncio';
+
+  @override
+  String get shareAd => 'Compartilhar o link do anúncio';
+
+  @override
+  String get adsTitle => 'Seus anúncios';
+
+  @override
+  String get adsEmptyTitle => 'Nenhum anúncio ainda';
+
+  @override
+  String get adsEmptyMessage =>
+      'Adicione um anúncio: quando um admin aprovar, ele aparece entre os planos em Buscar para todo mundo.';
+
+  @override
+  String get newAd => 'Novo anúncio';
+
+  @override
+  String get adStatusPending => 'Aguardando revisão';
+
+  @override
+  String get adStatusApproved => 'Aprovado: em exibição';
+
+  @override
+  String get adStatusRejected => 'Recusado';
+
+  @override
+  String get deleteAdQuestion => 'Excluir este anúncio?';
+
+  @override
+  String get deleteAdMessage => 'Ele sai de Buscar para sempre.';
+
+  @override
+  String get adTextLabel => 'Texto sobre o anúncio';
+
+  @override
+  String get adLinkLabel => 'Link (https://…)';
+
+  @override
+  String get adLinkInvalid => 'Digite um endereço web começando com https://';
+
+  @override
+  String get adAddMedia => 'Adicionar foto ou vídeo';
+
+  @override
+  String get adRemoveMedia => 'Remover a foto ou o vídeo';
+
+  @override
+  String get adVideoPicked => 'Vídeo';
+
+  @override
+  String get adNeedsContent => 'Adicione texto, uma foto ou um vídeo.';
+
+  @override
+  String get adSubmit => 'Enviar para revisão';
+
+  @override
+  String get adSent => 'Enviado: um admin vai revisar.';
+
+  @override
+  String get adPreview => 'Prévia';
+
+  @override
+  String get adsNeedPremium =>
+      'Seu Premium terminou: seus anúncios não aparecem. Renove no seu perfil.';
+
+  @override
+  String get adminUsersTab => 'Usuários';
+
+  @override
+  String get adminAdsTab => 'Anúncios';
+
+  @override
+  String get adminAdsTitle => 'Admin';
+
+  @override
+  String get adsOnDiscover => 'Em Buscar';
+
+  @override
+  String get adEveryOff => 'Sem anúncios';
+
+  @override
+  String adEvery(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Um anúncio a cada $count planos',
+      one: 'Um anúncio depois de cada plano',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adApprove => 'Aprovar';
+
+  @override
+  String get adReject => 'Recusar';
+
+  @override
+  String get adminAdsEmpty => 'Nenhum anúncio aqui';
 }

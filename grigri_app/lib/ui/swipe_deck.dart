@@ -24,6 +24,7 @@ class SwipeDeck<T> extends StatefulWidget {
     required this.onSwiped,
     required this.yesLabel,
     required this.noLabel,
+    this.labelsOf,
     this.controller,
   });
 
@@ -35,6 +36,10 @@ class SwipeDeck<T> extends StatefulWidget {
   /// The stamps shown while dragging, e.g. "JOIN" and "PASS".
   final String yesLabel;
   final String noLabel;
+
+  /// Other stamps for some cards (an ad's "OPEN" and "SKIP"); null keeps
+  /// [yesLabel] and [noLabel].
+  final (String yes, String no)? Function(T item)? labelsOf;
   final SwipeController? controller;
 
   @override
@@ -126,6 +131,9 @@ class _SwipeDeckState<T> extends State<SwipeDeck<T>>
         _width = constraints.maxWidth;
         final items = widget.items;
         final progress = (_drag.dx / (_width * 0.28)).clamp(-1.0, 1.0);
+        final labels = items.isEmpty
+            ? null
+            : widget.labelsOf?.call(items.first);
         return Stack(
           clipBehavior: Clip.none,
           children: [
@@ -161,14 +169,14 @@ class _SwipeDeckState<T> extends State<SwipeDeck<T>>
                           ),
                           if (progress > 0)
                             _Stamp(
-                              widget.yesLabel,
+                              labels?.$1 ?? widget.yesLabel,
                               Mountain.olive,
                               progress,
                               left: true,
                             ),
                           if (progress < 0)
                             _Stamp(
-                              widget.noLabel,
+                              labels?.$2 ?? widget.noLabel,
                               Mountain.clay,
                               -progress,
                               left: false,

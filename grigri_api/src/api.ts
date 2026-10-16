@@ -17,6 +17,7 @@ import {
   publicClimber,
   requestJson,
 } from './domain/model.js';
+import { type Ad, AD_STATUSES, type AdStatus, MAX_ADS_PER_OWNER, adInput, adSettingsInput, deckAds } from './domain/ads.js';
 import { type PicWithCrag, type Where, picsFor } from './domain/pics.js';
 import * as rules from './domain/rules.js';
 import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
@@ -196,6 +197,11 @@ export class Api {
     r('POST /api/premium/checkout', 'profile', (req, s) => this.checkout(req, s));
     r('POST /api/premium/portal', 'profile', (_req, s) => this.portal(s));
 
+    r('GET /api/ads', 'profile', (_req, s) => this.myAds(s));
+    r('POST /api/ads/media', 'profile', (req, s) => this.presignAdMedia(req, s));
+    r('POST /api/ads', 'profile', (req, s) => this.createAd(req, s));
+    r('DELETE /api/ads/{id}', 'profile', (req, s) => this.deleteAd(req, s));
+
     r('GET /api/discover', 'profile', (_req, s) => this.discover(s));
     r('POST /api/plans', 'profile', (req, s) => this.createPlan(req, s));
     r('GET /api/plans', 'profile', (_req, s) => this.myPlans(s));
@@ -227,6 +233,14 @@ export class Api {
     });
 
     r('GET /api/admin/climbers', 'admin', () => this.adminClimbers());
+    r('GET /api/admin/ads', 'admin', (req) => this.adminAds(req));
+    r('POST /api/admin/ads/{id}/approve', 'admin', (req, s) => this.reviewAd(req, s, 'approved'));
+    r('POST /api/admin/ads/{id}/reject', 'admin', (req, s) => this.reviewAd(req, s, 'rejected'));
+    r('PUT /api/admin/ads/settings', 'admin', async (req) => {
+      const settings = adSettingsInput(req.body);
+      await this.store.putAdSettings(settings);
+      return settings;
+    });
     r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(req, s, true));
     r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(req, s, false));
   }
@@ -524,6 +538,99 @@ export class Api {
     return { received: true };
   }
 
+  // --- Ads (specs/ads.md) ------------------------------------------------------
+
+  /** Whether I'm Premium now (ads need it). */
+  private async isPremium(climberId: string, now: Date): Promise<boolean> {
+    return premiumOf(await this.store.getSubscription(climberId), now).active;
+  }
+
+  /** GET /api/ads: my ads, newest first, and whether I'm Premium (to add more). */
+  private async myAds(s: Session) {
+    const [ads, premium] = await Promise.all([this.store.adsBy(s.me.id), this.isPremium(s.me.id, s.now)]);
+    return { ads, premium };
+  }
+
+  /** POST /api/ads/media {contentType}: where a Premium climber uploads an ad's photo or video (`ads/<me>/<id>.<ext>`, pending until the ad is saved). */
+  private async presignAdMedia(req: Request, s: Session) {
+    const contentType = asObject(req.body).contentType;
+    const ext = typeof contentType === 'string' && Object.hasOwn(CHAT_TYPES, contentType) ? CHAT_TYPES[contentType] : undefined;
+    if (!ext) throw badRequest(`contentType must be one of ${Object.keys(CHAT_TYPES).join(', ')}`);
+    if (!(await this.isPremium(s.me.id, s.now))) throw forbidden('ads are for Premium');
+    const key = `ads/${s.me.id}/${newId()}.${ext}`;
+    const maxBytes = Object.hasOwn(VIDEO_TYPES, contentType as string) ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
+    const { url, fields } = await this.deps.photos.presign(key, contentType as string, maxBytes);
+    return { key, url, fields, maxBytes };
+  }
+
+  /** POST /api/ads {text, link, media?}: a Premium climber's new ad, waiting for an admin. */
+  private async createAd(req: Request, s: Session) {
+    const input = adInput(req.body, s.me.id);
+    if (!(await this.isPremium(s.me.id, s.now))) throw forbidden('ads are for Premium');
+    if ((await this.store.adsBy(s.me.id)).length >= MAX_ADS_PER_OWNER) {
+      throw conflict(`you can keep at most ${MAX_ADS_PER_OWNER} ads; delete one first`);
+    }
+    if (input.media && !(await this.deps.photos.keep(input.media.key))) {
+      throw badRequest("the photo or video isn't uploaded (or expired): upload it again");
+    }
+    const ad: Ad = { id: newId(), ownerId: s.me.id, ...input, status: 'pending', createdAt: s.now.toISOString() };
+    await this.store.putAd(ad);
+    return { ad };
+  }
+
+  /** DELETE /api/ads/{id}: its owner (or an admin) takes it down for good, with its media. */
+  private async deleteAd(req: Request, s: Session) {
+    const ad = await this.store.getAd(id(req.params.id, 'ad id'));
+    if (!ad) throw notFound('no such ad');
+    if (ad.ownerId !== s.me.id && !s.caller.admin) throw forbidden('not your ad');
+    await this.store.deleteAd(ad.id);
+    if (ad.media) {
+      // Best effort: a leftover only costs storage.
+      await this.deps.photos.remove([ad.media.key]).catch((e: unknown) => {
+        console.error(JSON.stringify({ level: 'warn', msg: 'ad media cleanup failed', error: String(e) }));
+      });
+    }
+    return {};
+  }
+
+  /** GET /api/admin/ads?status=pending|approved|rejected: newest first, with their owners and the deck's setting. */
+  private async adminAds(req: Request) {
+    const status = (req.query.status ?? 'pending') as AdStatus;
+    if (!AD_STATUSES.includes(status)) throw badRequest(`status must be one of ${AD_STATUSES.join(', ')}`);
+    const [ads, settings] = await Promise.all([this.store.adsByStatus(status), this.store.getAdSettings()]);
+    return { ads, climbers: await this.publicClimbers(ads.map((a) => a.ownerId)), every: settings.every };
+  }
+
+  /** POST /api/admin/ads/{id}/approve or /reject. */
+  private async reviewAd(req: Request, s: Session, status: 'approved' | 'rejected') {
+    const ad = await this.store.getAd(id(req.params.id, 'ad id'));
+    if (!ad) throw notFound('no such ad');
+    const reviewed: Ad = { ...ad, status, reviewedAt: s.now.toISOString() };
+    await this.store.putAd(reviewed);
+    return { ad: reviewed };
+  }
+
+  /**
+   * The deck's ads: approved, not mine, their owner Premium and not
+   * blocked; and how often to show one. Never fails the deck.
+   */
+  private async deckAds(s: Session): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
+    try {
+      const settings = await this.store.getAdSettings();
+      if (settings.every === 0) return { ads: [], adEvery: 0, adOwners: {} };
+      const approved = await this.store.adsByStatus('approved');
+      const owners = [...new Set(approved.map((a) => a.ownerId))];
+      const [subs, climbers] = await Promise.all([this.store.getSubscriptions(owners), this.store.getClimbers(owners)]);
+      const ok = (ownerId: string) => premiumOf(subs[ownerId], s.now).active && climbers[ownerId] !== undefined && climbers[ownerId]!.blocked !== true;
+      const ads = deckAds(approved, s.me.id, ok);
+      const adOwners = Object.fromEntries(ads.map((a) => [a.ownerId, publicClimber(climbers[a.ownerId]!)]));
+      return { ads, adEvery: settings.every, adOwners };
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'deck ads failed', error: String(e) }));
+      return { ads: [], adEvery: 0, adOwners: {} };
+    }
+  }
+
   // --- Decks and plans ------------------------------------------------------
 
   private async discover(s: Session) {
@@ -545,11 +652,20 @@ export class Api {
     const climbers = Object.fromEntries(
       plans.flatMap((p) => [p.organizerId, ...p.memberIds]).flatMap((cid) => (everyone[cid] ? [[cid, publicClimber(everyone[cid])]] : [])),
     );
-    const [covers, scores] = await Promise.all([
+    const [covers, scores, ads] = await Promise.all([
       this.deckCovers(plans),
       s.caller.admin ? this.deckScores(plans, s) : Promise.resolve(undefined),
+      this.deckAds(s),
     ]);
-    return { plans, distanceKm, climbers, covers, ...(scores ? { scores } : {}) };
+    return {
+      plans,
+      distanceKm,
+      climbers: { ...ads.adOwners, ...climbers },
+      covers,
+      ads: ads.ads,
+      adEvery: ads.adEvery,
+      ...(scores ? { scores } : {}),
+    };
   }
 
   /**

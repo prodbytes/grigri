@@ -17,6 +17,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
+import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
 import type { Delivery, Effects } from '../domain/rules.js';
 import { type Attachment, type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, isOpen } from '../domain/model.js';
 import { index, key, prefix } from './keys.js';
@@ -226,6 +227,52 @@ export class Store implements SessionStore {
   /** Saves Stripe's latest copy of a subscription (a climber has one at a time: the newest wins). */
   async putSubscription(sub: Subscription): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.premium(sub.climberId), type: 'premium', ...sub } }));
+  }
+
+  // --- Ads --------------------------------------------------------------------
+
+  async getAd(adId: string): Promise<Ad | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.ad(adId) }));
+    return Item ? toAd(Item) : undefined;
+  }
+
+  async putAd(ad: Ad): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: adItem(ad) }));
+  }
+
+  async deleteAd(adId: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.ad(adId) }));
+  }
+
+  /** A climber's ads, newest first. */
+  async adsBy(ownerId: string): Promise<Ad[]> {
+    const items = await this.query({
+      IndexName: index.adsBy.name,
+      KeyConditionExpression: 'gsi2pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.adsBy.pk(ownerId) },
+      ScanIndexForward: false,
+    });
+    return items.map(toAd);
+  }
+
+  /** Ads in a status, newest first. */
+  async adsByStatus(status: AdStatus): Promise<Ad[]> {
+    const items = await this.query({
+      IndexName: index.adsByStatus.name,
+      KeyConditionExpression: 'gsi1pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.adsByStatus.pk(status) },
+      ScanIndexForward: false,
+    });
+    return items.map(toAd);
+  }
+
+  async getAdSettings(): Promise<AdSettings> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.adSettings() }));
+    return typeof Item?.every === 'number' ? { every: Item.every } : DEFAULT_AD_SETTINGS;
+  }
+
+  async putAdSettings(settings: AdSettings): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.adSettings(), type: 'adSettings', ...settings } }));
   }
 
   // --- Plans ----------------------------------------------------------------
@@ -785,5 +832,30 @@ function toPlanPic(i: Item): PlanPic {
     uploaderId: i.uploaderId as string,
     time: i.time as string,
     fromChat: i.fromChat === true,
+  };
+}
+
+export function adItem(a: Ad): Item {
+  return {
+    ...key.ad(a.id),
+    type: 'ad',
+    ...a,
+    gsi1pk: index.adsByStatus.pk(a.status),
+    gsi1sk: `${a.createdAt}#${a.id}`,
+    gsi2pk: index.adsBy.pk(a.ownerId),
+    gsi2sk: `${a.createdAt}#${a.id}`,
+  };
+}
+
+export function toAd(i: Item): Ad {
+  return {
+    id: i.id as string,
+    ownerId: i.ownerId as string,
+    text: (i.text as string) ?? '',
+    link: i.link as string,
+    ...(i.media ? { media: i.media as Ad['media'] } : {}),
+    status: i.status as AdStatus,
+    createdAt: i.createdAt as string,
+    ...(i.reviewedAt ? { reviewedAt: i.reviewedAt as string } : {}),
   };
 }

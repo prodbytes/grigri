@@ -27,8 +27,9 @@ Each match opens the plan's group chat.
   net.
 - [Sign-in](sign-in.md): Google only, per platform; the profile made
   from the Google account at the first sign-in; admins.
-- [Admin](admin.md): the Admin tab, for admins: everyone, to block
-  (they can't use Grigri, and their plans leave the deck) or unblock.
+- [Admin](admin.md): the Admin tab, for admins, with a sub-navigation:
+  Users, everyone, to block (they can't use Grigri, and their plans
+  leave the deck) or unblock; and Ads, to approve or reject ads.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
 - [Plan photos](pics.md): a plan's **Your Pics** (what members add,
@@ -48,6 +49,10 @@ Each match opens the plan's group chat.
 - [Premium](premium.md): $20 a month or $200 a year, for advertising
   only; paid through Stripe Checkout, managed in Stripe's billing
   portal, kept in step by Stripe's webhook.
+- [Ads](ads.md): Premium climbers' ads (a link, with text over a photo
+  or video) in their own Ads tab; approved by admins (Admin → Ads, which
+  also sets how often they show); between plans on Discover, where ✓
+  opens the link in the browser.
 - [Theme](theme.md): dark, in mountain colors.
 - [Logging](logging.md): the app's developer log on every platform
   (browser console, device log, a file on phones), scrubbed of account

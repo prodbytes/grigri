@@ -5,6 +5,7 @@ import type { SessionRecord } from '../src/auth.js';
 import type { Effects, Delivery } from '../src/domain/rules.js';
 import { type Climber, type JoinRequest, type Message, type Notice, type PlanPic, isOpen } from '../src/domain/model.js';
 import type { Subscription } from '../src/premium.js';
+import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../src/domain/ads.js';
 import { Conflict, type LoadedPlan, type Store, type VersionedPlan } from '../src/store/store.js';
 
 export class FakeStore {
@@ -18,6 +19,8 @@ export class FakeStore {
   pics: PlanPic[] = [];
   sessions = new Map<string, SessionRecord>();
   subscriptions = new Map<string, Subscription>();
+  ads = new Map<string, Ad>();
+  adSettings: AdSettings = DEFAULT_AD_SETTINGS;
   /** Session writes (puts and slides), to check there's at most one a day. */
   sessionWrites = 0;
 
@@ -39,6 +42,32 @@ export class FakeStore {
   }
   async putSubscription(sub: Subscription) {
     this.subscriptions.set(sub.climberId, { ...sub });
+  }
+
+  async getAd(id: string) {
+    const a = this.ads.get(id);
+    return a ? { ...a } : undefined;
+  }
+  async putAd(ad: Ad) {
+    this.ads.set(ad.id, { ...ad });
+  }
+  async deleteAd(id: string) {
+    this.ads.delete(id);
+  }
+  private newestFirst(ads: Ad[]) {
+    return ads.map((a) => ({ ...a })).sort((a, b) => `${b.createdAt}#${b.id}`.localeCompare(`${a.createdAt}#${a.id}`));
+  }
+  async adsBy(ownerId: string) {
+    return this.newestFirst([...this.ads.values()].filter((a) => a.ownerId === ownerId));
+  }
+  async adsByStatus(status: AdStatus) {
+    return this.newestFirst([...this.ads.values()].filter((a) => a.status === status));
+  }
+  async getAdSettings() {
+    return { ...this.adSettings };
+  }
+  async putAdSettings(settings: AdSettings) {
+    this.adSettings = { ...settings };
   }
 
   async putSession(s: SessionRecord) {

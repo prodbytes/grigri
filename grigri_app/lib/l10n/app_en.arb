@@ -1369,5 +1369,163 @@
   "errorOpenLink": "Couldn't open the link.",
   "@errorOpenLink": {
     "description": "Error: the browser couldn't be opened for a link."
+  },
+  "tabAds": "Ads",
+  "@tabAds": {
+    "description": "Bottom navigation tab: my ads (Premium). One short word."
+  },
+  "adTag": "Ad",
+  "@adTag": {
+    "description": "Tag on an ad's card on the deck."
+  },
+  "adBy": "Ad by {name}",
+  "@adBy": {
+    "description": "On an ad's card: who placed it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "swipeOpen": "Open",
+  "@swipeOpen": {
+    "description": "Stamp while dragging an ad right: opens its link (shown uppercased)."
+  },
+  "swipeSkip": "Skip",
+  "@swipeSkip": {
+    "description": "Stamp while dragging an ad left (shown uppercased)."
+  },
+  "openAd": "Open the ad's link",
+  "@openAd": {
+    "description": "Tooltip of ✓ when the top card is an ad."
+  },
+  "skipAd": "Skip the ad",
+  "@skipAd": {
+    "description": "Tooltip of ✕ when the top card is an ad."
+  },
+  "shareAd": "Share the ad's link",
+  "@shareAd": {
+    "description": "Tooltip of the share button when the top card is an ad."
+  },
+  "adsTitle": "Your ads",
+  "@adsTitle": {
+    "description": "Ads tab title."
+  },
+  "adsEmptyTitle": "No ads yet",
+  "@adsEmptyTitle": {
+    "description": "Ads tab with no ads yet."
+  },
+  "adsEmptyMessage": "Add an ad: once an admin approves it, it shows between plans on everyone's Discover.",
+  "@adsEmptyMessage": {
+    "description": "Ads tab with no ads yet: what an ad does."
+  },
+  "newAd": "New ad",
+  "@newAd": {
+    "description": "Button and editor title: a new ad."
+  },
+  "adStatusPending": "Waiting for review",
+  "@adStatusPending": {
+    "description": "An ad's status: waiting for an admin."
+  },
+  "adStatusApproved": "Approved: showing",
+  "@adStatusApproved": {
+    "description": "An ad's status: approved, showing on Discover."
+  },
+  "adStatusRejected": "Rejected",
+  "@adStatusRejected": {
+    "description": "An ad's status: rejected by an admin."
+  },
+  "deleteAdQuestion": "Delete this ad?",
+  "@deleteAdQuestion": {
+    "description": "Confirmation title before deleting my ad."
+  },
+  "deleteAdMessage": "It leaves Discover for good.",
+  "@deleteAdMessage": {
+    "description": "Confirmation text before deleting my ad."
+  },
+  "adTextLabel": "Text over the ad",
+  "@adTextLabel": {
+    "description": "Ad editor field: the text shown over the ad."
+  },
+  "adLinkLabel": "Link (https://…)",
+  "@adLinkLabel": {
+    "description": "Ad editor field: where the ad links to."
+  },
+  "adLinkInvalid": "Enter a web address, starting with https://",
+  "@adLinkInvalid": {
+    "description": "Ad editor: the link isn't a web address."
+  },
+  "adAddMedia": "Add a photo or video",
+  "@adAddMedia": {
+    "description": "Ad editor button: add a photo or video."
+  },
+  "adRemoveMedia": "Remove the photo or video",
+  "@adRemoveMedia": {
+    "description": "Ad editor: remove the picked photo or video."
+  },
+  "adVideoPicked": "Video",
+  "@adVideoPicked": {
+    "description": "Ad editor: a video is picked (its preview)."
+  },
+  "adNeedsContent": "Add text, a photo or a video.",
+  "@adNeedsContent": {
+    "description": "Ad editor: nothing to show yet."
+  },
+  "adSubmit": "Send for review",
+  "@adSubmit": {
+    "description": "Ad editor button: send the ad for an admin's review."
+  },
+  "adSent": "Sent: an admin will review it.",
+  "@adSent": {
+    "description": "Snackbar after sending an ad."
+  },
+  "adPreview": "Preview",
+  "@adPreview": {
+    "description": "Ad editor: heading over the preview of the card."
+  },
+  "adsNeedPremium": "Your Premium has ended: your ads don't show. Renew it in your profile.",
+  "@adsNeedPremium": {
+    "description": "Ads tab when Premium has ended: can't add ads."
+  },
+  "adminUsersTab": "Users",
+  "@adminUsersTab": {
+    "description": "Admin tab's sub-navigation: everyone, to block."
+  },
+  "adminAdsTab": "Ads",
+  "@adminAdsTab": {
+    "description": "Admin tab's sub-navigation: ads to approve or reject."
+  },
+  "adminAdsTitle": "Admin",
+  "@adminAdsTitle": {
+    "description": "Admin screen title."
+  },
+  "adsOnDiscover": "On Discover",
+  "@adsOnDiscover": {
+    "description": "Admin ads: label of the frequency picker."
+  },
+  "adEveryOff": "No ads",
+  "@adEveryOff": {
+    "description": "Admin ads frequency: no ads on the deck."
+  },
+  "adEvery": "{count, plural, =1{An ad after every plan} other{An ad after every {count} plans}}",
+  "@adEvery": {
+    "description": "Admin ads frequency: one ad after every N plans.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "adApprove": "Approve",
+  "@adApprove": {
+    "description": "Admin: approve an ad."
+  },
+  "adReject": "Reject",
+  "@adReject": {
+    "description": "Admin: reject an ad."
+  },
+  "adminAdsEmpty": "No ads here",
+  "@adminAdsEmpty": {
+    "description": "Admin ads: none in this status."
   }
 }

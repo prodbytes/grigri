@@ -922,3 +922,17 @@ spec.
       people back. The app opens links with `url_launcher`.
     - Cost: no new AWS resource and nothing idle; Stripe's 2.9% + $0.30
       plus 0.7% per payment ([backend](backend.md#cost)).
+
+62. **Ads: Premium users submit ads in a new Ads tab; admins approve or
+    reject them in an Admin sub-nav and set their rate; ads show like
+    plans, with an image or video, text over it, and a link that opens in
+    the browser when accepted.**
+    - [Ads](ads.md) (new): the ad (link, text, photo or video), the Ads
+      tab and its editor with a preview, the deck (one ad after every *n*
+      plans swiped; ✓ opens the link with `url_launcher`, ✕ skips),
+      Admin → Ads, the routes, data and cost.
+    - [Admin](admin.md): a sub-navigation, **Users** and **Ads**.
+    - [Screens](screens.md), [Matching](matching.md), [API](api.md),
+      [Premium](premium.md), [Backend](backend.md#cost) revised to match;
+      the bar has up to seven tabs.
+    - Cost: nothing idle; a couple of reads per deck.
