@@ -17,6 +17,57 @@ final index = SectorIndex(const [
 List<String> names(String q) => [for (final s in index.search(q)) s.name];
 
 void main() {
+  group('nearest first', () {
+    // Made-up crags, with made-up points.
+    final crags = SectorIndex(const [
+      Sector(id: 'far', name: 'Roca Gran', area: 'Lluny', lat: 42.5, lon: 1.5),
+      Sector(
+        id: 'near',
+        name: 'Gran Paret',
+        area: 'Aprop',
+        lat: 41.26,
+        lon: 0.94,
+      ),
+      Sector(id: 'mid', name: 'Granet', area: 'Mig', lat: 41.4, lon: 0.9),
+      Sector(id: 'nopoint', name: 'Gran Sense Punt', area: 'Enlloc'),
+    ]);
+    const me = (lat: 41.2577, lon: 0.9318);
+
+    test(
+      'a name search sorts by distance from me, before how well it matches',
+      () {
+        expect(
+          [for (final s in crags.search('gran', near: me)) s.id],
+          ['near', 'mid', 'far', 'nopoint'],
+        );
+        // Without where I am, as before: names starting with it, shorter first.
+        expect(
+          [for (final s in crags.search('gran')) s.id],
+          ['mid', 'near', 'nopoint', 'far'],
+        );
+      },
+    );
+
+    test('nothing typed: the nearest places with a point', () {
+      expect(
+        [for (final s in crags.search('', near: me, limit: 2)) s.id],
+        ['near', 'mid'],
+      );
+      expect(crags.search(''), isEmpty);
+    });
+
+    test('distance in km, great circle; none without a point', () {
+      expect(
+        SectorIndex.distanceKm(crags.search('gran paret').first, me),
+        closeTo(0.7, 0.2),
+      );
+      expect(
+        SectorIndex.distanceKm(crags.search('sense punt').first, me),
+        isNull,
+      );
+    });
+  });
+
   group('nearest', () {
     // Made-up places.
     final places = SectorIndex(const [

@@ -1161,4 +1161,9 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get routeGrade => 'Grau';
+
+  @override
+  String kmAway(String km) {
+    return '$km km';
+  }
 }

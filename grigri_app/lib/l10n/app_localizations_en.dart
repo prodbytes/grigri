@@ -1156,4 +1156,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routeGrade => 'Grade';
+
+  @override
+  String kmAway(String km) {
+    return '$km km';
+  }
 }

@@ -1013,3 +1013,11 @@ spec.
     - [Roles](roles.md): Grigri's API calls rbacr through rbacr-lib
       (`grigri_api/src/rbacr.ts` wraps it); rbacr not knowing the
       `grigri` system is no longer kept as "no" for a minute.
+71. **When creating a plan, let users search a crag by name, sorted by
+    distance first.**
+    - [Sectors](sectors.md): the search takes where I am (my location,
+      else my first area) and sorts matches nearest first, places
+      without a point last; with nothing typed it offers the nearest.
+    - [Screens](screens.md): the plan editor's **Where** shows each
+      suggestion's distance ("· 0.7 km").
+

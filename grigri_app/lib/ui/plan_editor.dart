@@ -184,13 +184,23 @@ class _PlanEditorState extends State<PlanEditor> {
     memberIds: const [],
   );
 
-  /// The where field: searches the sector index as I type, and takes any
-  /// place the index doesn't have.
+  /// Where I am, for the search: my location, else my first area; null
+  /// when I've set neither.
+  ({double lat, double lon})? _me(BuildContext context) {
+    final me = StoreScope.read(context).me;
+    final at = me.location ?? (me.areas.isEmpty ? null : me.areas.first);
+    return at == null ? null : (lat: at.lat, lon: at.lon);
+  }
+
+  /// The where field: searches the sector index by name as I type,
+  /// nearest to me first (with how far each is), and with nothing typed
+  /// offers the nearest; takes any place the index doesn't have.
   Widget _whereField() => RawAutocomplete<Sector>(
     textEditingController: _place,
     focusNode: _placeFocus,
     displayStringForOption: (s) => s.name,
-    optionsBuilder: (value) => _index?.search(value.text) ?? const <Sector>[],
+    optionsBuilder: (value) =>
+        _index?.search(value.text, near: _me(context)) ?? const <Sector>[],
     onSelected: (s) => setState(() => _sector = s),
     fieldViewBuilder: (context, controller, focusNode, onSubmitted) =>
         TextFormField(
@@ -231,7 +241,7 @@ class _PlanEditorState extends State<PlanEditor> {
                     color: Mountain.sky,
                   ),
                   title: Text(s.name),
-                  subtitle: s.where.isEmpty ? null : Text(s.where),
+                  subtitle: _subtitle(context, s),
                   onTap: () => onSelected(s),
                 ),
             ],
@@ -240,6 +250,18 @@ class _PlanEditorState extends State<PlanEditor> {
       ),
     ),
   );
+
+  /// Where a suggestion is, and how far from me ("Siurana, Spain · 12 km").
+  Widget? _subtitle(BuildContext context, Sector s) {
+    final near = _me(context);
+    final km = near == null ? null : SectorIndex.distanceKm(s, near);
+    final parts = [
+      if (s.where.isNotEmpty) s.where,
+      if (km != null)
+        context.l10n.kmAway(km < 10 ? km.toStringAsFixed(1) : '${km.round()}'),
+    ];
+    return parts.isEmpty ? null : Text(parts.join(' · '));
+  }
 
   @override
   Widget build(BuildContext context) {
