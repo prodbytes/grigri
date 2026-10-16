@@ -35,8 +35,10 @@ for that tag:
    endpoint, looked up with
    `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
    both stacks. Production never gets the test seed (it holds real people's data and the demo showcase, which the API writes itself, see [backend](backend.md#the-demo-showcase));
-3. deploys the `grigri-web` stack: certificate, site and photos buckets,
-   CloudFront (with `/api/*` to the API's domain) and DNS records;
+3. deploys the `grigri-web` stack: certificate, site, photos and GriGri
+   Pics buckets, CloudFront (with `/api/*` to the API's domain and
+   `/pics/*` to GriGri Pics) and DNS records, then loads
+   [GriGri Pics](pics.md) (`grigri_api/pics/load.mjs`: only new photos);
 4. uploads the index page and the web build (`Cache-Control: no-cache`,
    Flutter's files aren't content-hashed) and invalidates `/*`;
 5. checks, for up to 10 minutes, that `/app/version.json` reports the
@@ -97,7 +99,7 @@ and a Content Security Policy:
   microphone, and allows location to the app itself (`geolocation=(self)`),
   which fills in [where I climb](matching.md) from the browser.
 - `/`: only the index page's redirect script, by its hash.
-- `/api/*` and `/photos/*`: AWS's managed security headers policy.
+- `/api/*`, `/photos/*` and `/pics/*`: AWS's managed security headers policy.
 
 ## Access
 
@@ -112,7 +114,8 @@ topics, CloudFront distributions and ACM certificates tagged with its
 never delete, never read or write items), `/aws/lambda/<prefix>-*` log
 groups, and `<prefix>-*` IAM roles, which it may only create or change
 with the stage's permissions boundary (`<prefix>-app-boundary`: the
-stage's tables' items, its function logs and photo uploads) on them, so a
+stage's tables' items, its function logs, photo uploads and reading
+GriGri Pics' catalog) on them, so a
 deploy can't make a role more powerful than that. It can't remove a
 boundary, change the artifact buckets' settings, or touch the photos
 buckets' objects. Origin access controls, response headers policies and

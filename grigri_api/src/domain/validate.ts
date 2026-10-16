@@ -236,6 +236,16 @@ export function chatMediaKey(value: unknown, planId: string): Attachment {
   return { key: value as string, kind };
 }
 
+const PLAN_PIC_KEY = /^plans\/([A-Za-z0-9_-]{1,64})\/[A-Za-z0-9_-]{8,64}\.(jpg|png|webp)$/;
+
+/** A plan photo's key (as issued by POST /api/plans/{id}/pics/upload): `plans/<planId>/<name>.<jpg|png|webp>`, for this plan. */
+export function planPicKey(value: unknown, planId: string): string {
+  const match = typeof value === 'string' ? PLAN_PIC_KEY.exec(value) : null;
+  if (!match) throw badRequest("key isn't one from /api/plans/{id}/pics/upload");
+  if (match[1] !== planId) throw badRequest("key isn't this plan's");
+  return value as string;
+}
+
 export function parseDate(value: string, field: string): Date {
   // ISO 8601 with a time and a zone (Z or ±hh:mm).
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,9})?)?(Z|[+-]\d{2}:\d{2})$/.test(value)) {

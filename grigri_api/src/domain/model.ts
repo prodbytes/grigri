@@ -166,6 +166,54 @@ export interface Attachment {
   kind: 'image' | 'video';
 }
 
+/**
+ * A photo in a plan's "Your Pics": one a member added to the plan, or a
+ * photo sent in its chat (added with the message). Members only.
+ */
+export interface PlanPic {
+  id: string;
+  planId: string;
+  /** Served at /photos/<key>: `plans/<planId>/<id>.<ext>`, or a chat photo's `chat/<planId>/...`. */
+  key: string;
+  /** Who added it (or sent it in the chat). */
+  uploaderId: string;
+  time: string;
+  /** From the chat: deleting it from the pics leaves the chat's photo. */
+  fromChat: boolean;
+}
+
+/** A photo of GriGri Pics, Grigri's own photos of crags (the pics bucket). */
+export interface GrigriPic {
+  /** Served at /pics/<key>: `crags/<crag>/<name>.jpg`. */
+  key: string;
+  width: number;
+  height: number;
+  caption: string;
+  /** Credit, as the license asks. */
+  author: string;
+  license: string;
+  licenseUrl: string;
+  /** Where it comes from (its page, e.g. on Wikimedia Commons). */
+  source: string;
+}
+
+/** A crag (or a whole climbing area: ids `area:<name>`) and its photos, in GriGri Pics' catalog. */
+export interface PicCrag {
+  /** The sector index's id (OpenStreetMap's, e.g. "osm:n123"), or `area:<name>`. */
+  id: string;
+  name: string;
+  area: string;
+  lat: number;
+  lon: number;
+  photos: GrigriPic[];
+}
+
+/** GriGri Pics' catalog (pics/catalog.json), made from the photos' S3 annotations. */
+export interface PicCatalog {
+  generatedAt: string;
+  crags: PicCrag[];
+}
+
 export interface Match {
   plan: Plan;
   newcomerId: string;

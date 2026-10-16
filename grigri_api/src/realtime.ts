@@ -5,7 +5,7 @@
 // the API, where all authorization stays. Publishing is best effort: a
 // failure is logged and never fails the request.
 
-export type HintKind = 'message' | 'request' | 'notice' | 'plan' | 'match';
+export type HintKind = 'message' | 'request' | 'notice' | 'plan' | 'match' | 'pics';
 
 export interface Hint {
   kind: HintKind;
