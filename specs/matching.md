@@ -207,8 +207,7 @@ loads my profile again (`GET /api/me`, which makes a new one).
   RC and local also get made-up test data from the backend's seed (never
   in GA). All of it is marked **demo**: a demo plan (on the deck, its
   screen, the match screen) and a demo person's profile sheet begin with
-  one discreet line, "Demo: automatically generated, not real people or
-  plans. It's here to show how Grigri works.", and a demo person's name
+  one discreet line, "Demo: made-up people and plans.", and a demo person's name
   has a **Demo** tag. A real plan's requests wait for its real members
   (or an [admin](sign-in.md#admins)); a demo plan's group says yes at once.
 - **Photos** are in the backend's photo store, never in the database or on

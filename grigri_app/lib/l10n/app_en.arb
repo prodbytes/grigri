@@ -246,7 +246,7 @@
   "@demoTag": {
     "description": "Tag next to a made-up (demo) person's name."
   },
-  "demoNotice": "Demo: automatically generated, not real people or plans. It's here to show how Grigri works.",
+  "demoNotice": "Demo: made-up people and plans.",
   "@demoNotice": {
     "description": "Discreet line on a demo (automatically generated) plan or profile."
   },
