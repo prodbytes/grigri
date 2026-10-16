@@ -1007,3 +1007,10 @@ spec.
       (`grigri_api/src/rbacr.ts` wraps it); rbacr not knowing the
       `grigri` system is no longer kept as "no" for a minute.
 
+69. **Barrel roll: commit what was pending.**
+    - `.env.example` documents the Google Cloud project's OAuth clients
+      and `GOOGLE_ANDROID_CLIENT_ID_GA` (reference only: Android matches
+      the client by package name and signing SHA-1).
+    - The iOS Swift Package Manager pins Xcode wrote
+      (`Package.resolved`, both workspaces) are committed, so builds
+      resolve the same package versions.
