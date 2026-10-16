@@ -332,5 +332,6 @@
   "routeName": "Nom de la voie",
   "routeScale": "Voie",
   "boulderScale": "Bloc",
-  "routeGrade": "Cotation"
+  "routeGrade": "Cotation",
+  "kmAway": "{km} km"
 }

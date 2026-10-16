@@ -332,5 +332,6 @@
   "routeName": "Name der Route",
   "routeScale": "Route",
   "boulderScale": "Boulder",
-  "routeGrade": "Grad"
+  "routeGrade": "Grad",
+  "kmAway": "{km} km"
 }
