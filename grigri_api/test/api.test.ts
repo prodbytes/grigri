@@ -3,6 +3,7 @@ import { Api, NO_NAME } from '../src/api.js';
 import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import type { PicCatalog } from '../src/domain/model.js';
+import { FakeRbacr } from './fake-rbacr.js';
 import { FakeStore } from './fake-store.js';
 
 let now = new Date('2030-05-01T10:00:00.000Z');
@@ -14,6 +15,7 @@ let objects: Map<string, boolean>;
 /** Each presigned upload: its key, type and size cap. */
 let presigned: { key: string; contentType: string; maxBytes: number }[];
 let removed: string[];
+let rbacr: FakeRbacr;
 /** GriGri Pics' catalog, as the fake bucket has it. */
 let catalog: PicCatalog;
 
@@ -76,7 +78,8 @@ beforeEach(async () => {
     config: { devMode: false, isAdmin: async (email) => email === 'root@example.com' },
     clock: () => now,
   });
-  api = new Api({ store: store.asStore(), photos, pics: { catalog: async () => catalog }, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now, random: () => random() });
+  rbacr = new FakeRbacr(() => now);
+  api = new Api({ store: store.asStore(), photos, pics: { catalog: async () => catalog }, roles: rbacr.lookup, grants: rbacr.api, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now, random: () => random() });
 });
 
 describe('access', () => {
@@ -108,7 +111,9 @@ describe('access', () => {
   });
 
   it('GET /api/me has my roles from rbacr, or null when it can\'t say', async () => {
-    expect((await call(ada, 'GET', '/api/me')).roles).toBeNull();
+    const photos = { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} };
+    const noRbacr = new Api({ store: store.asStore(), photos, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now });
+    expect((await noRbacr.handle('GET', '/api/me', { caller: ada, body: undefined, query: {} }) as any).roles).toBeNull();
     const asked: string[] = [];
     const withRoles = new Api({
       store: store.asStore(),
@@ -149,6 +154,8 @@ describe('access', () => {
     expect(list[1].location).toBeUndefined();
 
     expect(await call(root, 'POST', `/api/admin/climbers/${b.id}/block`)).toEqual({ blocked: true });
+    // Blocked is rbacr's role, by Ben's verified email.
+    expect(rbacr.calls).toEqual(['grant blocked ben@example.com']);
     expect((await call(root, 'GET', '/api/admin/climbers')).climbers[1].blocked).toBe(true);
     // Blocked: nothing works but signing out, and a save can't unblock.
     await fails(call(ben, 'GET', '/api/me'), 403, /blocked/);
@@ -161,6 +168,24 @@ describe('access', () => {
 
     await fails(call(root, 'POST', `/api/admin/climbers/${r.id}/block`), 400);
     await fails(call(root, 'POST', '/api/admin/climbers/nobody/block'), 404);
+  });
+
+  it("blocking finds the email in the climber's sessions; none: 409; rbacr down: nobody's blocked", async () => {
+    const { climber: b } = await call(ben, 'PUT', '/api/me', profile('Ben'));
+    await call(root, 'PUT', '/api/me', profile('Root'));
+    // A climber from before emails were kept: their session's, then kept.
+    store.emails.delete(b.id);
+    store.sessions.set('s-ben', { id: 's-ben', subject: ben.subject, email: 'ben@example.com', emailVerified: true, createdAt: now.toISOString(), lastUsedAt: now.toISOString(), ttl: 0 } as any);
+    await call(root, 'POST', `/api/admin/climbers/${b.id}/block`);
+    expect(rbacr.calls).toEqual(['grant blocked ben@example.com']);
+    expect(store.emails.get(b.id)).toBe('ben@example.com');
+    // No email anywhere: rbacr can't block them.
+    const { climber: c } = await call(cy, 'PUT', '/api/me', profile('Cy'));
+    store.emails.delete(c.id);
+    await fails(call(root, 'POST', `/api/admin/climbers/${c.id}/block`), 409, /no verified email/);
+    // rbacr can't say who's blocked: Ben gets in (logged), rather than everyone out.
+    rbacr.failNext = true;
+    expect((await call(ben, 'GET', '/api/me')).climber.name).toBe('Ben');
   });
 
   it("a blocked organizer's plans leave everyone's deck", async () => {

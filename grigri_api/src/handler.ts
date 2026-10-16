@@ -13,7 +13,7 @@ import { Api, type GrigriPics, type Photos } from './api.js';
 import type { PicCatalog } from './domain/model.js';
 import { Auth, type AuthConfig } from './auth.js';
 import { REFUSED, originCheck } from './origin.js';
-import { rbacrAdminCheck, rbacrRoles } from './rbacr.js';
+import { rbacrAdminCheck, rbacrGrants, rbacrRoles } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
 import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
@@ -159,10 +159,12 @@ const api = new Api({
   auth,
   realtime,
   roles: rbacrRoles(rbacr),
+  // Premium's role in rbacr, granted and revoked by the Stripe webhook.
+  grants: rbacrGrants(rbacr) ?? undefined,
   matchScorer,
   billing,
   showcase,
-  config: { stage, version: env.VERSION ?? 'dev' },
+  config: { stage, version: env.VERSION ?? 'dev', roleSuffix: env.ROLE_SUFFIX ?? '' },
 });
 
 // Only through the site's CloudFront (origin.ts); no secret: open (local).

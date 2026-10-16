@@ -9,6 +9,10 @@
 
 export const RBACR_SYSTEM = 'grigri';
 export const ADMIN_ROLE = 'admin';
+/** Premium (specs/premium.md): granted while paid, by the Stripe webhook; admins have it too (rbacr: admin implies premium). */
+export const PREMIUM_ROLE = 'premium';
+/** Blocked by an admin (specs/admin.md): nothing but signing out. */
+export const BLOCKED_ROLE = 'blocked';
 const TIMEOUT_MS = 2000;
 const CACHE_MS = 60_000;
 
@@ -60,8 +64,12 @@ export function rbacrAdminCheck(config: RbacrConfig): AdminCheck {
   };
 }
 
-/** My roles in Grigri, sorted; null when rbacr can't say (no token, an error). */
-export type RolesLookup = (email: string) => Promise<string[] | null>;
+/**
+ * My roles in Grigri, sorted; null when rbacr can't say (no token, an
+ * error). `fresh`: ask rbacr even when an answer is kept (right after
+ * paying, say).
+ */
+export type RolesLookup = (email: string, options?: { fresh?: boolean }) => Promise<string[] | null>;
 
 // The roles someone holds in Grigri, for their own profile: POST
 // <url>/api/roles {email} with the same root token; their effective roles
@@ -75,10 +83,10 @@ export function rbacrRoles(config: RbacrConfig): RolesLookup {
   const clock = config.clock ?? Date.now;
   const cache = new Map<string, { roles: string[]; until: number }>();
 
-  return async (email: string) => {
+  return async (email: string, options?: { fresh?: boolean }) => {
     const key = email.toLowerCase();
     const hit = cache.get(key);
-    if (hit && hit.until > clock()) return hit.roles;
+    if (hit && hit.until > clock() && !options?.fresh) return hit.roles;
     try {
       const res = await doFetch(`${url}/api/roles`, {
         method: 'POST',
@@ -96,5 +104,70 @@ export function rbacrRoles(config: RbacrConfig): RolesLookup {
       console.error(JSON.stringify({ level: 'warn', msg: 'rbacr roles lookup failed', error: String(e) }));
       return null;
     }
+  };
+}
+
+/**
+ * Grants and revokes Grigri's roles in rbacr (roots only, so the same
+ * root token): `POST /api/systems/grigri/grants {role, grantee, endsAt?}`
+ * (a grant again with another end replaces it) and `DELETE` with
+ * `{role, grantee}`. Unlike the lookups these fail loudly: the Stripe
+ * webhook answers an error, so Stripe sends the event again.
+ */
+export interface RoleGrants {
+  grant(email: string, role: string, endsAt?: string): Promise<void>;
+  /** Nothing to revoke (no such grant) is fine. */
+  revoke(email: string, role: string): Promise<void>;
+  /**
+   * Everyone a role is granted to now (by email; direct grants, not
+   * implied ones or roots'): `GET /api/systems/grigri/grants`, one call for
+   * all of them, kept a minute (and dropped by this instance's own grants
+   * and revokes). Errors throw; they're never kept.
+   */
+  holders(role: string): Promise<Set<string>>;
+}
+
+export function rbacrGrants(config: RbacrConfig): RoleGrants | null {
+  const url = config.url.replace(/\/+$/, '');
+  const token = config.token.trim();
+  if (!url || !token) return null;
+  const doFetch = config.fetch ?? fetch;
+  const call = (method: 'POST' | 'DELETE', body: Record<string, string>) =>
+    doFetch(`${url}/api/systems/${RBACR_SYSTEM}/grants`, {
+      method,
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(TIMEOUT_MS * 2),
+    });
+  const clock = config.clock ?? Date.now;
+  const held = new Map<string, { emails: Set<string>; until: number }>();
+  return {
+    async grant(email, role, endsAt) {
+      held.delete(role);
+      const res = await call('POST', { role, grantee: email.toLowerCase(), ...(endsAt ? { endsAt } : {}) });
+      if (!res.ok) throw new Error(`rbacr grant of ${role} answered ${res.status}`);
+    },
+    async revoke(email, role) {
+      held.delete(role);
+      const res = await call('DELETE', { role, grantee: email.toLowerCase() });
+      if (!res.ok && res.status !== 404) throw new Error(`rbacr revoke of ${role} answered ${res.status}`);
+    },
+    async holders(role) {
+      const hit = held.get(role);
+      if (hit && hit.until > clock()) return hit.emails;
+      const res = await doFetch(`${url}/api/systems/${RBACR_SYSTEM}/grants`, {
+        headers: { authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+      if (!res.ok) throw new Error(`rbacr grants answered ${res.status}`);
+      const body = (await res.json()) as { grants?: { role?: unknown; grantee?: unknown; status?: unknown }[] };
+      const emails = new Set(
+        (body.grants ?? [])
+          .filter((g) => g.role === role && g.status === 'active' && typeof g.grantee === 'string')
+          .map((g) => (g.grantee as string).toLowerCase()),
+      );
+      held.set(role, { emails, until: clock() + CACHE_MS });
+      return emails;
+    },
   };
 }

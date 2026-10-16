@@ -101,17 +101,11 @@ export class FakeStore {
     this.subjects.set(subject, c.id);
     this.climbers.set(c.id, c);
   }
-  async saveProfile(c: Climber) {
-    if (this.climbers.get(c.id)?.blocked) throw new Conflict('blocked');
-    const { blocked: _blocked, ...rest } = c;
-    this.climbers.set(c.id, rest);
-  }
-  async setBlocked(id: string, blocked: boolean) {
-    const c = this.climbers.get(id);
-    if (!c) return false;
-    const { blocked: _was, ...rest } = c;
-    this.climbers.set(id, blocked ? { ...rest, blocked: true } : rest);
-    return true;
+  async saveProfile(c: Climber) { this.climbers.set(c.id, c); }
+  /** Sessions' emails by climber (made up: the subject's name). */
+  async sessionEmail(id: string) {
+    const subject = [...this.subjects].find(([, cid]) => cid === id)?.[0];
+    return [...this.sessions.values()].find((x) => x.subject === subject && x.emailVerified)?.email;
   }
   async allClimbers() { return [...this.climbers.values()]; }
   async getPlan(id: string) { return this.plans.get(id); }
@@ -202,4 +196,9 @@ export class FakeStore {
     if (previous === null ? current : current?.version !== previous) throw new Conflict('changed');
     this.walls.set(wall.id, { wall: structuredClone(wall), version: (previous ?? 0) + 1 });
   }
+  emails = new Map<string, string>();
+  async getEmails(ids: Iterable<string>) {
+    return Object.fromEntries([...new Set(ids)].flatMap((id) => (this.emails.has(id) ? [[id, this.emails.get(id)!]] : [])));
+  }
+  async putEmail(climberId: string, email: string) { this.emails.set(climberId, email); }
 }

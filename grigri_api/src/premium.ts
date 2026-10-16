@@ -1,7 +1,9 @@
-// Premium (specs/premium.md): a subscription, paid through Stripe, that
-// lets a climber advertise on Grigri. Everything else stays the same for
-// everyone. The subscription's state is Stripe's; the API keeps a copy,
-// refreshed from Stripe on every webhook event about it (stripe.ts).
+// Premium (specs/premium.md): a subscription, paid through Stripe. Who is
+// Premium is rbacr's: its `premium` role, which the Stripe webhook grants
+// while the subscription is paid (and admins hold through rbacr's
+// implication). The subscription's billing state is Stripe's; the API
+// keeps a copy, refreshed from Stripe on every webhook event about it
+// (stripe.ts), for the plan, the renewal date and the billing portal.
 
 export type PremiumPlan = 'monthly' | 'yearly';
 
@@ -24,6 +26,8 @@ export interface Subscription {
   /** Cancelled: it ends at periodEnd and won't renew. */
   cancelAtPeriodEnd: boolean;
   updatedAt: string;
+  /** Whose it is in rbacr: the subscriber's verified email, from checkout (the subscription's metadata). */
+  email?: string;
 }
 
 /** Premium as the app sees it. */
@@ -49,6 +53,22 @@ export function isPaid(status: string): boolean {
 
 /** Past the period's end, premium lasts this much longer: a late renewal webhook doesn't cut it off. */
 const GRACE_MS = 2 * 86_400_000;
+
+/** Until when a paid subscription keeps the role: its period's end plus the grace. */
+export function premiumUntil(sub: Subscription): string {
+  return new Date(Date.parse(sub.periodEnd) + GRACE_MS).toISOString();
+}
+
+/**
+ * Premium as the app sees it: whether rbacr says I hold the role, and,
+ * from my subscription when it's paid, its plan and dates (none for
+ * admins, or Premium granted in rbacr by hand).
+ */
+export function premiumView(holdsRole: boolean, sub: Subscription | undefined, now: Date): Premium {
+  if (!holdsRole) return { active: false };
+  const paid = premiumOf(sub, now);
+  return paid.active ? paid : { active: true };
+}
 
 export function premiumOf(sub: Subscription | undefined, now: Date): Premium {
   if (!sub) return { active: false };

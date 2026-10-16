@@ -24,7 +24,7 @@ export interface StripeConfig {
 /** What the API needs from Stripe. */
 export interface Billing {
   /** A Checkout page for the plan; Stripe sends them back to the app. */
-  checkout(climberId: string, plan: PremiumPlan, customerId?: string): Promise<string>;
+  checkout(climberId: string, plan: PremiumPlan, customerId?: string, email?: string): Promise<string>;
   /** The billing portal: cancel, change card, invoices. */
   portal(customerId: string): Promise<string>;
   /** A webhook's event, verified; throws BadSignature. */
@@ -68,7 +68,7 @@ export function stripeBilling(config: StripeConfig, fetchFn: Fetch = fetch): Bil
   }
 
   return {
-    async checkout(climberId, plan, customerId) {
+    async checkout(climberId, plan, customerId, email) {
       const price = PREMIUM_PRICES[plan];
       const session = await call('POST', '/checkout/sessions', {
         mode: 'subscription',
@@ -82,6 +82,9 @@ export function stripeBilling(config: StripeConfig, fetchFn: Fetch = fetch): Bil
         // Which climber a subscription is for, on every event about it.
         'subscription_data[metadata][climberId]': climberId,
         'subscription_data[metadata][app]': 'grigri',
+        // Whose Premium it is in rbacr (roles are by email): the webhook
+        // grants the role to it. Prefills Checkout's email too.
+        ...(email ? { 'subscription_data[metadata][email]': email, ...(customerId ? {} : { customer_email: email }) } : {}),
         success_url: `${site}/app/premium.html?premium=done`,
         cancel_url: `${site}/app/premium.html?premium=cancelled`,
       });
@@ -140,6 +143,7 @@ export function toSubscription(s: Record<string, unknown>, now: Date): Subscript
     periodEnd: Number.isFinite(end) && end > 0 ? new Date(end * 1000).toISOString() : now.toISOString(),
     cancelAtPeriodEnd: s.cancel_at_period_end === true,
     updatedAt: now.toISOString(),
+    ...(metadata.email ? { email: metadata.email.toLowerCase() } : {}),
   };
 }
 

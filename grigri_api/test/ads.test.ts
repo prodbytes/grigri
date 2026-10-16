@@ -3,7 +3,7 @@ import { Api } from '../src/api.js';
 import { Auth, type Caller } from '../src/auth.js';
 import { adInput, adLink, adSettingsInput } from '../src/domain/ads.js';
 import { ApiError } from '../src/domain/errors.js';
-import type { Subscription } from '../src/premium.js';
+import { FakeRbacr } from './fake-rbacr.js';
 import { FakeStore } from './fake-store.js';
 
 let now = new Date('2030-05-01T10:00:00.000Z');
@@ -24,14 +24,8 @@ const status = (p: Promise<unknown>) => p.then(() => 200, (e: unknown) => (e as 
 
 /** Makes the caller's profile; Premium unless `premium` is false. */
 async function climber(c: Caller, premium = true): Promise<string> {
+  if (premium) rbacr.give(c.email!, 'premium', '2030-06-03T00:00:00.000Z');
   const { climber: me } = await call(c, 'GET', '/api/me');
-  if (premium) {
-    const sub: Subscription = {
-      climberId: me.id, customerId: 'cus', subscriptionId: `sub_${me.id}`, status: 'active', plan: 'monthly',
-      periodEnd: '2030-06-01T00:00:00.000Z', cancelAtPeriodEnd: false, updatedAt: now.toISOString(),
-    };
-    await store.putSubscription(sub);
-  }
   return me.id as string;
 }
 
@@ -40,8 +34,12 @@ const plan = {
   grades: { scale: 'routes', min: 6, max: 10 }, notes: '',
 };
 
+let rbacr: FakeRbacr;
+
 beforeEach(() => {
   now = new Date('2030-05-01T10:00:00.000Z');
+  rbacr = new FakeRbacr(() => now);
+  rbacr.give('root@example.com', 'admin');
   store = new FakeStore();
   objects = new Map();
   removed = [];
@@ -60,7 +58,7 @@ beforeEach(() => {
     },
   };
   const auth = new Auth({ store: store.asStore(), verify: async () => { throw new Error('unused'); }, config: { devMode: false, isAdmin: async () => false }, clock: () => now });
-  api = new Api({ store: store.asStore(), photos, auth, config: { stage: 'local', version: 'test' }, clock: () => now });
+  api = new Api({ store: store.asStore(), photos, auth, roles: rbacr.lookup, grants: rbacr.api, config: { stage: 'local', version: 'test' }, clock: () => now });
 });
 
 describe('ad input', () => {
@@ -153,9 +151,11 @@ describe('ads', () => {
     await call(ben, 'POST', '/api/plans', plan);
     expect((await call(ben, 'GET', '/api/discover')).ads).toHaveLength(1);
 
-    store.subscriptions.set(adaId, { ...store.subscriptions.get(adaId)!, status: 'canceled' });
+    // Her Premium ends in rbacr: her ad leaves the decks; back, it's back.
+    rbacr.grants.get('ada@example.com')!.delete('premium');
     expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
-    store.subscriptions.set(adaId, { ...store.subscriptions.get(adaId)!, status: 'active' });
+    rbacr.give('ada@example.com', 'premium');
+    expect((await call(ben, 'GET', '/api/discover')).ads).toHaveLength(1);
     await call(root, 'POST', `/api/admin/climbers/${adaId}/block`);
     expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
   });

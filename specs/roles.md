@@ -22,6 +22,30 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
   - "Couldn't get your roles from rbacr." with **Retry** when the API
     couldn't say (Retry asks `GET /api/me` again, which also refreshes
     whether I'm an admin).
+- **Every role is rbacr's**: Grigri keeps no role of its own. The
+  `grigri` system's roles:
+
+  | Role | Who holds it | Set by |
+  |---|---|---|
+  | `admin` | the Admin tab's people ([admin.md](admin.md)); implies `premium` and `premium-rc` | a root, in rbacr |
+  | `premium` | Premium subscribers ([premium.md](premium.md)), until their paid period's end plus two days | the Stripe webhook (grant and revoke); a root, for a comp |
+  | `blocked` | people an admin blocked ([admin.md](admin.md#blocking)) | the Admin tab's Block/Unblock; a root |
+  | `premium-rc`, `blocked-rc` | the same, on the RC, which asks production's rbacr too: its test payments and blocks never reach production | the RC's API |
+
+  The stage's own roles are the template's `RoleSuffix` (`-rc` on the
+  RC, none elsewhere). The API asks about people by their verified
+  email, kept privately per climber ([backend.md](backend.md)).
+- **Setting it up**: [scripts/rbacr-setup.sh](../scripts/rbacr-setup.sh)
+  makes the `grigri` system and its roles when missing and has `admin`
+  imply both Premiums (keeping whatever else it implies); idempotent. Run
+  by every deploy (production's rbacr, with `GRIGRI_RBACR_TOKEN`) and,
+  locally, by `devbox services up` (`7-rbacr-setup`, the local rbacr,
+  with `.env`'s `RBACR_TOKEN`).
+- **Granting**: the API grants and revokes with rbacr's grants API
+  (`POST`/`DELETE /api/systems/grigri/grants {role, grantee, endsAt?}`,
+  roots only, so the same root token), and lists a role's holders with
+  `GET /api/systems/grigri/grants` (kept a minute). No rbacr change was
+  needed: grants with an end, revokes and implications were all there.
 - **Admin** (the Admin tab, [admin.md](admin.md)) is rbacr's too: the API asks
   rbacr whether my verified email holds the `admin` role of the `grigri`
   system (roots do). rbacr needs the `grigri` system and its `admin` role

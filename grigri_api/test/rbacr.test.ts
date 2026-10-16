@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { rbacrAdminCheck, rbacrRoles } from '../src/rbacr.js';
+import { rbacrAdminCheck, rbacrGrants, rbacrRoles } from '../src/rbacr.js';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -96,5 +96,36 @@ describe('rbacr roles', () => {
     expect(await rbacrRoles({ url: 'https://r', token: '', fetch })('a@example.com')).toBeNull();
     expect(await rbacrRoles({ url: '', token: 't', fetch })('a@example.com')).toBeNull();
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('rbacr grants (Premium, from the Stripe webhook)', () => {
+  const asked: { method: string; url: string; auth: string; body: unknown }[] = [];
+  const answering = (status: number) =>
+    (async (url: string, init: RequestInit) => {
+      asked.push({ method: String(init.method), url: String(url), auth: String((init.headers as Record<string, string>).authorization), body: JSON.parse(String(init.body)) });
+      return new Response(status === 204 ? null : '{}', { status });
+    }) as typeof fetch;
+
+  it('grants with an end, and revokes, in the grigri system with the root token', async () => {
+    asked.length = 0;
+    const grants = rbacrGrants({ url: 'https://rbacr.example.com/', token: 'rbacr_made_up', fetch: answering(201) })!;
+    await grants.grant('Ada@Example.com', 'premium', '2030-06-03T10:00:00.000Z');
+    expect(asked[0]).toEqual({
+      method: 'POST',
+      url: 'https://rbacr.example.com/api/systems/grigri/grants',
+      auth: 'Bearer rbacr_made_up',
+      body: { role: 'premium', grantee: 'ada@example.com', endsAt: '2030-06-03T10:00:00.000Z' },
+    });
+    const revoking = rbacrGrants({ url: 'https://rbacr.example.com', token: 'rbacr_made_up', fetch: answering(204) })!;
+    await revoking.revoke('ada@example.com', 'premium');
+    expect(asked[1]).toMatchObject({ method: 'DELETE', body: { role: 'premium', grantee: 'ada@example.com' } });
+  });
+
+  it('nothing to revoke is fine; other failures are errors; no token: none', async () => {
+    await rbacrGrants({ url: 'https://r.example.com', token: 't', fetch: answering(404) })!.revoke('a@example.com', 'premium');
+    await expect(rbacrGrants({ url: 'https://r.example.com', token: 't', fetch: answering(404) })!.grant('a@example.com', 'premium')).rejects.toThrow(/404/);
+    await expect(rbacrGrants({ url: 'https://r.example.com', token: 't', fetch: answering(500) })!.revoke('a@example.com', 'premium')).rejects.toThrow(/500/);
+    expect(rbacrGrants({ url: 'https://r.example.com', token: '' })).toBeNull();
   });
 });

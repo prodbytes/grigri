@@ -324,6 +324,15 @@ elif [[ -n "$ORIGIN_SECRET" ]]; then
 fi
 echo "==> testing and building the API"
 (cd grigri_api && npm ci --no-audit --no-fund && npm run typecheck && npm test && npm run build)
+# Grigri's roles in rbacr (admin; premium and blocked, and the RC's own
+# premium-rc and blocked-rc; admin implies both Premiums): set up before
+# the API grants any. Both stages use production's rbacr.
+role_suffix=""
+[[ "$STAGE" == rc ]] && role_suffix=-rc
+if [[ -n "$GRIGRI_RBACR_TOKEN" ]]; then
+  echo "==> setting up Grigri's roles in rbacr"
+  RBACR_TOKEN="$GRIGRI_RBACR_TOKEN" bash scripts/rbacr-setup.sh
+fi
 echo "==> deploying $API_STACK"
 packaged="$(mktemp -t grigri-api.XXXXXX)"
 aws cloudformation package --template-file grigri_api/template.yaml \
@@ -337,7 +346,7 @@ aws cloudformation deploy --stack-name "$API_STACK" \
   --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
     "GoogleIosClientIds=$GOOGLE_IOS_CLIENT_IDS" \
     "RbacrToken=$GRIGRI_RBACR_TOKEN" "PhotosBucket=$PHOTOS_BUCKET" \
-    "PicsBucket=$PICS_BUCKET" \
+    "PicsBucket=$PICS_BUCKET" "RoleSuffix=$role_suffix" \
     "AityxApiKey=$GRIGRI_AITYX_API_KEY" "AityxUrl=$GRIGRI_AITYX_URL" \
     "StripeSecretKey=$GRIGRI_STRIPE_SECRET_KEY" \
     "StripeWebhookSecret=$GRIGRI_STRIPE_WEBHOOK_SECRET" "SiteUrl=https://$DOMAIN" \

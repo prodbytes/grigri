@@ -3,7 +3,7 @@ import { Api } from '../src/api.js';
 import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { MAX_VIEWS } from '../src/domain/walls.js';
-import type { Subscription } from '../src/premium.js';
+import { FakeRbacr } from './fake-rbacr.js';
 import { FakeStore } from './fake-store.js';
 
 const now = new Date('2030-05-01T10:00:00.000Z');
@@ -39,8 +39,15 @@ async function uploaded(c: Caller): Promise<string> {
 
 const route = { name: 'Made-up Line', grade: { scale: 'routes', grade: 8 }, bolts: [[0.5, 0.9], [0.52, 0.6], [0.55, 0.3]] };
 
+let rbacr: FakeRbacr;
+
 beforeEach(async () => {
   store = new FakeStore();
+  // Ada and Ben are Premium in rbacr; Free isn't; Root is an admin (admin implies premium).
+  rbacr = new FakeRbacr(() => now);
+  rbacr.give('ada@example.com', 'premium');
+  rbacr.give('ben@example.com', 'premium');
+  rbacr.give('root@example.com', 'admin');
   objects = new Map();
   removed = [];
   const photos = {
@@ -65,25 +72,18 @@ beforeEach(async () => {
     store: store.asStore(),
     photos,
     auth,
+    roles: rbacr.lookup,
     config: { stage: 'local', version: '0' },
     clock: () => now,
   });
-  // Ada and Ben subscribe to Premium; Free doesn't; Root is an admin.
-  for (const c of [ada, ben, free, root]) {
-    const { climber } = await call(c, 'GET', '/api/me');
-    if (c !== ada && c !== ben) continue;
-    const sub: Subscription = {
-      climberId: climber.id, customerId: 'cus', subscriptionId: `sub_${climber.id}`, status: 'active', plan: 'monthly',
-      periodEnd: '2030-06-01T00:00:00.000Z', cancelAtPeriodEnd: false, updatedAt: now.toISOString(),
-    };
-    await store.putSubscription(sub);
-  }
+  for (const c of [ada, ben, free, root]) await call(c, 'GET', '/api/me');
 });
 
 describe('the route finder (premium)', () => {
   it('only Premium climbers (and admins) use it', async () => {
     expect((await call(ada, 'GET', '/api/me')).premium.active).toBe(true);
     expect((await call(free, 'GET', '/api/me')).premium.active).toBe(false);
+    expect((await call(root, 'GET', '/api/me')).premium).toEqual({ active: true });
     await fails(call(free, 'GET', '/api/walls', undefined, { lat: '41.26', lon: '0.93' }), 403, /premium/);
     await fails(call(free, 'POST', '/api/walls/photo', { contentType: 'image/jpeg' }), 403);
     expect((await call(root, 'GET', '/api/walls', undefined, { lat: '41.26', lon: '0.93' })).walls).toEqual([]);

@@ -47,11 +47,29 @@ Subscribed, the card says "Premium: renews on <date>" (or "ends on <date>"
 once cancelled) and offers **Manage subscription**: Stripe's billing
 portal (`POST /api/premium/portal`), to cancel or change the card.
 
-**Who is Premium**: a subscription whose Stripe status is `active`,
-`trialing` or `past_due` (a failed renewal Stripe is still retrying),
-until its paid period's end plus two days' grace (a late renewal webhook
-doesn't cut anyone off). Cancelled, it lasts to the end of the period
-paid for.
+**Who is Premium**: whoever holds the `premium` role of rbacr's `grigri`
+system (`premium-rc` on the RC, which asks production's rbacr too, so
+its test-mode payments never make anyone Premium on production). Like
+every role, it's [rbacr's](roles.md); Grigri keeps only the billing.
+
+- **Paying grants it**: the webhook, after saving Stripe's latest copy
+  of the subscription, grants the role to the subscriber's verified
+  email (from checkout, in the subscription's metadata, also prefilled
+  in Checkout) until the paid period's end plus two days' grace, while
+  Stripe says `active`, `trialing` or `past_due` (a failed renewal
+  Stripe is still retrying). Each renewal moves the end; a cancelled
+  subscription keeps it to the end of the period paid for; once it's
+  over (or ended at once), the role is revoked. If rbacr fails, the
+  webhook answers 500, and Stripe sends the event again.
+- **Admins** hold it too: rbacr's `admin` implies `premium` and
+  `premium-rc`. Roots hold every role. A root can also grant `premium`
+  in rbacr by hand (a comp); a later payment by the same email replaces
+  that grant's end with the paid period's.
+- **Checks**: the API asks rbacr for the caller's roles (kept a minute
+  per function instance; `GET /api/premium` asks afresh, so **I've paid:
+  check again** sees a payment at once). Ad owners in the deck are
+  checked by their kept emails. Checkout needs a verified email (Google's
+  always is).
 
 Without Stripe's keys on a stage, Premium can't be bought: the card says
 "Premium isn't available yet." and the routes answer 503.
@@ -63,10 +81,13 @@ App Store (Google Play has a similar rule).
 
 ## Data
 
-One item per climber, `CLIMBER#<id>` / `PREMIUM`: Stripe's customer and
-subscription ids, its status, plan, period end, whether it's cancelled,
+In rbacr, the role (above). In Grigri, one billing item per climber,
+`CLIMBER#<id>` / `PREMIUM`: Stripe's customer and subscription ids, its
+status, plan, period end, whether it's cancelled, the subscriber's email,
 and when it was read. `GET /api/me` and `GET /api/premium` answer
-`"premium": {"active", "plan"?, "until"?, "ending"?}` from it.
+`"premium": {"active", "plan"?, "until"?, "ending"?}`: `active` is the
+role; `plan`, `until` and `ending` come from a paid subscription (none
+for admins, or a comp).
 
 ## Keys and setup
 
