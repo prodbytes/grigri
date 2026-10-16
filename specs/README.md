@@ -27,6 +27,8 @@ Each match opens the plan's group chat.
   net.
 - [Sign-in](sign-in.md): Google only, per platform; the profile made
   from the Google account at the first sign-in; admins.
+- [Admin](admin.md): the Admin tab, for admins: everyone, to block
+  (they can't use Grigri, and their plans leave the deck) or unblock.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
 - [Plan photos](pics.md): a plan's **Your Pics** (what members add,
@@ -39,11 +41,12 @@ Each match opens the plan's group chat.
   profile.
 - [Match scores](match-scores.md): how likely a climber and a plan end
   in a match, from a decision model run by aityx: on admins' decks, and
-  for every profile and plan in the scores table, previewed on the Admin
-  tab.
+  for every profile and plan in the scores table.
 - [Languages](i18n.md): English, Spanish, German, French, Portuguese and
   Catalan; the language picker in the profile, kept on the device; the
   translation bundles and the test that keeps them complete.
+- [Premium](premium.md) (planned, not built): $20 a month or $200 a
+  year, for advertisement only; what that covers is still to decide.
 - [Theme](theme.md): dark, in mountain colors.
 - [Logging](logging.md): the app's developer log on every platform
   (browser console, device log, a file on phones), scrubbed of account

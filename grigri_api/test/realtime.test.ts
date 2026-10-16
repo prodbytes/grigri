@@ -256,11 +256,10 @@ describe('hints from the API', () => {
     expect(await hintsOf(() => call(cy, 'POST', `/api/plans/${planId}/leave`))).toEqual(['Ada plan', 'Ben plan']);
   });
 
-  it('a no tells the requester and the members; admins get nothing', async () => {
+  it('a no tells the requester and the members', async () => {
     await call(ben, 'POST', `/api/plans/${planId}/join`);
     await call(cy, 'POST', `/api/plans/${planId}/join`);
     expect(await hintsOf(() => call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/reject`))).toEqual(['Ben notice']);
-    expect(await hintsOf(() => call(root, 'POST', `/api/admin/requests/${planId}/${ids.Cy}/accept`, {}))).toEqual(['Ada plan', 'Cy match']);
     expect(await hintsOf(() => call(ada, 'POST', `/api/plans/${planId}/pass`))).toEqual([]);
   });
 

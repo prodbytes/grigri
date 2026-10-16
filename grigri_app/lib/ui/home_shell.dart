@@ -176,10 +176,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: _select,
-        // Six tabs don't leave room for every label on a narrow phone.
-        labelBehavior: admin
-            ? NavigationDestinationLabelBehavior.onlyShowSelected
-            : null,
+        // Every tab keeps its label, six tabs too: the labels are short
+        // words in 11 pt, which fit a 360 dp phone.
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: [
           NavigationDestination(
             icon: const Icon(Icons.landscape_outlined),
@@ -208,14 +207,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           ),
           if (admin)
             NavigationDestination(
-              icon: badged(
-                Icons.admin_panel_settings_outlined,
-                store.adminRequests.length,
-              ),
-              selectedIcon: badged(
-                Icons.admin_panel_settings,
-                store.adminRequests.length,
-              ),
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+              selectedIcon: const Icon(Icons.admin_panel_settings),
               label: l.tabAdmin,
             ),
         ],

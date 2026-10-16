@@ -254,14 +254,13 @@ describe('the API', () => {
   const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', admin: false };
   const root: Caller = { subject: 'test#root', email: 'root@example.com', admin: true };
 
-  function setup(scorer?: MatchScorer, run?: ScoreRun, top: ScoredPair[] = []) {
+  function setup(scorer?: MatchScorer) {
     const store = new FakeStore();
     const api = new Api({
       store: store.asStore(),
       photos: { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} },
       auth: { signIn: async () => ({}), signOut: async () => {}, signOutEverywhere: async () => {} } as never,
       matchScorer: scorer,
-      scores: { latestRun: async () => run, top: async (_runId, limit) => top.slice(0, limit) },
       config: { stage: 'local', version: 'test' },
       clock: () => now,
     });
@@ -304,22 +303,5 @@ describe('the API', () => {
     const deck = await call(root, 'GET', '/api/discover');
     expect(deck.plans).toHaveLength(1);
     expect(deck.scores).toEqual({});
-  });
-
-  it('previews the latest run for admins only', async () => {
-    const run: ScoreRun = {
-      runId: 'r1', startedAt: 'r1', finishedAt: 'r1', climbers: 2, plans: 1, pairs: 2, scored: 2, failed: 0, skipped: 0, inputTokens: 10,
-    };
-    const { call } = setup(undefined, run);
-    await call(ada, 'PUT', '/api/me', profile);
-    await expect(call(ada, 'GET', '/api/admin/scores')).rejects.toMatchObject({ status: 403 });
-    await call(root, 'PUT', '/api/me', profile);
-    expect(await call(root, 'GET', '/api/admin/scores')).toEqual({ run, scores: [], plans: {}, climbers: {} });
-  });
-
-  it('previews nothing before the first run', async () => {
-    const { call } = setup();
-    await call(root, 'PUT', '/api/me', profile);
-    expect(await call(root, 'GET', '/api/admin/scores')).toEqual({ run: null, scores: [], plans: {}, climbers: {} });
   });
 });

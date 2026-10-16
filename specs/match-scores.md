@@ -113,18 +113,6 @@ which every profile saved joins. Profiles saved before it existed join
 it with `STAGE=prod bash scripts/index-climbers.sh` (once per stage; an
 administrator's credentials, since it scans the table).
 
-## The Admin tab's preview
-
-`GET /api/admin/scores` (admins only) → `{"run": <the latest run> | null,
-"scores": [{"climberId", "planId", "score", "level", "reason",
-"scoredAt"}] (its best 20), "plans": {id: Plan}, "climbers"}`.
-
-The Admin tab opens with a **Match scores** card: when the latest run
-finished, how many pairs it scored of how many, for how many people and
-plans, any failed or over the cap, then its best 20: who → which plan,
-the reason, and the score tag. Before the first run it says how to run
-one.
-
 ## The key
 
 The aityx API key is a secret: the `AityxApiKey` stack parameter
@@ -143,8 +131,8 @@ none and the scoring function refuses to run.
   2026-10-16), about $0.00007 per call. An admin's deck is up to 30 calls
   (about $0.002); a full run of 5,000 pairs about $0.33.
 - **The scores table**: on demand, nothing while idle; a run writes one
-  item per pair (5,000 writes, about $0.006) and the run's summary; the
-  preview reads about 20 items. Expired scores are deleted free (TTL).
+  item per pair (5,000 writes, about $0.006) and the run's summary;
+  nothing in the app reads it for now. Expired scores are deleted free (TTL).
 - **The scoring function**: 256 MB arm64, invoked only by hand; a full
   run is a few minutes, well under a cent.
 

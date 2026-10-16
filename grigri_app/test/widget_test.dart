@@ -361,6 +361,45 @@ void main() {
       expect(api.calls.where((c) => c.contains('boulder-night')), isEmpty);
     });
 
+    testWidgets('the card trims long notes and bios, in smaller text', (
+      tester,
+    ) async {
+      final long = List.filled(40, 'Long approach, steep pockets.').join(' ');
+      final api = sampleApi();
+      final plan = api.plans['boulder-night']!;
+      api
+        ..addPlan(
+          Plan(
+            id: plan.id,
+            organizerId: plan.organizerId,
+            discipline: plan.discipline,
+            place: plan.place,
+            start: plan.start,
+            end: plan.end,
+            grades: plan.grades,
+            memberIds: plan.memberIds,
+            notes: long,
+          ),
+        )
+        ..addClimber(Climber(id: 'kit', name: 'Kit Marlow', bio: long));
+      await pumpApp(tester, api);
+      final texts = tester.widgetList<Text>(find.text(long)).toList();
+      expect(texts, hasLength(2));
+      for (final t in texts) {
+        expect(t.maxLines, 3);
+        expect(t.overflow, TextOverflow.ellipsis);
+      }
+      final element = tester.element(find.text(long).first);
+      expect(MediaQuery.textScalerOf(element).scale(10), closeTo(9, 0.001));
+      // The whole profile, in its sheet, isn't trimmed.
+      await tester.tap(find.text('Kit Marlow'));
+      await tester.pumpAndSettle();
+      final whole = tester
+          .widgetList<Text>(find.text(long))
+          .where((t) => t.maxLines == null);
+      expect(whole, isNotEmpty);
+    });
+
     testWidgets('demo plans and people say they are made up', (tester) async {
       const notice = 'Demo: made-up people and plans.';
       final api = sampleApi();
@@ -1030,7 +1069,7 @@ void main() {
       await tapTab(tester, 'Alerts');
       expect(find.text('Nothing yet'), findsOneWidget);
       await tapTab(tester, 'Admin');
-      expect(find.text('No open requests'), findsOneWidget);
+      expect(find.byKey(const ValueKey('admin climber me')), findsOneWidget);
     });
   });
 
@@ -1043,56 +1082,107 @@ void main() {
       expect(labels, ['Find', 'Plans', 'Chats', 'Alerts', 'Me']);
     });
 
-    testWidgets('admins approve any request', (tester) async {
-      final api = sampleApi(admin: true)..ask('boulder-night', 'jules');
-      await pumpApp(tester, api);
-      await tapTab(tester, 'Admin');
-      final tile = find.byKey(const ValueKey('admin boulder-night/jules'));
-      expect(
-        find.descendant(of: tile, matching: find.text('0 of 2 said yes')),
-        findsOneWidget,
-      );
-      await tester.tap(
-        find.descendant(of: tile, matching: find.text('Approve')),
-      );
+    testWidgets('every tab keeps its label, an admin\'s six too', (
+      tester,
+    ) async {
+      await pumpApp(tester, sampleApi(admin: true));
+      // On a 360 dp wide phone. (The test font's glyphs are full squares,
+      // too wide to measure whether labels fit; real fonts' do.)
+      tester.view.physicalSize = const Size(936, 2028);
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, 'Approve'));
-      await tester.pumpAndSettle();
-      expect(
-        api.calls,
-        contains('POST /api/admin/requests/boulder-night/jules/accept'),
-      );
-      expect(api.plans['boulder-night']!.memberIds, contains('jules'));
-      expect(find.text('Jules Fern joined Block Hall.'), findsOneWidget);
-      expect(tile, findsNothing);
+      final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
+      for (final label in ['Find', 'Plans', 'Chats', 'Alerts', 'Me', 'Admin']) {
+        expect(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text(label),
+          ),
+          findsOneWidget,
+        );
+      }
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('admins reject any request, after a confirmation', (
+    testWidgets('admins list everyone, and block after a confirmation', (
       tester,
     ) async {
       final api = sampleApi(admin: true);
       await pumpApp(tester, api);
       await tapTab(tester, 'Admin');
-      final tile = find.byKey(const ValueKey('admin my-gym/jules'));
+      expect(api.calls, contains('GET /api/admin/climbers'));
+      final jules = find.byKey(const ValueKey('admin climber jules'));
+      expect(
+        find.descendant(of: jules, matching: find.text('Jules Fern')),
+        findsOneWidget,
+      );
+      // Never myself.
+      final mine = find.byKey(const ValueKey('admin climber me'));
+      expect(
+        find.descendant(of: mine, matching: find.text('Block')),
+        findsNothing,
+      );
+
       await tester.tap(
-        find.descendant(of: tile, matching: find.text('Reject')),
+        find.descendant(of: jules, matching: find.text('Block')),
       );
       await tester.pumpAndSettle();
+      expect(find.text('Block Jules Fern?'), findsOneWidget);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(api.calls.where((c) => c.contains('reject')), isEmpty);
+      expect(api.calls.where((c) => c.contains('/block')), isEmpty);
+
       await tester.tap(
-        find.descendant(of: tile, matching: find.text('Reject')),
+        find.descendant(of: jules, matching: find.text('Block')),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(TextButton, 'Reject'));
+      await tester.tap(find.widgetWithText(TextButton, 'Block').last);
       await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/admin/climbers/jules/block'));
+      expect(api.blocked, {'jules'});
       expect(
-        api.calls,
-        contains('POST /api/admin/requests/my-gym/jules/reject'),
+        find.descendant(of: jules, matching: find.text('Blocked')),
+        findsOneWidget,
       );
-      expect(api.requestsById['my-gym/jules']!.rejected, isTrue);
-      expect(find.text('No open requests'), findsOneWidget);
+
+      await tester.tap(
+        find.descendant(of: jules, matching: find.text('Unblock')),
+      );
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/admin/climbers/jules/unblock'));
+      expect(api.blocked, isEmpty);
+      expect(
+        find.descendant(of: jules, matching: find.text('Block')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a blocked climber sees only that, and can sign out', (
+      tester,
+    ) async {
+      final api = sampleApi()..blocked.add('me');
+      await pumpApp(tester, api);
+      expect(find.text('Your account is blocked'), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      // Unblocked meanwhile: trying again opens the app.
+      api.blocked.clear();
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.byType(NavigationBar), findsOneWidget);
+    });
+
+    testWidgets('blocked while using the app: the blocked screen', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final store = await pumpApp(tester, api);
+      api.blocked.add('me');
+      await store.refreshAll();
+      await tester.pumpAndSettle();
+      expect(find.text('Your account is blocked'), findsOneWidget);
+      await tester.tap(find.text('Sign out'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sign in with Google'), findsOneWidget);
     });
 
     testWidgets('admins see the match score on the deck, with its reason', (
@@ -1124,65 +1214,6 @@ void main() {
       );
       expect(find.byKey(const ValueKey('match boulder-night')), findsNothing);
       expect(find.textContaining('Match '), findsNothing);
-    });
-
-    testWidgets('the Admin tab previews the latest scoring run', (
-      tester,
-    ) async {
-      final api = sampleApi(admin: true)
-        ..scoreRun = ScoreRun(
-          finishedAt: DateTime(2030, 5, 1, 18, 30),
-          climbers: 3,
-          plans: 2,
-          pairs: 5,
-          scored: 4,
-          failed: 1,
-          skipped: 0,
-        )
-        ..scoredPairs = [
-          const ScoredPair(
-            climberId: 'jules',
-            planId: 'boulder-night',
-            match: MatchScore(
-              score: 0.52,
-              level: MatchLevel.good,
-              reason: MatchReason.inGrades,
-            ),
-          ),
-        ];
-      await pumpApp(tester, api);
-      await tapTab(tester, 'Admin');
-      final preview = find.byKey(const ValueKey('admin scores'));
-      expect(
-        find.descendant(of: preview, matching: find.text('Match scores')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: preview,
-          matching: find.textContaining('4 of 5 pairs, 3 people × 2 plans'),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text("1 failed, 0 over the run's cap"), findsOneWidget);
-      final row = find.byKey(const ValueKey('score jules boulder-night'));
-      expect(
-        find.descendant(of: row, matching: find.textContaining('Jules Fern')),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: row, matching: find.text('Match 52% · good')),
-        findsOneWidget,
-      );
-      expect(api.calls, contains('GET /api/admin/scores'));
-    });
-
-    testWidgets('before the first run, the preview says how to run it', (
-      tester,
-    ) async {
-      await pumpApp(tester, sampleApi(admin: true));
-      await tapTab(tester, 'Admin');
-      expect(find.textContaining('No scoring run yet'), findsOneWidget);
     });
 
     testWidgets('six tabs fit a narrow phone', (tester) async {

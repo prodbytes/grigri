@@ -5,8 +5,8 @@ Google account, with no screen of its own; [sign-in](sign-in.md)). Then
 five tabs, in a bottom navigation
 bar: Discover, Plans, Chats, Notifications and Profile, and a sixth,
 **Admin**, for [admins](sign-in.md#admins). The bar's labels are short
-words in 11 pt, so each fits on one line on a 360 dp wide phone (with six
-tabs, only the selected one's label shows): in English **Find**, **Plans**,
+words in 11 pt, so each fits on one line on a 360 dp wide phone, and
+every tab always shows its label, six tabs too: in English **Find**, **Plans**,
 **Chats**, **Alerts**, **Me** and **Admin** (Spanish Buscar, Planes, Chats,
 Avisos, Yo; German Suche, Pläne, Chats, Infos, Ich; French Trouve, Plans,
 Tchats, Alertes, Moi; Portuguese Buscar, Planos, Chats, Avisos, Eu;
@@ -15,12 +15,12 @@ is "Alerts" in English.
 
 | Tab | Shows |
 |---|---|
-| **Discover** | The plans deck ([matching](matching.md#the-deck)), best first, with ✕ and ✓ buttons (centered) and, to the right of ✓, a smaller share button, and ⟳ to refresh, which also brings back the plans I passed on (I may have changed my mind). Each card shows the plan (date and time on separate lines, no distance) and the organizer with **+N** for the rest of the group, whose list opens when tapped. Without a location on my profile, the app first takes my location from the phone or browser ([matching](matching.md)); only when the device can't tell (and I have no area either) does a line above the deck say "Set where you climb to see plans near you first." with **Set** (the profile editor). Empty: "No plans to join right now" and **New plan**. |
+| **Discover** | The plans deck ([matching](matching.md#the-deck)), best first, with ✕ and ✓ buttons (centered) and, to the right of ✓, a smaller share button, and ⟳ to refresh, which also brings back the plans I passed on (I may have changed my mind). Each card, in slightly smaller text, shows the plan (date and time on separate lines, no distance; notes cut to three lines with "…") and the organizer with **+N** for the rest of the group, whose list opens when tapped. Without a location on my profile, the app first takes my location from the phone or browser ([matching](matching.md)); only when the device can't tell (and I have no area either) does a line above the deck say "Set where you climb to see plans near you first." with **Set** (the profile editor). Empty: "No plans to join right now" and **New plan**. |
 | **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review", and ⋮ with **Cancel the plan**, after the same confirmation as on the plan screen), then **Asked to join**: "Pending" and who it's waiting for, with **Nudge** to remind them (once every 12 hours; "Nudged" until then; a snackbar confirms it), or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message and "N to answer" when join requests wait for my answer. The tab's badge counts those requests. Empty: "No chats yet" and **Find a plan** (to Discover). |
 | **Notifications** | Join requests for my plans, nudges to answer them, and the groups' answers to mine ([matching](matching.md#notifications)). The tab's badge counts the unread ones. Empty: "Nothing yet". |
 | **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; **Where you climb** (private, only I see it): my location, a spinner while the app takes it from the device, "Set your location" when it has none; tap it to pick a place or "Use my current location" ([matching](matching.md)), saved at once, without the editor; the **Language** picker ([languages](i18n.md)); in ⋯, **Sign out** and **Sign out everywhere** (on every phone and browser, this one too), each after a confirmation. Then my [roles](roles.md), from rbacr. The version at the bottom. |
-| **Admin** | Admins only: first the **Match scores** card, the latest [scoring run](match-scores.md#the-admin-tabs-preview) and its best 20 scores; then every open join request, anyone's: who (avatar, name and age; tap for their profile) and when they asked, the plan (discipline, place, where it is, date), how many of the group said yes, its grades, and **Approve** (they join now) and **Reject**, each after a confirmation. Its badge counts the requests. Empty: "No open requests". |
+| **Admin** | Admins only ([admin.md](admin.md)): everyone, by name (avatar and name; tap for their profile), "Blocked" under a blocked person, and **Block** (after a confirmation) or **Unblock**; nothing on my own row. |
 
 - **Sign-in**: the app's name and tagline on the mountain night gradient,
   and **Sign in with Google** (Google's own button on the web). See
