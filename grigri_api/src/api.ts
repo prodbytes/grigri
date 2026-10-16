@@ -19,6 +19,17 @@ import {
 } from './domain/model.js';
 import { type PicWithCrag, type Where, picsFor } from './domain/pics.js';
 import * as rules from './domain/rules.js';
+import {
+  IDENTITY,
+  MAX_ROUTES,
+  type Wall,
+  addView,
+  homography,
+  routeInput,
+  viewInput,
+  wallInput,
+  wallsNear,
+} from './domain/walls.js';
 import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { matchFacts } from './match/facts.js';
@@ -110,8 +121,15 @@ export interface Request {
   body: unknown;
 }
 
-/** public: anyone; session: a caller, nothing loaded; caller: plus their profile if any; profile: must have one; admin: and be one. */
-export type Access = 'public' | 'session' | 'caller' | 'profile' | 'admin';
+/**
+ * public: anyone; session: a caller, nothing loaded; caller: plus their
+ * profile if any; profile: must have one; premium: and be premium (or an
+ * admin); admin: and be one.
+ */
+export type Access = 'public' | 'session' | 'caller' | 'profile' | 'premium' | 'admin';
+
+/** The rbacr role that makes someone premium (specs/premium.md). */
+export const PREMIUM_ROLE = 'premium';
 
 interface Session {
   caller: Caller;
@@ -181,7 +199,7 @@ export class Api {
         email && deps.roles ? deps.roles(email) : Promise.resolve(null),
       ]);
       // roles: my roles in Grigri from rbacr, or null when it can't say.
-      return { climber, admin: s.caller.admin, roles };
+      return { climber, admin: s.caller.admin, premium: this.isPremium(s.caller.admin, roles), roles };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
@@ -217,6 +235,13 @@ export class Api {
       return {};
     });
 
+    r('GET /api/walls', 'premium', (req) => this.walls(req));
+    r('POST /api/walls/photo', 'premium', (req, s) => this.presignWallPhoto(req, s));
+    r('POST /api/walls', 'premium', (req, s) => this.createWall(req, s));
+    r('POST /api/walls/{id}/routes', 'premium', (req, s) => this.addRoute(req, s));
+    r('DELETE /api/walls/{id}/routes/{routeId}', 'premium', (req, s) => this.deleteRoute(req, s));
+    r('POST /api/walls/{id}/views', 'premium', (req, s) => this.addWallView(req, s));
+
     r('GET /api/admin/climbers', 'admin', () => this.adminClimbers());
     r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(req, s, true));
     r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(req, s, false));
@@ -245,6 +270,7 @@ export class Api {
     // Blocked: nothing but signing out ('session' routes, above).
     if (me?.blocked) throw forbidden('blocked');
     if (route.access === 'admin' && !req.caller.admin) throw forbidden('admins only');
+    if (route.access === 'premium' && !(await this.callerIsPremium(req.caller))) throw forbidden('premium only');
     const names = new Map<string, string>();
     const session: Session = {
       caller: req.caller,
@@ -457,6 +483,127 @@ export class Api {
     if (!current) throw notFound('no such plan');
     if (!current.plan.memberIds.includes(s.me.id)) throw forbidden("you're not in this plan");
     return current.plan;
+  }
+
+  // --- Premium ----------------------------------------------------------------
+
+  /** Premium: rbacr's premium role (or root's), or an admin. */
+  private isPremium(admin: boolean, roles: string[] | null): boolean {
+    return admin || (roles ?? []).some((r) => r === PREMIUM_ROLE || r === 'root');
+  }
+
+  private async callerIsPremium(caller: Caller): Promise<boolean> {
+    if (caller.admin) return true;
+    if (!caller.email || !this.deps.roles) return false;
+    return this.isPremium(false, await this.deps.roles(caller.email));
+  }
+
+  // --- The route finder: walls and their routes ------------------------------------
+
+  /** GET /api/walls?lat=&lon=: the walls near a point, nearest first. */
+  private async walls(req: Request) {
+    const where = whereFrom(req.query);
+    if (where.lat === undefined || where.lon === undefined) throw badRequest('lat and lon are required');
+    const walls = wallsNear(await this.store.allWalls(), { lat: where.lat, lon: where.lon });
+    const ids = new Set(walls.flatMap((w) => [w.createdBy, ...w.routes.map((r) => r.addedBy)]));
+    return { walls, climbers: await this.publicClimbers(ids) };
+  }
+
+  /** My own folder's key prefixes (wall photos are `walls/<owner>/...`). */
+  private owners(s: Session): string[] {
+    return [subjectHash(s.caller.subject), s.me.id];
+  }
+
+  /** POST /api/walls/photo: where to upload a wall's reference photo (pending until a wall or view uses it). */
+  private async presignWallPhoto(req: Request, s: Session) {
+    const o = asObject(req.body);
+    const ext = typeof o.contentType === 'string' && Object.hasOwn(CONTENT_TYPES, o.contentType) ? CONTENT_TYPES[o.contentType] : undefined;
+    if (!ext) throw badRequest(`contentType must be one of ${Object.keys(CONTENT_TYPES).join(', ')}`);
+    const key = `walls/${subjectHash(s.caller.subject)}/${newId()}.${ext}`;
+    const { url, fields } = await this.deps.photos.presign(key, o.contentType as string, MAX_PHOTO_BYTES);
+    return { key, url, fields, maxBytes: MAX_PHOTO_BYTES };
+  }
+
+  /** POST /api/walls: a new wall, from its first reference photo. */
+  private async createWall(req: Request, s: Session) {
+    const input = wallInput(req.body, this.owners(s));
+    await this.keepPhoto(input.view.key);
+    const time = s.now.toISOString();
+    const wall: Wall = {
+      id: newId(),
+      name: input.name,
+      ...(input.cragId ? { cragId: input.cragId } : {}),
+      lat: input.lat,
+      lon: input.lon,
+      views: [{ ...input.view, h: IDENTITY, addedBy: s.me.id, time }],
+      routes: [],
+      createdBy: s.me.id,
+      createdAt: time,
+    };
+    await this.store.saveWall(wall, null);
+    return { wall };
+  }
+
+  /** POST /api/walls/{id}/routes: a route drawn on the wall, bolt by bolt. */
+  private async addRoute(req: Request, s: Session) {
+    const input = routeInput(req.body);
+    return this.changeWall(req.params.id, (wall) => {
+      if (wall.routes.length >= MAX_ROUTES) throw conflict(`a wall keeps at most ${MAX_ROUTES} routes`);
+      const route = { id: newId(), ...input, addedBy: s.me.id, time: s.now.toISOString() };
+      return { ...wall, routes: [...wall.routes, route] };
+    });
+  }
+
+  /** DELETE /api/walls/{id}/routes/{routeId}: whoever drew it, or an admin. */
+  private async deleteRoute(req: Request, s: Session) {
+    const routeId = id(req.params.routeId, 'route id');
+    return this.changeWall(req.params.id, (wall) => {
+      const route = wall.routes.find((r) => r.id === routeId);
+      if (!route) throw notFound('no such route');
+      if (route.addedBy !== s.me.id && !s.caller.admin) throw forbidden('only whoever drew it can delete it');
+      return { ...wall, routes: wall.routes.filter((r) => r.id !== routeId) };
+    });
+  }
+
+  /**
+   * POST /api/walls/{id}/views: the app learns the wall: a photo of it
+   * seen and confirmed, with its transform to the first view, so it's
+   * recognized from there (another angle, other light) too. Past
+   * MAX_VIEWS the oldest learned view goes.
+   */
+  private async addWallView(req: Request, s: Session) {
+    const o = asObject(req.body);
+    const view = viewInput(o, this.owners(s));
+    const h = homography(o.h);
+    await this.keepPhoto(view.key);
+    let dropped: string | undefined;
+    const result = await this.changeWall(req.params.id, (wall) => {
+      const out = addView(wall, { ...view, h, addedBy: s.me.id, time: s.now.toISOString() });
+      dropped = out.dropped?.key;
+      return out.wall;
+    });
+    if (dropped) {
+      await this.deps.photos.remove([dropped]).catch((e: unknown) => {
+        console.error(JSON.stringify({ level: 'warn', msg: 'wall view cleanup failed', error: String(e) }));
+      });
+    }
+    return result;
+  }
+
+  private async keepPhoto(key: string): Promise<void> {
+    if (!(await this.deps.photos.keep(key))) throw badRequest("the photo isn't uploaded (or expired): upload it again");
+  }
+
+  /** Reads, changes and saves a wall, again if someone changed it meanwhile. */
+  private async changeWall(rawId: string | undefined, change: (wall: Wall) => Wall) {
+    const wallId = id(rawId, 'wall id');
+    return this.retry(async () => {
+      const current = await this.store.getWall(wallId);
+      if (!current) throw notFound('no such wall');
+      const wall = change(current.wall);
+      await this.store.saveWall(wall, current.version);
+      return { wall };
+    });
   }
 
   // --- Decks and plans ------------------------------------------------------

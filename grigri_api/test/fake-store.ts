@@ -5,6 +5,7 @@ import type { SessionRecord } from '../src/auth.js';
 import type { Effects, Delivery } from '../src/domain/rules.js';
 import { type Climber, type JoinRequest, type Message, type Notice, type PlanPic, isOpen } from '../src/domain/model.js';
 import { Conflict, type LoadedPlan, type Store, type VersionedPlan } from '../src/store/store.js';
+import type { Wall } from '../src/domain/walls.js';
 
 export class FakeStore {
   subjects = new Map<string, string>();
@@ -143,4 +144,15 @@ export class FakeStore {
   async planPics(planId: string) { return this.pics.filter((p) => p.planId === planId); }
   async putPlanPic(p: PlanPic) { this.pics.push(p); }
   async deletePlanPic(planId: string, picId: string) { this.pics = this.pics.filter((p) => !(p.planId === planId && p.id === picId)); }
+  walls = new Map<string, { wall: Wall; version: number }>();
+  async getWall(wallId: string) {
+    const w = this.walls.get(wallId);
+    return w ? structuredClone(w) : undefined;
+  }
+  async allWalls() { return [...this.walls.values()].map((w) => structuredClone(w.wall)); }
+  async saveWall(wall: Wall, previous: number | null) {
+    const current = this.walls.get(wall.id);
+    if (previous === null ? current : current?.version !== previous) throw new Conflict('changed');
+    this.walls.set(wall.id, { wall: structuredClone(wall), version: (previous ?? 0) + 1 });
+  }
 }

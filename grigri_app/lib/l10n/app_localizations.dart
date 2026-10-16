@@ -1646,6 +1646,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sent in the chat by {name}'**
   String picFromChat(String name);
+
+  /// Route finder (premium): the screen's title and the plan screen's button.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes on the rock'**
+  String get routeFinder;
+
+  /// Route finder (premium): routeFinderLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Getting the walls here ready…'**
+  String get routeFinderLoading;
+
+  /// Route finder (premium): routeFinderNoWalls.
+  ///
+  /// In en, this message translates to:
+  /// **'No walls known here yet. Record the first route.'**
+  String get routeFinderNoWalls;
+
+  /// Route finder: the wall in sight and how many routes it has.
+  ///
+  /// In en, this message translates to:
+  /// **'{wall}: {count, plural, =0{no routes yet} =1{1 route} other{{count} routes}}'**
+  String routeFinderSeen(String wall, int count);
+
+  /// Route finder (premium): routeFinderPoint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point the camera at the wall'**
+  String get routeFinderPoint;
+
+  /// Route finder (premium): routeFinderSnap.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo of the wall to find its routes'**
+  String get routeFinderSnap;
+
+  /// Route finder (premium): cameraUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera isn\'t available.'**
+  String get cameraUnavailable;
+
+  /// Route finder (premium): recordRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a route'**
+  String get recordRoute;
+
+  /// Route finder (premium): teachView.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn this view'**
+  String get teachView;
+
+  /// Route finder (premium): findRoutes.
+  ///
+  /// In en, this message translates to:
+  /// **'Find routes'**
+  String get findRoutes;
+
+  /// Route finder (premium): learnedView.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks! Grigri knows this wall better now.'**
+  String get learnedView;
+
+  /// Route finder (premium): needTwoBolts.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap at least two bolts.'**
+  String get needTwoBolts;
+
+  /// Route finder (premium): routeSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Route saved.'**
+  String get routeSaved;
+
+  /// Route finder (premium): undoBolt.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo the last bolt'**
+  String get undoBolt;
+
+  /// Route finder (premium): tapBolts.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap each bolt, from the ground up to the anchor'**
+  String get tapBolts;
+
+  /// Route finder (premium): tapBoltsNewWall.
+  ///
+  /// In en, this message translates to:
+  /// **'New rock: tap each bolt, from the ground up. This photo will teach Grigri the wall.'**
+  String get tapBoltsNewWall;
+
+  /// Route finder (premium): notRecognized.
+  ///
+  /// In en, this message translates to:
+  /// **'Grigri didn\'t recognize this wall.'**
+  String get notRecognized;
+
+  /// Route finder (premium): saveRoute.
+  ///
+  /// In en, this message translates to:
+  /// **'Save the route'**
+  String get saveRoute;
+
+  /// Route finder (premium): newWallNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A new wall: this photo will teach Grigri what it looks like.'**
+  String get newWallNote;
+
+  /// Route finder (premium): wallName.
+  ///
+  /// In en, this message translates to:
+  /// **'Wall'**
+  String get wallName;
+
+  /// Route finder (premium): routeName.
+  ///
+  /// In en, this message translates to:
+  /// **'Route name'**
+  String get routeName;
+
+  /// Route finder (premium): routeScale.
+  ///
+  /// In en, this message translates to:
+  /// **'Route'**
+  String get routeScale;
+
+  /// Route finder (premium): boulderScale.
+  ///
+  /// In en, this message translates to:
+  /// **'Boulder'**
+  String get boulderScale;
+
+  /// Route finder (premium): routeGrade.
+  ///
+  /// In en, this message translates to:
+  /// **'Grade'**
+  String get routeGrade;
 }
 
 class _AppLocalizationsDelegate

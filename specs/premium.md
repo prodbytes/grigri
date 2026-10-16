@@ -1,8 +1,22 @@
 # Premium
 
-**Status: planned, not built.** Nothing in the app, the API or the
-infrastructure implements it yet; this file records the decisions made
-so far.
+**Status: partly built.** Who is premium is decided (an rbacr role) and
+the first premium feature, the [route finder](route-finder.md), is built.
+Paying for it isn't: premium is granted by hand for now.
+
+## Who is premium
+
+Whoever holds the `premium` role of rbacr's `grigri` system (granted in
+rbacr, like `admin`), and every admin (and rbacr root). The API asks
+rbacr with the roles lookup it already makes for `GET /api/me` (kept 60 s
+per function instance), so a grant shows within a minute.
+`GET /api/me` says `"premium": true|false`; premium routes answer 403
+`premium only` to everyone else.
+
+## Premium features
+
+- The [route finder](route-finder.md): routes on the rock through the
+  camera, and recording and learning them.
 
 ## Price
 
@@ -13,9 +27,10 @@ so far.
 
 ## What it's for
 
-Premium is **for advertisement only**: it changes what is advertised,
-not what Grigri can do. Climbing, matching, chats and every feature stay
-the same for everyone, premium or not.
+Premium was first meant to be for advertisement only (2026-10-16); the
+route finder, asked for as premium only, is its first feature of its
+own. Climbing, matching, chats and every other feature stay the same for
+everyone.
 
 Still to decide before building it (asked 2026-10-16, left for later):
 

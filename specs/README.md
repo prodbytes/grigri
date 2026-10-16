@@ -45,7 +45,11 @@ Each match opens the plan's group chat.
 - [Languages](i18n.md): English, Spanish, German, French, Portuguese and
   Catalan; the language picker in the profile, kept on the device; the
   translation bundles and the test that keeps them complete.
-- [Premium](premium.md) (planned, not built): $20 a month or $200 a
+- [Route finder](route-finder.md) (premium): routes on the rock through
+  the camera, recognized on the phone; recording routes bolt by bolt, and
+  learning walls from confirmed views.
+- [Premium](premium.md) (partly built: the `premium` role and the route
+  finder; no payments yet): $20 a month or $200 a
   year, for advertisement only; what that covers is still to decide.
 - [Theme](theme.md): dark, in mountain colors.
 - [Logging](logging.md): the app's developer log on every platform

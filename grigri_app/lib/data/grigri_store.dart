@@ -170,6 +170,7 @@ class GrigriStore extends ChangeNotifier {
 
   Climber? _me;
   bool _admin = false;
+  bool _premium = false;
   List<String>? _roles;
   bool _signedIn = false;
 
@@ -242,6 +243,7 @@ class GrigriStore extends ChangeNotifier {
     _session++;
     _me = null;
     _admin = false;
+    _premium = false;
     _roles = null;
     _locating = false;
     _climbers.clear();
@@ -276,6 +278,7 @@ class GrigriStore extends ChangeNotifier {
       final climber = me.climber;
       if (climber == null) throw const ApiException(409, 'no profile');
       _admin = me.admin;
+      _premium = me.premium;
       _roles = me.roles;
       _me = climber;
       _climbers[climber.id] = climber;
@@ -306,6 +309,9 @@ class GrigriStore extends ChangeNotifier {
 
   bool get admin => _admin;
 
+  /// Premium (or an admin): the route finder is theirs (specs/premium.md).
+  bool get premium => _premium;
+
   /// My roles in Grigri, from rbacr through the API, sorted; null when
   /// rbacr couldn't say.
   List<String>? get roles => _roles;
@@ -318,6 +324,7 @@ class GrigriStore extends ChangeNotifier {
       if (session != _session) return;
       _roles = me.roles;
       _admin = me.admin;
+      _premium = me.premium;
       notifyListeners();
     } on ApiException {
       // The card keeps offering Retry.
@@ -462,6 +469,17 @@ class GrigriStore extends ChangeNotifier {
 
   /// The status of an answer that came after a sign-out: dropped quietly.
   static const _stale = -1;
+
+  /// An error from a call made outside the store (the route finder's), as
+  /// the store's own: a 401 signs out; the rest go to [errors].
+  void report(ApiException e) {
+    if (e.status == 401) {
+      _errors.add(l10n.errorSignedOut);
+      unawaited(auth.signedOut());
+      return;
+    }
+    _errors.add(_describe(e));
+  }
 
   /// Runs an action: its error, in the server's words, goes to [errors].
   Future<T?> _act<T>(Future<T> Function() call) async {

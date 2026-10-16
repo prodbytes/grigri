@@ -17,6 +17,8 @@ export const key = {
   message: (planId: string, time: string, messageId: string) => ({ pk: `PLAN#${planId}`, sk: `MSG#${time}#${messageId}` }),
   /** A photo in the plan's "Your Pics". */
   pic: (planId: string, picId: string) => ({ pk: `PLAN#${planId}`, sk: `PIC#${picId}` }),
+  /** A wall of the route finder, its views and routes in one item. */
+  wall: (wallId: string) => ({ pk: `WALL#${wallId}`, sk: 'WALL' }),
   /** When the demo showcase was last written (seed/seed.ts). */
   showcase: () => ({ pk: 'META#SHOWCASE', sk: 'META' }),
 };
@@ -36,6 +38,7 @@ export const index = {
   byStart: { name: 'gsi1', pk: 'PLANS' },
   openRequests: { name: 'gsi1', pk: 'OPENREQ' },
   climbers: { name: 'gsi1', pk: 'CLIMBERS' },
+  walls: { name: 'gsi1', pk: 'WALLS' },
   asked: { name: 'gsi2', pk: (climberId: string) => `ASKED#${climberId}` },
   sessions: { name: 'gsi3', pk: (subject: string) => `SESSIONS#${subject}` },
 };

@@ -59,6 +59,7 @@ dependencies:
   # Plays chat videos (specs/platforms.md): Flutter's own plugin, no
   # native-assets hook.
   video_player: ^2.14.1
+  camera: ^0.12.1
 
 dev_dependencies:
   flutter_test:

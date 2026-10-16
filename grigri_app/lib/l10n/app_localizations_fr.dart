@@ -914,4 +914,90 @@ class AppLocalizationsFr extends AppLocalizations {
   String picFromChat(String name) {
     return 'Envoyée dans le chat par $name';
   }
+
+  @override
+  String get routeFinder => 'Voies sur le rocher';
+
+  @override
+  String get routeFinderLoading => 'Préparation des parois d\'ici…';
+
+  @override
+  String get routeFinderNoWalls =>
+      'Aucune paroi connue ici pour l\'instant. Enregistre la première voie.';
+
+  @override
+  String routeFinderSeen(String wall, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count voies',
+      one: '1 voie',
+      zero: 'pas encore de voies',
+    );
+    return '$wall : $_temp0';
+  }
+
+  @override
+  String get routeFinderPoint => 'Vise la paroi avec la caméra';
+
+  @override
+  String get routeFinderSnap =>
+      'Prends la paroi en photo pour trouver ses voies';
+
+  @override
+  String get cameraUnavailable => 'La caméra n\'est pas disponible.';
+
+  @override
+  String get recordRoute => 'Enregistrer une voie';
+
+  @override
+  String get teachView => 'Apprendre cette vue';
+
+  @override
+  String get findRoutes => 'Trouver les voies';
+
+  @override
+  String get learnedView =>
+      'Merci ! Grigri connaît mieux cette paroi maintenant.';
+
+  @override
+  String get needTwoBolts => 'Touche au moins deux points.';
+
+  @override
+  String get routeSaved => 'Voie enregistrée.';
+
+  @override
+  String get undoBolt => 'Annuler le dernier point';
+
+  @override
+  String get tapBolts => 'Touche chaque point, du sol au relais';
+
+  @override
+  String get tapBoltsNewWall =>
+      'Rocher nouveau : touche chaque point, depuis le sol. Cette photo apprendra la paroi à Grigri.';
+
+  @override
+  String get notRecognized => 'Grigri n\'a pas reconnu cette paroi.';
+
+  @override
+  String get saveRoute => 'Enregistrer la voie';
+
+  @override
+  String get newWallNote =>
+      'Une nouvelle paroi : cette photo apprendra à Grigri à la reconnaître.';
+
+  @override
+  String get wallName => 'Paroi';
+
+  @override
+  String get routeName => 'Nom de la voie';
+
+  @override
+  String get routeScale => 'Voie';
+
+  @override
+  String get boulderScale => 'Bloc';
+
+  @override
+  String get routeGrade => 'Cotation';
 }

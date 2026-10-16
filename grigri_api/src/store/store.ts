@@ -18,6 +18,7 @@ import {
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Delivery, Effects } from '../domain/rules.js';
 import { type Attachment, type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, isOpen } from '../domain/model.js';
+import type { Wall } from '../domain/walls.js';
 import { index, key, prefix } from './keys.js';
 
 type Item = Record<string, unknown>;
@@ -489,6 +490,41 @@ export class Store implements SessionStore {
     await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.pic(planId, picId) }));
   }
 
+  // --- Walls (the route finder) -----------------------------------------------
+
+  async getWall(wallId: string): Promise<{ wall: Wall; version: number } | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.wall(wallId) }));
+    return Item ? { wall: toWall(Item), version: Item.version as number } : undefined;
+  }
+
+  /**
+   * Every wall (the WALLS index partition), for the lookup by distance.
+   * Fine for a few thousand walls; past that, partition them by area.
+   */
+  async allWalls(): Promise<Wall[]> {
+    const items = await this.query({
+      IndexName: index.walls.name,
+      KeyConditionExpression: 'gsi1pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.walls.pk },
+    });
+    return items.map(toWall);
+  }
+
+  /** Saves a wall: new (version 1), or over [previous] version (Conflict when it moved on). */
+  async saveWall(wall: Wall, previous: number | null): Promise<void> {
+    try {
+      await this.doc.send(new PutCommand({
+        TableName: this.table,
+        Item: wallItem(wall, (previous ?? 0) + 1),
+        ...(previous === null
+          ? { ConditionExpression: 'attribute_not_exists(pk)' }
+          : { ConditionExpression: 'version = :v', ExpressionAttributeValues: { ':v': previous } }),
+      }));
+    } catch (e) {
+      throw asConflict(e);
+    }
+  }
+
   // --- Plumbing ---------------------------------------------------------------
 
   /** Everything left in a plan's partition (requests, messages, pics). */
@@ -764,5 +800,38 @@ function toPlanPic(i: Item): PlanPic {
     uploaderId: i.uploaderId as string,
     time: i.time as string,
     fromChat: i.fromChat === true,
+  };
+}
+
+export function wallItem(w: Wall, version: number): Item {
+  return {
+    ...key.wall(w.id),
+    type: 'wall',
+    version,
+    gsi1pk: index.walls.pk,
+    gsi1sk: `${w.createdAt}#${w.id}`,
+    id: w.id,
+    name: w.name,
+    ...(w.cragId ? { cragId: w.cragId } : {}),
+    lat: w.lat,
+    lon: w.lon,
+    views: w.views,
+    routes: w.routes,
+    createdBy: w.createdBy,
+    createdAt: w.createdAt,
+  };
+}
+
+function toWall(i: Item): Wall {
+  return {
+    id: i.id as string,
+    name: i.name as string,
+    ...(i.cragId ? { cragId: i.cragId as string } : {}),
+    lat: i.lat as number,
+    lon: i.lon as number,
+    views: (i.views as Wall['views']) ?? [],
+    routes: (i.routes as Wall['routes']) ?? [],
+    createdBy: i.createdBy as string,
+    createdAt: i.createdAt as string,
   };
 }

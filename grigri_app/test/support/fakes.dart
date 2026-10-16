@@ -15,6 +15,7 @@ import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/pics.dart';
+import 'package:grigri_app/model/walls.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/model/sector.dart';
 
@@ -334,6 +335,199 @@ class FakeApi implements GrigriApi, SessionApi {
   @override
   Uri picUrl(String key) => Uri.parse('https://grigri.test/pics/$key');
 
+  @override
+  Future<Uint8List> photoBytes(String key) async {
+    final bytes = uploads[key];
+    if (bytes == null) throw const ApiException(404, 'No such photo.');
+    return bytes;
+  }
+
+  /// Whether `GET /api/me` says I'm premium.
+  bool premium = false;
+
+  /// The route finder's walls (the server's).
+  final allWalls = <Wall>[];
+
+  Map<String, Object?> _wallJson(Wall w) => {
+    'id': w.id,
+    'name': w.name,
+    'cragId': w.cragId,
+    'lat': w.lat,
+    'lon': w.lon,
+    'views': [
+      for (final v in w.views)
+        {'key': v.key, 'width': v.width, 'height': v.height, 'h': v.h},
+    ],
+    'routes': [
+      for (final r in w.routes)
+        {
+          'id': r.id,
+          'name': r.name,
+          'grade': {'scale': r.scale.name, 'grade': r.grade},
+          'bolts': [
+            for (final (x, y) in r.bolts) [x, y],
+          ],
+          'addedBy': r.addedBy,
+        },
+    ],
+  };
+
+  /// Saved as the server would: through its JSON.
+  Wall _saveWall(Wall w) {
+    final saved = Wall.fromJson(
+      jsonDecode(jsonEncode(_wallJson(w))) as Map<String, Object?>,
+    );
+    allWalls.removeWhere((x) => x.id == w.id);
+    allWalls.add(saved);
+    return saved;
+  }
+
+  void _premium() {
+    if (!premium && !admin) throw const ApiException(403, 'premium only');
+  }
+
+  Wall _wall(String id) => allWalls.firstWhere(
+    (w) => w.id == id,
+    orElse: () => throw const ApiException(404, 'no such wall'),
+  );
+
+  @override
+  Future<List<Wall>> walls(double lat, double lon) =>
+      _route('GET /api/walls', () {
+        _premium();
+        return [
+          for (final w in allWalls)
+            if ((w.lat - lat).abs() < 0.03 && (w.lon - lon).abs() < 0.03) w,
+        ];
+      });
+
+  @override
+  Future<PhotoUpload> newWallPhoto(String contentType) =>
+      _route('POST /api/walls/photo', () {
+        _premium();
+        final key = 'walls/me/wall-${++_ids}.jpg';
+        return PhotoUpload(
+          key: key,
+          url: Uri.parse('https://bucket.test/'),
+          fields: {'key': key},
+          contentType: contentType,
+        );
+      });
+
+  @override
+  Future<Wall> createWall({
+    required String name,
+    required double lat,
+    required double lon,
+    String? cragId,
+    required String key,
+    required int width,
+    required int height,
+  }) => _route('POST /api/walls', () {
+    _premium();
+    if (!uploads.containsKey(key)) {
+      throw const ApiException(400, "The photo isn't uploaded.");
+    }
+    return _saveWall(
+      Wall(
+        id: _id('wall'),
+        name: name,
+        cragId: cragId,
+        lat: lat,
+        lon: lon,
+        views: [
+          WallView(
+            key: key,
+            width: width,
+            height: height,
+            h: const [1, 0, 0, 0, 1, 0, 0, 0, 1],
+          ),
+        ],
+        routes: const [],
+      ),
+    );
+  });
+
+  @override
+  Future<Wall> addRoute(
+    String wallId, {
+    required String name,
+    required GradeScale scale,
+    required int grade,
+    required List<(double, double)> bolts,
+  }) => _route('POST /api/walls/$wallId/routes', () {
+    _premium();
+    final w = _wall(wallId);
+    return _saveWall(
+      Wall(
+        id: w.id,
+        name: w.name,
+        cragId: w.cragId,
+        lat: w.lat,
+        lon: w.lon,
+        views: w.views,
+        routes: [
+          ...w.routes,
+          ClimbRoute(
+            id: _id('route'),
+            name: name,
+            scale: scale,
+            grade: grade,
+            bolts: bolts,
+            addedBy: meId!,
+          ),
+        ],
+      ),
+    );
+  });
+
+  @override
+  Future<Wall> deleteRoute(String wallId, String routeId) =>
+      _route('DELETE /api/walls/$wallId/routes/$routeId', () {
+        _premium();
+        final w = _wall(wallId);
+        return _saveWall(
+          Wall(
+            id: w.id,
+            name: w.name,
+            cragId: w.cragId,
+            lat: w.lat,
+            lon: w.lon,
+            views: w.views,
+            routes: [
+              for (final r in w.routes)
+                if (r.id != routeId) r,
+            ],
+          ),
+        );
+      });
+
+  @override
+  Future<Wall> addWallView(
+    String wallId, {
+    required String key,
+    required int width,
+    required int height,
+    required List<double> h,
+  }) => _route('POST /api/walls/$wallId/views', () {
+    _premium();
+    final w = _wall(wallId);
+    return _saveWall(
+      Wall(
+        id: w.id,
+        name: w.name,
+        cragId: w.cragId,
+        lat: w.lat,
+        lon: w.lon,
+        views: [
+          ...w.views,
+          WallView(key: key, width: width, height: height, h: h),
+        ],
+        routes: w.routes,
+      ),
+    );
+  });
+
   /// What `GET /api/realtime` answers: null, live updates off.
   RealtimeInfo? realtimeInfo;
 
@@ -348,7 +542,12 @@ class FakeApi implements GrigriApi, SessionApi {
       meId = 'me';
       climbers['me'] = Climber(id: 'me', name: googleName);
     }
-    return Me(climber: climbers[meId], admin: admin, roles: roles);
+    return Me(
+      climber: climbers[meId],
+      admin: admin,
+      roles: roles,
+      premium: premium || admin,
+    );
   });
 
   @override

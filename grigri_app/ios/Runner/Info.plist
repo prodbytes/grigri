@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Take a photo of yourself or your gear for your profile, or a photo or video to send to a plan's chat.</string>
+	<string>Take a photo of yourself or your gear for your profile, or a photo or video to send to a plan's chat, and see climbing routes on the rock through the camera.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Record sound with the videos you send to a plan's chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
