@@ -30,8 +30,9 @@ person, and a plan can take a whole group.
     brings my profile back without them). They rank my
     [deck](#the-deck).
 
-    The app **takes my location from the device instead of asking**:
-    when my profile has no location or areas, it asks the phone or
+    The app **takes my location from the device instead of asking**, so
+    it defaults to where I am: when my profile has no location (areas or
+    not), it asks the phone or
     browser where it is once signed in (the system's location
     permission prompt the first time; coarse, through `geolocator`, at
     no running cost) and saves it as my location, rounded to 0.01°
@@ -43,6 +44,9 @@ person, and a plan can take a whole group.
     Android declares `ACCESS_COARSE_LOCATION`, iOS
     `NSLocationWhenInUseUsageDescription`, and the web app's
     `Permissions-Policy` allows `geolocation=(self)` ([deploy](deploy.md)).
+    I can change my location from the **Profile** tab itself
+    ([screens](screens.md)), saved at once, or in the profile editor
+    with my areas.
 
   When is only the plan's: a profile has no availability or years
   climbing.

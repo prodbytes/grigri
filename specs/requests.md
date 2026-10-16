@@ -760,3 +760,12 @@ spec.
       docs/ folder): how it works, with references to the key code.
     - Cost: about $0.00007 of aityx credits per score; nothing while
       idle ([backend](backend.md#cost)).
+
+55. **Let me set my location on the profile screen, defaulting to where
+    I am.**
+    - [Screens](screens.md): the Profile tab has a **Where you climb**
+      card: my location (a spinner while it's being detected), tap to
+      pick a place or my current location, saved at once.
+    - [Matching](matching.md#profiles-and-plans-are-separate): the app
+      takes my location from the device whenever my profile has none,
+      even when I have areas (before, areas alone stopped it).
