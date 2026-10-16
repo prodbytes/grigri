@@ -321,9 +321,7 @@ void main() {
     });
 
     testWidgets('demo plans and people say they are made up', (tester) async {
-      const notice =
-          'Demo: automatically generated, not real people or plans. '
-          "It's here to show how Grigri works.";
+      const notice = 'Demo: made-up people and plans.';
       final api = sampleApi();
       final plan = api.plans['boulder-night']!;
       api
