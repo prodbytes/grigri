@@ -821,7 +821,7 @@ spec.
     - [Screens](screens.md): the plan screen's Your Pics and GriGri Pics.
     - Cost: ~$0.0002/month of storage for GriGri Pics, a GET per cold
       start; Your Pics cost as chat photos do ([pics.md](pics.md#cost)).
-56. **A little smaller text on Discover; plan notes and bios cut to
+57. **A little smaller text on Discover; plan notes and bios cut to
     about three lines, with "…".**
     - [Matching](matching.md#the-deck): the swipe card's text is 10%
       smaller than the app's (on top of the system's text size); the
