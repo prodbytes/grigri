@@ -918,7 +918,39 @@ spec.
       every one without a watermark or a person's name; one more Margalef
       photo is out (its description named a climber).
     - [Plan photos](pics.md): how photos are placed, and the counts.
-65. **A premium-only camera view: the routes on the rock drawn bolt by
+
+65. **Let people subscribe to Premium in their profile, with real
+    payments.** (First half of the request for ads; the ads come in the
+    next entry.)
+    - [Premium](premium.md) rewritten as built: Stripe Checkout from the
+      profile's **Grigri Premium** card, the billing portal to manage it,
+      Stripe's webhook (signed) keeping each subscription in step; active
+      while paid (or retrying) to the period's end plus two days.
+    - [API](api.md): `GET /api/premium`, `POST /api/premium/checkout`,
+      `POST /api/premium/portal`, `POST /api/stripe/webhook`; `GET
+      /api/me` carries `premium`.
+    - [Deploy](deploy.md): Stripe's keys as secrets (live for GA, test
+      for RC), `StripeSecretKey`, `StripeWebhookSecret` and `SiteUrl` on
+      the API stack. The web app gets `premium.html`, where Stripe sends
+      people back. The app opens links with `url_launcher`.
+    - Cost: no new AWS resource and nothing idle; Stripe's 2.9% + $0.30
+      plus 0.7% per payment ([backend](backend.md#cost)).
+
+66. **Ads: Premium users submit ads in a new Ads tab; admins approve or
+    reject them in an Admin sub-nav and set their rate; ads show like
+    plans, with an image or video, text over it, and a link that opens in
+    the browser when accepted.**
+    - [Ads](ads.md) (new): the ad (link, text, photo or video), the Ads
+      tab and its editor with a preview, the deck (one ad after every *n*
+      plans swiped; ✓ opens the link with `url_launcher`, ✕ skips),
+      Admin → Ads, the routes, data and cost.
+    - [Admin](admin.md): a sub-navigation, **Users** and **Ads**.
+    - [Screens](screens.md), [Matching](matching.md), [API](api.md),
+      [Premium](premium.md), [Backend](backend.md#cost) revised to match;
+      the bar has up to seven tabs.
+    - Cost: nothing idle; a couple of reads per deck.
+
+67. **A premium-only camera view: the routes on the rock drawn bolt by
     bolt, labeled with their grade, so climbers see which route is
     which; climbers record and annotate new routes, and the app learns
     them.**
@@ -930,10 +962,9 @@ spec.
       route bolt by bolt on a photo (new rock becomes a wall); learning a
       wall from each confirmed view (12 at most). The web finds routes on
       a photo.
-    - [Premium](premium.md): partly built. Premium is rbacr's `premium`
-      role (or an admin), checked by the API; `GET /api/me` says
-      `premium`. The route finder is its first feature (premium was meant
-      for advertisement only; this request makes it a feature too).
+    - [Premium](premium.md): the route finder is Premium's first feature
+      besides ads (an active subscription, or an admin; checked by the
+      API on every `/api/walls` route).
     - [API](api.md): `/api/walls` (lookup, photo upload, create, routes,
       views), premium only; walls in the table's gsi1 `WALLS` partition,
       views in the photos bucket under `photos/walls/`.

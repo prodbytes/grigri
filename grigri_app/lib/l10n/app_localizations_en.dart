@@ -908,6 +908,172 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get premiumTitle => 'Grigri Premium';
+
+  @override
+  String get premiumPitch =>
+      'Advertise on Grigri: your ads show between plans on everyone\'s Discover. Everything else stays the same.';
+
+  @override
+  String premiumMonthly(String price) {
+    return '$price a month';
+  }
+
+  @override
+  String premiumYearly(String price) {
+    return '$price a year';
+  }
+
+  @override
+  String get premiumCheckoutHint =>
+      'You pay on Stripe\'s secure page, in your browser. Come back here when you\'re done.';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium: renews on $date';
+  }
+
+  @override
+  String premiumEndsOn(String date) {
+    return 'Premium: ends on $date';
+  }
+
+  @override
+  String get premiumManage => 'Manage subscription';
+
+  @override
+  String get premiumUnavailable => 'Premium isn\'t available yet.';
+
+  @override
+  String get premiumCheckRefresh => 'I\'ve paid: check again';
+
+  @override
+  String get errorOpenLink => 'Couldn\'t open the link.';
+
+  @override
+  String get tabAds => 'Ads';
+
+  @override
+  String get adTag => 'Ad';
+
+  @override
+  String adBy(String name) {
+    return 'Ad by $name';
+  }
+
+  @override
+  String get swipeOpen => 'Open';
+
+  @override
+  String get swipeSkip => 'Skip';
+
+  @override
+  String get openAd => 'Open the ad\'s link';
+
+  @override
+  String get skipAd => 'Skip the ad';
+
+  @override
+  String get shareAd => 'Share the ad\'s link';
+
+  @override
+  String get adsTitle => 'Your ads';
+
+  @override
+  String get adsEmptyTitle => 'No ads yet';
+
+  @override
+  String get adsEmptyMessage =>
+      'Add an ad: once an admin approves it, it shows between plans on everyone\'s Discover.';
+
+  @override
+  String get newAd => 'New ad';
+
+  @override
+  String get adStatusPending => 'Waiting for review';
+
+  @override
+  String get adStatusApproved => 'Approved: showing';
+
+  @override
+  String get adStatusRejected => 'Rejected';
+
+  @override
+  String get deleteAdQuestion => 'Delete this ad?';
+
+  @override
+  String get deleteAdMessage => 'It leaves Discover for good.';
+
+  @override
+  String get adTextLabel => 'Text over the ad';
+
+  @override
+  String get adLinkLabel => 'Link (https://…)';
+
+  @override
+  String get adLinkInvalid => 'Enter a web address, starting with https://';
+
+  @override
+  String get adAddMedia => 'Add a photo or video';
+
+  @override
+  String get adRemoveMedia => 'Remove the photo or video';
+
+  @override
+  String get adVideoPicked => 'Video';
+
+  @override
+  String get adNeedsContent => 'Add text, a photo or a video.';
+
+  @override
+  String get adSubmit => 'Send for review';
+
+  @override
+  String get adSent => 'Sent: an admin will review it.';
+
+  @override
+  String get adPreview => 'Preview';
+
+  @override
+  String get adsNeedPremium =>
+      'Your Premium has ended: your ads don\'t show. Renew it in your profile.';
+
+  @override
+  String get adminUsersTab => 'Users';
+
+  @override
+  String get adminAdsTab => 'Ads';
+
+  @override
+  String get adminAdsTitle => 'Admin';
+
+  @override
+  String get adsOnDiscover => 'On Discover';
+
+  @override
+  String get adEveryOff => 'No ads';
+
+  @override
+  String adEvery(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'An ad after every $count plans',
+      one: 'An ad after every plan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adApprove => 'Approve';
+
+  @override
+  String get adReject => 'Reject';
+
+  @override
+  String get adminAdsEmpty => 'No ads here';
+
+  @override
   String get routeFinder => 'Routes on the rock';
 
   @override

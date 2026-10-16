@@ -8,12 +8,15 @@ import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/sector_index.dart';
 import 'package:grigri_app/main.dart';
+import 'package:grigri_app/model/ad.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/location.dart';
 import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/plan.dart';
+import 'package:grigri_app/model/premium.dart';
+import 'package:grigri_app/ui/admin_screen.dart';
 import 'package:grigri_app/ui/chat_media.dart';
 import 'package:grigri_app/ui/chat_screen.dart';
 import 'package:grigri_app/ui/common.dart';
@@ -816,7 +819,7 @@ void main() {
       tester.view.physicalSize = const Size(1080, 2340);
       tester.view.devicePixelRatio = 2.6;
       addTearDown(tester.view.reset);
-      final api = sampleApi()..premium = premium;
+      final api = sampleApi()..myPremium = Premium(active: premium);
       api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
         memberIds: member ? ['robin', 'me'] : ['robin'],
         point: () => (lat: 41.2577, lon: 0.9318),
@@ -1104,6 +1107,248 @@ void main() {
       expect(find.text('Nothing yet'), findsOneWidget);
       await tapTab(tester, 'Admin');
       expect(find.byKey(const ValueKey('admin climber me')), findsOneWidget);
+    });
+  });
+
+  group('Premium', () {
+    Future<void> openProfile(WidgetTester tester) async {
+      await tapTab(tester, 'Me');
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('premium card')),
+        200,
+      );
+    }
+
+    testWidgets('subscribing opens Stripe Checkout in the browser', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await openProfile(tester);
+      expect(find.text('\$20 a month'), findsOneWidget);
+      expect(find.text('\$200 a year'), findsOneWidget);
+      await tester.ensureVisible(find.text('\$200 a year'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('\$200 a year'));
+      await tester.pumpAndSettle();
+      expect(api.opened, [Uri.parse('https://checkout.stripe.test/yearly')]);
+
+      // Stripe told the API: checking again shows it.
+      api.myPremium = Premium(
+        active: true,
+        plan: PremiumPlan.yearly,
+        until: DateTime(2031, 5, 1),
+      );
+      await tester.ensureVisible(find.text("I've paid: check again"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("I've paid: check again"));
+      await tester.pumpAndSettle();
+      expect(find.text('Premium: renews on May 1, 2031'), findsOneWidget);
+      await tester.ensureVisible(find.text('Manage subscription'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Manage subscription'));
+      await tester.pumpAndSettle();
+      expect(api.opened.last, Uri.parse('https://billing.stripe.test/portal'));
+    });
+
+    testWidgets('a cancelled subscription says when it ends', (tester) async {
+      final api = sampleApi()
+        ..myPremium = Premium(
+          active: true,
+          plan: PremiumPlan.monthly,
+          until: DateTime(2030, 6, 1),
+          ending: true,
+        );
+      await pumpApp(tester, api);
+      await openProfile(tester);
+      expect(find.text('Premium: ends on Jun 1, 2030'), findsOneWidget);
+      expect(find.text('\$20 a month'), findsNothing);
+    });
+
+    testWidgets('without payments set up, it says Premium isn\'t available', (
+      tester,
+    ) async {
+      final api = sampleApi()..premiumPrices = const {};
+      await pumpApp(tester, api);
+      await openProfile(tester);
+      expect(find.text("Premium isn't available yet."), findsOneWidget);
+      expect(find.text('\$20 a month'), findsNothing);
+    });
+  });
+
+  group('Ads', () {
+    Ad chalk({AdStatus status = AdStatus.approved}) => Ad(
+      id: 'ad-chalk',
+      ownerId: 'robin',
+      text: 'Chalk sale this weekend',
+      link: Uri.parse('https://chalk.example.com/sale'),
+      status: status,
+    );
+    final premium = Premium(
+      active: true,
+      plan: PremiumPlan.monthly,
+      until: DateTime(2031),
+    );
+
+    testWidgets('an approved ad comes up between plans; ✓ opens its link', (
+      tester,
+    ) async {
+      final api = sampleApi()
+        ..adEvery = 1
+        ..addAd(chalk());
+      await pumpApp(tester, api);
+      expect(find.text('Block Hall'), findsOneWidget);
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      // After one plan: the ad, saying whose it is and where it goes.
+      expect(find.text('Chalk sale this weekend'), findsOneWidget);
+      expect(find.text('Ad by Robin Vale'), findsOneWidget);
+      expect(find.text('chalk.example.com'), findsOneWidget);
+      await tester.tap(find.byTooltip("Open the ad's link"));
+      await tester.pumpAndSettle();
+      expect(api.opened, [Uri.parse('https://chalk.example.com/sale')]);
+      // Then the next plan, and the ad doesn't come back.
+      expect(find.text('Grey Cliffs'), findsOneWidget);
+      expect(find.text('Chalk sale this weekend'), findsNothing);
+    });
+
+    testWidgets('skipping an ad opens nothing; pending ads never show', (
+      tester,
+    ) async {
+      final api = sampleApi()
+        ..adEvery = 1
+        ..addAd(chalk())
+        ..addAd(
+          Ad(
+            id: 'ad-pending',
+            ownerId: 'kit',
+            text: 'Not reviewed yet',
+            link: Uri.parse('https://kit.example.com'),
+          ),
+        );
+      await pumpApp(tester, api);
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Skip the ad'));
+      await tester.pumpAndSettle();
+      expect(api.opened, isEmpty);
+      expect(find.text('Grey Cliffs'), findsOneWidget);
+      expect(find.text('Not reviewed yet'), findsNothing);
+    });
+
+    test('ads keep their place as plans are swiped', () async {
+      final api = sampleApi()
+        ..adEvery = 2
+        ..addAd(chalk());
+      for (var i = 0; i < 3; i++) {
+        api.addPlan(
+          Plan(
+            id: 'extra$i',
+            organizerId: 'robin',
+            discipline: Discipline.sport,
+            place: 'Extra $i',
+            start: inDays(5 + i),
+            end: inDays(5 + i, 16),
+            grades: const GradeRange(GradeScale.routes, 6, 12),
+            memberIds: const ['robin'],
+          ),
+        );
+      }
+      final store = storeFor(api);
+      await store.start();
+      String shape() =>
+          store.deck.map((i) => i is DeckAd ? 'ad' : 'plan').join(' ');
+      expect(shape(), 'plan plan ad plan plan plan');
+      await store.pass(store.discover.first.id);
+      expect(shape(), 'plan ad plan plan plan');
+      await store.pass(store.discover.first.id);
+      expect(shape(), 'ad plan plan plan');
+      await store.swipeAd((store.deck.first as DeckAd).ad, open: false);
+      expect(shape(), 'plan plan plan');
+    });
+
+    testWidgets('the Ads tab is for Premium: add an ad, it waits for review', (
+      tester,
+    ) async {
+      final plain = sampleApi();
+      await pumpApp(tester, plain);
+      expect(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Ads'),
+        ),
+        findsNothing,
+      );
+
+      final api = sampleApi()..myPremium = premium;
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Ads');
+      expect(find.text('No ads yet'), findsOneWidget);
+      await tester.tap(find.text('New ad'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Text over the ad'),
+        'Guided days in the gorge',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('ad link')),
+        'not a link',
+      );
+      await tester.tap(find.text('Send for review'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Enter a web address, starting with https://'),
+        findsOneWidget,
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('ad link')),
+        'https://guides.example.com',
+      );
+      await tester.pumpAndSettle();
+      // The preview shows the card as the deck will.
+      expect(find.text('guides.example.com'), findsOneWidget);
+      await tester.ensureVisible(find.text('Send for review'));
+      await tester.tap(find.text('Send for review'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sent: an admin will review it.'), findsOneWidget);
+      expect(find.text('Waiting for review'), findsOneWidget);
+      final saved = api.ads.values.single;
+      expect(saved.text, 'Guided days in the gorge');
+      expect(saved.link, Uri.parse('https://guides.example.com'));
+
+      await tester.tap(find.byTooltip('Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+      expect(api.ads, isEmpty);
+      expect(find.text('No ads yet'), findsOneWidget);
+    });
+
+    testWidgets('admins approve ads and set how often they show', (
+      tester,
+    ) async {
+      final api = sampleApi(admin: true)
+        ..addAd(chalk(status: AdStatus.pending));
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Admin');
+      expect(find.widgetWithText(Tab, 'Users'), findsOneWidget);
+      await tester.tap(find.widgetWithText(Tab, 'Ads'));
+      await tester.pumpAndSettle();
+      expect(find.text('Chalk sale this weekend'), findsOneWidget);
+      // The card is tall: bring its buttons up from under the bar.
+      await tester.drag(find.byType(AdminAdsView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Approve'));
+      await tester.pumpAndSettle();
+      expect(api.ads['ad-chalk']!.status, AdStatus.approved);
+      expect(find.text('Chalk sale this weekend'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('ad every')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('An ad after every 3 plans').last);
+      await tester.pumpAndSettle();
+      expect(api.adEvery, 3);
+      expect(api.calls, contains('PUT /api/admin/ads/settings'));
     });
   });
 
@@ -1510,9 +1755,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(store.locale, const Locale('es'));
-      expect(find.text('Editar perfil'), findsOneWidget);
       expect(find.text('Idioma'), findsOneWidget);
       expect(find.text('Español'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Editar perfil'), -200);
+      expect(find.text('Editar perfil'), findsOneWidget);
       await tapTab(tester, 'Buscar');
       expect(find.text('Descubre planes'), findsOneWidget);
       expect(find.text('Organiza'), findsWidgets);
@@ -1524,6 +1770,7 @@ void main() {
       await tester.tap(find.text('Idioma del sistema').last);
       await tester.pumpAndSettle();
       expect(store.locale, isNull);
+      await tester.scrollUntilVisible(find.text('Edit profile'), -200);
       expect(find.text('Edit profile'), findsOneWidget);
     });
 

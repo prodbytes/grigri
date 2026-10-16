@@ -4,11 +4,13 @@ import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
+import '../model/ad.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/pics.dart';
 import '../model/walls.dart';
 import '../model/plan.dart';
+import '../model/premium.dart';
 import '../log.dart';
 import 'api.dart';
 import 'auth.dart';
@@ -438,6 +440,60 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       );
     }
   }
+
+  @override
+  Future<PremiumOffer> premium() async =>
+      ApiJson.premiumOffer(await _get(['premium']));
+
+  @override
+  Future<Uri> premiumCheckout(PremiumPlan plan) async =>
+      ApiJson.url(await _post(['premium', 'checkout'], {'plan': plan.name}));
+
+  @override
+  Future<Uri> premiumPortal() async =>
+      ApiJson.url(await _post(['premium', 'portal']));
+
+  @override
+  Future<MyAds> myAds() async => ApiJson.myAds(await _get(['ads']));
+
+  @override
+  Future<PhotoUpload> newAdMedia(String contentType) async =>
+      ApiJson.photoUpload(
+        await _post(['ads', 'media'], {'contentType': contentType}),
+        contentType,
+      );
+
+  @override
+  Future<Ad> createAd({
+    required String text,
+    required String link,
+    String? mediaKey,
+  }) async => ApiJson.ad(
+    await _post(
+      ['ads'],
+      {
+        'text': text,
+        'link': link,
+        if (mediaKey != null) 'media': {'key': mediaKey},
+      },
+    ),
+  );
+
+  @override
+  Future<void> deleteAd(String adId) => _send('DELETE', ['ads', adId]);
+
+  @override
+  Future<AdminAds> adminAds(AdStatus status) async =>
+      ApiJson.adminAds(await _get(['admin', 'ads'], {'status': status.name}));
+
+  @override
+  Future<Ad> reviewAd(String adId, {required bool approve}) async => ApiJson.ad(
+    await _post(['admin', 'ads', adId, approve ? 'approve' : 'reject']),
+  );
+
+  @override
+  Future<void> setAdEvery(int every) =>
+      _put(['admin', 'ads', 'settings'], {'every': every});
 
   @override
   Future<List<AdminClimber>> adminClimbers() async =>

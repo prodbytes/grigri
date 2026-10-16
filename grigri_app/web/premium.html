@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!-- Where Stripe's Checkout and billing portal send people back
+     (specs/premium.md). Static, no script: the app reads Premium from the
+     API when it comes back to the foreground. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Grigri Premium</title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(160deg, #1b2a36, #12202b 60%, #0d171f);
+      color: #e9e4d8;
+    }
+    main { max-width: 26rem; padding: 2rem 1.25rem; text-align: center; }
+    h1 { font-size: 1.6rem; margin: 0 0 .75rem; color: #e8d9b5; }
+    p { line-height: 1.5; margin: 0 0 1.25rem; color: #c9c4b8; }
+    a.button {
+      display: inline-block; padding: .75rem 1.5rem; border-radius: 999px;
+      background: #7fa7c4; color: #0d171f; font-weight: 600; text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Back from Stripe</h1>
+    <p>If you subscribed, Grigri Premium shows on your profile within a
+      minute. On your phone, switch back to the Grigri app; you can close
+      this page.</p>
+    <a class="button" href="./">Open Grigri</a>
+  </main>
+</body>
+</html>

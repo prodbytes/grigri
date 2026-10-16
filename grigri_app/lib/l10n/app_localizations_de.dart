@@ -919,6 +919,173 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get premiumTitle => 'Grigri Premium';
+
+  @override
+  String get premiumPitch =>
+      'Wirb auf Grigri: Deine Anzeigen erscheinen bei allen in der Suche zwischen den Plänen. Sonst bleibt alles gleich.';
+
+  @override
+  String premiumMonthly(String price) {
+    return '$price im Monat';
+  }
+
+  @override
+  String premiumYearly(String price) {
+    return '$price im Jahr';
+  }
+
+  @override
+  String get premiumCheckoutHint =>
+      'Du bezahlst auf der sicheren Seite von Stripe in deinem Browser. Komm danach hierher zurück.';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium: verlängert sich am $date';
+  }
+
+  @override
+  String premiumEndsOn(String date) {
+    return 'Premium: endet am $date';
+  }
+
+  @override
+  String get premiumManage => 'Abo verwalten';
+
+  @override
+  String get premiumUnavailable => 'Premium ist noch nicht verfügbar.';
+
+  @override
+  String get premiumCheckRefresh => 'Bezahlt: erneut prüfen';
+
+  @override
+  String get errorOpenLink => 'Der Link ließ sich nicht öffnen.';
+
+  @override
+  String get tabAds => 'Anzeigen';
+
+  @override
+  String get adTag => 'Anzeige';
+
+  @override
+  String adBy(String name) {
+    return 'Anzeige von $name';
+  }
+
+  @override
+  String get swipeOpen => 'Öffnen';
+
+  @override
+  String get swipeSkip => 'Weiter';
+
+  @override
+  String get openAd => 'Link der Anzeige öffnen';
+
+  @override
+  String get skipAd => 'Anzeige überspringen';
+
+  @override
+  String get shareAd => 'Link der Anzeige teilen';
+
+  @override
+  String get adsTitle => 'Deine Anzeigen';
+
+  @override
+  String get adsEmptyTitle => 'Noch keine Anzeigen';
+
+  @override
+  String get adsEmptyMessage =>
+      'Füge eine Anzeige hinzu: Sobald ein Admin sie freigibt, erscheint sie bei allen in der Suche zwischen den Plänen.';
+
+  @override
+  String get newAd => 'Neue Anzeige';
+
+  @override
+  String get adStatusPending => 'Wartet auf Prüfung';
+
+  @override
+  String get adStatusApproved => 'Freigegeben: wird gezeigt';
+
+  @override
+  String get adStatusRejected => 'Abgelehnt';
+
+  @override
+  String get deleteAdQuestion => 'Diese Anzeige löschen?';
+
+  @override
+  String get deleteAdMessage => 'Sie verschwindet endgültig aus der Suche.';
+
+  @override
+  String get adTextLabel => 'Text auf der Anzeige';
+
+  @override
+  String get adLinkLabel => 'Link (https://…)';
+
+  @override
+  String get adLinkInvalid =>
+      'Gib eine Webadresse ein, die mit https:// beginnt';
+
+  @override
+  String get adAddMedia => 'Foto oder Video hinzufügen';
+
+  @override
+  String get adRemoveMedia => 'Foto oder Video entfernen';
+
+  @override
+  String get adVideoPicked => 'Video';
+
+  @override
+  String get adNeedsContent => 'Füge Text, ein Foto oder ein Video hinzu.';
+
+  @override
+  String get adSubmit => 'Zur Prüfung senden';
+
+  @override
+  String get adSent => 'Gesendet: Ein Admin prüft sie.';
+
+  @override
+  String get adPreview => 'Vorschau';
+
+  @override
+  String get adsNeedPremium =>
+      'Dein Premium ist abgelaufen: Deine Anzeigen werden nicht gezeigt. Verlängere es in deinem Profil.';
+
+  @override
+  String get adminUsersTab => 'Nutzer';
+
+  @override
+  String get adminAdsTab => 'Anzeigen';
+
+  @override
+  String get adminAdsTitle => 'Admin';
+
+  @override
+  String get adsOnDiscover => 'In der Suche';
+
+  @override
+  String get adEveryOff => 'Keine Anzeigen';
+
+  @override
+  String adEvery(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Eine Anzeige alle $count Pläne',
+      one: 'Eine Anzeige nach jedem Plan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adApprove => 'Freigeben';
+
+  @override
+  String get adReject => 'Ablehnen';
+
+  @override
+  String get adminAdsEmpty => 'Keine Anzeigen hier';
+
+  @override
   String get routeFinder => 'Routen am Fels';
 
   @override

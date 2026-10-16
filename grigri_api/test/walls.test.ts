@@ -3,6 +3,7 @@ import { Api } from '../src/api.js';
 import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { MAX_VIEWS } from '../src/domain/walls.js';
+import type { Subscription } from '../src/premium.js';
 import { FakeStore } from './fake-store.js';
 
 const now = new Date('2030-05-01T10:00:00.000Z');
@@ -11,8 +12,6 @@ let api: Api;
 /** S3 as the fake photos see it: key -> pending tag. */
 let objects: Map<string, boolean>;
 let removed: string[];
-/** Each email's roles in rbacr. */
-const roles: Record<string, string[]> = {};
 
 const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
 const ada = who('ada');
@@ -44,7 +43,6 @@ beforeEach(async () => {
   store = new FakeStore();
   objects = new Map();
   removed = [];
-  Object.assign(roles, { 'ada@example.com': ['premium'], 'ben@example.com': ['premium'], 'free@example.com': [] });
   const photos = {
     presign: async (key: string) => ({ url: 'https://upload.example.com/', fields: { key: `photos/${key}` } }),
     keep: async (key: string) => {
@@ -67,18 +65,25 @@ beforeEach(async () => {
     store: store.asStore(),
     photos,
     auth,
-    roles: async (email) => roles[email] ?? null,
     config: { stage: 'local', version: '0' },
     clock: () => now,
   });
-  for (const c of [ada, ben, free, root]) await call(c, 'GET', '/api/me');
+  // Ada and Ben subscribe to Premium; Free doesn't; Root is an admin.
+  for (const c of [ada, ben, free, root]) {
+    const { climber } = await call(c, 'GET', '/api/me');
+    if (c !== ada && c !== ben) continue;
+    const sub: Subscription = {
+      climberId: climber.id, customerId: 'cus', subscriptionId: `sub_${climber.id}`, status: 'active', plan: 'monthly',
+      periodEnd: '2030-06-01T00:00:00.000Z', cancelAtPeriodEnd: false, updatedAt: now.toISOString(),
+    };
+    await store.putSubscription(sub);
+  }
 });
 
 describe('the route finder (premium)', () => {
-  it('only premium climbers (and admins) use it; /api/me says who is', async () => {
-    expect((await call(ada, 'GET', '/api/me')).premium).toBe(true);
-    expect((await call(free, 'GET', '/api/me')).premium).toBe(false);
-    expect((await call(root, 'GET', '/api/me')).premium).toBe(true);
+  it('only Premium climbers (and admins) use it', async () => {
+    expect((await call(ada, 'GET', '/api/me')).premium.active).toBe(true);
+    expect((await call(free, 'GET', '/api/me')).premium.active).toBe(false);
     await fails(call(free, 'GET', '/api/walls', undefined, { lat: '41.26', lon: '0.93' }), 403, /premium/);
     await fails(call(free, 'POST', '/api/walls/photo', { contentType: 'image/jpeg' }), 403);
     expect((await call(root, 'GET', '/api/walls', undefined, { lat: '41.26', lon: '0.93' })).walls).toEqual([]);

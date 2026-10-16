@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/route_finder.dart';
 import 'package:grigri_app/model/climbing.dart';
+import 'package:grigri_app/model/premium.dart';
 import 'package:grigri_app/vision/gray.dart';
 import 'package:grigri_app/vision/homography.dart';
 
@@ -42,10 +43,10 @@ class Photos {
 void main() {
   test('records a route on new rock, finds it from another angle, adds one '
       'there, and learns that view', () async {
-    final api = sampleApi()..premium = true;
+    final api = sampleApi()..myPremium = const Premium(active: true);
     final store = storeFor(api);
     await store.start();
-    expect(store.premium, isTrue);
+    expect(store.premium.active, isTrue);
     final photos = Photos();
     RouteFinder finder() => RouteFinder(
       store: store,
@@ -160,7 +161,7 @@ void main() {
     final api = sampleApi();
     final store = storeFor(api);
     await store.start();
-    expect(store.premium, isFalse);
+    expect(store.premium.active, isFalse);
     final errors = <String>[];
     final sub = store.errors.listen(errors.add);
     addTearDown(sub.cancel);

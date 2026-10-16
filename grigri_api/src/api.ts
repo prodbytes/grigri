@@ -5,7 +5,7 @@
 // Google account's name, or PUT /api/me saves it).
 import { randomBytes } from 'node:crypto';
 import { type Auth, type Caller, subjectHash } from './auth.js';
-import { ApiError, badRequest, conflict, forbidden, notFound } from './domain/errors.js';
+import { ApiError, badRequest, conflict, forbidden, notFound, unavailable } from './domain/errors.js';
 import {
   type Climber,
   type JoinRequest,
@@ -17,6 +17,7 @@ import {
   publicClimber,
   requestJson,
 } from './domain/model.js';
+import { type Ad, AD_STATUSES, type AdStatus, MAX_ADS_PER_OWNER, adInput, adSettingsInput, deckAds } from './domain/ads.js';
 import { type PicWithCrag, type Where, picsFor } from './domain/pics.js';
 import * as rules from './domain/rules.js';
 import {
@@ -32,6 +33,8 @@ import {
 } from './domain/walls.js';
 import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
+import { PREMIUM_PRICES, type PremiumPlan, isPaid, premiumOf } from './premium.js';
+import { BadSignature, type Billing, subscriptionIdOf } from './stripe.js';
 import { matchFacts } from './match/facts.js';
 import { openByPlan, othersWaiting } from './match/run.js';
 import type { RolesLookup } from './rbacr.js';
@@ -107,6 +110,8 @@ export interface Deps {
   roles?: RolesLookup;
   /** Match scores from aityx (match/aityx.ts), on admins' decks; none: off. */
   matchScorer?: MatchScorer;
+  /** Stripe, for Premium (stripe.ts); none: no Premium (no keys). */
+  billing?: Billing;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -128,8 +133,6 @@ export interface Request {
  */
 export type Access = 'public' | 'session' | 'caller' | 'profile' | 'premium' | 'admin';
 
-/** The rbacr role that makes someone premium (specs/premium.md). */
-export const PREMIUM_ROLE = 'premium';
 
 interface Session {
   caller: Caller;
@@ -199,11 +202,21 @@ export class Api {
         email && deps.roles ? deps.roles(email) : Promise.resolve(null),
       ]);
       // roles: my roles in Grigri from rbacr, or null when it can't say.
-      return { climber, admin: s.caller.admin, premium: this.isPremium(s.caller.admin, roles), roles };
+      const premium = premiumOf(await this.store.getSubscription(climber.id), s.now);
+      return { climber, admin: s.caller.admin, roles, premium };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
     r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });
+
+    r('GET /api/premium', 'profile', (_req, s) => this.premium(s));
+    r('POST /api/premium/checkout', 'profile', (req, s) => this.checkout(req, s));
+    r('POST /api/premium/portal', 'profile', (_req, s) => this.portal(s));
+
+    r('GET /api/ads', 'profile', (_req, s) => this.myAds(s));
+    r('POST /api/ads/media', 'profile', (req, s) => this.presignAdMedia(req, s));
+    r('POST /api/ads', 'profile', (req, s) => this.createAd(req, s));
+    r('DELETE /api/ads/{id}', 'profile', (req, s) => this.deleteAd(req, s));
 
     r('GET /api/discover', 'profile', (_req, s) => this.discover(s));
     r('POST /api/plans', 'profile', (req, s) => this.createPlan(req, s));
@@ -243,6 +256,14 @@ export class Api {
     r('POST /api/walls/{id}/views', 'premium', (req, s) => this.addWallView(req, s));
 
     r('GET /api/admin/climbers', 'admin', () => this.adminClimbers());
+    r('GET /api/admin/ads', 'admin', (req) => this.adminAds(req));
+    r('POST /api/admin/ads/{id}/approve', 'admin', (req, s) => this.reviewAd(req, s, 'approved'));
+    r('POST /api/admin/ads/{id}/reject', 'admin', (req, s) => this.reviewAd(req, s, 'rejected'));
+    r('PUT /api/admin/ads/settings', 'admin', async (req) => {
+      const settings = adSettingsInput(req.body);
+      await this.store.putAdSettings(settings);
+      return settings;
+    });
     r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(req, s, true));
     r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(req, s, false));
   }
@@ -270,7 +291,10 @@ export class Api {
     // Blocked: nothing but signing out ('session' routes, above).
     if (me?.blocked) throw forbidden('blocked');
     if (route.access === 'admin' && !req.caller.admin) throw forbidden('admins only');
-    if (route.access === 'premium' && !(await this.callerIsPremium(req.caller))) throw forbidden('premium only');
+    // Premium routes: a Premium subscription (specs/premium.md), or an admin.
+    if (route.access === 'premium' && !req.caller.admin && !(me && (await this.isPremium(me.id, now)))) {
+      throw forbidden('premium only');
+    }
     const names = new Map<string, string>();
     const session: Session = {
       caller: req.caller,
@@ -485,19 +509,6 @@ export class Api {
     return current.plan;
   }
 
-  // --- Premium ----------------------------------------------------------------
-
-  /** Premium: rbacr's premium role (or root's), or an admin. */
-  private isPremium(admin: boolean, roles: string[] | null): boolean {
-    return admin || (roles ?? []).some((r) => r === PREMIUM_ROLE || r === 'root');
-  }
-
-  private async callerIsPremium(caller: Caller): Promise<boolean> {
-    if (caller.admin) return true;
-    if (!caller.email || !this.deps.roles) return false;
-    return this.isPremium(false, await this.deps.roles(caller.email));
-  }
-
   // --- The route finder: walls and their routes ------------------------------------
 
   /** GET /api/walls?lat=&lon=: the walls near a point, nearest first. */
@@ -606,6 +617,155 @@ export class Api {
     });
   }
 
+  // --- Premium (specs/premium.md) --------------------------------------------
+
+  /** GET /api/premium: mine, and the prices (null when Premium can't be bought here: no Stripe keys). */
+  private async premium(s: Session) {
+    const premium = premiumOf(await this.store.getSubscription(s.me.id), s.now);
+    return { premium, prices: this.deps.billing ? PREMIUM_PRICES : null };
+  }
+
+  /** POST /api/premium/checkout {plan}: Stripe Checkout's page for it, to open in a browser. */
+  private async checkout(req: Request, s: Session) {
+    const billing = this.deps.billing;
+    if (!billing) throw unavailable("Premium isn't available yet");
+    const plan = asObject(req.body).plan;
+    if (plan !== 'monthly' && plan !== 'yearly') throw badRequest('plan must be monthly or yearly');
+    const current = await this.store.getSubscription(s.me.id);
+    if (premiumOf(current, s.now).active) throw conflict("you're already Premium");
+    return { url: await billing.checkout(s.me.id, plan as PremiumPlan, current?.customerId || undefined) };
+  }
+
+  /** POST /api/premium/portal: Stripe's billing portal, to cancel or change the card. */
+  private async portal(s: Session) {
+    const billing = this.deps.billing;
+    if (!billing) throw unavailable("Premium isn't available yet");
+    const current = await this.store.getSubscription(s.me.id);
+    if (!current?.customerId) throw notFound('no subscription');
+    return { url: await billing.portal(current.customerId) };
+  }
+
+  /**
+   * POST /api/stripe/webhook (handler.ts passes the raw body): a signed
+   * event from Stripe. The subscription it's about is read back from
+   * Stripe and saved, so the copy is Stripe's latest whatever the order of
+   * events. An older subscription never overwrites a newer paid one.
+   */
+  async stripeWebhook(rawBody: string, signature: string | undefined): Promise<unknown> {
+    const billing = this.deps.billing;
+    if (!billing) throw unavailable('no billing');
+    const now = this.clock();
+    let event;
+    try {
+      event = billing.event(rawBody, signature, now);
+    } catch (e) {
+      if (e instanceof BadSignature || e instanceof SyntaxError) throw badRequest('bad signature');
+      throw e;
+    }
+    const subscriptionId = subscriptionIdOf(event);
+    if (!subscriptionId) return { received: true };
+    const sub = await billing.subscription(subscriptionId, now);
+    // Not Grigri Premium (another product on the account): nothing to do.
+    if (!sub) return { received: true };
+    const current = await this.store.getSubscription(sub.climberId);
+    const stale = current && current.subscriptionId !== sub.subscriptionId && isPaid(current.status) && !isPaid(sub.status);
+    if (!stale) await this.store.putSubscription(sub);
+    return { received: true };
+  }
+
+  // --- Ads (specs/ads.md) ------------------------------------------------------
+
+  /** Whether I'm Premium now (ads need it). */
+  private async isPremium(climberId: string, now: Date): Promise<boolean> {
+    return premiumOf(await this.store.getSubscription(climberId), now).active;
+  }
+
+  /** GET /api/ads: my ads, newest first, and whether I'm Premium (to add more). */
+  private async myAds(s: Session) {
+    const [ads, premium] = await Promise.all([this.store.adsBy(s.me.id), this.isPremium(s.me.id, s.now)]);
+    return { ads, premium };
+  }
+
+  /** POST /api/ads/media {contentType}: where a Premium climber uploads an ad's photo or video (`ads/<me>/<id>.<ext>`, pending until the ad is saved). */
+  private async presignAdMedia(req: Request, s: Session) {
+    const contentType = asObject(req.body).contentType;
+    const ext = typeof contentType === 'string' && Object.hasOwn(CHAT_TYPES, contentType) ? CHAT_TYPES[contentType] : undefined;
+    if (!ext) throw badRequest(`contentType must be one of ${Object.keys(CHAT_TYPES).join(', ')}`);
+    if (!(await this.isPremium(s.me.id, s.now))) throw forbidden('ads are for Premium');
+    const key = `ads/${s.me.id}/${newId()}.${ext}`;
+    const maxBytes = Object.hasOwn(VIDEO_TYPES, contentType as string) ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
+    const { url, fields } = await this.deps.photos.presign(key, contentType as string, maxBytes);
+    return { key, url, fields, maxBytes };
+  }
+
+  /** POST /api/ads {text, link, media?}: a Premium climber's new ad, waiting for an admin. */
+  private async createAd(req: Request, s: Session) {
+    const input = adInput(req.body, s.me.id);
+    if (!(await this.isPremium(s.me.id, s.now))) throw forbidden('ads are for Premium');
+    if ((await this.store.adsBy(s.me.id)).length >= MAX_ADS_PER_OWNER) {
+      throw conflict(`you can keep at most ${MAX_ADS_PER_OWNER} ads; delete one first`);
+    }
+    if (input.media && !(await this.deps.photos.keep(input.media.key))) {
+      throw badRequest("the photo or video isn't uploaded (or expired): upload it again");
+    }
+    const ad: Ad = { id: newId(), ownerId: s.me.id, ...input, status: 'pending', createdAt: s.now.toISOString() };
+    await this.store.putAd(ad);
+    return { ad };
+  }
+
+  /** DELETE /api/ads/{id}: its owner (or an admin) takes it down for good, with its media. */
+  private async deleteAd(req: Request, s: Session) {
+    const ad = await this.store.getAd(id(req.params.id, 'ad id'));
+    if (!ad) throw notFound('no such ad');
+    if (ad.ownerId !== s.me.id && !s.caller.admin) throw forbidden('not your ad');
+    await this.store.deleteAd(ad.id);
+    if (ad.media) {
+      // Best effort: a leftover only costs storage.
+      await this.deps.photos.remove([ad.media.key]).catch((e: unknown) => {
+        console.error(JSON.stringify({ level: 'warn', msg: 'ad media cleanup failed', error: String(e) }));
+      });
+    }
+    return {};
+  }
+
+  /** GET /api/admin/ads?status=pending|approved|rejected: newest first, with their owners and the deck's setting. */
+  private async adminAds(req: Request) {
+    const status = (req.query.status ?? 'pending') as AdStatus;
+    if (!AD_STATUSES.includes(status)) throw badRequest(`status must be one of ${AD_STATUSES.join(', ')}`);
+    const [ads, settings] = await Promise.all([this.store.adsByStatus(status), this.store.getAdSettings()]);
+    return { ads, climbers: await this.publicClimbers(ads.map((a) => a.ownerId)), every: settings.every };
+  }
+
+  /** POST /api/admin/ads/{id}/approve or /reject. */
+  private async reviewAd(req: Request, s: Session, status: 'approved' | 'rejected') {
+    const ad = await this.store.getAd(id(req.params.id, 'ad id'));
+    if (!ad) throw notFound('no such ad');
+    const reviewed: Ad = { ...ad, status, reviewedAt: s.now.toISOString() };
+    await this.store.putAd(reviewed);
+    return { ad: reviewed };
+  }
+
+  /**
+   * The deck's ads: approved, not mine, their owner Premium and not
+   * blocked; and how often to show one. Never fails the deck.
+   */
+  private async deckAds(s: Session): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
+    try {
+      const settings = await this.store.getAdSettings();
+      if (settings.every === 0) return { ads: [], adEvery: 0, adOwners: {} };
+      const approved = await this.store.adsByStatus('approved');
+      const owners = [...new Set(approved.map((a) => a.ownerId))];
+      const [subs, climbers] = await Promise.all([this.store.getSubscriptions(owners), this.store.getClimbers(owners)]);
+      const ok = (ownerId: string) => premiumOf(subs[ownerId], s.now).active && climbers[ownerId] !== undefined && climbers[ownerId]!.blocked !== true;
+      const ads = deckAds(approved, s.me.id, ok);
+      const adOwners = Object.fromEntries(ads.map((a) => [a.ownerId, publicClimber(climbers[a.ownerId]!)]));
+      return { ads, adEvery: settings.every, adOwners };
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'deck ads failed', error: String(e) }));
+      return { ads: [], adEvery: 0, adOwners: {} };
+    }
+  }
+
   // --- Decks and plans ------------------------------------------------------
 
   private async discover(s: Session) {
@@ -627,11 +787,20 @@ export class Api {
     const climbers = Object.fromEntries(
       plans.flatMap((p) => [p.organizerId, ...p.memberIds]).flatMap((cid) => (everyone[cid] ? [[cid, publicClimber(everyone[cid])]] : [])),
     );
-    const [covers, scores] = await Promise.all([
+    const [covers, scores, ads] = await Promise.all([
       this.deckCovers(plans),
       s.caller.admin ? this.deckScores(plans, s) : Promise.resolve(undefined),
+      this.deckAds(s),
     ]);
-    return { plans, distanceKm, climbers, covers, ...(scores ? { scores } : {}) };
+    return {
+      plans,
+      distanceKm,
+      climbers: { ...ads.adOwners, ...climbers },
+      covers,
+      ads: ads.ads,
+      adEvery: ads.adEvery,
+      ...(scores ? { scores } : {}),
+    };
   }
 
   /**

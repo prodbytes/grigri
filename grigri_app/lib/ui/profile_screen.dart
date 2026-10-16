@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../app_version.dart';
+import '../model/premium.dart';
 import '../theme.dart';
 import 'common.dart';
 import 'location_picker.dart';
@@ -101,6 +103,8 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const _WhereIClimb(),
+          const SizedBox(height: 8),
+          const PremiumCard(),
           const SizedBox(height: 12),
           const SizedBox(height: 4),
           const LanguagePicker(),
@@ -186,6 +190,116 @@ class _WhereIClimb extends StatelessWidget {
                       );
                     },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Premium (specs/premium.md): to advertise on Grigri. Subscribing opens
+/// Stripe Checkout in the browser; once Stripe tells the API, it shows
+/// here (the app checks again when it comes back to the foreground, or on
+/// "I've paid: check again"). Subscribed: until when, and Stripe's portal
+/// to cancel or change the card.
+class PremiumCard extends StatefulWidget {
+  const PremiumCard({super.key});
+
+  @override
+  State<PremiumCard> createState() => _PremiumCardState();
+}
+
+class _PremiumCardState extends State<PremiumCard> {
+  @override
+  void initState() {
+    super.initState();
+    StoreScope.read(context).refreshPremium();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final premium = store.premium;
+    final prices = store.premiumPrices;
+    final text = Theme.of(context).textTheme;
+    final l = context.l10n;
+    final date = premium.until == null
+        ? ''
+        : DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag())
+              .format(premium.until!);
+    return Card(
+      key: const ValueKey('premium card'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.workspace_premium, color: Mountain.sand),
+                const SizedBox(width: 8),
+                Text(
+                  l.premiumTitle,
+                  style: text.titleMedium?.copyWith(
+                    color: Mountain.sand,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (premium.active) ...[
+              Text(
+                premium.ending
+                    ? l.premiumEndsOn(date)
+                    : l.premiumActiveUntil(date),
+                style: const TextStyle(color: Mountain.snow),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.open_in_new),
+                label: Text(l.premiumManage),
+                onPressed: store.managePremium,
+              ),
+            ] else ...[
+              Text(
+                l.premiumPitch,
+                style: const TextStyle(color: Mountain.snow),
+              ),
+              const SizedBox(height: 12),
+              if (prices.isEmpty)
+                Text(
+                  l.premiumUnavailable,
+                  style: text.bodySmall?.copyWith(color: Mountain.granite),
+                )
+              else ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (prices[PremiumPlan.monthly] case final p?)
+                      FilledButton(
+                        onPressed: () => store.subscribe(PremiumPlan.monthly),
+                        child: Text(l.premiumMonthly(p.label)),
+                      ),
+                    if (prices[PremiumPlan.yearly] case final p?)
+                      FilledButton.tonal(
+                        onPressed: () => store.subscribe(PremiumPlan.yearly),
+                        child: Text(l.premiumYearly(p.label)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l.premiumCheckoutHint,
+                  style: text.bodySmall?.copyWith(color: Mountain.granite),
+                ),
+                TextButton(
+                  onPressed: store.refreshPremium,
+                  child: Text(l.premiumCheckRefresh),
+                ),
+              ],
+            ],
           ],
         ),
       ),

@@ -108,6 +108,12 @@ set -- "Stage=local" "DevMode=$DEV_MODE" "PhotosBucket=$PHOTOS" "PicsBucket=$PIC
 # aityx: match scores, when .env has a key.
 [ -n "${GRIGRI_AITYX_API_KEY:-}" ] && set -- "$@" "AityxApiKey=$GRIGRI_AITYX_API_KEY"
 [ -n "${GRIGRI_AITYX_URL:-}" ] && set -- "$@" "AityxUrl=$GRIGRI_AITYX_URL"
+# Stripe (test mode), when .env has its keys: Premium. Its webhook reaches
+# the host only through `stripe listen --forward-to` (specs/premium.md).
+if [ -n "${GRIGRI_STRIPE_SECRET_KEY:-}" ] && [ -n "${GRIGRI_STRIPE_WEBHOOK_SECRET:-}" ]; then
+  set -- "$@" "StripeSecretKey=$GRIGRI_STRIPE_SECRET_KEY" "StripeWebhookSecret=$GRIGRI_STRIPE_WEBHOOK_SECRET" \
+    "SiteUrl=https://${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}:${FLOCI_HTTPS_PORT_HOST:-2543}"
+fi
 aws cloudformation deploy --stack-name "$STACK" --template-file /tmp/grigri-api.yaml \
   --capabilities CAPABILITY_NAMED_IAM --parameter-overrides "$@" >/dev/null
 

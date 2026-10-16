@@ -915,6 +915,173 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get premiumTitle => 'Grigri Premium';
+
+  @override
+  String get premiumPitch =>
+      'Anúnciate en Grigri: tus anuncios salen entre los planes en Buscar de todo el mundo. Todo lo demás sigue igual.';
+
+  @override
+  String premiumMonthly(String price) {
+    return '$price al mes';
+  }
+
+  @override
+  String premiumYearly(String price) {
+    return '$price al año';
+  }
+
+  @override
+  String get premiumCheckoutHint =>
+      'Pagas en la página segura de Stripe, en tu navegador. Vuelve aquí cuando acabes.';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium: se renueva el $date';
+  }
+
+  @override
+  String premiumEndsOn(String date) {
+    return 'Premium: termina el $date';
+  }
+
+  @override
+  String get premiumManage => 'Gestionar suscripción';
+
+  @override
+  String get premiumUnavailable => 'Premium aún no está disponible.';
+
+  @override
+  String get premiumCheckRefresh => 'Ya he pagado: comprobar';
+
+  @override
+  String get errorOpenLink => 'No se pudo abrir el enlace.';
+
+  @override
+  String get tabAds => 'Anuncios';
+
+  @override
+  String get adTag => 'Anuncio';
+
+  @override
+  String adBy(String name) {
+    return 'Anuncio de $name';
+  }
+
+  @override
+  String get swipeOpen => 'Abrir';
+
+  @override
+  String get swipeSkip => 'Saltar';
+
+  @override
+  String get openAd => 'Abrir el enlace del anuncio';
+
+  @override
+  String get skipAd => 'Saltar el anuncio';
+
+  @override
+  String get shareAd => 'Compartir el enlace del anuncio';
+
+  @override
+  String get adsTitle => 'Tus anuncios';
+
+  @override
+  String get adsEmptyTitle => 'Aún no hay anuncios';
+
+  @override
+  String get adsEmptyMessage =>
+      'Añade un anuncio: cuando un admin lo apruebe, saldrá entre los planes en Buscar de todo el mundo.';
+
+  @override
+  String get newAd => 'Nuevo anuncio';
+
+  @override
+  String get adStatusPending => 'Pendiente de revisión';
+
+  @override
+  String get adStatusApproved => 'Aprobado: se muestra';
+
+  @override
+  String get adStatusRejected => 'Rechazado';
+
+  @override
+  String get deleteAdQuestion => '¿Eliminar este anuncio?';
+
+  @override
+  String get deleteAdMessage => 'Desaparecerá de Buscar para siempre.';
+
+  @override
+  String get adTextLabel => 'Texto sobre el anuncio';
+
+  @override
+  String get adLinkLabel => 'Enlace (https://…)';
+
+  @override
+  String get adLinkInvalid =>
+      'Escribe una dirección web que empiece por https://';
+
+  @override
+  String get adAddMedia => 'Añadir foto o vídeo';
+
+  @override
+  String get adRemoveMedia => 'Quitar la foto o el vídeo';
+
+  @override
+  String get adVideoPicked => 'Vídeo';
+
+  @override
+  String get adNeedsContent => 'Añade texto, una foto o un vídeo.';
+
+  @override
+  String get adSubmit => 'Enviar a revisión';
+
+  @override
+  String get adSent => 'Enviado: un admin lo revisará.';
+
+  @override
+  String get adPreview => 'Vista previa';
+
+  @override
+  String get adsNeedPremium =>
+      'Tu Premium ha terminado: tus anuncios no se muestran. Renuévalo en tu perfil.';
+
+  @override
+  String get adminUsersTab => 'Usuarios';
+
+  @override
+  String get adminAdsTab => 'Anuncios';
+
+  @override
+  String get adminAdsTitle => 'Admin';
+
+  @override
+  String get adsOnDiscover => 'En Buscar';
+
+  @override
+  String get adEveryOff => 'Sin anuncios';
+
+  @override
+  String adEvery(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Un anuncio cada $count planes',
+      one: 'Un anuncio tras cada plan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adApprove => 'Aprobar';
+
+  @override
+  String get adReject => 'Rechazar';
+
+  @override
+  String get adminAdsEmpty => 'No hay anuncios aquí';
+
+  @override
   String get routeFinder => 'Vías en la roca';
 
   @override

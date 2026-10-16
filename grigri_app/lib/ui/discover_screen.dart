@@ -6,6 +6,7 @@ import '../data/grigri_store.dart';
 import '../model/climbing.dart';
 import '../model/plan.dart';
 import '../theme.dart';
+import 'ad_card.dart';
 import 'common.dart';
 import 'match_score.dart';
 import 'profile_editor.dart';
@@ -13,6 +14,8 @@ import 'swipe_deck.dart';
 
 /// The plans deck: swipe right (or tap ✓) to ask to join a plan, left to
 /// pass. The plan comes first on each card; the people in it below.
+/// Between plans, now and then, an approved ad (specs/ads.md): right
+/// opens its link in the browser, left skips it.
 class DiscoverScreen extends StatefulWidget {
   const DiscoverScreen({super.key, required this.onCreatePlan});
 
@@ -34,6 +37,15 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
 
   final _controller = SwipeController();
 
+  Future<void> _swipedItem(
+    GrigriStore store,
+    DeckItem item, {
+    required bool right,
+  }) => switch (item) {
+    DeckPlan(:final plan) => _swiped(store, plan, right: right),
+    DeckAd(:final ad) => store.swipeAd(ad, open: right),
+  };
+
   Future<void> _swiped(
     GrigriStore store,
     Plan plan, {
@@ -51,21 +63,31 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     messenger.showSnackBar(SnackBar(content: Text(l.askedToJoinSent)));
   }
 
-  /// Shares the top plan as text with the app's link, through the
-  /// system's share sheet (the browser's, or copying, on the web).
-  Future<void> _share(BuildContext button, Plan plan) async {
+  /// Shares the top plan as text with the app's link (an ad: its link),
+  /// through the system's share sheet (the browser's, or copying, on the
+  /// web).
+  Future<void> _share(BuildContext button, DeckItem item) async {
     final l = context.l10n;
     final box = button.findRenderObject() as RenderBox?;
-    final text = l.sharePlanText(
-      plan.discipline.label(l),
-      plan.title,
-      whenLabel(context, plan),
-      AppConfig.origin.resolve('/app/').toString(),
-    );
+    final (text, subject) = switch (item) {
+      DeckPlan(:final plan) => (
+        l.sharePlanText(
+          plan.discipline.label(l),
+          plan.title,
+          whenLabel(context, plan),
+          AppConfig.origin.resolve('/app/').toString(),
+        ),
+        plan.title,
+      ),
+      DeckAd(:final ad) => (
+        [if (ad.text.isNotEmpty) ad.text, ad.link.toString()].join('\n'),
+        ad.site,
+      ),
+    };
     await SharePlus.instance.share(
       ShareParams(
         text: text,
-        subject: plan.title,
+        subject: subject,
         // Where the sheet points from, on iPad.
         sharePositionOrigin: box == null
             ? null
@@ -77,7 +99,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final plans = store.discover;
+    final items = store.deck;
+    final adOnTop = items.isNotEmpty && items.first is DeckAd;
     final l = context.l10n;
     return Scaffold(
       appBar: AppBar(
@@ -92,7 +115,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
       ),
       body: !store.isLoaded(Section.discover)
           ? const Center(child: CircularProgressIndicator())
-          : plans.isEmpty
+          : items.isEmpty
           ? EmptyState(
               icon: Icons.landscape_outlined,
               title: l.noPlansToJoinTitle,
@@ -141,15 +164,24 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 520),
-                        child: SwipeDeck<Plan>(
-                          items: plans,
-                          keyOf: (p) => p.id,
+                        child: SwipeDeck<DeckItem>(
+                          items: items,
+                          keyOf: (item) => item.key,
                           controller: _controller,
                           yesLabel: l.swipeJoin.toUpperCase(),
                           noLabel: l.swipePass.toUpperCase(),
-                          onSwiped: (plan, {required right}) =>
-                              _swiped(store, plan, right: right),
-                          builder: (context, plan) => _PlanCard(plan: plan),
+                          labelsOf: (item) => item is DeckAd
+                              ? (
+                                  l.swipeOpen.toUpperCase(),
+                                  l.swipeSkip.toUpperCase(),
+                                )
+                              : null,
+                          onSwiped: (item, {required right}) =>
+                              _swipedItem(store, item, right: right),
+                          builder: (context, item) => switch (item) {
+                            DeckPlan(:final plan) => _PlanCard(plan: plan),
+                            DeckAd(:final ad) => AdCard(ad),
+                          },
                         ),
                       ),
                     ),
@@ -171,7 +203,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                       DeckButton(
                         icon: Icons.close,
                         color: Mountain.clay,
-                        tooltip: l.pass,
+                        tooltip: adOnTop ? l.skipAd : l.pass,
                         onPressed: () => _controller.swipe(right: false),
                       ),
                       const SizedBox(width: 32),
@@ -180,7 +212,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                         color: Mountain.olive,
                         filled: true,
                         size: _joinSize,
-                        tooltip: l.askToJoin,
+                        tooltip: adOnTop ? l.openAd : l.askToJoin,
                         onPressed: () => _controller.swipe(right: true),
                       ),
                       const SizedBox(width: _shareGap),
@@ -189,8 +221,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                           icon: Icons.share_outlined,
                           color: Mountain.sky,
                           size: _shareSize,
-                          tooltip: l.sharePlan,
-                          onPressed: () => _share(context, plans.first),
+                          tooltip: adOnTop ? l.shareAd : l.sharePlan,
+                          onPressed: () => _share(context, items.first),
                         ),
                       ),
                     ],

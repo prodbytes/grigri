@@ -916,6 +916,172 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get premiumTitle => 'Grigri Premium';
+
+  @override
+  String get premiumPitch =>
+      'Fais ta pub sur Grigri : tes annonces apparaissent entre les plans dans Trouve, chez tout le monde. Le reste ne change pas.';
+
+  @override
+  String premiumMonthly(String price) {
+    return '$price par mois';
+  }
+
+  @override
+  String premiumYearly(String price) {
+    return '$price par an';
+  }
+
+  @override
+  String get premiumCheckoutHint =>
+      'Tu paies sur la page sécurisée de Stripe, dans ton navigateur. Reviens ici une fois fini.';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium : renouvelé le $date';
+  }
+
+  @override
+  String premiumEndsOn(String date) {
+    return 'Premium : se termine le $date';
+  }
+
+  @override
+  String get premiumManage => 'Gérer l\'abonnement';
+
+  @override
+  String get premiumUnavailable => 'Premium n\'est pas encore disponible.';
+
+  @override
+  String get premiumCheckRefresh => 'J\'ai payé : vérifier';
+
+  @override
+  String get errorOpenLink => 'Impossible d\'ouvrir le lien.';
+
+  @override
+  String get tabAds => 'Pubs';
+
+  @override
+  String get adTag => 'Pub';
+
+  @override
+  String adBy(String name) {
+    return 'Pub de $name';
+  }
+
+  @override
+  String get swipeOpen => 'Ouvrir';
+
+  @override
+  String get swipeSkip => 'Passer';
+
+  @override
+  String get openAd => 'Ouvrir le lien de la pub';
+
+  @override
+  String get skipAd => 'Passer la pub';
+
+  @override
+  String get shareAd => 'Partager le lien de la pub';
+
+  @override
+  String get adsTitle => 'Tes pubs';
+
+  @override
+  String get adsEmptyTitle => 'Pas encore de pub';
+
+  @override
+  String get adsEmptyMessage =>
+      'Ajoute une pub : une fois validée par un admin, elle apparaît entre les plans dans Trouve, chez tout le monde.';
+
+  @override
+  String get newAd => 'Nouvelle pub';
+
+  @override
+  String get adStatusPending => 'En attente de validation';
+
+  @override
+  String get adStatusApproved => 'Validée : affichée';
+
+  @override
+  String get adStatusRejected => 'Refusée';
+
+  @override
+  String get deleteAdQuestion => 'Supprimer cette pub ?';
+
+  @override
+  String get deleteAdMessage => 'Elle quitte Trouve pour de bon.';
+
+  @override
+  String get adTextLabel => 'Texte sur la pub';
+
+  @override
+  String get adLinkLabel => 'Lien (https://…)';
+
+  @override
+  String get adLinkInvalid => 'Saisis une adresse web commençant par https://';
+
+  @override
+  String get adAddMedia => 'Ajouter une photo ou une vidéo';
+
+  @override
+  String get adRemoveMedia => 'Retirer la photo ou la vidéo';
+
+  @override
+  String get adVideoPicked => 'Vidéo';
+
+  @override
+  String get adNeedsContent => 'Ajoute du texte, une photo ou une vidéo.';
+
+  @override
+  String get adSubmit => 'Envoyer pour validation';
+
+  @override
+  String get adSent => 'Envoyée : un admin va la valider.';
+
+  @override
+  String get adPreview => 'Aperçu';
+
+  @override
+  String get adsNeedPremium =>
+      'Ton Premium est terminé : tes pubs ne s\'affichent plus. Renouvelle-le dans ton profil.';
+
+  @override
+  String get adminUsersTab => 'Utilisateurs';
+
+  @override
+  String get adminAdsTab => 'Pubs';
+
+  @override
+  String get adminAdsTitle => 'Admin';
+
+  @override
+  String get adsOnDiscover => 'Dans Trouve';
+
+  @override
+  String get adEveryOff => 'Pas de pub';
+
+  @override
+  String adEvery(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Une pub tous les $count plans',
+      one: 'Une pub après chaque plan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adApprove => 'Valider';
+
+  @override
+  String get adReject => 'Refuser';
+
+  @override
+  String get adminAdsEmpty => 'Aucune pub ici';
+
+  @override
   String get routeFinder => 'Voies sur le rocher';
 
   @override

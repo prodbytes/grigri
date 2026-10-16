@@ -1647,6 +1647,294 @@ abstract class AppLocalizations {
   /// **'Sent in the chat by {name}'**
   String picFromChat(String name);
 
+  /// Profile card heading: the Premium subscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Grigri Premium'**
+  String get premiumTitle;
+
+  /// Profile card: what Premium is for (advertising only).
+  ///
+  /// In en, this message translates to:
+  /// **'Advertise on Grigri: your ads show between plans on everyone\'s Discover. Everything else stays the same.'**
+  String get premiumPitch;
+
+  /// Button: subscribe monthly, with the price ("$20").
+  ///
+  /// In en, this message translates to:
+  /// **'{price} a month'**
+  String premiumMonthly(String price);
+
+  /// Button: subscribe yearly, with the price ("$200").
+  ///
+  /// In en, this message translates to:
+  /// **'{price} a year'**
+  String premiumYearly(String price);
+
+  /// Under the subscribe buttons: payment happens on Stripe's page.
+  ///
+  /// In en, this message translates to:
+  /// **'You pay on Stripe\'s secure page, in your browser. Come back here when you\'re done.'**
+  String get premiumCheckoutHint;
+
+  /// Profile card when subscribed: renews on this date.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium: renews on {date}'**
+  String premiumActiveUntil(String date);
+
+  /// Profile card when cancelled: Premium ends on this date.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium: ends on {date}'**
+  String premiumEndsOn(String date);
+
+  /// Button: open Stripe's billing portal.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage subscription'**
+  String get premiumManage;
+
+  /// Profile card when Premium can't be bought yet (no payments set up).
+  ///
+  /// In en, this message translates to:
+  /// **'Premium isn\'t available yet.'**
+  String get premiumUnavailable;
+
+  /// Button: check again whether Premium is active (after paying).
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve paid: check again'**
+  String get premiumCheckRefresh;
+
+  /// Error: the browser couldn't be opened for a link.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the link.'**
+  String get errorOpenLink;
+
+  /// Bottom navigation tab: my ads (Premium). One short word.
+  ///
+  /// In en, this message translates to:
+  /// **'Ads'**
+  String get tabAds;
+
+  /// Tag on an ad's card on the deck.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad'**
+  String get adTag;
+
+  /// On an ad's card: who placed it.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad by {name}'**
+  String adBy(String name);
+
+  /// Stamp while dragging an ad right: opens its link (shown uppercased).
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get swipeOpen;
+
+  /// Stamp while dragging an ad left (shown uppercased).
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get swipeSkip;
+
+  /// Tooltip of ✓ when the top card is an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the ad\'s link'**
+  String get openAd;
+
+  /// Tooltip of ✕ when the top card is an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip the ad'**
+  String get skipAd;
+
+  /// Tooltip of the share button when the top card is an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Share the ad\'s link'**
+  String get shareAd;
+
+  /// Ads tab title.
+  ///
+  /// In en, this message translates to:
+  /// **'Your ads'**
+  String get adsTitle;
+
+  /// Ads tab with no ads yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads yet'**
+  String get adsEmptyTitle;
+
+  /// Ads tab with no ads yet: what an ad does.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an ad: once an admin approves it, it shows between plans on everyone\'s Discover.'**
+  String get adsEmptyMessage;
+
+  /// Button and editor title: a new ad.
+  ///
+  /// In en, this message translates to:
+  /// **'New ad'**
+  String get newAd;
+
+  /// An ad's status: waiting for an admin.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for review'**
+  String get adStatusPending;
+
+  /// An ad's status: approved, showing on Discover.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved: showing'**
+  String get adStatusApproved;
+
+  /// An ad's status: rejected by an admin.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get adStatusRejected;
+
+  /// Confirmation title before deleting my ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this ad?'**
+  String get deleteAdQuestion;
+
+  /// Confirmation text before deleting my ad.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves Discover for good.'**
+  String get deleteAdMessage;
+
+  /// Ad editor field: the text shown over the ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Text over the ad'**
+  String get adTextLabel;
+
+  /// Ad editor field: where the ad links to.
+  ///
+  /// In en, this message translates to:
+  /// **'Link (https://…)'**
+  String get adLinkLabel;
+
+  /// Ad editor: the link isn't a web address.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a web address, starting with https://'**
+  String get adLinkInvalid;
+
+  /// Ad editor button: add a photo or video.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo or video'**
+  String get adAddMedia;
+
+  /// Ad editor: remove the picked photo or video.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the photo or video'**
+  String get adRemoveMedia;
+
+  /// Ad editor: a video is picked (its preview).
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get adVideoPicked;
+
+  /// Ad editor: nothing to show yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Add text, a photo or a video.'**
+  String get adNeedsContent;
+
+  /// Ad editor button: send the ad for an admin's review.
+  ///
+  /// In en, this message translates to:
+  /// **'Send for review'**
+  String get adSubmit;
+
+  /// Snackbar after sending an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent: an admin will review it.'**
+  String get adSent;
+
+  /// Ad editor: heading over the preview of the card.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get adPreview;
+
+  /// Ads tab when Premium has ended: can't add ads.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Premium has ended: your ads don\'t show. Renew it in your profile.'**
+  String get adsNeedPremium;
+
+  /// Admin tab's sub-navigation: everyone, to block.
+  ///
+  /// In en, this message translates to:
+  /// **'Users'**
+  String get adminUsersTab;
+
+  /// Admin tab's sub-navigation: ads to approve or reject.
+  ///
+  /// In en, this message translates to:
+  /// **'Ads'**
+  String get adminAdsTab;
+
+  /// Admin screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get adminAdsTitle;
+
+  /// Admin ads: label of the frequency picker.
+  ///
+  /// In en, this message translates to:
+  /// **'On Discover'**
+  String get adsOnDiscover;
+
+  /// Admin ads frequency: no ads on the deck.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads'**
+  String get adEveryOff;
+
+  /// Admin ads frequency: one ad after every N plans.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{An ad after every plan} other{An ad after every {count} plans}}'**
+  String adEvery(int count);
+
+  /// Admin: approve an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get adApprove;
+
+  /// Admin: reject an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get adReject;
+
+  /// Admin ads: none in this status.
+  ///
+  /// In en, this message translates to:
+  /// **'No ads here'**
+  String get adminAdsEmpty;
+
   /// Route finder (premium): the screen's title and the plan screen's button.
   ///
   /// In en, this message translates to:

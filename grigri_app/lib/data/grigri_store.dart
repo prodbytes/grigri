@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../l10n/app_localizations.dart';
+import '../model/ad.dart';
+import '../model/premium.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/location.dart';
@@ -14,6 +17,7 @@ import '../model/sector.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'device_location.dart';
+import 'links.dart';
 import 'preferences.dart';
 import 'realtime.dart';
 import 'sector_index.dart';
@@ -49,7 +53,34 @@ enum Phase {
 }
 
 /// The parts of the app's data that load separately.
-enum Section { discover, plans, requests, notices, admin }
+enum Section { discover, plans, requests, notices, admin, ads, adminAds }
+
+/// A card on the Discover deck: a plan, or an ad between plans
+/// (specs/ads.md).
+sealed class DeckItem {
+  const DeckItem();
+
+  /// Unique on the deck.
+  String get key;
+}
+
+class DeckPlan extends DeckItem {
+  const DeckPlan(this.plan);
+
+  final Plan plan;
+
+  @override
+  String get key => 'plan:${plan.id}';
+}
+
+class DeckAd extends DeckItem {
+  const DeckAd(this.ad);
+
+  final Ad ad;
+
+  @override
+  String get key => 'ad:${ad.id}';
+}
 
 /// A photo or video picked for a chat message.
 class ChatMedia {
@@ -83,6 +114,7 @@ class GrigriStore extends ChangeNotifier {
     RealtimeTransport? realtime,
     this.deviceLocation = const DeviceLocation.none(),
     Future<SectorIndex> Function()? places,
+    this.openLink = openInBrowser,
   }) : _image = image ?? ((url) => NetworkImage(url.toString())),
        _places = places ?? SectorIndex.load,
        _preferences = preferences ?? Preferences.none() {
@@ -114,6 +146,9 @@ class GrigriStore extends ChangeNotifier {
 
   /// Where the phone or browser is, to fill in my location.
   final DeviceLocation deviceLocation;
+
+  /// Opens Stripe's pages, and ads' links, in the browser.
+  final OpenLink openLink;
 
   /// The sector index, to name a place the device found.
   final Future<SectorIndex> Function() _places;
@@ -170,7 +205,19 @@ class GrigriStore extends ChangeNotifier {
 
   Climber? _me;
   bool _admin = false;
-  bool _premium = false;
+  Premium _premium = const Premium.none();
+  Map<PremiumPlan, PremiumPrice> _premiumPrices = const {};
+  List<Ad> _deckAds = [];
+  int _adEvery = 0;
+
+  /// Ads swiped this session: they don't come back until ⟳.
+  final _seenAds = <String>{};
+
+  /// Plans swiped since the deck last showed an ad.
+  int _plansSinceAd = 0;
+  List<Ad> _myAds = [];
+  final _adminAds = <AdStatus, List<Ad>>{};
+  int _adminAdEvery = 0;
   List<String>? _roles;
   bool _signedIn = false;
 
@@ -243,7 +290,15 @@ class GrigriStore extends ChangeNotifier {
     _session++;
     _me = null;
     _admin = false;
-    _premium = false;
+    _premium = const Premium.none();
+    _premiumPrices = const {};
+    _deckAds = [];
+    _adEvery = 0;
+    _seenAds.clear();
+    _plansSinceAd = 0;
+    _myAds = [];
+    _adminAds.clear();
+    _adminAdEvery = 0;
     _roles = null;
     _locating = false;
     _climbers.clear();
@@ -278,8 +333,8 @@ class GrigriStore extends ChangeNotifier {
       final climber = me.climber;
       if (climber == null) throw const ApiException(409, 'no profile');
       _admin = me.admin;
-      _premium = me.premium;
       _roles = me.roles;
+      _premium = me.premium;
       _me = climber;
       _climbers[climber.id] = climber;
       _phase = Phase.ready;
@@ -309,8 +364,11 @@ class GrigriStore extends ChangeNotifier {
 
   bool get admin => _admin;
 
-  /// Premium (or an admin): the route finder is theirs (specs/premium.md).
-  bool get premium => _premium;
+  /// My Premium subscription (specs/premium.md).
+  Premium get premium => _premium;
+
+  /// What Premium costs; empty until loaded, or when it can't be bought.
+  Map<PremiumPlan, PremiumPrice> get premiumPrices => _premiumPrices;
 
   /// My roles in Grigri, from rbacr through the API, sorted; null when
   /// rbacr couldn't say.
@@ -359,6 +417,38 @@ class GrigriStore extends ChangeNotifier {
 
   /// Plans to swipe on, best fits first (the server's order).
   List<Plan> get discover => [for (final id in _discover) ?_plans[id]];
+
+  /// The Discover deck: its plans, with an approved ad after every
+  /// [adEvery] plans swiped (counting the ones swiped since the last ad,
+  /// so an ad comes up as the deck goes, not further down each time).
+  /// Ads swiped this session are left out. No plans: no ads either.
+  List<DeckItem> get deck {
+    final plans = discover;
+    final ads = [
+      for (final a in _deckAds)
+        if (!_seenAds.contains(a.id)) a,
+    ];
+    if (_adEvery <= 0 || ads.isEmpty || plans.isEmpty) {
+      return [for (final p in plans) DeckPlan(p)];
+    }
+    final items = <DeckItem>[];
+    var next = math.max(0, _adEvery - _plansSinceAd);
+    var shown = 0;
+    var ad = 0;
+    for (final p in plans) {
+      if (shown == next && ad < ads.length) {
+        items.add(DeckAd(ads[ad++]));
+        next = shown + _adEvery;
+      }
+      items.add(DeckPlan(p));
+      shown++;
+    }
+    if (shown == next && ad < ads.length) items.add(DeckAd(ads[ad]));
+    return items;
+  }
+
+  /// One ad after every this many plans on the deck; 0: none.
+  int get adEvery => _adEvery;
 
   /// How far a plan on the deck is from my nearest location or area, in
   /// km; null when it isn't known.
@@ -601,6 +691,7 @@ class GrigriStore extends ChangeNotifier {
       refreshRequests(),
       refreshDiscover(),
       if (_admin) refreshAdmin(),
+      if (_premium.active) refreshMyAds(),
     ]);
     await refreshNotices();
   }
@@ -608,7 +699,10 @@ class GrigriStore extends ChangeNotifier {
   /// The deck again, with [again] the plans I passed on too (Discover's
   /// refresh button: I may have changed my mind).
   Future<void> refreshDiscover({bool again = false}) async {
-    if (again) await _ok(api.clearPasses);
+    if (again) {
+      _seenAds.clear();
+      await _ok(api.clearPasses);
+    }
     await _refreshDeck();
   }
 
@@ -621,6 +715,8 @@ class GrigriStore extends ChangeNotifier {
     _distanceKm = list.distanceKm;
     _covers = list.covers;
     _matchScores = list.scores;
+    _deckAds = list.ads;
+    _adEvery = list.adEvery;
     _loaded.add(Section.discover);
   });
 
@@ -801,7 +897,7 @@ class GrigriStore extends ChangeNotifier {
 
   /// I swipe left on a plan: it leaves my deck.
   Future<void> pass(String planId) async {
-    _discover.remove(planId);
+    if (_discover.remove(planId)) _plansSinceAd++;
     notifyListeners();
     await _ok(() => api.pass(planId));
   }
@@ -811,7 +907,7 @@ class GrigriStore extends ChangeNotifier {
   /// and the match screen opens. False when it failed.
   Future<bool> like(String planId) async {
     final demo = _plans[planId]?.demo ?? false;
-    _discover.remove(planId);
+    if (_discover.remove(planId)) _plansSinceAd++;
     notifyListeners();
     final request = await _act(() => api.join(planId));
     if (request == null) return false;
@@ -1043,24 +1139,7 @@ class GrigriStore extends ChangeNotifier {
     final message = await _act(() async {
       String? key;
       if (media != null) {
-        final type = mediaContentType(media.bytes);
-        final kind = type?.startsWith('video/') == true
-            ? MediaKind.video
-            : MediaKind.image;
-        if (type == null || kind != media.kind) {
-          throw const ApiException(
-            400,
-            'Use a JPEG, PNG or WebP photo, or an MP4 or MOV video.',
-            client: ClientError.mediaType,
-          );
-        }
-        if (kind == MediaKind.video && media.bytes.length > maxVideoBytes) {
-          throw const ApiException(
-            413,
-            'The video is too big.',
-            client: ClientError.videoTooBig,
-          );
-        }
+        final type = _mediaType(media);
         final upload = await _call(() => api.newChatMedia(planId, type));
         await api.uploadPhoto(upload, media.bytes, onProgress: onProgress);
         key = upload.key;
@@ -1075,6 +1154,161 @@ class GrigriStore extends ChangeNotifier {
       unawaited(loadPics(planId));
     }
     return true;
+  }
+
+  /// The type a photo or video is uploaded as; refuses anything but a
+  /// JPEG, PNG or WebP photo or an MP4 or MOV video, and videos over
+  /// [maxVideoBytes].
+  static String _mediaType(ChatMedia media) {
+    final type = mediaContentType(media.bytes);
+    final kind = type?.startsWith('video/') == true
+        ? MediaKind.video
+        : MediaKind.image;
+    if (type == null || kind != media.kind) {
+      throw const ApiException(
+        400,
+        'Use a JPEG, PNG or WebP photo, or an MP4 or MOV video.',
+        client: ClientError.mediaType,
+      );
+    }
+    if (kind == MediaKind.video && media.bytes.length > maxVideoBytes) {
+      throw const ApiException(
+        413,
+        'The video is too big.',
+        client: ClientError.videoTooBig,
+      );
+    }
+    return type;
+  }
+
+  // --- Ads (specs/ads.md) -------------------------------------------------
+
+  /// An ad on the deck was swiped: it leaves the deck for this session,
+  /// the plans count again to the next one, and [open] (swiped right)
+  /// opens its link in the browser.
+  Future<void> swipeAd(Ad ad, {required bool open}) async {
+    _seenAds.add(ad.id);
+    _plansSinceAd = 0;
+    notifyListeners();
+    if (open) await _openOrSay(ad.link);
+  }
+
+  /// My ads, newest first.
+  List<Ad> get myAds => _myAds;
+
+  Future<void> refreshMyAds() => _refresh(api.myAds, (mine) {
+    _myAds = mine.ads;
+    _loaded.add(Section.ads);
+  });
+
+  /// Adds an ad (Premium only): its photo or video uploaded first
+  /// ([onProgress] hears how much has gone). It waits for an admin. True
+  /// when it was saved.
+  Future<bool> createAd({
+    required String text,
+    required String link,
+    ChatMedia? media,
+    void Function(double sent)? onProgress,
+  }) async {
+    final ad = await _act(() async {
+      String? key;
+      if (media != null) {
+        final type = _mediaType(media);
+        final upload = await _call(() => api.newAdMedia(type));
+        await api.uploadPhoto(upload, media.bytes, onProgress: onProgress);
+        key = upload.key;
+      }
+      return api.createAd(text: text.trim(), link: link.trim(), mediaKey: key);
+    });
+    if (ad == null) return false;
+    _myAds = [ad, ..._myAds];
+    notifyListeners();
+    return true;
+  }
+
+  /// Takes my ad down for good.
+  Future<bool> deleteAd(String adId) async {
+    if (!await _ok(() => api.deleteAd(adId))) return false;
+    _myAds = [
+      for (final a in _myAds)
+        if (a.id != adId) a,
+    ];
+    notifyListeners();
+    return true;
+  }
+
+  /// Ads in a status, for admins to review (newest first).
+  List<Ad> adminAds(AdStatus status) => _adminAds[status] ?? const [];
+
+  /// How often the deck shows ads, as admins set it: one after every
+  /// this many plans; 0: none.
+  int get adminAdEvery => _adminAdEvery;
+
+  Future<void> refreshAdminAds(AdStatus status) async {
+    if (!_admin) return;
+    await _refresh(() => api.adminAds(status), (list) {
+      _learn(list.climbers);
+      _adminAds[status] = list.ads;
+      _adminAdEvery = list.every;
+      _loaded.add(Section.adminAds);
+    });
+  }
+
+  /// An admin approves or rejects an ad; it moves to that list.
+  Future<bool> reviewAd(Ad ad, {required bool approve}) async {
+    final reviewed = await _act(() => api.reviewAd(ad.id, approve: approve));
+    if (reviewed == null) return false;
+    for (final status in AdStatus.values) {
+      _adminAds[status] = [
+        if (status == reviewed.status) reviewed,
+        for (final a in _adminAds[status] ?? const <Ad>[])
+          if (a.id != ad.id) a,
+      ];
+    }
+    notifyListeners();
+    return true;
+  }
+
+  /// An admin sets how often the deck shows ads.
+  Future<bool> setAdEvery(int every) async {
+    if (!await _ok(() => api.setAdEvery(every))) return false;
+    _adminAdEvery = every;
+    notifyListeners();
+    return true;
+  }
+
+  // --- Premium -----------------------------------------------------------
+
+  /// My Premium and its prices again (the profile, and coming back from
+  /// Stripe's pages in the browser).
+  Future<void> refreshPremium() async {
+    await _refresh(api.premium, (offer) {
+      _premium = offer.premium;
+      _premiumPrices = offer.prices;
+    });
+    // Just subscribed: the Ads tab appears, with my ads.
+    if (_premium.active && !_loaded.contains(Section.ads)) {
+      await refreshMyAds();
+    }
+  }
+
+  /// Opens Stripe Checkout for [plan] in the browser; true when it opened.
+  /// Premium shows once Stripe tells the API (a refresh).
+  Future<bool> subscribe(PremiumPlan plan) async {
+    final url = await _act(() => api.premiumCheckout(plan));
+    return url != null && await _openOrSay(url);
+  }
+
+  /// Opens Stripe's billing portal (cancel, card, invoices).
+  Future<bool> managePremium() async {
+    final url = await _act(api.premiumPortal);
+    return url != null && await _openOrSay(url);
+  }
+
+  Future<bool> _openOrSay(Uri url) async {
+    if (await openLink(url)) return true;
+    _errors.add(l10n.errorOpenLink);
+    return false;
   }
 
   // --- Admin -------------------------------------------------------------

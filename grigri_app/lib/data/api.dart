@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
+import '../model/ad.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/match_score.dart';
 import '../model/pics.dart';
 import '../model/plan.dart';
 import '../model/walls.dart';
+import '../model/premium.dart';
 import 'realtime.dart';
 
 /// The Grigri backend, one method per route of its contract
@@ -163,6 +165,47 @@ abstract interface class GrigriApi {
     required List<double> h,
   });
 
+  /// `GET /api/premium`: my Premium, and its prices (none when it can't be
+  /// bought here).
+  Future<PremiumOffer> premium();
+
+  /// `POST /api/premium/checkout`: Stripe Checkout's page for [plan], to
+  /// open in the browser.
+  Future<Uri> premiumCheckout(PremiumPlan plan);
+
+  /// `POST /api/premium/portal`: Stripe's billing portal (cancel, card,
+  /// invoices), to open in the browser.
+  Future<Uri> premiumPortal();
+
+  /// `GET /api/ads`: my ads, newest first, and whether I'm Premium (ads
+  /// need it).
+  Future<MyAds> myAds();
+
+  /// `POST /api/ads/media`: where to upload an ad's photo or video
+  /// (Premium only).
+  Future<PhotoUpload> newAdMedia(String contentType);
+
+  /// `POST /api/ads`: a new ad, waiting for an admin (Premium only).
+  Future<Ad> createAd({
+    required String text,
+    required String link,
+    String? mediaKey,
+  });
+
+  /// `DELETE /api/ads/{id}`: takes my ad down for good.
+  Future<void> deleteAd(String adId);
+
+  /// `GET /api/admin/ads?status=`: ads in a status, newest first, with
+  /// their owners and how often the deck shows ads (admins only).
+  Future<AdminAds> adminAds(AdStatus status);
+
+  /// `POST /api/admin/ads/{id}/approve` or `/reject` (admins only).
+  Future<Ad> reviewAd(String adId, {required bool approve});
+
+  /// `PUT /api/admin/ads/settings`: one ad after every [every] plans; 0:
+  /// none (admins only).
+  Future<void> setAdEvery(int every);
+
   /// `GET /api/admin/climbers`: everyone, by name (admins only).
   Future<List<AdminClimber>> adminClimbers();
 
@@ -239,14 +282,14 @@ class Me {
     required this.climber,
     required this.admin,
     this.roles,
-    this.premium = false,
+    this.premium = const Premium.none(),
   });
 
   final Climber? climber;
   final bool admin;
 
-  /// Premium (or an admin): the route finder is theirs (specs/premium.md).
-  final bool premium;
+  /// My Premium subscription.
+  final Premium premium;
 
   /// My roles in Grigri, from rbacr (the API asks it); null when rbacr
   /// couldn't say.
@@ -260,10 +303,17 @@ class PlanList {
     this.distanceKm = const {},
     this.covers = const {},
     this.scores = const {},
+    this.ads = const [],
+    this.adEvery = 0,
   });
 
   final List<Plan> plans;
   final Climbers climbers;
+
+  /// Approved ads to show between the plans (specs/ads.md), and how
+  /// often: one after every [adEvery] plans (0: none).
+  final List<Ad> ads;
+  final int adEvery;
 
   /// For the deck: each plan's cover photo, for the plans that have one.
   final Map<String, DeckCover> covers;
@@ -275,6 +325,25 @@ class PlanList {
   /// Admins only: how likely each of the deck's best plans ends in a
   /// match for me; empty for everyone else.
   final Map<String, MatchScore> scores;
+}
+
+/// `GET /api/ads`.
+class MyAds {
+  const MyAds(this.ads, {required this.premium});
+
+  final List<Ad> ads;
+  final bool premium;
+}
+
+/// `GET /api/admin/ads`.
+class AdminAds {
+  const AdminAds(this.ads, this.climbers, {required this.every});
+
+  final List<Ad> ads;
+  final Climbers climbers;
+
+  /// One ad after every [every] plans on the deck; 0: none.
+  final int every;
 }
 
 /// Someone in the admin's list, and whether they're blocked.
@@ -429,10 +498,10 @@ abstract final class ApiJson {
         ? null
         : Climber.fromJson(_map(json['climber'])),
     admin: json['admin'] == true,
-    premium: json['premium'] == true,
     roles: json['roles'] is List
         ? [for (final r in json['roles']! as List) r as String]
         : null,
+    premium: Premium.fromJson(json['premium']),
   );
 
   static List<Wall> walls(Map<String, Object?> json) =>
@@ -440,6 +509,15 @@ abstract final class ApiJson {
 
   static Wall wall(Map<String, Object?> json) =>
       Wall.fromJson(_map(json['wall']));
+
+  static PremiumOffer premiumOffer(Map<String, Object?> json) =>
+      PremiumOffer(Premium.fromJson(json['premium']), {
+        for (final plan in PremiumPlan.values)
+          plan: ?PremiumPrice.fromJson((json['prices'] as Map?)?[plan.name]),
+      });
+
+  static Uri url(Map<String, Object?> json) =>
+      Uri.parse(json['url']! as String);
 
   static Climber climber(Map<String, Object?> json) =>
       Climber.fromJson(_map(json['climber']));
@@ -462,6 +540,23 @@ abstract final class ApiJson {
       for (final e in (json['scores'] as Map? ?? {}).entries)
         e.key as String: ?MatchScore.fromJson(_map(e.value)),
     },
+    ads: _ads(json['ads']),
+    adEvery: (json['adEvery'] as num?)?.toInt() ?? 0,
+  );
+
+  static List<Ad> _ads(Object? v) => [
+    for (final a in _list(v)) ?Ad.fromJson(a),
+  ];
+
+  static Ad ad(Map<String, Object?> json) => Ad.fromJson(_map(json['ad']))!;
+
+  static MyAds myAds(Map<String, Object?> json) =>
+      MyAds(_ads(json['ads']), premium: json['premium'] == true);
+
+  static AdminAds adminAds(Map<String, Object?> json) => AdminAds(
+    _ads(json['ads']),
+    climbers(json),
+    every: (json['every'] as num?)?.toInt() ?? 0,
   );
 
   static List<AdminClimber> adminClimbers(Map<String, Object?> json) => [

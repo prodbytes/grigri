@@ -912,6 +912,172 @@ class AppLocalizationsCa extends AppLocalizations {
   }
 
   @override
+  String get premiumTitle => 'Grigri Premium';
+
+  @override
+  String get premiumPitch =>
+      'Anuncia\'t a Grigri: els teus anuncis surten entre els plans a Cerca de tothom. La resta no canvia.';
+
+  @override
+  String premiumMonthly(String price) {
+    return '$price al mes';
+  }
+
+  @override
+  String premiumYearly(String price) {
+    return '$price l\'any';
+  }
+
+  @override
+  String get premiumCheckoutHint =>
+      'Pagues a la pàgina segura de Stripe, al navegador. Torna aquí quan acabis.';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium: es renova el $date';
+  }
+
+  @override
+  String premiumEndsOn(String date) {
+    return 'Premium: s\'acaba el $date';
+  }
+
+  @override
+  String get premiumManage => 'Gestiona la subscripció';
+
+  @override
+  String get premiumUnavailable => 'Premium encara no està disponible.';
+
+  @override
+  String get premiumCheckRefresh => 'Ja he pagat: comprova-ho';
+
+  @override
+  String get errorOpenLink => 'No s\'ha pogut obrir l\'enllaç.';
+
+  @override
+  String get tabAds => 'Anuncis';
+
+  @override
+  String get adTag => 'Anunci';
+
+  @override
+  String adBy(String name) {
+    return 'Anunci de $name';
+  }
+
+  @override
+  String get swipeOpen => 'Obre';
+
+  @override
+  String get swipeSkip => 'Salta';
+
+  @override
+  String get openAd => 'Obre l\'enllaç de l\'anunci';
+
+  @override
+  String get skipAd => 'Salta l\'anunci';
+
+  @override
+  String get shareAd => 'Comparteix l\'enllaç de l\'anunci';
+
+  @override
+  String get adsTitle => 'Els teus anuncis';
+
+  @override
+  String get adsEmptyTitle => 'Encara no hi ha anuncis';
+
+  @override
+  String get adsEmptyMessage =>
+      'Afegeix un anunci: quan un admin l\'aprovi, sortirà entre els plans a Cerca de tothom.';
+
+  @override
+  String get newAd => 'Nou anunci';
+
+  @override
+  String get adStatusPending => 'Pendent de revisió';
+
+  @override
+  String get adStatusApproved => 'Aprovat: es mostra';
+
+  @override
+  String get adStatusRejected => 'Rebutjat';
+
+  @override
+  String get deleteAdQuestion => 'Vols eliminar aquest anunci?';
+
+  @override
+  String get deleteAdMessage => 'Desapareixerà de Cerca per sempre.';
+
+  @override
+  String get adTextLabel => 'Text sobre l\'anunci';
+
+  @override
+  String get adLinkLabel => 'Enllaç (https://…)';
+
+  @override
+  String get adLinkInvalid => 'Escriu una adreça web que comenci per https://';
+
+  @override
+  String get adAddMedia => 'Afegeix una foto o un vídeo';
+
+  @override
+  String get adRemoveMedia => 'Treu la foto o el vídeo';
+
+  @override
+  String get adVideoPicked => 'Vídeo';
+
+  @override
+  String get adNeedsContent => 'Afegeix text, una foto o un vídeo.';
+
+  @override
+  String get adSubmit => 'Envia a revisió';
+
+  @override
+  String get adSent => 'Enviat: un admin el revisarà.';
+
+  @override
+  String get adPreview => 'Previsualització';
+
+  @override
+  String get adsNeedPremium =>
+      'El teu Premium s\'ha acabat: els teus anuncis no es mostren. Renova\'l al perfil.';
+
+  @override
+  String get adminUsersTab => 'Usuaris';
+
+  @override
+  String get adminAdsTab => 'Anuncis';
+
+  @override
+  String get adminAdsTitle => 'Admin';
+
+  @override
+  String get adsOnDiscover => 'A Cerca';
+
+  @override
+  String get adEveryOff => 'Sense anuncis';
+
+  @override
+  String adEvery(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Un anunci cada $count plans',
+      one: 'Un anunci després de cada pla',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get adApprove => 'Aprova';
+
+  @override
+  String get adReject => 'Rebutja';
+
+  @override
+  String get adminAdsEmpty => 'No hi ha anuncis aquí';
+
+  @override
   String get routeFinder => 'Vies a la roca';
 
   @override

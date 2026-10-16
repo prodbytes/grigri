@@ -92,6 +92,10 @@ person, and a plan can take a whole group.
     yet). On the web, the browser's share sheet, or an email draft where
     it has none. It doesn't swipe.
 
+  Between plans, an approved [ad](ads.md#on-the-deck) now and then
+  (one after every *n* plans swiped, as admins set it): right opens its
+  link in the browser, left skips it.
+
   The server picks and orders the deck. With nothing to show (GA starts
   empty), Discover says so and offers **New plan**.
 
