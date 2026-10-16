@@ -47,6 +47,11 @@
 #                a secret in CI). Optional: without it, no scores.
 #   GRIGRI_AITYX_URL aityx's API (default https://api.aityx.ai; a stage
 #                key needs aityx's stage)
+#   GRIGRI_ORIGIN_SECRET what the site's CloudFront sends the API so it
+#                answers only through the site (specs/origin-check.md;
+#                also from .env). Default: derived from GRIGRI_RBACR_TOKEN
+#                and the stage, so CI needs no new secret. Neither: none,
+#                and the API answers anyone (a warning).
 #   PERMISSIONS_BOUNDARY the API function role's boundary (default: the
 #                stage's, arn:aws:iam::<account>:policy/<prefix>-app-boundary)
 #   ARTIFACT_BUCKET where the API's code is uploaded (default: the stage's,
@@ -159,7 +164,7 @@ if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
 fi
 GRIGRI_RBACR_TOKEN="${GRIGRI_RBACR_TOKEN:-}"
-for name in GRIGRI_AITYX_API_KEY GRIGRI_AITYX_URL; do
+for name in GRIGRI_AITYX_API_KEY GRIGRI_AITYX_URL GRIGRI_ORIGIN_SECRET; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
   fi
@@ -204,6 +209,20 @@ if [[ ! "$GRIGRI_AITYX_URL" =~ ^https://[A-Za-z0-9.:-]+$ ]]; then
 fi
 if [[ -z "$GRIGRI_AITYX_API_KEY" ]]; then
   echo "warning: GRIGRI_AITYX_API_KEY isn't set: no match scores" >&2
+fi
+# The origin secret (specs/origin-check.md): given, or derived per stage
+# from the rbacr token (one-way, so it reveals nothing of it). Never logged.
+ORIGIN_SECRET="${GRIGRI_ORIGIN_SECRET:-}"
+if [[ -z "$ORIGIN_SECRET" && -n "$GRIGRI_RBACR_TOKEN" ]]; then
+  ORIGIN_SECRET="$(STAGE="$STAGE" KEY="$GRIGRI_RBACR_TOKEN" python3 -c \
+    'import hashlib,hmac,os; print(hmac.new(os.environ["KEY"].encode(), ("grigri-origin-" + os.environ["STAGE"]).encode(), hashlib.sha256).hexdigest())')"
+fi
+if [[ -n "$ORIGIN_SECRET" && ! "$ORIGIN_SECRET" =~ ^[A-Za-z0-9_-]{32,}$ ]]; then
+  echo "error: GRIGRI_ORIGIN_SECRET must be 32 or more of A-Z a-z 0-9 _ -" >&2
+  exit 1
+fi
+if [[ -z "$ORIGIN_SECRET" ]]; then
+  echo "warning: no origin secret (GRIGRI_ORIGIN_SECRET or GRIGRI_RBACR_TOKEN): the API answers anyone, not only through the site" >&2
 fi
 if [[ -n "$GRIGRI_RBACR_TOKEN" ]]; then
   echo "    admins: whoever rbacr says holds grigri's admin role"
@@ -274,6 +293,17 @@ if [[ "$built" != "$VERSION" ]]; then
 fi
 
 # 2. The API, before the site, whose CloudFront routes /api/* to it.
+# It demands the origin secret only once the site already sends it (the
+# site stack's OriginVerified, from an earlier deploy): a first deploy has
+# the site start sending it, and the next one turns the check on.
+api_origin_secret=""
+site_verified="$(stack_output "$SITE_STACK" OriginVerified 2>/dev/null || true)"
+if [[ -n "$ORIGIN_SECRET" && "$site_verified" == true ]]; then
+  api_origin_secret="$ORIGIN_SECRET"
+  echo "    the API answers only through the site"
+elif [[ -n "$ORIGIN_SECRET" ]]; then
+  echo "    the site starts sending the origin secret; the next deploy has the API demand it"
+fi
 echo "==> testing and building the API"
 (cd grigri_api && npm ci --no-audit --no-fund && npm run typecheck && npm test && npm run build)
 echo "==> deploying $API_STACK"
@@ -293,7 +323,7 @@ aws cloudformation deploy --stack-name "$API_STACK" \
     "AityxApiKey=$GRIGRI_AITYX_API_KEY" "AityxUrl=$GRIGRI_AITYX_URL" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
-    "IotEndpoint=$IOT_ENDPOINT" \
+    "IotEndpoint=$IOT_ENDPOINT" "OriginSecret=$api_origin_secret" \
   --tags "${stack_tags[@]}" \
   --no-fail-on-empty-changeset
 rm -f "$packaged"
@@ -314,7 +344,7 @@ aws cloudformation deploy --stack-name "$SITE_STACK" \
   --template-file grigri_infra/site.yaml \
   --parameter-overrides "DomainName=$DOMAIN" "Stage=$STAGE" \
     "HostedZoneId=$HOSTED_ZONE_ID" "ApiDomainName=$api_domain" \
-    "IotEndpoint=$IOT_ENDPOINT" \
+    "IotEndpoint=$IOT_ENDPOINT" "OriginSecret=$ORIGIN_SECRET" \
   --tags "${stack_tags[@]}" \
   --no-fail-on-empty-changeset
 bucket="$(stack_output "$SITE_STACK" SiteBucketName)"
@@ -352,6 +382,12 @@ check() {
     | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["stage"], d["version"])')" \
     || { echo "    /api/health failed"; return 1; }
   [[ "$health" == "$STAGE $VERSION" ]] || { echo "    /api/health says '$health', want '$STAGE $VERSION'"; return 1; }
+  # Enforced: straight to the API's own host, refused.
+  if [[ -n "$api_origin_secret" ]]; then
+    local direct
+    direct="$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "https://$api_domain/api/health")"
+    [[ "$direct" == 403 ]] || { echo "    https://$api_domain/api/health answered $direct, want 403"; return 1; }
+  fi
 }
 for attempt in $(seq 1 30); do
   if check; then

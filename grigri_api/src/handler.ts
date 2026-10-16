@@ -12,6 +12,7 @@ import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda
 import { Api, type GrigriPics, type Photos } from './api.js';
 import type { PicCatalog } from './domain/model.js';
 import { Auth, type AuthConfig } from './auth.js';
+import { REFUSED, originCheck } from './origin.js';
 import { rbacrAdminCheck, rbacrRoles } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
 import { googleVerifier, parseClientIds } from './google.js';
@@ -153,6 +154,9 @@ const api = new Api({
   config: { stage, version: env.VERSION ?? 'dev' },
 });
 
+// Only through the site's CloudFront (origin.ts); no secret: open (local).
+const throughSite = originCheck(env.ORIGIN_SECRET ?? '');
+
 type Event = APIGatewayProxyEventV2 | { grigriSeed?: boolean };
 
 export async function handler(event: Event): Promise<APIGatewayProxyResultV2 | Record<string, unknown>> {
@@ -171,6 +175,8 @@ async function http(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResul
   const path = event.rawPath;
   try {
     const headers = lowercase(event.headers ?? {});
+    // First: a request that skipped the site gets nothing else.
+    if (!throughSite(headers)) throw new ApiError(403, REFUSED);
     let body: unknown;
     if (event.body) {
       const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
