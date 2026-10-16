@@ -64,7 +64,7 @@ describe('discover', () => {
   const near = { lat: 41.47, lon: 2.1 };
   const far = { lat: 41.26, lon: 0.38 };
 
-  it('ranks by grade fit plus nearness to my nearest location or area', () => {
+  it('ranks by grade fit plus twice the nearness to my nearest location or area', () => {
     const located: Climber = { ...me, location: home };
     const plans = [
       plan({ id: 'far-fit', ...far }),
@@ -74,7 +74,7 @@ describe('discover', () => {
       plan({ id: 'unknown-fit' }),
     ];
     const out = rules.discover(plans, located, new Set(), new Set(), now);
-    expect(out.plans.map((p) => p.id)).toEqual(['near-fit', 'near-close-grades', 'unknown-fit', 'far-fit', 'near-nofit']);
+    expect(out.plans.map((p) => p.id)).toEqual(['near-fit', 'near-close-grades', 'near-nofit', 'unknown-fit', 'far-fit']);
     expect(out.distanceKm['near-fit']).toBe(11);
     expect(out.distanceKm['far-fit']).toBe(150);
     expect(out.distanceKm).not.toHaveProperty('unknown-fit');

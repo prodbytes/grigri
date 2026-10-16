@@ -3,7 +3,7 @@
 How likely a climber and a plan end in a **match**: the climber asks to
 join and every member of the group says yes. Only [admins](sign-in.md#admins)
 see the scores, to judge the model before anyone else does. The deck's
-order stays the [fit + nearness ranking](api.md#the-decks-ranking).
+order stays the [fit + 2 × nearness ranking](api.md#the-decks-ranking).
 
 A walkthrough of the code, with references to its key sections:
 [docs/match-scores.md](../docs/match-scores.md).
@@ -49,8 +49,9 @@ why (`# why`):
   month, 0.85 beyond.
 - **group_odds**: 0.9 for each member besides the organizer (one more
   yes needed), times crowding.
-- **match_likelihood** = grade_fit × (0.5 + 0.5 × nearness) × group_odds
-  × timing, to two decimals.
+- **match_likelihood** = grade_fit × (0.2 + 0.8 × nearness) × group_odds
+  × timing, to two decimals: distance weighs strongly (a plan 100 km
+  away keeps about 30% of its odds; one of unknown distance 40%).
 - **match_level**: great from 0.7, good from 0.45, possible from 0.2,
   else long shot.
 - **match_reason**, the first that applies: doesn't climb the discipline;
@@ -59,10 +60,12 @@ why (`# why`):
   group; ten or more waiting; in grades and within 25 km; in grades;
   else within a grade or two.
 
-Checked live against aityx production on 2026-10-16: five sample cases
-gave the scores, levels and reasons worked out by hand (e.g. in grades,
-12 km away, a group of two, three days out: 0.80, great, in grades and
-nearby).
+Model v1 (nearness weighed 0.5 + 0.5 ×) was checked live against aityx
+production on 2026-10-16: five sample cases gave the scores, levels and
+reasons worked out by hand. v2 (0.2 + 0.8 ×, the same day) changes only
+that formula; worked by hand, in grades, 12 km away, a group of two,
+three days out is 1 × (0.2 + 0.8 × 0.79) × 0.9 × 1 = 0.75, great, in
+grades and nearby.
 
 Changing a weight is an edit to the model file, not to the code. To
 check a change, run the same facts through the old and the new model

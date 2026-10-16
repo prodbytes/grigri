@@ -59,10 +59,10 @@ person, and a plan can take a whole group.
 
 - **Discover**: plans to join. Upcoming plans that I'm
   not in and haven't swiped on, **ranked by how well they match my
-  profile plus how close they are** to the nearest of my location and
-  areas ([the score](api.md#the-decks-ranking)): a plan in my grades
-  nearby first; one in my grades far away still before one next door
-  that I don't climb; ties soonest first. A plan typed in by hand (no
+  profile plus, weighing twice as much, how close they are** to the
+  nearest of my location and areas ([the score](api.md#the-decks-ranking)):
+  a plan in my grades nearby first; nearby plans before far ones, even
+  ones a few grades off; ties soonest first. A plan typed in by hand (no
   point), or a deck without my location or areas, counts as about 70 km
   away. Each card shows **the plan first, highlighted** (the place, the
   date and the time range on lines of their own, the grades, a "Your
