@@ -911,4 +911,52 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get adminScoresEmpty =>
       'Die letzte Berechnung hat keine Paare bewertet.';
+
+  @override
+  String get yourPics => 'Deine Fotos';
+
+  @override
+  String get grigriPics => 'GriGri Pics';
+
+  @override
+  String get yourPicsEmpty =>
+      'Noch keine Fotos. Füge eins hinzu oder schick eins im Chat.';
+
+  @override
+  String get grigriPicsEmpty => 'Noch keine GriGri Pics von diesem Ort.';
+
+  @override
+  String get addPlanPic => 'Foto zum Plan hinzufügen';
+
+  @override
+  String get deletePic => 'Foto löschen';
+
+  @override
+  String get deletePicQuestion => 'Dieses Foto löschen?';
+
+  @override
+  String get deletePicMessage =>
+      'Es verschwindet für alle aus den Fotos des Plans.';
+
+  @override
+  String get deleteChatPicMessage =>
+      'Es verschwindet aus den Fotos des Plans; der Chat behält es.';
+
+  @override
+  String get delete => 'Löschen';
+
+  @override
+  String picCredit(String author, String license) {
+    return 'Foto: $author, $license';
+  }
+
+  @override
+  String picAddedBy(String name) {
+    return 'Hinzugefügt von $name';
+  }
+
+  @override
+  String picFromChat(String name) {
+    return 'Im Chat gesendet von $name';
+  }
 }

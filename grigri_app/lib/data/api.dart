@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import '../model/climber.dart';
 import '../model/match_score.dart';
+import '../model/pics.dart';
 import '../model/plan.dart';
 import 'realtime.dart';
 
@@ -11,6 +12,9 @@ import 'realtime.dart';
 abstract interface class GrigriApi {
   /// Where a photo's key is served: `<site>/photos/<key>`.
   Uri photoUrl(String key);
+
+  /// Where a GriGri Pics photo is served: `<site>/pics/<key>`.
+  Uri picUrl(String key);
 
   /// `GET /api/me`: my profile (null until I save one) and whether I'm an
   /// admin.
@@ -92,8 +96,22 @@ abstract interface class GrigriApi {
   /// the plan's chat.
   Future<PhotoUpload> newChatMedia(String planId, String contentType);
 
-  /// Uploads a photo or video to the presigned POST [newPhoto] or
-  /// [newChatMedia] gave; [onProgress] hears the share sent so far (0 to 1).
+  /// `GET /api/plans/{id}/pics`: the plan's GriGri Pics and, for members,
+  /// its "Your Pics".
+  Future<PlanPicsList> planPics(String planId);
+
+  /// `POST /api/plans/{id}/pics/upload`: where to upload a photo for the
+  /// plan.
+  Future<PhotoUpload> newPlanPic(String planId, String contentType);
+
+  /// `POST /api/plans/{id}/pics`: adds an uploaded photo to the plan.
+  Future<PlanPic> addPlanPic(String planId, String key);
+
+  /// `DELETE /api/plans/{id}/pics/{picId}`.
+  Future<void> deletePlanPic(String planId, String picId);
+
+  /// Uploads a photo or video to the presigned POST [newPhoto],
+  /// [newChatMedia] or [newPlanPic] gave; [onProgress] hears the share sent so far (0 to 1).
   Future<void> uploadPhoto(
     PhotoUpload upload,
     Uint8List bytes, {
@@ -255,6 +273,15 @@ class NoticeList {
   const NoticeList(this.notices, this.climbers);
 
   final List<Notice> notices;
+  final Climbers climbers;
+}
+
+class PlanPicsList {
+  const PlanPicsList(this.pics, this.climbers);
+
+  final PlanPics pics;
+
+  /// Who added the photos.
   final Climbers climbers;
 }
 
@@ -439,6 +466,18 @@ abstract final class ApiJson {
     _list(json['messages']).map(Message.fromJson).toList(),
     climbers(json),
   );
+
+  static PlanPicsList planPics(Map<String, Object?> json) => PlanPicsList(
+    PlanPics(
+      yours: _list(json['yours']).map(PlanPic.fromJson).toList(),
+      grigri: _list(json['grigri']).map(GrigriPic.fromJson).toList(),
+      member: json['member'] == true,
+    ),
+    climbers(json),
+  );
+
+  static PlanPic planPic(Map<String, Object?> json) =>
+      PlanPic.fromJson(_map(json['pic']));
 
   static Message message(Map<String, Object?> json) =>
       Message.fromJson(_map(json['message']));

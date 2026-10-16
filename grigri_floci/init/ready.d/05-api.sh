@@ -31,6 +31,9 @@ set -eu
 SRC=/opt/grigri-api
 STACK=grigri-local-api
 PHOTOS=grigri-local-photos
+# GriGri Pics' bucket, apart from people's photos; scripts/pics-local.sh
+# (process-compose's 6-pics) loads it from the host once Floci is up.
+PICS=grigri-local-pics
 ARTIFACTS=grigri-local-artifacts
 API_ID=grigri
 rm -f /tmp/grigri-api-host
@@ -59,6 +62,7 @@ esac
 aws iot describe-endpoint --endpoint-type iot:Data-ATS >/dev/null
 aws s3 mb "s3://$ARTIFACTS" >/dev/null
 aws s3 mb "s3://$PHOTOS" >/dev/null
+aws s3 mb "s3://$PICS" >/dev/null
 # The local web app's origins post uploads to Floci's S3 directly.
 aws s3api put-bucket-cors --bucket "$PHOTOS" --cors-configuration "{
   \"CORSRules\": [{
@@ -72,8 +76,8 @@ aws s3api put-bucket-cors --bucket "$PHOTOS" --cors-configuration "{
   }]
 }"
 # As in AWS (site.yaml): uploads are tagged pending until a profile saves
-# them or a chat message sends them; pending ones expire after a day, and
-# chat media 400 days after its upload.
+# them, a chat message sends them or a plan adds them; pending ones expire
+# after a day, and chat media and plan photos 400 days after their upload.
 aws s3api put-bucket-lifecycle-configuration --bucket "$PHOTOS" --lifecycle-configuration '{
   "Rules": [{
     "ID": "expire-pending-photos",
@@ -85,12 +89,17 @@ aws s3api put-bucket-lifecycle-configuration --bucket "$PHOTOS" --lifecycle-conf
     "Status": "Enabled",
     "Filter": {"Prefix": "photos/chat/"},
     "Expiration": {"Days": 400}
+  }, {
+    "ID": "expire-plan-pics",
+    "Status": "Enabled",
+    "Filter": {"Prefix": "photos/plans/"},
+    "Expiration": {"Days": 400}
   }]
 }'
 
 aws cloudformation package --template-file "$SRC/template.yaml" \
   --s3-bucket "$ARTIFACTS" --output-template-file /tmp/grigri-api.yaml >/dev/null
-set -- "Stage=local" "DevMode=$DEV_MODE" "PhotosBucket=$PHOTOS" "Architecture=$ARCH" "Version=local" \
+set -- "Stage=local" "DevMode=$DEV_MODE" "PhotosBucket=$PHOTOS" "PicsBucket=$PICS" "Architecture=$ARCH" "Version=local" \
   "PhotosUploadUrl=https://localhost:${FLOCI_HTTPS_PORT_HOST:-2543}/$PHOTOS" \
   "IotEndpoint=${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}:${FLOCI_HTTPS_PORT_HOST:-2543}"
 [ -n "$CLIENT_ID" ] && set -- "$@" "GoogleWebClientId=$CLIENT_ID"

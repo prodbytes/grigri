@@ -5,6 +5,7 @@
 #   /app*     -> Flutter dev server  (http://$GRIGRI_ORIGIN_HOST:$FLUTTER_WEB_PORT)
 #   /api/*    -> the local API       (Floci's HTTP API, from 05-api.sh)
 #   /photos/* -> the photos bucket   (Floci's S3, grigri-local-photos)
+#   /pics/*   -> GriGri Pics' bucket (Floci's S3, grigri-local-pics)
 #   *         -> grigri_index       (http://$GRIGRI_ORIGIN_HOST:$INDEX_PORT),
 #                whose / redirects to /app/
 # Paths are forwarded as is (CloudFront can't strip a prefix), so the app is
@@ -28,9 +29,10 @@ PUBLIC_HOST="${GRIGRI_PUBLIC_HOST:-local.grigri.nu01.com}"
 WEB_PORT="${FLUTTER_WEB_PORT:-7189}"
 INDEX_PORT="${INDEX_PORT:-2113}"
 # The local API's host, deployed into this Floci by 05-api.sh. Missing (no
-# build): no /api/* or /photos/* routes.
+# build): no /api/*, /photos/* or /pics/* routes.
 API_HOST="$(cat /tmp/grigri-api-host 2>/dev/null || true)"
 PHOTOS_BUCKET=grigri-local-photos
+PICS_BUCKET=grigri-local-pics
 
 cache_policy=$(aws cloudfront create-cache-policy \
   --query CachePolicy.Id --output text \
@@ -70,12 +72,12 @@ behavior_count=1
 api_origins=""
 api_behaviors=""
 if [ -n "$API_HOST" ]; then
-  origin_count=4
-  behavior_count=3
+  origin_count=5
+  behavior_count=4
   # The API: Floci itself, on its own port, over HTTP (inside the
-  # container). Photos: Floci's in-process S3.
-  api_origins=$(printf ', {"Id": "api", "DomainName": "%s", "CustomOriginConfig": {"HTTPPort": 4566, "HTTPSPort": 443, "OriginProtocolPolicy": "http-only"}}, {"Id": "photos", "DomainName": "%s.s3.amazonaws.com", "S3OriginConfig": {"OriginAccessIdentity": ""}}' "$API_HOST" "$PHOTOS_BUCKET")
-  api_behaviors=", {\"PathPattern\": \"/api/*\", $(behavior api)}, {\"PathPattern\": \"/photos/*\", $(behavior photos)}"
+  # container). Photos and GriGri Pics: Floci's in-process S3.
+  api_origins=$(printf ', {"Id": "api", "DomainName": "%s", "CustomOriginConfig": {"HTTPPort": 4566, "HTTPSPort": 443, "OriginProtocolPolicy": "http-only"}}, {"Id": "photos", "DomainName": "%s.s3.amazonaws.com", "S3OriginConfig": {"OriginAccessIdentity": ""}}, {"Id": "pics", "DomainName": "%s.s3.amazonaws.com", "S3OriginConfig": {"OriginAccessIdentity": ""}}' "$API_HOST" "$PHOTOS_BUCKET" "$PICS_BUCKET")
+  api_behaviors=", {\"PathPattern\": \"/api/*\", $(behavior api)}, {\"PathPattern\": \"/photos/*\", $(behavior photos)}, {\"PathPattern\": \"/pics/*\", $(behavior pics)}"
 fi
 
 distribution=$(aws cloudfront create-distribution \
@@ -92,4 +94,4 @@ distribution=$(aws cloudfront create-distribution \
     ]}
   }")
 
-echo "grigri: CloudFront distribution $distribution serves $ALIAS and $PUBLIC_HOST (index, /app/${API_HOST:+, /api/, /photos/})"
+echo "grigri: CloudFront distribution $distribution serves $ALIAS and $PUBLIC_HOST (index, /app/${API_HOST:+, /api/, /photos/, /pics/})"

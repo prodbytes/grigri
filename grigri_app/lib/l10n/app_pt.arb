@@ -249,5 +249,18 @@
   "adminScoresNone": "Nenhum cálculo ainda. scripts/score-matches.sh pontua cada perfil contra cada plano futuro.",
   "adminScoresRun": "Último cálculo {day}, {time}: {scored} de {pairs} pares, {climbers} pessoas × {plans} planos",
   "adminScoresProblems": "{failed} falharam, {skipped} acima do limite",
-  "adminScoresEmpty": "O último cálculo não pontuou nenhum par."
+  "adminScoresEmpty": "O último cálculo não pontuou nenhum par.",
+  "yourPics": "Suas fotos",
+  "grigriPics": "GriGri Pics",
+  "yourPicsEmpty": "Ainda não há fotos. Adicione uma, ou envie uma no chat.",
+  "grigriPicsEmpty": "Ainda não há GriGri Pics deste lugar.",
+  "addPlanPic": "Adicionar uma foto ao plano",
+  "deletePic": "Apagar a foto",
+  "deletePicQuestion": "Apagar esta foto?",
+  "deletePicMessage": "Ela sai das fotos do plano para todos.",
+  "deleteChatPicMessage": "Ela sai das fotos do plano; o chat a mantém.",
+  "delete": "Apagar",
+  "picCredit": "Foto: {author}, {license}",
+  "picAddedBy": "Adicionada por {name}",
+  "picFromChat": "Enviada no chat por {name}"
 }
