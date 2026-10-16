@@ -361,7 +361,7 @@ abstract class AppLocalizations {
   /// Sign-in screen, under the app name.
   ///
   /// In en, this message translates to:
-  /// **'Find climbing partners: make a plan, or swipe right on one, and climb together.'**
+  /// **'Find a climbing plan: make one, or swipe right on one, and climb together.'**
   String get signInTagline;
 
   /// Button: sign in with a Google account.

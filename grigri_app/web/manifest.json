@@ -5,7 +5,7 @@
     "display": "standalone",
     "background_color": "#161A16",
     "theme_color": "#161A16",
-    "description": "Grigri: matchmaking for climbing and sports",
+    "description": "Grigri: find a climbing plan",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

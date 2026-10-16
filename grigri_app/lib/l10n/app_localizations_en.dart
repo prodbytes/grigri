@@ -154,7 +154,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Find climbing partners: make a plan, or swipe right on one, and climb together.';
+      'Find a climbing plan: make one, or swipe right on one, and climb together.';
 
   @override
   String get signInWithGoogle => 'Sign in with Google';

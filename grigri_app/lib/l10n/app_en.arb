@@ -206,7 +206,7 @@
   "@loadFailedTitle": {
     "description": "Title of the screen shown when the profile could not be loaded."
   },
-  "signInTagline": "Find climbing partners: make a plan, or swipe right on one, and climb together.",
+  "signInTagline": "Find a climbing plan: make one, or swipe right on one, and climb together.",
   "@signInTagline": {
     "description": "Sign-in screen, under the app name."
   },

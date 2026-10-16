@@ -46,8 +46,8 @@
         ["true", "2", "-", "0.35", "Two grades short: the group may worry about leading or belaying."],
         ["true", "3", "-", "0.15", "Three grades short: rarely taken."],
         ["true", ">= 4", "-", "0", "Four or more grades short: the plan's routes are out of reach."],
-        ["true", "-", "1", "0.85", "One grade above: easy for the climber, still a welcome partner."],
-        ["true", "-", "2", "0.7", "Two grades above: may get bored, but a safe partner."],
+        ["true", "-", "1", "0.85", "One grade above: easy for the climber, still welcome in the group."],
+        ["true", "-", "2", "0.7", "Two grades above: may get bored, but safe to climb with."],
         ["true", "-", "3", "0.5", "Three grades above: a mismatch the climber may not want."],
         ["-", "-", "-", "0.3", "Four or more grades above: unlikely to suit either side."]
       ]

@@ -1020,6 +1020,16 @@ spec.
       without a point last; with nothing typed it offers the nearest.
     - [Screens](screens.md): the plan editor's **Where** shows each
       suggestion's distance ("· 0.7 km").
+72. **People match with a plan, not a partner: the title is "Find a
+    climbing plan", and partners, when worth saying, are always plural;
+    note it in CLAUDE.md and memory.**
+    - The sign-in tagline, in all six languages: "Find a climbing plan:
+      make one, or swipe right on one, and climb together." The web
+      app's description (page, manifest, pubspec): "Grigri: find a
+      climbing plan".
+    - The match model's reasons no longer call a climber "a partner".
+    - The rule: CLAUDE.md ("Wording: plans, not partners") and the
+      product section of [README.md](README.md).
 
 ## 2026-10-17
 
