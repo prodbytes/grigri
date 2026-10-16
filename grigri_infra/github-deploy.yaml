@@ -512,6 +512,9 @@ Resources:
                   - cloudfront:PublishFunction
                   - cloudfront:DeleteFunction
                   - cloudfront:TestFunction
+                  # The stack's cost-allocation tags reach functions too.
+                  - cloudfront:TagResource
+                  - cloudfront:UntagResource
                 Resource: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:function/${Prefix}-*
               # Distributions by their grigri:stage tag.
               - Sid: Distributions
