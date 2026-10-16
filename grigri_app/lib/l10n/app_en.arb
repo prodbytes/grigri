@@ -1013,97 +1013,9 @@
   "@dismiss": {
     "description": "Tooltip: remove a declined request from the list."
   },
-  "adminTitle": "Admin: join requests",
+  "adminTitle": "Admin: people",
   "@adminTitle": {
     "description": "Title of the Admin tab."
-  },
-  "noOpenRequestsTitle": "No open requests",
-  "@noOpenRequestsTitle": {
-    "description": "Admin, empty: title."
-  },
-  "noOpenRequestsMessage": "When anyone asks to join a plan, their request shows up here for you to approve or reject.",
-  "@noOpenRequestsMessage": {
-    "description": "Admin, empty: message."
-  },
-  "aPlan": "a plan",
-  "@aPlan": {
-    "description": "Stands for a plan the admin cannot see the details of."
-  },
-  "askedAt": "Asked {day}, {time}",
-  "@askedAt": {
-    "description": "When someone asked to join.",
-    "placeholders": {
-      "day": {
-        "type": "String",
-        "example": "Sat 17 Oct"
-      },
-      "time": {
-        "type": "String",
-        "example": "18:30"
-      }
-    }
-  },
-  "reject": "Reject",
-  "@reject": {
-    "description": "Admin button: reject the request."
-  },
-  "approve": "Approve",
-  "@approve": {
-    "description": "Admin button: approve the request."
-  },
-  "rejectNameQuestion": "Reject {name}?",
-  "@rejectNameQuestion": {
-    "description": "Admin dialog title.",
-    "placeholders": {
-      "name": {
-        "type": "String",
-        "example": "Marta Soler"
-      }
-    }
-  },
-  "rejectMessage": "They won't join {plan}, and they'll be told the group declined.",
-  "@rejectMessage": {
-    "description": "Admin dialog body.",
-    "placeholders": {
-      "plan": {
-        "type": "String",
-        "example": "El Pati"
-      }
-    }
-  },
-  "approveNameQuestion": "Approve {name}?",
-  "@approveNameQuestion": {
-    "description": "Admin dialog title.",
-    "placeholders": {
-      "name": {
-        "type": "String",
-        "example": "Marta Soler"
-      }
-    }
-  },
-  "approveMessage": "They join {plan} now, as if everyone in the group had said yes.",
-  "@approveMessage": {
-    "description": "Admin dialog body.",
-    "placeholders": {
-      "plan": {
-        "type": "String",
-        "example": "El Pati"
-      }
-    }
-  },
-  "adminJoined": "{name} joined {plan}.",
-  "@adminJoined": {
-    "description": "Snackbar after an admin approves a request.",
-    "placeholders": {
-      "name": {
-        "type": "String",
-        "example": "Marta Soler"
-      },
-      "plan": {
-        "type": "String",
-        "example": "El Pati"
-      }
-    }
   },
   "roles": "Roles",
   "@roles": {
@@ -1283,61 +1195,46 @@
   "@matchReasonCloseGrades": {
     "description": "Why a match score is what it is."
   },
-  "adminScoresTitle": "Match scores",
-  "@adminScoresTitle": {
-    "description": "Admin tab: the match scores preview's heading."
+  "adminNoClimbersTitle": "Nobody yet",
+  "@adminNoClimbersTitle": {
+    "description": "Admin tab: nobody has a profile yet."
   },
-  "adminScoresNone": "No scoring run yet. scripts/score-matches.sh scores every profile against every upcoming plan.",
-  "@adminScoresNone": {
-    "description": "Admin tab: no scoring run yet."
+  "adminNoClimbersMessage": "Everyone with a profile shows up here, to block or unblock.",
+  "@adminNoClimbersMessage": {
+    "description": "Admin tab: what shows up there."
   },
-  "adminScoresRun": "Last run {day}, {time}: {scored} of {pairs} pairs, {climbers} people × {plans} plans",
-  "@adminScoresRun": {
-    "description": "Admin tab: the latest scoring run.",
+  "block": "Block",
+  "@block": {
+    "description": "Admin tab: block someone (they can't use Grigri)."
+  },
+  "unblock": "Unblock",
+  "@unblock": {
+    "description": "Admin tab: unblock someone."
+  },
+  "blocked": "Blocked",
+  "@blocked": {
+    "description": "Admin tab: under a blocked person's name."
+  },
+  "blockNameQuestion": "Block {name}?",
+  "@blockNameQuestion": {
+    "description": "Confirms blocking someone.",
     "placeholders": {
-      "day": {
-        "type": "String",
-        "example": "Sat 17 Oct"
-      },
-      "time": {
-        "type": "String",
-        "example": "18:30"
-      },
-      "scored": {
-        "type": "int",
-        "example": "118"
-      },
-      "pairs": {
-        "type": "int",
-        "example": "120"
-      },
-      "climbers": {
-        "type": "int",
-        "example": "12"
-      },
-      "plans": {
-        "type": "int",
-        "example": "10"
+      "name": {
+        "type": "String"
       }
     }
   },
-  "adminScoresProblems": "{failed} failed, {skipped} over the run's cap",
-  "@adminScoresProblems": {
-    "description": "Admin tab: pairs the latest run couldn't score.",
-    "placeholders": {
-      "failed": {
-        "type": "int",
-        "example": "2"
-      },
-      "skipped": {
-        "type": "int",
-        "example": "0"
-      }
-    }
+  "blockMessage": "They can't use Grigri until you unblock them, and their plans leave everyone's Discover.",
+  "@blockMessage": {
+    "description": "What blocking someone does."
   },
-  "adminScoresEmpty": "The last run scored no pairs.",
-  "@adminScoresEmpty": {
-    "description": "Admin tab: the latest run scored nothing."
+  "blockedTitle": "Your account is blocked",
+  "@blockedTitle": {
+    "description": "Shown to a blocked person instead of the app."
+  },
+  "blockedMessage": "An admin blocked your account, so you can't use Grigri for now.",
+  "@blockedMessage": {
+    "description": "Why a blocked person can't use the app."
   },
   "yourPics": "Your Pics",
   "@yourPics": {

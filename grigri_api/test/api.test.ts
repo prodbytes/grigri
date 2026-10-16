@@ -131,11 +131,48 @@ describe('access', () => {
   });
 
   it('admin routes are admins only', async () => {
-    await call(ada, 'PUT', '/api/me', profile('Ada'));
-    await fails(call(ada, 'GET', '/api/admin/requests'), 403);
+    const { climber: me } = await call(ada, 'PUT', '/api/me', profile('Ada'));
+    await fails(call(ada, 'GET', '/api/admin/climbers'), 403);
+    await fails(call(ada, 'POST', `/api/admin/climbers/${me.id}/block`), 403);
     await call(root, 'PUT', '/api/me', profile('Root'));
-    expect(await call(root, 'GET', '/api/admin/requests')).toEqual({ requests: [], plans: {}, climbers: {} });
+    expect((await call(root, 'GET', '/api/admin/climbers')).climbers).toHaveLength(2);
     expect((await call(root, 'GET', '/api/me')).admin).toBe(true);
+  });
+
+  it('the admin lists everyone and blocks and unblocks them', async () => {
+    const { climber: b } = await call(ben, 'PUT', '/api/me', { ...profile('Ben'), location: { name: 'Town', lat: 41.39, lon: 2.17 } });
+    await call(ada, 'PUT', '/api/me', profile('Ada'));
+    const { climber: r } = await call(root, 'PUT', '/api/me', profile('Root'));
+    const list = (await call(root, 'GET', '/api/admin/climbers')).climbers;
+    // By name, without where they are.
+    expect(list.map((c: any) => [c.name, c.blocked])).toEqual([['Ada', false], ['Ben', false], ['Root', false]]);
+    expect(list[1].location).toBeUndefined();
+
+    expect(await call(root, 'POST', `/api/admin/climbers/${b.id}/block`)).toEqual({ blocked: true });
+    expect((await call(root, 'GET', '/api/admin/climbers')).climbers[1].blocked).toBe(true);
+    // Blocked: nothing works but signing out, and a save can't unblock.
+    await fails(call(ben, 'GET', '/api/me'), 403, /blocked/);
+    await fails(call(ben, 'PUT', '/api/me', profile('Ben')), 403, /blocked/);
+    await fails(call(ben, 'GET', '/api/discover'), 403, /blocked/);
+    expect(await call(ben, 'DELETE', '/api/session')).toEqual({});
+
+    expect(await call(root, 'POST', `/api/admin/climbers/${b.id}/unblock`)).toEqual({ blocked: false });
+    expect((await call(ben, 'GET', '/api/me')).climber.name).toBe('Ben');
+
+    await fails(call(root, 'POST', `/api/admin/climbers/${r.id}/block`), 400);
+    await fails(call(root, 'POST', '/api/admin/climbers/nobody/block'), 404);
+  });
+
+  it("a blocked organizer's plans leave everyone's deck", async () => {
+    const { climber: b } = await call(ben, 'PUT', '/api/me', profile('Ben'));
+    await call(ben, 'POST', '/api/plans', planBody);
+    await call(ada, 'PUT', '/api/me', profile('Ada'));
+    await call(root, 'PUT', '/api/me', profile('Root'));
+    expect((await call(ada, 'GET', '/api/discover')).plans).toHaveLength(1);
+    await call(root, 'POST', `/api/admin/climbers/${b.id}/block`);
+    const deck = await call(ada, 'GET', '/api/discover');
+    expect(deck.plans).toEqual([]);
+    expect(deck.climbers).toEqual({});
   });
 });
 
@@ -421,18 +458,6 @@ describe('the matchmaking flow', () => {
     const { plan } = await call(ada, 'PUT', `/api/plans/${planId}`, { ...planBody, place: 'Elsewhere' });
     expect(plan.place).toBe('Elsewhere');
     await fails(call(ada, 'PUT', `/api/plans/${planId}`, { ...planBody, start: '2020-01-01T00:00:00Z' }), 400);
-  });
-
-  it('the admin lists every open request and accepts or rejects any', async () => {
-    await call(ben, 'POST', `/api/plans/${planId}/join`);
-    await call(cy, 'POST', `/api/plans/${planId}/join`);
-    const list = await call(root, 'GET', '/api/admin/requests');
-    expect(list.requests).toHaveLength(2);
-    expect(Object.keys(list.plans)).toEqual([planId]);
-    expect((await call(root, 'POST', `/api/admin/requests/${planId}/${ids.Ben}/accept`)).match.newcomerId).toBe(ids.Ben);
-    expect(await call(root, 'POST', `/api/admin/requests/${planId}/${ids.Cy}/reject`)).toEqual({});
-    expect((await call(root, 'GET', '/api/admin/requests')).requests).toEqual([]);
-    await fails(call(ada, 'POST', `/api/admin/requests/${planId}/${ids.Cy}/accept`), 403);
   });
 
   it('pass takes a plan out of my deck; notices can be marked read', async () => {

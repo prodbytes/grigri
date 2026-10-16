@@ -237,8 +237,8 @@ Resources:
   # every upcoming plan, by climber and plan, plus each run's scores best
   # first (gsi1). Derived data, rewritten by each scoring run, so no
   # backups and no deletion protection: dropping it loses nothing. On
-  # demand: a run of 5,000 pairs writes 5,000 items (about $0.006) and
-  # the preview reads 20; storage is cents. Scores expire (ttl) a day after
+  # demand: a run of 5,000 pairs writes 5,000 items (about $0.006);
+  # storage is cents. Scores expire (ttl) a day after
   # their plan starts.
   ScoresTable:
     Type: AWS::DynamoDB::Table
@@ -331,15 +331,6 @@ Resources:
                 Resource:
                   - !GetAtt Table.Arn
                   - !Sub ${Table.Arn}/index/*
-              # The admin's preview of the match scores: read only.
-              - Sid: Scores
-                Effect: Allow
-                Action:
-                  - dynamodb:GetItem
-                  - dynamodb:Query
-                Resource:
-                  - !GetAtt ScoresTable.Arn
-                  - !Sub ${ScoresTable.Arn}/index/*
               - Sid: Photos
                 Effect: Allow
                 Action:
@@ -393,7 +384,6 @@ Resources:
           DEV_MODE: !Ref DevMode
           IOT_ENDPOINT: !Ref IotEndpoint
           IOT_AUTHORIZER: !If [CreateIotAuthorizer, !Sub '${AWS::StackName}-realtime', '']
-          SCORES_TABLE: !Ref ScoresTable
           AITYX_URL: !Ref AityxUrl
           AITYX_API_KEY: !Ref AityxApiKey
           # Reuse TCP connections to DynamoDB between invocations.

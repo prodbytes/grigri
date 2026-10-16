@@ -827,7 +827,29 @@ spec.
       smaller than the app's (on top of the system's text size); the
       plan's notes and the organizer's bio stop at three lines, ending in
       "…" when cut. The plan screen and the profile sheet show them whole.
-58. **The nav icons were missing labels.** With the Admin tab (six
+58. **Remove every feature from the Admin tab and start it over: for
+    now, just a list of people with the option to block or unblock.**
+    - [Admin](admin.md) (new): the tab lists everyone by name
+      (`GET /api/admin/climbers`), with **Block** (after a confirmation)
+      and **Unblock** (`POST /api/admin/climbers/{id}/block`,
+      `…/unblock`); never on my own row (the API refuses it too). A
+      blocked climber gets 403 `blocked` from every route but signing
+      out, sees only "Your account is blocked" in the app (Sign out, Try
+      again), and their plans leave everyone's Discover. A profile save
+      can't clear a block.
+    - Removed: the Admin tab's match scores preview
+      (`GET /api/admin/scores`, and the API's read access to the scores
+      table) and its open join requests to approve or reject
+      (`GET /api/admin/requests`, `POST /api/admin/requests/…/accept`,
+      `…/reject`), with their texts in every language. Admins' deck
+      scores and the scoring run stay ([match scores](match-scores.md)).
+    - [API](api.md), [Screens](screens.md), [Sign-in](sign-in.md),
+      [Backend](backend.md), [Matching](matching.md),
+      [Live updates](live-updates.md), [Roles](roles.md) and
+      [docs/match-scores.md](../docs/match-scores.md) revised to match.
+    - Cost: nothing new to run; the list is one index query, a block one
+      write.
+59. **The nav icons were missing labels.** With the Admin tab (six
     tabs), the bar showed only the selected tab's label.
     - [Screens](screens.md): every tab always shows its label; the short
       11 pt labels fit six tabs on a 360 dp phone.
