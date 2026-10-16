@@ -44,8 +44,17 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
 - **Granting**: the API grants and revokes with rbacr's grants API
   (`POST`/`DELETE /api/systems/grigri/grants {role, grantee, endsAt?}`,
   roots only, so the same root token), and lists a role's holders with
-  `GET /api/systems/grigri/grants` (kept a minute). No rbacr change was
-  needed: grants with an end, revokes and implications were all there.
+  `GET /api/systems/grigri/grants` (kept a minute).
+- **The client**: every call goes through rbacr's TypeScript client,
+  [rbacr-lib](https://github.com/prodbytes/rbacr/tree/main/rbacr-lib)
+  (`grigri_api/package.json` pins its release tarball by URL and the
+  lockfile by integrity), wrapped by
+  [grigri_api/src/rbacr.ts](../grigri_api/src/rbacr.ts): one client per
+  function instance, shared by the admin check, the role lookups and the
+  grants, so a grant drops what that instance kept about the person.
+  Answers are kept a minute (a "yes" never past its grant's end), errors
+  never (rbacr's rule C6: rbacr not knowing the `grigri` system is "no",
+  asked again next time); rbacr's error answers and outages are logged.
 - **Admin** (the Admin tab, [admin.md](admin.md)) is rbacr's too: the API asks
   rbacr whether my verified email holds the `admin` role of the `grigri`
   system (roots do). rbacr needs the `grigri` system and its `admin` role

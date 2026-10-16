@@ -995,6 +995,17 @@ spec.
       its own small client (`grigri_api/src/rbacr.ts`), now with grants.
     - Nobody was Premium, blocked or advertising on either stage, so
       nothing moved.
+70. **Do it all: write rbacr's TypeScript client library and use it.**
+    - rbacr: `rbacr-lib` specified (its README) and built: a
+      dependency-free client for `/api` (checks and role lists kept
+      briefly, fail-closed helpers, and for roots grants with a validity,
+      revokes, the grants listing and a role's holders), with unit and
+      end-to-end tests, CI, and releases as GitHub release tarballs
+      (0.1.0; 0.1.1 also takes plain http for `*.localhost` and
+      `host.docker.internal`, which the local API in Docker uses).
+    - [Roles](roles.md): Grigri's API calls rbacr through rbacr-lib
+      (`grigri_api/src/rbacr.ts` wraps it); rbacr not knowing the
+      `grigri` system is no longer kept as "no" for a minute.
 
 69. **Barrel roll: commit what was pending.**
     - `.env.example` documents the Google Cloud project's OAuth clients
