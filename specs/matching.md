@@ -53,8 +53,11 @@ person, and a plan can take a whole group.
 - A **plan** ([Plan](../grigri_app/lib/model/plan.dart)) is one outing:
   discipline, where (a sector, crag or gym: picked from the
   [sector index](sectors.md), with where it is and its point on the
-  map, or typed in), the day and
-  its time range (from and to), the grades it's for, and notes. It has
+  map, or typed in), its days (a first day, which may be left to be
+  decided, and any more days after it, up to two weeks) and its time
+  range (from and to, the same each day), the grades it's for, and
+  notes. Joining closes when its first day starts; an undated plan stays
+  open. It has
   no title: it's called by its place. Its members are its **group**,
   organizer first, and the group has **no size limit**: it's as big as
   the people who match.
@@ -66,10 +69,11 @@ person, and a plan can take a whole group.
   profile plus, weighing twice as much, how close they are** to the
   nearest of my location and areas ([the score](api.md#the-decks-ranking)):
   a plan in my grades nearby first; nearby plans before far ones, even
-  ones a few grades off; ties soonest first. A plan typed in by hand (no
+  ones a few grades off; ties soonest first, undated plans last. A plan typed in by hand (no
   point), or a deck without my location or areas, counts as about 70 km
   away. Each card shows **the plan first, highlighted** (the place, the
-  date and the time range on lines of their own, the grades, a "Your
+  date (the first day, "+N days" when there are more, or "Date to be
+  decided") and the time range (none while undated) on lines of their own, the grades, a "Your
   grades" badge when they fit; the distance isn't shown, only used to
   rank), then the organizer with how many others are in the group
   ("Kit Marlow" and **+1**: tap it to show or hide the group's list,

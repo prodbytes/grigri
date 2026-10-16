@@ -227,7 +227,7 @@ class FakeApi implements GrigriApi, SessionApi {
     }
     if (r.rejected) throw const ApiException(409, 'the request was declined');
     final now = _now();
-    if (!plan.start.isAfter(now)) {
+    if (plan.hasStarted(now)) {
       throw const ApiException(409, 'the plan has started');
     }
     if (!r.canNudge(now)) {
@@ -624,7 +624,7 @@ class FakeApi implements GrigriApi, SessionApi {
         plans.values
             .where(
               (p) =>
-                  p.start.isAfter(now) &&
+                  !p.hasStarted(now) &&
                   !p.memberIds.contains(meId) &&
                   !passed.contains(p.id) &&
                   !requestsById.containsKey('${p.id}/$meId') &&
@@ -633,7 +633,11 @@ class FakeApi implements GrigriApi, SessionApi {
             .toList()
           ..sort((a, b) {
             final fit = (_fits(b) ? 1 : 0).compareTo(_fits(a) ? 1 : 0);
-            return fit != 0 ? fit : a.start.compareTo(b.start);
+            return fit != 0
+                ? fit
+                : (a.start ?? DateTime(9999)).compareTo(
+                    b.start ?? DateTime(9999),
+                  );
           });
     return PlanList(
       list,
@@ -671,6 +675,7 @@ class FakeApi implements GrigriApi, SessionApi {
       lon: plan.lon,
       start: plan.start,
       end: plan.end,
+      moreDays: plan.moreDays,
       grades: plan.grades,
       memberIds: [meId!],
       notes: plan.notes,
@@ -691,7 +696,10 @@ class FakeApi implements GrigriApi, SessionApi {
   @override
   Future<MyPlans> myPlans() => _route('GET /api/plans', () {
     final mine = plans.values.where((p) => p.memberIds.contains(meId)).toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+      ..sort(
+        (a, b) =>
+            (a.start ?? DateTime(9999)).compareTo(b.start ?? DateTime(9999)),
+      );
     final asked = [
       for (final r in requestsById.values)
         if (r.climberId == meId && plans.containsKey(r.planId))

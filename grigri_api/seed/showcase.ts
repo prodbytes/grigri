@@ -127,9 +127,10 @@ export function showcaseData(now: Date): ShowcaseData {
       lat: 49.7,
       lon: 11.33,
       when: at(2, 8, 9),
+      moreDays: [at(3, 8, 9)],
       grades: routes('6c', '7c'),
       memberIds: ['seed-wolf'],
-      notes: 'Short approach, steep pockets. Lunch at the beer garden after.',
+      notes: 'Two days of short approaches and steep pockets. Lunch at the beer garden after.',
     }),
     plan({
       id: 'seed-buoux-limestone',

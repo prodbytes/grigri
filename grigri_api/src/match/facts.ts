@@ -18,6 +18,8 @@ export interface MatchFacts {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+/** An undated plan's days until start: time enough for every member to answer. */
+const UNDATED_DAYS = 30;
 /** The model's grade inputs go up to 30; no scale is that long. */
 const MAX_GRADES = 30;
 
@@ -43,6 +45,6 @@ export function matchFacts(
     distance_km: km === undefined ? 0 : Math.round(km * 10) / 10,
     group_size: Math.max(1, plan.memberIds.length),
     open_requests: Math.max(0, openRequests),
-    days_until_start: Math.max(0, Math.round(((Date.parse(plan.start) - now.getTime()) / DAY_MS) * 100) / 100),
+    days_until_start: plan.start === undefined ? UNDATED_DAYS : Math.max(0, Math.round(((Date.parse(plan.start) - now.getTime()) / DAY_MS) * 100) / 100),
   };
 }

@@ -58,6 +58,10 @@ describe('matchFacts', () => {
     });
   });
 
+  it('an undated plan is a month away', () => {
+    expect(matchFacts(climber('a'), plan('p', { start: undefined, end: undefined }), 0, now).days_until_start).toBe(30);
+  });
+
   it('grades short or over, by how many', () => {
     expect(matchFacts(climber('a'), plan('p', { grades: { scale: 'routes', min: 13, max: 15 } }), 0, now)).toMatchObject({ grades_short: 3, grades_over: 0 });
     expect(matchFacts(climber('a'), plan('p', { grades: { scale: 'routes', min: 1, max: 4 } }), 0, now)).toMatchObject({ grades_short: 0, grades_over: 2 });
@@ -247,6 +251,11 @@ describe('scoreItem', () => {
       gsi1sk: '0.50#a#p',
       ttl: Date.parse('2030-05-04T10:00:00.000Z') / 1000,
     });
+  });
+
+  it("an undated plan's expires a month (and a day) after the run", () => {
+    const item = scoreItem({ climberId: 'a', planId: 'p', score: 0.5, level: 'good', reason: 'in_grades', runId: 'r1', scoredAt: '2030-05-01T10:00:00.000Z' }, undefined);
+    expect(item.ttl).toBe(Date.parse('2030-06-01T10:00:00.000Z') / 1000);
   });
 });
 

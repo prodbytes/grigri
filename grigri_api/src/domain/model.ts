@@ -92,6 +92,12 @@ export function publicClimber(c: Climber): PublicClimber {
  * A plan to climb. No title (the app names it by its place) and no group
  * size: a group is as big as the people who match, so it's never full.
  */
+/** One day's time window: ISO 8601 UTC, end after start and at most 24 hours later. */
+export interface DayWindow {
+  start: string;
+  end: string;
+}
+
 export interface Plan {
   id: string;
   organizerId: string;
@@ -105,10 +111,12 @@ export interface Plan {
   /** Where the place is on the map, from the sector index; absent when typed by hand. */
   lat?: number;
   lon?: number;
-  /** ISO 8601 UTC. */
-  start: string;
+  /** The first day's window, ISO 8601 UTC; absent (with end) while the day is undecided. */
+  start?: string;
   /** ISO 8601 UTC, after start and at most 24 hours later. */
-  end: string;
+  end?: string;
+  /** More days after the first, soonest first: each a window like start–end, starting after the one before ends. Absent for a one-day (or undated) plan. */
+  moreDays?: DayWindow[];
   grades: GradeRange;
   /** Organizer first, then in join order. */
   memberIds: string[];

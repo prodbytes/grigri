@@ -31,8 +31,8 @@ class ChatsScreen extends StatelessWidget {
           for (final plan in store.myPlans)
             (plan: plan, last: store.messages(plan.id).lastOrNull),
         ]..sort((a, b) {
-          final ta = a.last?.time ?? a.plan.start;
-          final tb = b.last?.time ?? b.plan.start;
+          final ta = a.last?.time ?? a.plan.start ?? DateTime(0);
+          final tb = b.last?.time ?? b.plan.start ?? DateTime(0);
           return tb.compareTo(ta);
         });
     int toAnswer(String planId) =>
@@ -94,7 +94,7 @@ class ChatsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        dayLabel(context, plan.start),
+                        daysLabel(context, plan),
                         style: text.labelSmall?.copyWith(
                           color: Mountain.granite,
                         ),

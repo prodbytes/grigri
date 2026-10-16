@@ -17,7 +17,7 @@ is "Alerts" in English.
 | Tab | Shows |
 |---|---|
 | **Discover** | The plans deck ([matching](matching.md#the-deck)), best first, with raised round ✕ and ✓ buttons (centered, ✓ bigger) and, to the right of ✓, a smaller share button, and ⟳ to refresh, which also brings back the plans I passed on (I may have changed my mind). Now and then, between plans, an approved [ad](ads.md#on-the-deck), drawn the same way (its photo full-bleed, its text over a dark fade, an **Ad** tag): ✓ opens its link in the browser, ✕ skips it. Each plan's card, in slightly smaller text, is drawn like a dating app's profile card: the plan's crag photo (its [GriGri Pics cover](pics.md#on-the-deck)) fills the top edge to edge, or, without one, a backdrop in the discipline's colors with a faint mountain; over it, on a dark fade, the discipline (and an admin's match score) at the top, and at the bottom the place in large bold type, the area, the date and the time on separate lines (no distance), the grades and **Your grades**, and the photo's crag and credit. Below the photo, always in view, the organizer (avatar, name, "Organized by") with the others' avatars and **+N**, which opens the group's list; scrolling the card shows the notes (cut to three lines with "…") and the organizer's profile. Without a location on my profile, the app first takes my location from the phone or browser ([matching](matching.md)); only when the device can't tell (and I have no area either) does a line above the deck say "Set where you climb to see plans near you first." with **Set** (the profile editor). Empty: "No plans to join right now" and **New plan**. |
-| **Plans** | The plans I'm in, soonest first (discipline, place, date and time range, the group's avatars, "Organizing" or "Accepted", "N to review", and ⋮ with **Cancel the plan**, after the same confirmation as on the plan screen), then **Asked to join**: "Pending" and who it's waiting for, with **Nudge** to remind them (once every 12 hours; "Nudged" until then; a snackbar confirms it), or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
+| **Plans** | The plans I'm in, soonest first (discipline, place, date ("+N days" for more days, or "Date to be decided") and time range, the group's avatars, "Organizing" or "Accepted", "N to review", and ⋮ with **Cancel the plan**, after the same confirmation as on the plan screen), then **Asked to join**: "Pending" and who it's waiting for, with **Nudge** to remind them (once every 12 hours; "Nudged" until then; a snackbar confirms it), or "Declined" with ✕ to dismiss. **New plan** (a floating button). Pull to refresh. Empty: "No plans yet" and **New plan**. |
 | **Chats** | One group chat per plan I'm in, most recent first, with the last message and "N to answer" when join requests wait for my answer. The tab's badge counts those requests. Empty: "No chats yet" and **Find a plan** (to Discover). |
 | **Notifications** | Join requests for my plans, nudges to answer them, and the groups' answers to mine ([matching](matching.md#notifications)). The tab's badge counts the unread ones. Empty: "Nothing yet". |
 | **Profile** | My profile as others see it: my photo (tap to see it whole), name and age, about, climbs, and gear with its photos (tap one to see it whole); **Edit profile**; **Where you climb** (private, only I see it): my location, a spinner while the app takes it from the device, "Set your location" when it has none; tap it to pick a place or "Use my current location" ([matching](matching.md)), saved at once, without the editor; **Grigri Premium** ([premium](premium.md)): the pitch and **$20 a month** / **$200 a year** (each opens Stripe Checkout in the browser), and **I've paid: check again**; once subscribed, "Premium: renews on <date>" (or "ends on <date>") and **Manage subscription**; the **Language** picker ([languages](i18n.md)); in ⋯, **Sign out** and **Sign out everywhere** (on every phone and browser, this one too), each after a confirmation. Then my [roles](roles.md), from rbacr. The version at the bottom. |
@@ -28,7 +28,7 @@ is "Alerts" in English.
   and **Sign in with Google** (Google's own button on the web). See
   [sign-in](sign-in.md).
 - **Plan** (from Plans, a notification, or a chat's title): the plan
-  highlighted, my request's status when I'm not in it yet (Pending, N of
+  highlighted (every one of its days, or "Date to be decided"), my request's status when I'm not in it yet (Pending, N of
   M said yes, or Declined), the group (tap someone for their profile),
   who's asking to join and how many have said yes ("Answer in the chat",
   or "You said yes"), and the plan's [photos](pics.md): **Your Pics**
@@ -54,9 +54,15 @@ is "Alerts" in English.
     lists the [sector index](sectors.md)'s matches, each with where it
     is; picking one shows where it is under the field. A place the index
     lacks is just typed in. Required.
-  - **When**: the day, then a time range slider, from and to, in half
-    hours between 05:00 and 23:30 (09:00–17:00 to start); the start must
-    be still to come.
+  - **When**: the start date (the next Saturday for a new plan), with ✕
+    to **leave the date open** ("Date to be decided"); then the plan's
+    more days as chips (✕ removes one) and **Add a day** (a date after
+    the first, not already in the plan; up to 13 more), only while it
+    has a start date; then a time range slider, from and to, in half
+    hours between 05:00 and 23:30 (09:00–17:00 to start), the same each
+    day, while it has a start date. A hint says the date is optional and
+    more days make a longer trip. Moving the start date drops the more
+    days not after it. The first day's start must be still to come.
   - **Grades**: the European / American switch (my grade system,
     everywhere in the app), then a range on the discipline's scale,
     starting at my own grades.

@@ -1203,6 +1203,36 @@ abstract class AppLocalizations {
   /// **'When'**
   String get sectionWhen;
 
+  /// A plan with no date yet, in place of its day.
+  ///
+  /// In en, this message translates to:
+  /// **'Date to be decided'**
+  String get dateToBeDecided;
+
+  /// A plan of several days: its first day and how many more, e.g. "Sat 17 Oct +2 days".
+  ///
+  /// In en, this message translates to:
+  /// **'{day} +{count, plural, =1{1 day} other{{count} days}}'**
+  String dayAndMoreDays(String day, int count);
+
+  /// Plan editor button: adds another day to the plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a day'**
+  String get addDay;
+
+  /// Plan editor tooltip: removes the plan's date, leaving it to be decided.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave the date open'**
+  String get leaveDateOpen;
+
+  /// Plan editor hint under the When section.
+  ///
+  /// In en, this message translates to:
+  /// **'The date is optional. Add more days for a longer trip.'**
+  String get whenHelp;
+
   /// Plan editor section (shown uppercased).
   ///
   /// In en, this message translates to:

@@ -258,8 +258,8 @@ class PlanHighlight extends StatelessWidget {
           ),
           SizedBox(height: compact ? 6 : 10),
           if (plan.area.isNotEmpty) _Line(Icons.place_outlined, plan.area),
-          _Line(Icons.event_outlined, dayLabel(context, plan.start)),
-          _Line(Icons.schedule, timeRangeLabel(plan)),
+          _Line(Icons.event_outlined, allDaysLabel(context, plan)),
+          if (plan.start != null) _Line(Icons.schedule, timeRangeLabel(plan)),
           _Line(Icons.trending_up, StoreScope.of(context).grades(plan.grades)),
           if (showNotes && plan.notes.isNotEmpty) ...[
             const SizedBox(height: 8),

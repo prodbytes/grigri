@@ -663,6 +663,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get sectionWhen => 'Wann';
 
   @override
+  String get dateToBeDecided => 'Datum noch offen';
+
+  @override
+  String dayAndMoreDays(String day, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Tage',
+      one: '1 Tag',
+    );
+    return '$day +$_temp0';
+  }
+
+  @override
+  String get addDay => 'Tag hinzufügen';
+
+  @override
+  String get leaveDateOpen => 'Datum offen lassen';
+
+  @override
+  String get whenHelp =>
+      'Das Datum ist optional. Füge für eine längere Tour weitere Tage hinzu.';
+
+  @override
   String get sectionGrades => 'Grade';
 
   @override

@@ -219,7 +219,7 @@ class _RequestTileState extends State<_RequestTile> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${plan.place} · ${dayLabel(context, plan.start)}\n'
+              '${plan.place} · ${daysLabel(context, plan)}\n'
               '${request.rejected ? l.groupSaidNo : l.waitingForNames(pending.join(', '))}',
               style: text.bodyMedium?.copyWith(color: Mountain.granite),
             ),
@@ -240,7 +240,7 @@ class _RequestTileState extends State<_RequestTile> {
                 // started; "Nudged" (disabled) for 12 hours after.
                 if (!request.rejected &&
                     pending.isNotEmpty &&
-                    plan.start.isAfter(now))
+                    !plan.hasStarted(now))
                   Tooltip(
                     message: l.nudgeTooltip,
                     child: TextButton.icon(

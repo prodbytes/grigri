@@ -233,7 +233,7 @@ export function seedData(now: Date): SeedData {
   ];
 
   const name = (id: string) => climbers.find((c) => c.id === id)!.name;
-  const thursday = new Date(plans.find((p) => p.id === 'seed-thursday-bouldering')!.start);
+  const thursday = new Date(plans.find((p) => p.id === 'seed-thursday-bouldering')!.start!);
   const message = (id: string, planId: string, authorId: string | null, text: string, time: string, req?: string): Message => ({
     id: `seed-${id}`,
     planId,

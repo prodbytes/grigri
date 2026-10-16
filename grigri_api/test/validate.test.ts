@@ -125,6 +125,39 @@ describe('planInput', () => {
     expect(planInput({ ...valid, sectorId: '' }, now)).not.toHaveProperty('sectorId');
   });
 
+  it('takes an undated plan: no start and no end', () => {
+    const undated = planInput({ ...valid, start: undefined, end: null }, now);
+    expect(undated).not.toHaveProperty('start');
+    expect(undated).not.toHaveProperty('end');
+    expect(undated).not.toHaveProperty('moreDays');
+  });
+
+  it('takes more days after the first, normalized to UTC; none is left out', () => {
+    const more = [
+      { start: '2030-05-03T10:00:00+02:00', end: '2030-05-03T12:00:00Z' },
+      { start: '2030-05-05T08:00:00Z', end: '2030-05-05T12:00:00Z' },
+    ];
+    expect(planInput({ ...valid, moreDays: more }, now).moreDays).toEqual([
+      { start: '2030-05-03T08:00:00.000Z', end: '2030-05-03T12:00:00.000Z' },
+      { start: '2030-05-05T08:00:00.000Z', end: '2030-05-05T12:00:00.000Z' },
+    ]);
+    expect(planInput({ ...valid, moreDays: [] }, now)).not.toHaveProperty('moreDays');
+  });
+
+  const day = (d: number) => ({ start: `2030-05-${String(d).padStart(2, '0')}T08:00:00Z`, end: `2030-05-${String(d).padStart(2, '0')}T12:00:00Z` });
+  it.each([
+    [{ moreDays: 'x' }, /moreDays must be a list/],
+    [{ start: undefined, end: undefined, moreDays: [day(3)] }, /needs a start/],
+    [{ moreDays: [day(2)] }, /moreDays\[0\] must start after/],
+    [{ moreDays: [day(4), day(3)] }, /moreDays\[1\] must start after/],
+    [{ moreDays: [{ start: '2030-05-03T08:00:00Z' }] }, /moreDays\[0\]\.end/],
+    [{ moreDays: [{ ...day(3), end: '2030-05-04T09:00:00Z' }] }, /moreDays\[0\]\.end must be at most 24 hours/],
+    [{ moreDays: [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map(day) }, /at most 13 more days/],
+    [{ moreDays: [null] }, /moreDays\[0\] must be a JSON object/],
+  ])('refuses more days %j', (patch, error) => {
+    expect(() => planInput({ ...valid, ...patch }, now)).toThrow(error);
+  });
+
   it.each([
     [{ place: ' ' }, /place is required/],
     [{ place: 'x'.repeat(81) }, /place/],
@@ -135,6 +168,7 @@ describe('planInput', () => {
     [{ start: '2030-05-02' }, /ISO 8601/],
     [{ start: '2032-05-02T08:00:00Z', end: '2032-05-02T09:00:00Z' }, /a year/],
     [{ end: undefined }, /end must be/],
+    [{ start: undefined }, /start must be/],
     [{ end: '2030-05-02T08:00:00Z' }, /after start/],
     [{ end: '2030-05-03T08:00:01Z' }, /24 hours/],
     [{ notes: 'x'.repeat(1001) }, /notes/],

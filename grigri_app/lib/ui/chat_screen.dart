@@ -173,7 +173,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     Text(
                       '${l.climberCount(plan.memberIds.length)} · '
-                      '${dayLabel(context, plan.start)}',
+                      '${daysLabel(context, plan)}',
                       style: text.bodySmall?.copyWith(color: Mountain.granite),
                     ),
                   ],

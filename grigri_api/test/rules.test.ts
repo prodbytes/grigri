@@ -59,6 +59,13 @@ describe('discover', () => {
     expect(out.distanceKm).toEqual({});
   });
 
+  it('keeps undated plans (never started), after dated ones that fit as well', () => {
+    const plans = [plan({ id: 'undated', start: undefined, end: undefined }), plan({ id: 'dated' })];
+    const out = rules.discover(plans, me, new Set(), new Set(), now);
+    expect(out.plans.map((p) => p.id)).toEqual(['dated', 'undated']);
+    expect(rules.soonestFirst(plans).map((p) => p.id)).toEqual(['dated', 'undated']);
+  });
+
   // Made-up points: a home, a crag ~10 km away and one ~150 km away.
   const home = { name: 'Home', lat: 41.39, lon: 2.17 };
   const near = { lat: 41.47, lon: 2.1 };
@@ -123,6 +130,10 @@ describe('ask', () => {
     expect(() => rules.ask(plan(), 'ada', undefined, ctx)).toThrow(/already in/);
     expect(() => rules.ask(plan(), 'cy', request('cy'), ctx)).toThrow(/already asked/);
     expect(() => rules.ask(plan({ start: '2030-04-01T00:00:00.000Z' }), 'cy', undefined, ctx)).toThrow(/started/);
+  });
+
+  it('takes asks on an undated plan', () => {
+    expect(rules.ask(plan({ start: undefined, end: undefined }), 'cy', undefined, ctx).requests).toHaveLength(1);
   });
 });
 
@@ -241,6 +252,15 @@ describe('plans', () => {
     expect(updated).toMatchObject({ place: 'X', memberIds: ['ada', 'ben'], organizerId: 'ada' });
     expect(updated).not.toHaveProperty('sectorId');
     expect(rules.updatePlan(p, 'ada', { ...input, sectorId: 'osm:n2' }).sectorId).toBe('osm:n2');
+  });
+
+  it('days left out of an edit are cleared: the plan can become undated', () => {
+    const p = plan({ moreDays: [{ start: '2030-05-11T08:00:00.000Z', end: '2030-05-11T14:00:00.000Z' }] });
+    const { start: _s, end: _e, moreDays: _m, id: _i, organizerId: _o, memberIds: _ms, ...input } = p;
+    const updated = rules.updatePlan(p, 'ada', input);
+    expect(updated).not.toHaveProperty('start');
+    expect(updated).not.toHaveProperty('end');
+    expect(updated).not.toHaveProperty('moreDays');
   });
 
   it('a new plan has its organizer as its only member and a first note', () => {

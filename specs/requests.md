@@ -1014,3 +1014,28 @@ spec.
     - The iOS Swift Package Manager pins Xcode wrote
       (`Package.resolved`, both workspaces) are committed, so builds
       resolve the same package versions.
+
+## 2026-10-17
+
+71. **Let plans have multiple days: besides the start date, expected to
+    be filled but not required, let the user add more dates, as wanted.**
+    - [Matching](matching.md), [API](api.md#json-shapes): a plan's start
+      and end are now optional (an **undated** plan, "Date to be
+      decided": it can always be joined, ranks after dated plans and
+      shows no hours), and a plan takes `moreDays`, up to 13 more days
+      after the first (two weeks in all), each its own start–end. The
+      API validates them like the first day; an edit that leaves days
+      out clears them. Undated plans sort after every date in the
+      by-start index (`~` for the date), so the deck still reads one
+      index.
+    - [Screens](screens.md): the editor's start date
+      (still the next Saturday for a new plan) has ✕ to leave it open,
+      **Add a day** adds more days as removable chips, and the hours
+      apply to every day. Cards and lists show "Sat 17 Oct +2 days";
+      the plan's screen lists every day.
+    - [Match scores](match-scores.md): an undated plan counts as 30 days
+      away, and its scores expire a month after the run.
+    - The demo showcase's Frankenjura plan is now two days (showcase
+      version 3), so the feature shows on every stage.
+    - Cost: none added; the extra days are a few bytes on the plan's
+      item.
