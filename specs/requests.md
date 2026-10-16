@@ -827,7 +827,7 @@ spec.
       smaller than the app's (on top of the system's text size); the
       plan's notes and the organizer's bio stop at three lines, ending in
       "…" when cut. The plan screen and the profile sheet show them whole.
-57. **The nav icons were missing labels.** With the Admin tab (six
+58. **The nav icons were missing labels.** With the Admin tab (six
     tabs), the bar showed only the selected tab's label.
     - [Screens](screens.md): every tab always shows its label; the short
       11 pt labels fit six tabs on a 360 dp phone.
