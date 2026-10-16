@@ -853,3 +853,10 @@ spec.
     tabs), the bar showed only the selected tab's label.
     - [Screens](screens.md): every tab always shows its label; the short
       11 pt labels fit six tabs on a 360 dp phone.
+
+60. **Premium users pay $20 a month or $200 a year; premium is for
+    advertisement only.** Spec only for now, nothing built.
+    - [Premium](premium.md) (new): the prices, that premium changes only
+      advertisement (every feature stays for everyone), and the open
+      questions: what advertisement covers, how it's paid, other
+      currencies.
