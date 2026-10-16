@@ -760,3 +760,10 @@ spec.
       docs/ folder): how it works, with references to the key code.
     - Cost: about $0.00007 of aityx credits per score; nothing while
       idle ([backend](backend.md#cost)).
+
+56. **A little smaller text on Discover; plan notes and bios cut to
+    about three lines, with "…".**
+    - [Matching](matching.md#the-deck): the swipe card's text is 10%
+      smaller than the app's (on top of the system's text size); the
+      plan's notes and the organizer's bio stop at three lines, ending in
+      "…" when cut. The plan screen and the profile sheet show them whole.

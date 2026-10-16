@@ -70,7 +70,10 @@ person, and a plan can take a whole group.
   rank), then the organizer with how many others are in the group
   ("Kit Marlow" and **+1**: tap it to show or hide the group's list,
   collapsed at first) and their profile (without the gear). The card
-  is compact, to fit small phones.
+  is compact, to fit small phones: its text is 10% smaller than the
+  rest of the app's (on top of the system's text size), and the plan's
+  notes and the organizer's bio stop at three lines, with "…" when cut
+  (the plan's screen and the profile sheet show them whole).
   - Right / ✓: I ask to join (a join request); a snackbar says "Asked to
     join. You'll get an alert when you're accepted." On a **demo** plan
     the group says yes at once (its made-up members can't answer): I
