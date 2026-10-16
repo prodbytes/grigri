@@ -95,18 +95,25 @@ backdrop instead.
 ### The data and the loader
 
 - [grigri_api/pics/crags.json](../grigri_api/pics/crags.json): the crags
-  and their photos, checked by hand. Crags are OpenStreetMap's
-  `climbing=crag` (and `climbing=area`) within 6 km of Siurana and
-  Margalef; photos are from Wikimedia Commons, only CC0, public domain,
-  CC BY or CC BY-SA, only ones that clearly show that place, and never
+  and their photos, checked by hand. Crags are OpenStreetMap's named
+  `climbing=crag`, `sport=climbing` and `climbing=area` elements within
+  6 km of Siurana and Margalef (11 and 34); photos are from Wikimedia
+  Commons and Flickr (found by name, by Commons' geosearch around each
+  crag, and through Openverse), only CC0, public domain, CC BY or
+  CC BY-SA, only ones that clearly show that crag, and never
   with a watermark or a person's name (in the file's title, description
   or caption; the author's credit is the license's).
-- As of 2026-10-16 it has **8 photos: 5 of Siurana and 3 of Margalef**,
-  as areas (El Pati and Racó de la Finestra among them). Commons has no
-  photo that can be tied to any single OpenStreetMap crag there, so the
-  11 Margalef crags are listed with none (Siurana's sectors aren't tagged
-  `climbing=crag` in OpenStreetMap). A plan at either place, or within
-  8 km, shows its area's photos.
+- Photos go **by crag** when they reliably show one (named in their
+  description, or taken within a few hundred meters and plainly of that
+  cliff); the rest, good photos of the area's cliffs that no single crag
+  can claim, go to the area (`area:siurana`, `area:margalef`), so every
+  plan there still gets some.
+- As of 2026-10-16: **19 photos**. Racó de la Finestra (Margalef) has 1
+  of its own; Siurana's area has 12 (El Pati's 3 among them: El Pati
+  isn't in OpenStreetMap, so it has no point to hang them on) and
+  Margalef's 6. The other 44 crags have none yet: Commons, Flickr and
+  Openverse have no free photo that can be tied to them. A plan at a crag
+  with photos shows those first, then its area's (within 8 km).
 - [grigri_api/pics/load.mjs](../grigri_api/pics/load.mjs) loads it,
   idempotently: it downloads each photo not in the bucket yet (Commons'
   1920 px thumbnail; cached in `grigri_api/pics/.cache`, git-ignored),
@@ -122,8 +129,8 @@ backdrop instead.
 
 Nothing while idle beyond storage; see [backend.md](backend.md#cost).
 
-- **GriGri Pics storage**: ~6 MB now (8 photos of ~0.7 MB):
-  $0.0002/month. Annotations are billed as S3 Standard storage (bytes).
+- **GriGri Pics storage**: ~11 MB now (19 photos of 0.3–0.7 MB):
+  $0.0003/month. Annotations are billed as S3 Standard storage (bytes).
 - **Lookups**: the catalog GET, once per warm function: about $0.0004 per
   1,000 cold starts. The plan's photos come with one extra API call per
   plan screen opened (`GET /api/plans/{id}/pics`: ~$2 per million). The
