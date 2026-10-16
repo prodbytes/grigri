@@ -107,7 +107,7 @@ whole profile), their grade for the plan's discipline (marked when it
 fits), and who in the group has said yes and who it's waiting for. Until
 I've answered it has **Decline** and **Accept**; then it shows "You said
 yes" and who it's still waiting for, **Joined**, **Declined** (when I said
-no), or **Closed** (turned down by someone else, or by an admin). The
+no), or **Closed** (turned down by someone else). The
 organizer and **every member** are notified ("<name> wants to join"), and
 a newcomer is notified of the requests still open when they join. Chats
 marks each chat with how many requests wait for my answer, and the Chats
@@ -203,11 +203,12 @@ between runs but my grade system and the app's [language](i18n.md)
 a cache over the API client ([api.dart](../grigri_app/lib/data/api.dart),
 [http_api.dart](../grigri_app/lib/data/http_api.dart)): screens read it
 and call its actions (like, pass, accept, reject, dismiss, create,
-update, leave, send, save the profile, and the admin's approve and
-reject), which call the API and update the cache with the answers. A
+update, leave, send, save the profile, and the admin's block and
+unblock), which call the API and update the cache with the answers. A
 failed action shows the server's message at the bottom of the screen; a
 401 tries fresh credentials once, then signs out; a 409 "no profile"
-loads my profile again (`GET /api/me`, which makes a new one).
+loads my profile again (`GET /api/me`, which makes a new one); a 403
+"blocked" shows only the [blocked screen](admin.md#blocking).
 
 - **Demo data**: every stage, production included, has the demo showcase
   (fictional climbers and their plans, [backend](backend.md#the-demo-showcase));
@@ -215,8 +216,8 @@ loads my profile again (`GET /api/me`, which makes a new one).
   in GA). All of it is marked **demo**: a demo plan (on the deck, its
   screen, the match screen) and a demo person's profile sheet begin with
   one discreet line, "Demo: made-up people and plans.", and a demo person's name
-  has a **Demo** tag. A real plan's requests wait for its real members
-  (or an [admin](sign-in.md#admins)); a demo plan's group says yes at once.
+  has a **Demo** tag. A real plan's requests wait for its real members;
+  a demo plan's group says yes at once.
 - **Photos** are in the backend's photo store, never in the database or on
   the device: picked as before (my photo downsized to 640 px, gear photos
   to 1080 px, JPEG quality 75), uploaded when the profile is saved (`POST
@@ -233,10 +234,9 @@ hint over MQTT after each change that concerns me) refresh what changed,
 and the app also polls, only what's on screen, as a safety net:
 
 - after signing in: my profile, then my plans, my requests, the requests
-  waiting for me, the deck, notifications (and, for admins, every open
-  request);
+  waiting for me, the deck, notifications (and, for admins, everyone);
 - a tab, when I open it (Discover its deck, Chats every chat's latest
-  messages, Admin its requests), and every **15 seconds** my plans,
+  messages, Admin its list of everyone), and every **15 seconds** my plans,
   requests to review and notifications, plus the open tab; every
   **2 minutes** instead while the live connection is up;
 - an open **chat every 3 seconds**, asking only for messages after the

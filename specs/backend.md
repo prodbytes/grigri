@@ -78,11 +78,12 @@ who are members, or by an admin.
   name). Emails are only used for the admin check: kept on the session
   (only when verified), never on a profile, never returned. The Google
   name is kept on the session only to start the profile.
-- **Admin**: a signed-in caller whose session's verified email is in the
-  stage's current admin list, checked on every request (so removing
-  someone from the list takes effect at once). Admins see every open request (`GET /api/admin/requests`)
-  and accept (they join at once, as if every member had said yes) or
-  reject any.
+- **Admin**: a signed-in caller whose session's verified email holds
+  rbacr's `grigri` `admin` role ([roles](roles.md)), checked on every
+  request (rbacr's answer is kept 60 s). Admins list everyone and block
+  or unblock them ([admin.md](admin.md)): a profile item's `blocked`
+  attribute, which shuts its climber out of every route but signing
+  out.
 - **Live updates** ([live-updates.md](live-updates.md)): after a change,
   the function publishes a tiny hint (`{"kind", "planId"}`, never data)
   to each affected climber's MQTT topic on **AWS IoT Core**

@@ -159,6 +159,20 @@ class Root extends StatelessWidget {
       ),
       Phase.signedOut => const SignInScreen(),
       Phase.ready => const HomeShell(),
+      Phase.blocked => Scaffold(
+        body: EmptyState(
+          icon: Icons.block,
+          title: l.blockedTitle,
+          message: l.blockedMessage,
+          action: Wrap(
+            spacing: 12,
+            children: [
+              TextButton(onPressed: store.loadMe, child: Text(l.tryAgain)),
+              FilledButton(onPressed: store.signOut, child: Text(l.signOut)),
+            ],
+          ),
+        ),
+      ),
       Phase.failed => Scaffold(
         body: EmptyState(
           icon: Icons.cloud_off,

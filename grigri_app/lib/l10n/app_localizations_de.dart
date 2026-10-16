@@ -714,53 +714,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get dismiss => 'Ausblenden';
 
   @override
-  String get adminTitle => 'Admin: Anfragen';
-
-  @override
-  String get noOpenRequestsTitle => 'Keine offenen Anfragen';
-
-  @override
-  String get noOpenRequestsMessage =>
-      'Wenn jemand bei einem Plan mitmachen will, erscheint die Anfrage hier, damit du sie genehmigst oder ablehnst.';
-
-  @override
-  String get aPlan => 'einen Plan';
-
-  @override
-  String askedAt(String day, String time) {
-    return 'Angefragt am $day, $time';
-  }
-
-  @override
-  String get reject => 'Ablehnen';
-
-  @override
-  String get approve => 'Genehmigen';
-
-  @override
-  String rejectNameQuestion(String name) {
-    return '$name ablehnen?';
-  }
-
-  @override
-  String rejectMessage(String plan) {
-    return 'Die Person kommt nicht zu $plan dazu und erfährt, dass die Gruppe abgelehnt hat.';
-  }
-
-  @override
-  String approveNameQuestion(String name) {
-    return '$name genehmigen?';
-  }
-
-  @override
-  String approveMessage(String plan) {
-    return 'Die Person kommt jetzt zu $plan dazu, als hätten alle in der Gruppe zugesagt.';
-  }
-
-  @override
-  String adminJoined(String name, String plan) {
-    return '$name ist jetzt bei $plan dabei.';
-  }
+  String get adminTitle => 'Admin: Personen';
 
   @override
   String get roles => 'Rollen';
@@ -885,32 +839,36 @@ class AppLocalizationsDe extends AppLocalizations {
   String get matchReasonCloseGrades => 'Ein bis zwei Grade von deinen entfernt';
 
   @override
-  String get adminScoresTitle => 'Passung';
+  String get adminNoClimbersTitle => 'Noch niemand';
 
   @override
-  String get adminScoresNone =>
-      'Noch keine Berechnung. scripts/score-matches.sh bewertet jedes Profil gegen jeden anstehenden Plan.';
+  String get adminNoClimbersMessage =>
+      'Hier erscheint jede Person mit Profil, zum Sperren oder Entsperren.';
 
   @override
-  String adminScoresRun(
-    String day,
-    String time,
-    int scored,
-    int pairs,
-    int climbers,
-    int plans,
-  ) {
-    return 'Letzte Berechnung $day, $time: $scored von $pairs Paaren, $climbers Personen × $plans Pläne';
+  String get block => 'Sperren';
+
+  @override
+  String get unblock => 'Entsperren';
+
+  @override
+  String get blocked => 'Gesperrt';
+
+  @override
+  String blockNameQuestion(String name) {
+    return '$name sperren?';
   }
 
   @override
-  String adminScoresProblems(int failed, int skipped) {
-    return '$failed fehlgeschlagen, $skipped über dem Limit';
-  }
+  String get blockMessage =>
+      'Die Person kann Grigri nicht nutzen, bis du sie entsperrst, und ihre Pläne verschwinden für alle aus Entdecken.';
 
   @override
-  String get adminScoresEmpty =>
-      'Die letzte Berechnung hat keine Paare bewertet.';
+  String get blockedTitle => 'Dein Konto ist gesperrt';
+
+  @override
+  String get blockedMessage =>
+      'Ein Admin hat dein Konto gesperrt, daher kannst du Grigri vorerst nicht nutzen.';
 
   @override
   String get yourPics => 'Deine Fotos';

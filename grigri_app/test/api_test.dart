@@ -141,40 +141,21 @@ void main() {
       expect(scores['p1']!.reason, MatchReason.inGradesNearby);
     });
 
-    test('reads the admin\'s scores preview', () async {
+    test('reads the admin\'s list of everyone', () async {
       final seen = <http.Request>[];
       final api = apiWith(
         (_) async => json({
-          'run': {
-            'runId': '2030-05-01T10:00:00.000Z',
-            'finishedAt': '2030-05-01T10:02:00.000Z',
-            'climbers': 3,
-            'plans': 2,
-            'pairs': 5,
-            'scored': 5,
-            'failed': 0,
-            'skipped': 0,
-          },
-          'scores': [
-            {
-              'climberId': 'robin',
-              'planId': 'p1',
-              'score': 0.9,
-              'level': 'great',
-              'reason': 'in_grades',
-            },
+          'climbers': [
+            {...robinJson, 'blocked': true},
+            {'id': 'pat', 'name': 'Pat Quill'},
           ],
-          'plans': {'p1': planJson},
-          'climbers': {'robin': robinJson},
         }),
         seen: seen,
       );
-      final preview = await api.adminScores();
-      expect(seen.single.url.path, '/api/admin/scores');
-      expect(preview.run!.pairs, 5);
-      expect(preview.scores.single.climberId, 'robin');
-      expect(preview.scores.single.match.level, MatchLevel.great);
-      expect(preview.climbers.keys, ['robin']);
+      final list = await api.adminClimbers();
+      expect(seen.single.url.path, '/api/admin/climbers');
+      expect(list.map((c) => c.climber.id), ['robin', 'pat']);
+      expect(list.map((c) => c.blocked), [true, false]);
     });
 
     test(
@@ -215,8 +196,10 @@ void main() {
       expect(match!.newcomerId, 'pat');
       expect(match.plan.id, 'p1');
 
-      await api.adminReject('p1', 'pat');
-      expect(seen.last.url.path, '/api/admin/requests/p1/pat/reject');
+      await api.setBlocked('pat', true);
+      expect(seen.last.url.path, '/api/admin/climbers/pat/block');
+      await api.setBlocked('pat', false);
+      expect(seen.last.url.path, '/api/admin/climbers/pat/unblock');
     });
 
     test('nudges a plan; reads when, and how many', () async {

@@ -94,9 +94,8 @@ class FakeApi implements GrigriApi, SessionApi {
   /// tests set them).
   final matchScores = <String, MatchScore>{};
 
-  /// The latest match scoring run and its best scores (tests set them).
-  ScoreRun? scoreRun;
-  List<ScoredPair> scoredPairs = [];
+  /// Who an admin blocked: they get 403 "blocked" from every route.
+  final blocked = <String>{};
 
   /// Every call, as "METHOD /api/route".
   final calls = <String>[];
@@ -136,6 +135,7 @@ class FakeApi implements GrigriApi, SessionApi {
         route != 'POST /api/photos') {
       throw const ApiException(409, 'no profile');
     }
+    if (blocked.contains(meId)) throw const ApiException(403, 'blocked');
     return body();
   }
 
@@ -770,51 +770,34 @@ class FakeApi implements GrigriApi, SessionApi {
   }
 
   @override
-  Future<RequestList> adminRequests() => _route('GET /api/admin/requests', () {
-    _admin();
-    final list = [
-      for (final r in requestsById.values)
-        if (!r.rejected) r,
-    ];
-    final byPlan = {for (final r in list) r.planId: plans[r.planId]!};
-    return RequestList(
-      list,
-      byPlan,
-      _mention({
-        ...list.map((r) => r.climberId),
-        ...byPlan.values.expand(_planPeople),
-      }),
-    );
-  });
-
-  @override
-  Future<ApiMatch?> adminAccept(String planId, String climberId) =>
-      _route('POST /api/admin/requests/$planId/$climberId/accept', () {
+  Future<List<AdminClimber>> adminClimbers() =>
+      _route('GET /api/admin/climbers', () {
         _admin();
-        return _settle('$planId/$climberId', force: true);
+        final everyone = climbers.values.toList()
+          ..sort((a, b) => a.name.compareTo(b.name));
+        return [
+          for (final c in everyone)
+            AdminClimber(
+              c.copyWith(location: null, areas: const []),
+              blocked: blocked.contains(c.id),
+            ),
+        ];
       });
 
   @override
-  Future<void> adminReject(String planId, String climberId) =>
-      _route('POST /api/admin/requests/$planId/$climberId/reject', () {
-        _admin();
-        _reject('$planId/$climberId');
-      });
-
-  @override
-  Future<AdminScores> adminScores() => _route('GET /api/admin/scores', () {
-    _admin();
-    final byPlan = {for (final s in scoredPairs) s.planId: plans[s.planId]!};
-    return AdminScores(
-      scoreRun,
-      scoredPairs,
-      byPlan,
-      _mention({
-        ...scoredPairs.map((s) => s.climberId),
-        ...byPlan.values.expand(_planPeople),
-      }),
-    );
-  });
+  Future<void> setBlocked(String climberId, bool block) => _route(
+    'POST /api/admin/climbers/$climberId/${block ? 'block' : 'unblock'}',
+    () {
+      _admin();
+      if (block && climberId == meId) {
+        throw const ApiException(400, "you can't block yourself");
+      }
+      if (!climbers.containsKey(climberId)) {
+        throw const ApiException(404, 'no such climber');
+      }
+      block ? blocked.add(climberId) : blocked.remove(climberId);
+    },
+  );
 }
 
 /// Google, made up: its button signs Pat in with a made-up ID token that

@@ -1,6 +1,6 @@
 // The match scores table (<stack>-scores): every climber's score against
 // every upcoming plan, written by the scoring function (src/scorer.ts) and
-// read by the admin's preview. Its own table, apart from the app's data:
+// not read by the app for now. Its own table, apart from the app's data:
 // it's derived, rewritten whole by each run, and can be dropped any time.
 //
 //   pk CLIMBER#<climberId>, sk PLAN#<planId>   one climber's score for one

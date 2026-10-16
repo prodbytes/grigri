@@ -19,13 +19,13 @@ A hint says *what kind of thing changed*, never the thing itself:
 | Kind | Sent to | When | The app refetches |
 |---|---|---|---|
 | `message` | the plan's members | a chat message | that chat's new messages (if it's one of my plans) |
-| `request` | the plan's members | someone asks to join; a member says yes but not everyone has; a member or admin says no (the members) | requests to review, notifications; the plan's chat and open requests if loaded |
+| `request` | the plan's members | someone asks to join; a member says yes but not everyone has; a member says no (the members) | requests to review, notifications; the plan's chat and open requests if loaded |
 | `notice` | the requester; the members who haven't answered a nudge | their request was declined; the requester nudged them | notifications, my plans |
-| `match` | the newcomer | everyone said yes (or an admin let them in) | my plans, requests, notifications (the match screen opens as before) |
+| `match` | the newcomer | everyone said yes | my plans, requests, notifications (the match screen opens as before) |
 | `plan` | the plan's members | someone joined or left; the organizer edited the plan | my plans, requests; the plan's chat and open requests if loaded |
 
 - The one who made the change gets no hint (their own app already shows
-  it), and nor do admins as such.
+  it).
 - Everything the app then sees comes from the API, which checks who may
   see what, as always. A hint can't leak data: it carries only a kind and
   a plan id, on a topic only its climber can read.

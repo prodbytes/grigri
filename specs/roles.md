@@ -22,7 +22,7 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
   - "Couldn't get your roles from rbacr." with **Retry** when the API
     couldn't say (Retry asks `GET /api/me` again, which also refreshes
     whether I'm an admin).
-- **Admin** (the Admin tab, [api.md](api.md)) is rbacr's too: the API asks
+- **Admin** (the Admin tab, [admin.md](admin.md)) is rbacr's too: the API asks
   rbacr whether my verified email holds the `admin` role of the `grigri`
   system (roots do). rbacr needs the `grigri` system and its `admin` role
   for anyone but roots to be one. There's no admin list in Grigri.

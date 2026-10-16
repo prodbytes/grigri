@@ -208,14 +208,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
           ),
           if (admin)
             NavigationDestination(
-              icon: badged(
-                Icons.admin_panel_settings_outlined,
-                store.adminRequests.length,
-              ),
-              selectedIcon: badged(
-                Icons.admin_panel_settings,
-                store.adminRequests.length,
-              ),
+              icon: const Icon(Icons.admin_panel_settings_outlined),
+              selectedIcon: const Icon(Icons.admin_panel_settings),
               label: l.tabAdmin,
             ),
         ],
