@@ -153,7 +153,8 @@ class _PlanScreenState extends State<PlanScreen> {
           const SizedBox(height: 24),
           // Premium: the routes on the rock, through the camera, where the
           // plan is (or, for a place typed by hand, where I am).
-          if ((store.premium.active || store.admin) &&
+          // (Admins hold Premium too: rbacr's admin implies premium.)
+          if (store.premium.active &&
               (plan.lat != null || store.me.location != null)) ...[
             OutlinedButton.icon(
               key: const ValueKey('route finder'),

@@ -54,6 +54,22 @@ processes:
       restart: on_failure
       backoff_seconds: 5
 
+  7-rbacr-setup:
+    # Grigri's roles in the local rbacr (admin, premium, blocked and the
+    # RC's -rc ones; admin implies both Premiums), with .env's RBACR_TOKEN, once it's up
+    # (scripts/rbacr-setup.sh; idempotent). Without a token: nothing.
+    command: >-
+      bash -c 'if [ -n "$${RBACR_TOKEN:-}" ]; then
+      RBACR_URL=http://127.0.0.1:$${RBACR_PORT:-2115} bash scripts/rbacr-setup.sh;
+      else echo "no RBACR_TOKEN in .env, so rbacr is not set up"; fi'
+    environment:
+      - RBACR_PORT=${RBACR_PORT:-2115}
+    depends_on:
+      1-rbacr:
+        condition: process_healthy
+    availability:
+      restart: "no"
+
   2-flutter-web:
     command: bash scripts/flutter-web.sh
     environment:

@@ -73,7 +73,10 @@ export interface Climber {
   areas?: Location[];
   /** Made-up, to show how Grigri works (the seed's, on RC and local); the app says so. Never set through the API. */
   demo?: true;
-  /** Blocked by an admin: can't use Grigri, and their plans leave the deck. Never set through PUT /api/me; only admins see it. */
+  /**
+   * Blocked by an admin (rbacr's `blocked` role, never stored here): can't
+   * use Grigri, and their plans leave the deck. Only on the admin's list.
+   */
   blocked?: true;
 }
 

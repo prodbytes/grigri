@@ -973,3 +973,26 @@ spec.
       (`camera=(self)`); the iOS camera prompt mentions routes.
     - Cost: nothing per frame (on the phone); ~$0.0001 a wall a month
       ([backend](backend.md#cost)).
+68. **Let all roles be stored and managed in rbacr; sync when paid; add
+    to rbacr's APIs as needed.**
+    - [Roles](roles.md): every role is rbacr's: `admin`, `premium`
+      (granted by the Stripe webhook until the paid period's end plus
+      grace, revoked when it ends; admins hold it through rbacr's
+      implication) and `blocked` (the Admin tab's Block/Unblock); the RC
+      has its own `premium-rc` and `blocked-rc` (it shares production's
+      rbacr). Premium no longer comes from Grigri's subscription copy,
+      which stays for billing only; the profile's `blocked` flag is gone.
+    - `scripts/rbacr-setup.sh` (new) sets up the `grigri` system's roles
+      and implications, idempotently, on every deploy and locally
+      (`7-rbacr-setup`).
+    - The API keeps each climber's verified email privately
+      (`CLIMBER#<id>` / `EMAIL`), to ask rbacr about people other than
+      the caller; checkout sends the email to Stripe with the
+      subscription.
+    - rbacr: no API change was needed (grants with an end, revokes,
+      implications and the grants listing were there). The TypeScript
+      client library (`rbacr-lib`) isn't written yet; Grigri's API keeps
+      its own small client (`grigri_api/src/rbacr.ts`), now with grants.
+    - Nobody was Premium, blocked or advertising on either stage, so
+      nothing moved.
+

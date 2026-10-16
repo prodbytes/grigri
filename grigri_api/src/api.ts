@@ -33,11 +33,11 @@ import {
 } from './domain/walls.js';
 import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
-import { PREMIUM_PRICES, type PremiumPlan, isPaid, premiumOf } from './premium.js';
+import { PREMIUM_PRICES, type PremiumPlan, type Subscription, isPaid, premiumOf, premiumUntil, premiumView } from './premium.js';
 import { BadSignature, type Billing, subscriptionIdOf } from './stripe.js';
 import { matchFacts } from './match/facts.js';
 import { openByPlan, othersWaiting } from './match/run.js';
-import type { RolesLookup } from './rbacr.js';
+import { BLOCKED_ROLE, PREMIUM_ROLE, type RoleGrants, type RolesLookup } from './rbacr.js';
 import { type Params, Router } from './router.js';
 import { type Delivery, type Realtime, hintsFor } from './realtime.js';
 import { Conflict, type LoadedPlan, type Store } from './store/store.js';
@@ -95,6 +95,13 @@ export interface GrigriPics {
 export interface Config {
   stage: string;
   version: string;
+  /**
+   * The stage's suffix for its own roles in rbacr: none (production,
+   * local) or `-rc` (the RC, which asks production's rbacr too: its test
+   * payments and test blocks must never reach production), so `premium`
+   * or `premium-rc`, `blocked` or `blocked-rc`. Admin is one role for both.
+   */
+  roleSuffix?: string;
 }
 
 export interface Deps {
@@ -108,6 +115,8 @@ export interface Deps {
   realtime?: Realtime;
   /** My roles in Grigri, from rbacr (rbacr.ts); none: unknown. */
   roles?: RolesLookup;
+  /** Grants and revokes roles in rbacr (the Stripe webhook's Premium); none: no rbacr. */
+  grants?: RoleGrants;
   /** Match scores from aityx (match/aityx.ts), on admins' decks; none: off. */
   matchScorer?: MatchScorer;
   /** Stripe, for Premium (stripe.ts); none: no Premium (no keys). */
@@ -176,11 +185,15 @@ export class Api {
   private readonly store: Store;
   private readonly clock: () => Date;
   private readonly random: () => number;
+  private readonly premiumRole: string;
+  private readonly blockedRole: string;
 
   constructor(private readonly deps: Deps) {
     this.store = deps.store;
     this.clock = deps.clock ?? (() => new Date());
     this.random = deps.random ?? Math.random;
+    this.premiumRole = PREMIUM_ROLE + (deps.config.roleSuffix ?? '');
+    this.blockedRole = BLOCKED_ROLE + (deps.config.roleSuffix ?? '');
     const r = (pattern: string, access: Access, handler: Handler) => this.router.add(pattern, { access, handler });
 
     r('GET /api/health', 'public', async () => ({ ok: true, stage: deps.config.stage, version: deps.config.version }));
@@ -201,8 +214,10 @@ export class Api {
         this.myProfile(s),
         email && deps.roles ? deps.roles(email) : Promise.resolve(null),
       ]);
-      // roles: my roles in Grigri from rbacr, or null when it can't say.
-      const premium = premiumOf(await this.store.getSubscription(climber.id), s.now);
+      const [sub] = await Promise.all([this.store.getSubscription(climber.id), this.rememberEmail(climber.id, email)]);
+      // roles: my roles in Grigri from rbacr, or null when it can't say;
+      // Premium is one of them (and its billing details are my subscription's).
+      const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
       return { climber, admin: s.caller.admin, roles, premium };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
@@ -288,13 +303,11 @@ export class Api {
     const climberId = await this.store.climberIdFor(req.caller.subject);
     const me = climberId ? await this.store.getClimber(climberId) : undefined;
     if (!me && route.access !== 'caller') throw conflict('no profile');
-    // Blocked: nothing but signing out ('session' routes, above).
-    if (me?.blocked) throw forbidden('blocked');
+    // Blocked (rbacr's role): nothing but signing out ('session' routes, above).
+    if (me && (await this.isBlocked(req.caller.email))) throw forbidden('blocked');
     if (route.access === 'admin' && !req.caller.admin) throw forbidden('admins only');
-    // Premium routes: a Premium subscription (specs/premium.md), or an admin.
-    if (route.access === 'premium' && !req.caller.admin && !(me && (await this.isPremium(me.id, now)))) {
-      throw forbidden('premium only');
-    }
+    // Premium routes: rbacr's premium role (specs/premium.md; admins hold it too).
+    if (route.access === 'premium' && !(await this.isPremium(req.caller.email))) throw forbidden('premium only');
     const names = new Map<string, string>();
     const session: Session = {
       caller: req.caller,
@@ -354,7 +367,7 @@ export class Api {
     let saved: Climber;
     if (s.me) {
       saved = { id: s.me.id, ...input };
-      await this.saveBlocked(saved, s);
+      await this.store.saveProfile(saved, s.caller.subject, s.now);
     } else {
       saved = { id: newId(), ...input };
       try {
@@ -365,7 +378,7 @@ export class Api {
         const existing = await this.store.climberIdFor(s.caller.subject);
         if (!existing) throw e;
         saved = { ...saved, id: existing };
-        await this.saveBlocked(saved, s);
+        await this.store.saveProfile(saved, s.caller.subject, s.now);
       }
     }
     if (unused.length > 0) {
@@ -374,17 +387,8 @@ export class Api {
         console.error(JSON.stringify({ level: 'warn', msg: 'photo cleanup failed', error: String(e) }));
       });
     }
+    await this.rememberEmail(saved.id, s.caller.email);
     return { climber: saved };
-  }
-
-  /** Saves my profile; 403 when an admin blocked me meanwhile. */
-  private async saveBlocked(climber: Climber, s: Session): Promise<void> {
-    try {
-      await this.store.saveProfile(climber, s.caller.subject, s.now);
-    } catch (e) {
-      if (e instanceof Conflict) throw forbidden('blocked');
-      throw e;
-    }
   }
 
   private async presignPhoto(req: Request, s: Session) {
@@ -621,7 +625,9 @@ export class Api {
 
   /** GET /api/premium: mine, and the prices (null when Premium can't be bought here: no Stripe keys). */
   private async premium(s: Session) {
-    const premium = premiumOf(await this.store.getSubscription(s.me.id), s.now);
+    // Fresh from rbacr: the app asks right after paying.
+    const [roles, sub] = await Promise.all([this.rolesOf(s.caller.email, true), this.store.getSubscription(s.me.id)]);
+    const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
     return { premium, prices: this.deps.billing ? PREMIUM_PRICES : null };
   }
 
@@ -631,9 +637,12 @@ export class Api {
     if (!billing) throw unavailable("Premium isn't available yet");
     const plan = asObject(req.body).plan;
     if (plan !== 'monthly' && plan !== 'yearly') throw badRequest('plan must be monthly or yearly');
+    // Premium is a role in rbacr, by email: no verified email, no Premium.
+    const email = s.caller.email;
+    if (!email) throw badRequest('Premium needs a verified email');
     const current = await this.store.getSubscription(s.me.id);
     if (premiumOf(current, s.now).active) throw conflict("you're already Premium");
-    return { url: await billing.checkout(s.me.id, plan as PremiumPlan, current?.customerId || undefined) };
+    return { url: await billing.checkout(s.me.id, plan as PremiumPlan, current?.customerId || undefined, email) };
   }
 
   /** POST /api/premium/portal: Stripe's billing portal, to cancel or change the card. */
@@ -669,20 +678,54 @@ export class Api {
     if (!sub) return { received: true };
     const current = await this.store.getSubscription(sub.climberId);
     const stale = current && current.subscriptionId !== sub.subscriptionId && isPaid(current.status) && !isPaid(sub.status);
-    if (!stale) await this.store.putSubscription(sub);
+    if (stale) return { received: true };
+    const saved: Subscription = { ...sub, ...(sub.email || !current?.email ? {} : { email: current.email }) };
+    await this.store.putSubscription(saved);
+    // The role in rbacr follows (an error here answers 500: Stripe sends
+    // the event again).
+    await this.syncPremium(saved, now);
     return { received: true };
+  }
+
+  /**
+   * rbacr's premium role for a subscription: granted until its paid
+   * period's end plus the grace while paid (each renewal moves the end),
+   * revoked once it isn't.
+   */
+  private async syncPremium(sub: Subscription, now: Date): Promise<void> {
+    const grants = this.deps.grants;
+    const email = sub.email ?? (await this.store.getEmails([sub.climberId]))[sub.climberId];
+    if (!grants || !email) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'premium not synced to rbacr', reason: grants ? 'no email' : 'no rbacr', climberId: sub.climberId }));
+      return;
+    }
+    if (premiumOf(sub, now).active) await grants.grant(email, this.premiumRole, premiumUntil(sub));
+    else await grants.revoke(email, this.premiumRole);
+  }
+
+  /** My (or someone's) roles in Grigri, from rbacr; null when it can't say. */
+  private async rolesOf(email: string | undefined, fresh = false): Promise<string[] | null> {
+    if (!email || !this.deps.roles) return null;
+    return this.deps.roles(email, { fresh });
+  }
+
+  /** Whether rbacr says this email holds Premium (fails closed). */
+  private async isPremium(email: string | undefined, fresh = false): Promise<boolean> {
+    return holdsPremium(await this.rolesOf(email, fresh), this.premiumRole);
+  }
+
+  /** Keeps my verified email (private), so Grigri can ask rbacr about me when I'm not the caller. */
+  private async rememberEmail(climberId: string, email: string | undefined): Promise<void> {
+    if (!email) return;
+    const known = (await this.store.getEmails([climberId]))[climberId];
+    if (known !== email) await this.store.putEmail(climberId, email);
   }
 
   // --- Ads (specs/ads.md) ------------------------------------------------------
 
-  /** Whether I'm Premium now (ads need it). */
-  private async isPremium(climberId: string, now: Date): Promise<boolean> {
-    return premiumOf(await this.store.getSubscription(climberId), now).active;
-  }
-
   /** GET /api/ads: my ads, newest first, and whether I'm Premium (to add more). */
   private async myAds(s: Session) {
-    const [ads, premium] = await Promise.all([this.store.adsBy(s.me.id), this.isPremium(s.me.id, s.now)]);
+    const [ads, premium] = await Promise.all([this.store.adsBy(s.me.id), this.isPremium(s.caller.email)]);
     return { ads, premium };
   }
 
@@ -691,7 +734,7 @@ export class Api {
     const contentType = asObject(req.body).contentType;
     const ext = typeof contentType === 'string' && Object.hasOwn(CHAT_TYPES, contentType) ? CHAT_TYPES[contentType] : undefined;
     if (!ext) throw badRequest(`contentType must be one of ${Object.keys(CHAT_TYPES).join(', ')}`);
-    if (!(await this.isPremium(s.me.id, s.now))) throw forbidden('ads are for Premium');
+    if (!(await this.isPremium(s.caller.email))) throw forbidden('ads are for Premium');
     const key = `ads/${s.me.id}/${newId()}.${ext}`;
     const maxBytes = Object.hasOwn(VIDEO_TYPES, contentType as string) ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
     const { url, fields } = await this.deps.photos.presign(key, contentType as string, maxBytes);
@@ -701,7 +744,7 @@ export class Api {
   /** POST /api/ads {text, link, media?}: a Premium climber's new ad, waiting for an admin. */
   private async createAd(req: Request, s: Session) {
     const input = adInput(req.body, s.me.id);
-    if (!(await this.isPremium(s.me.id, s.now))) throw forbidden('ads are for Premium');
+    if (!(await this.isPremium(s.caller.email))) throw forbidden('ads are for Premium');
     if ((await this.store.adsBy(s.me.id)).length >= MAX_ADS_PER_OWNER) {
       throw conflict(`you can keep at most ${MAX_ADS_PER_OWNER} ads; delete one first`);
     }
@@ -755,8 +798,13 @@ export class Api {
       if (settings.every === 0) return { ads: [], adEvery: 0, adOwners: {} };
       const approved = await this.store.adsByStatus('approved');
       const owners = [...new Set(approved.map((a) => a.ownerId))];
-      const [subs, climbers] = await Promise.all([this.store.getSubscriptions(owners), this.store.getClimbers(owners)]);
-      const ok = (ownerId: string) => premiumOf(subs[ownerId], s.now).active && climbers[ownerId] !== undefined && climbers[ownerId]!.blocked !== true;
+      const [emails, climbers, blocked] = await Promise.all([this.store.getEmails(owners), this.store.getClimbers(owners), this.blockedEmails()]);
+      // Owners still Premium in rbacr (each answer kept a minute).
+      const premium = new Set<string>();
+      await Promise.all(owners.map(async (o) => {
+        if (await this.isPremium(emails[o])) premium.add(o);
+      }));
+      const ok = (ownerId: string) => premium.has(ownerId) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '');
       const ads = deckAds(approved, s.me.id, ok);
       const adOwners = Object.fromEntries(ads.map((a) => [a.ownerId, publicClimber(climbers[a.ownerId]!)]));
       return { ads, adEvery: settings.every, adOwners };
@@ -781,8 +829,11 @@ export class Api {
     ]);
     const deck = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
     // Blocked organizers' plans leave the deck.
-    const everyone = await this.store.getClimbers(deck.plans.flatMap((p) => [p.organizerId, ...p.memberIds]));
-    const plans = deck.plans.filter((p) => everyone[p.organizerId]?.blocked !== true);
+    const [everyone, blocked] = await Promise.all([
+      this.store.getClimbers(deck.plans.flatMap((p) => [p.organizerId, ...p.memberIds])),
+      this.blockedIds(deck.plans.map((p) => p.organizerId)),
+    ]);
+    const plans = deck.plans.filter((p) => !blocked.has(p.organizerId));
     const distanceKm = Object.fromEntries(Object.entries(deck.distanceKm).filter(([pid]) => plans.some((p) => p.id === pid)));
     const climbers = Object.fromEntries(
       plans.flatMap((p) => [p.organizerId, ...p.memberIds]).flatMap((cid) => (everyone[cid] ? [[cid, publicClimber(everyone[cid])]] : [])),
@@ -1050,18 +1101,61 @@ export class Api {
   /** GET /api/admin/climbers: everyone, by name, with whether they're blocked. */
   private async adminClimbers() {
     const all = await this.store.allClimbers();
+    const blocked = await this.blockedIds(all.map((c) => c.id));
     const climbers = all
-      .map((c) => ({ ...publicClimber(c), blocked: c.blocked === true }))
+      .map((c) => ({ ...publicClimber(c), blocked: blocked.has(c.id) }))
       .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
     return { climbers };
   }
 
-  /** POST /api/admin/climbers/{id}/block and /unblock. Never myself: I'd lock myself out. */
+  /**
+   * POST /api/admin/climbers/{id}/block and /unblock: rbacr's `blocked`
+   * role, granted or revoked by their verified email. Never myself: I'd
+   * lock myself out.
+   */
   private async block(req: Request, s: Session, blocked: boolean) {
     const climberId = id(req.params.id, 'climber id');
     if (blocked && climberId === s.me.id) throw badRequest("you can't block yourself");
-    if (!(await this.store.setBlocked(climberId, blocked))) throw notFound('no such climber');
+    if (!(await this.store.getClimber(climberId))) throw notFound('no such climber');
+    const grants = this.deps.grants;
+    if (!grants) throw unavailable("rbacr isn't set up here: nobody can be blocked");
+    const email = await this.emailOf(climberId);
+    if (!email) throw conflict('Grigri has no verified email for them, so rbacr can\'t block them');
+    if (blocked) await grants.grant(email, this.blockedRole);
+    else await grants.revoke(email, this.blockedRole);
     return { blocked };
+  }
+
+  /** Who's blocked (rbacr's role), by email; none when rbacr can't say (logged). */
+  private async blockedEmails(): Promise<Set<string>> {
+    if (!this.deps.grants) return new Set();
+    try {
+      return await this.deps.grants.holders(this.blockedRole);
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'rbacr blocked list failed', error: String(e) }));
+      return new Set();
+    }
+  }
+
+  private async isBlocked(email: string | undefined): Promise<boolean> {
+    return email !== undefined && (await this.blockedEmails()).has(email.toLowerCase());
+  }
+
+  /** Which of these climbers are blocked. */
+  private async blockedIds(climberIds: string[]): Promise<Set<string>> {
+    const blocked = await this.blockedEmails();
+    if (blocked.size === 0) return new Set();
+    const emails = await this.store.getEmails(climberIds);
+    return new Set(climberIds.filter((c) => emails[c] !== undefined && blocked.has(emails[c]!.toLowerCase())));
+  }
+
+  /** A climber's verified email: the one kept, or else their sessions' (then kept). */
+  private async emailOf(climberId: string): Promise<string | undefined> {
+    const known = (await this.store.getEmails([climberId]))[climberId];
+    if (known) return known;
+    const fromSession = await this.store.sessionEmail(climberId);
+    if (fromSession) await this.store.putEmail(climberId, fromSession);
+    return fromSession;
   }
 
   // --- Notices and chat -------------------------------------------------------
@@ -1215,4 +1309,9 @@ export function whereFrom(query: Record<string, string | undefined>): Where {
     where.lon = lon;
   }
   return where;
+}
+
+/** Premium: rbacr's premium role (the stage's), or root (roots hold every role). */
+export function holdsPremium(roles: string[] | null, role: string = PREMIUM_ROLE): boolean {
+  return (roles ?? []).some((r) => r === role || r === 'root');
 }

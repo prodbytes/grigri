@@ -5,6 +5,7 @@ import { Auth, type Caller } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { type Subscription, premiumOf } from '../src/premium.js';
 import { type Billing, stripeBilling, subscriptionIdOf, toSubscription } from '../src/stripe.js';
+import { FakeRbacr } from './fake-rbacr.js';
 import { FakeStore } from './fake-store.js';
 
 const now = new Date('2030-05-01T10:00:00.000Z');
@@ -36,7 +37,7 @@ const stripeSub = (id: string, climberId: string, over: Record<string, unknown> 
   customer: 'cus_1',
   status: 'active',
   cancel_at_period_end: false,
-  metadata: { climberId, app: 'grigri' },
+  metadata: { climberId, app: 'grigri', email: 'ada@example.com' },
   items: { data: [{ current_period_end: Math.floor(Date.parse('2030-06-01T10:00:00Z') / 1000), price: { recurring: { interval: 'month' } } }] },
   ...over,
 });
@@ -108,12 +109,13 @@ describe('premiumOf', () => {
 describe('Premium routes', () => {
   let store: FakeStore;
   let stripe: ReturnType<typeof fakeStripe>;
+  let rbacr: FakeRbacr;
   const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', admin: false };
 
   const make = (billing?: Billing) => {
     const auth = new Auth({ store: store.asStore(), verify: async () => { throw new Error('unused'); }, config: { devMode: false, isAdmin: async () => false }, clock: () => now });
     const photos = { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} };
-    return new Api({ store: store.asStore(), photos, auth, billing, config: { stage: 'local', version: 'test' }, clock: () => now });
+    return new Api({ store: store.asStore(), photos, auth, billing, roles: rbacr.lookup, grants: rbacr.api, config: { stage: 'local', version: 'test' }, clock: () => now });
   };
   const call = async (api: Api, method: string, path: string, body?: unknown) =>
     (await api.handle(method, path, { caller: ada, body, query: {} })) as Record<string, any>;
@@ -126,6 +128,7 @@ describe('Premium routes', () => {
   beforeEach(() => {
     store = new FakeStore();
     stripe = fakeStripe();
+    rbacr = new FakeRbacr(() => now);
   });
 
   it('without Stripe keys: no prices, and buying is unavailable', async () => {
@@ -143,11 +146,17 @@ describe('Premium routes', () => {
     expect((await call(api, 'GET', '/api/premium')).prices.monthly).toEqual({ amount: 2000, currency: 'usd' });
     expect(await status(call(api, 'POST', '/api/premium/checkout', { plan: 'weekly' }))).toBe(400);
     expect((await call(api, 'POST', '/api/premium/checkout', { plan: 'monthly' })).url).toMatch(/^https:\/\/checkout\.stripe\.com\//);
+    // Whose Premium it is in rbacr travels with the subscription.
+    const form = new URLSearchParams(stripe.calls.at(-1)!.body);
+    expect(form.get('subscription_data[metadata][email]')).toBe('ada@example.com');
+    expect(form.get('customer_email')).toBe('ada@example.com');
     // No customer yet: no portal.
     expect(await status(call(api, 'POST', '/api/premium/portal'))).toBe(404);
 
     stripe.subscriptions.set('sub_1', stripeSub('sub_1', climber.id));
     await deliver(api, 'checkout.session.completed', { subscription: 'sub_1', client_reference_id: climber.id });
+    // Paid: rbacr's premium role, until the period's end plus two days' grace.
+    expect(rbacr.calls).toEqual(['grant premium ada@example.com until 2030-06-03T10:00:00.000Z']);
     expect((await call(api, 'GET', '/api/me')).premium).toEqual({ active: true, plan: 'monthly', until: '2030-06-01T10:00:00.000Z' });
     expect(await status(call(api, 'POST', '/api/premium/checkout', { plan: 'yearly' }))).toBe(409);
     expect((await call(api, 'POST', '/api/premium/portal')).url).toMatch(/^https:\/\/billing\.stripe\.com\//);
@@ -158,7 +167,48 @@ describe('Premium routes', () => {
     expect((await call(api, 'GET', '/api/me')).premium.ending).toBe(true);
     stripe.subscriptions.set('sub_1', stripeSub('sub_1', climber.id, { status: 'canceled' }));
     await deliver(api, 'customer.subscription.deleted', { id: 'sub_1' });
+    expect(rbacr.calls.at(-1)).toBe('revoke premium ada@example.com');
     expect((await call(api, 'GET', '/api/me')).premium).toEqual({ active: false });
+  });
+
+  it('rbacr down: the webhook fails, so Stripe sends the event again', async () => {
+    const api = make(stripe.billing);
+    const { climber } = await call(api, 'GET', '/api/me');
+    stripe.subscriptions.set('sub_1', stripeSub('sub_1', climber.id));
+    rbacr.failNext = true;
+    await expect(deliver(api, 'customer.subscription.created', { id: 'sub_1' })).rejects.toThrow(/503/);
+    expect((await call(api, 'GET', '/api/me')).premium.active).toBe(false);
+    await deliver(api, 'customer.subscription.created', { id: 'sub_1' });
+    expect((await call(api, 'GET', '/api/me')).premium.active).toBe(true);
+  });
+
+  it('a subscription without an email (from before) uses the one Grigri keeps', async () => {
+    const api = make(stripe.billing);
+    const { climber } = await call(api, 'GET', '/api/me');
+    stripe.subscriptions.set('sub_1', { ...stripeSub('sub_1', climber.id), metadata: { climberId: climber.id, app: 'grigri' } });
+    await deliver(api, 'customer.subscription.created', { id: 'sub_1' });
+    expect(rbacr.calls).toEqual(['grant premium ada@example.com until 2030-06-03T10:00:00.000Z']);
+  });
+
+  it("the RC's Premium is its own role: production's doesn't count there", async () => {
+    const auth = new Auth({ store: store.asStore(), verify: async () => { throw new Error('unused'); }, config: { devMode: false, isAdmin: async () => false }, clock: () => now });
+    const photos = { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} };
+    const rc = new Api({ store: store.asStore(), photos, auth, billing: stripe.billing, roles: rbacr.lookup, grants: rbacr.api, config: { stage: 'rc', version: 'test', roleSuffix: '-rc' }, clock: () => now });
+    const { climber } = await call(rc, 'GET', '/api/me');
+    rbacr.give('ada@example.com', 'premium');
+    expect((await call(rc, 'GET', '/api/me')).premium.active).toBe(false);
+    stripe.subscriptions.set('sub_1', stripeSub('sub_1', climber.id));
+    await deliver(rc, 'customer.subscription.created', { id: 'sub_1' });
+    expect(rbacr.calls).toEqual(['grant premium-rc ada@example.com until 2030-06-03T10:00:00.000Z']);
+    expect((await call(rc, 'GET', '/api/me')).premium.active).toBe(true);
+  });
+
+  it('Premium is the role, however it came: an admin, or granted in rbacr by hand', async () => {
+    const api = make(stripe.billing);
+    await call(api, 'GET', '/api/me');
+    rbacr.give('ada@example.com', 'admin');
+    expect((await call(api, 'GET', '/api/me')).premium).toEqual({ active: true });
+    expect((await call(api, 'GET', '/api/premium')).premium).toEqual({ active: true });
   });
 
   it('an old subscription\'s late event never overwrites a newer paid one', async () => {

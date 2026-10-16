@@ -75,9 +75,13 @@ who are members, or by an admin.
 - **Identity**: a Google account (`https://accounts.google.com#<sub>`) is
   linked to one climber id (random, made by the server at the first
   `GET /api/me`, which starts the profile with the account's Google
-  name). Emails are only used for the admin check: kept on the session
-  (only when verified), never on a profile, never returned. The Google
-  name is kept on the session only to start the profile.
+  name). Emails are only used to ask [rbacr](roles.md) about roles: kept on
+  the session (only when verified) and, privately, on a per-climber item
+  (`CLIMBER#<id>` / `EMAIL`, written when the climber loads or saves their
+  profile), so Grigri can ask rbacr about someone who isn't the caller
+  (an ad's owner, a plan's organizer, whom an admin blocks); never on a
+  profile, never returned. The Google name is kept on the session only to
+  start the profile.
 - **Admin**: a signed-in caller whose session's verified email holds
   rbacr's `grigri` `admin` role ([roles](roles.md)), checked on every
   request (rbacr's answer is kept 60 s). Admins list everyone and block

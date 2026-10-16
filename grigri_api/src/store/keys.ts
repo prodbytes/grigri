@@ -21,6 +21,11 @@ export const key = {
   pic: (planId: string, picId: string) => ({ pk: `PLAN#${planId}`, sk: `PIC#${picId}` }),
   /** A wall of the route finder, its views and routes in one item. */
   wall: (wallId: string) => ({ pk: `WALL#${wallId}`, sk: 'WALL' }),
+  /**
+   * A climber's verified email, private (never returned): how Grigri asks
+   * rbacr, whose roles are by email, about someone else (an ad's owner).
+   */
+  email: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'EMAIL' }),
   /** A climber's Premium subscription, as last read from Stripe (src/premium.ts). */
   premium: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'PREMIUM' }),
   /** An ad (src/domain/ads.ts). */

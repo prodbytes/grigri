@@ -177,37 +177,30 @@ export class Store implements SessionStore {
     }
   }
 
-  /**
-   * Saves a profile whole. Conflict when it's blocked (only setBlocked
-   * changes that): a save never unblocks one.
-   */
+  /** Saves a profile whole. (Blocked is rbacr's role, not the profile's.) */
   async saveProfile(climber: Climber, subject: string | undefined, now: Date): Promise<void> {
-    try {
-      await this.doc.send(new PutCommand({
-        TableName: this.table,
-        Item: climberItem({ ...climber, blocked: undefined }, subject, now),
-        ConditionExpression: 'attribute_not_exists(blocked)',
-      }));
-    } catch (e) {
-      throw asConflict(e);
-    }
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: climberItem(climber, subject, now) }));
   }
 
-  /** Blocks or unblocks a profile (the admin's); false when there's no such profile. */
-  async setBlocked(climberId: string, blocked: boolean): Promise<boolean> {
-    try {
-      await this.doc.send(new UpdateCommand({
-        TableName: this.table,
-        Key: key.climber(climberId),
-        UpdateExpression: blocked ? 'SET blocked = :t' : 'REMOVE blocked',
-        ConditionExpression: 'attribute_exists(pk)',
-        ...(blocked ? { ExpressionAttributeValues: { ':t': true } } : {}),
-      }));
-      return true;
-    } catch (e) {
-      if (isConditionFailure(e)) return false;
-      throw e;
-    }
+  /**
+   * A climber's verified email from their sign-in sessions (the newest
+   * that has one), for climbers whose email Grigri hasn't kept yet.
+   */
+  async sessionEmail(climberId: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.climber(climberId), ProjectionExpression: 'subject' }));
+    const subject = Item?.subject as string | undefined;
+    if (!subject) return undefined;
+    const keys = await this.query({
+      IndexName: index.sessions.name,
+      KeyConditionExpression: 'gsi3pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.sessions.pk(subject) },
+      ScanIndexForward: false,
+    });
+    const sessions = await this.batchGet(keys.map((k) => ({ pk: k.pk, sk: k.sk })));
+    const withEmail = sessions
+      .filter((x) => typeof x.email === 'string' && x.emailVerified === true)
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    return withEmail[0]?.email as string | undefined;
   }
 
   // --- Premium ----------------------------------------------------------------
@@ -217,6 +210,16 @@ export class Store implements SessionStore {
     if (!Item) return undefined;
     const { pk: _pk, sk: _sk, type: _type, ...sub } = Item;
     return sub as unknown as Subscription;
+  }
+
+  /** Climbers' verified emails (for rbacr), by climber id; missing ones left out. */
+  async getEmails(climberIds: Iterable<string>): Promise<Record<string, string>> {
+    const items = await this.batchGet([...new Set(climberIds)].map((id) => key.email(id)));
+    return Object.fromEntries(items.map((i) => [(i.pk as string).slice('CLIMBER#'.length), i.email as string]));
+  }
+
+  async putEmail(climberId: string, email: string): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.email(climberId), type: 'email', email } }));
   }
 
   /** Several climbers' subscriptions (missing ones left out). */
@@ -701,7 +704,6 @@ export function climberItem(c: Climber, subject: string | undefined, now: Date):
     ...(c.location ? { location: c.location } : {}),
     areas: c.areas ?? [],
     ...(c.demo ? { demo: true } : {}),
-    ...(c.blocked ? { blocked: true } : {}),
     // Who signs in as this climber (never returned); none for the seed's.
     ...(subject ? { subject } : {}),
     updatedAt: now.toISOString(),
@@ -721,7 +723,6 @@ export function toClimber(i: Item): Climber {
     ...(i.location ? { location: i.location as Location } : {}),
     areas: (i.areas as Location[]) ?? [],
     ...(i.demo === true ? { demo: true as const } : {}),
-    ...(i.blocked === true ? { blocked: true as const } : {}),
   };
 }
 

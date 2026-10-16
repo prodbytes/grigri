@@ -41,6 +41,10 @@ for that tag:
    endpoint, looked up with
    `aws iot describe-endpoint --endpoint-type iot:Data-ATS` and passed to
    both stacks. Production never gets the test seed (it holds real people's data and the demo showcase, which the API writes itself, see [backend](backend.md#the-demo-showcase));
+   Before the API, it sets up Grigri's roles in production's rbacr
+   ([scripts/rbacr-setup.sh](../scripts/rbacr-setup.sh), with
+   `GRIGRI_RBACR_TOKEN`; idempotent), and passes `RoleSuffix` (`-rc` for
+   the RC: its own `premium-rc` and `blocked-rc`);
 3. deploys the `grigri-web` stack: certificate, site, photos and GriGri
    Pics buckets, CloudFront (with `/api/*` to the API's domain and
    `/pics/*` to GriGri Pics) and DNS records, then loads

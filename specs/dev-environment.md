@@ -27,6 +27,9 @@
     `dev@rbacr.local`), or generates one and logs it. Ready when
     `/health` answers; nothing waits for it, so the app runs without it
     (its roles then fail, with Retry, and nobody is an admin).
+  - `7-rbacr-setup`: once the local rbacr is up, sets up Grigri's roles
+    in it ([scripts/rbacr-setup.sh](../scripts/rbacr-setup.sh), with
+    `.env`'s `RBACR_TOKEN`; nothing without one) and exits.
   - `5-index`: [grigri_index/site](../grigri_index) on
     http://localhost:2113/.
   - `6-pics`: [scripts/pics-local.sh](../scripts/pics-local.sh) loads
