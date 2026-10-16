@@ -923,7 +923,7 @@ spec.
     - Cost: no new AWS resource and nothing idle; Stripe's 2.9% + $0.30
       plus 0.7% per payment ([backend](backend.md#cost)).
 
-62. **Ads: Premium users submit ads in a new Ads tab; admins approve or
+65. **Ads: Premium users submit ads in a new Ads tab; admins approve or
     reject them in an Admin sub-nav and set their rate; ads show like
     plans, with an image or video, text over it, and a link that opens in
     the browser when accepted.**
