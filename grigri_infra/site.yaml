@@ -4,7 +4,8 @@ Description: >
   https://rc.grigri.nu01.com). One CloudFront distribution in front of the
   index page (/) and the Flutter web app (/app/), both from a private S3
   bucket, the API (/api/*, the grigri_api stack's HTTP API) and people's
-  photos (/photos/*, a private bucket). Uptime is watched from outside,
+  photos (/photos/*, a private bucket) and GriGri Pics, Grigri's own crag
+  photos (/pics/*, a bucket of their own). Uptime is watched from outside,
   by the central nu01-monitor (/app/version.json and /api/health).
   Deploy in us-east-1 (CloudFront certificates must live there).
 
@@ -109,12 +110,13 @@ Resources:
             MaxAge: 3000
       # Uploads arrive tagged grigri-pending=true (the API's presigned
       # POSTs); saving a profile clears the tag of its photos, and deletes
-      # the ones it drops; sending a chat message clears its attachment's.
-      # Uploads never saved or sent expire after a day. Saved photos stay
-      # until their owner replaces them. Chat media expires 400 days after
-      # its upload: a plan starts at most a year after it's made, so that's
-      # at least a month after the plan is over. Failed multipart uploads
-      # are cleaned up too.
+      # the ones it drops; sending a chat message clears its attachment's,
+      # and adding a photo to a plan its own. Uploads never saved, sent or
+      # added expire after a day. Saved photos stay until their owner
+      # replaces them. Chat media and plan photos ("Your Pics") expire 400
+      # days after their upload: a plan starts at most a year after it's
+      # made, so that's at least a month after the plan is over. Failed
+      # multipart uploads are cleaned up too.
       LifecycleConfiguration:
         Rules:
           - Id: abort-incomplete-uploads
@@ -131,6 +133,10 @@ Resources:
           - Id: expire-chat-media
             Status: Enabled
             Prefix: photos/chat/
+            ExpirationInDays: 400
+          - Id: expire-plan-pics
+            Status: Enabled
+            Prefix: photos/plans/
             ExpirationInDays: 400
       Tags:
         - Key: grigri:stage
@@ -159,6 +165,65 @@ Resources:
             Resource:
               - !GetAtt PhotosBucket.Arn
               - !Sub ${PhotosBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: 'false'
+
+  # GriGri Pics (specs/pics.md): Grigri's own photos of crags, freely
+  # licensed (credited in each photo's S3 annotation), under pics/crags/,
+  # and pics/catalog.json, made from the annotations, which the API reads.
+  # Its own bucket, apart from people's data: loaded by scripts/deploy.sh
+  # (grigri_api/pics/load.mjs), served by this distribution under
+  # /pics/*. Not retained: it can be loaded again from crags.json.
+  PicsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${AWS::StackName}-pics-${AWS::AccountId}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          - Id: abort-incomplete-uploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  PicsBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PicsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # Only this distribution may read the photos (not the catalog,
+          # which only the API reads).
+          - Effect: Allow
+            Principal:
+              Service: cloudfront.amazonaws.com
+            Action: s3:GetObject
+            Resource: !Sub ${PicsBucket.Arn}/pics/crags/*
+            Condition:
+              StringEquals:
+                AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}
+          - Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt PicsBucket.Arn
+              - !Sub ${PicsBucket.Arn}/*
             Condition:
               Bool:
                 aws:SecureTransport: 'false'
@@ -362,6 +427,12 @@ Resources:
             OriginAccessControlId: !GetAtt SiteOriginAccessControl.Id
             S3OriginConfig:
               OriginAccessIdentity: ''
+          # GriGri Pics; the same origin access control signs requests.
+          - Id: pics
+            DomainName: !GetAtt PicsBucket.RegionalDomainName
+            OriginAccessControlId: !GetAtt SiteOriginAccessControl.Id
+            S3OriginConfig:
+              OriginAccessIdentity: ''
           # The API's HTTP API, default stage: no origin path
           # (/api/plans -> /api/plans).
           - Id: api
@@ -413,6 +484,16 @@ Resources:
             CachedMethods: [GET, HEAD]
             CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
             ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # Managed-SecurityHeadersPolicy
+          # GriGri Pics: keys follow their source, never reused, so they're
+          # cached at the edge too.
+          - PathPattern: /pics/*
+            TargetOriginId: pics
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+            ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03 # Managed-SecurityHeadersPolicy
 
   DnsRecordA:
     Type: AWS::Route53::RecordSet
@@ -445,6 +526,9 @@ Outputs:
   PhotosBucketName:
     Description: People's photos (under photos/), served at /photos/*
     Value: !Ref PhotosBucket
+  PicsBucketName:
+    Description: GriGri Pics (under pics/), served at /pics/*
+    Value: !Ref PicsBucket
   DistributionId:
     Value: !Ref Distribution
   DistributionDomainName:

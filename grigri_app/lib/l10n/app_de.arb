@@ -242,5 +242,18 @@
   "blockNameQuestion": "{name} sperren?",
   "blockMessage": "Die Person kann Grigri nicht nutzen, bis du sie entsperrst, und ihre Pläne verschwinden für alle aus Entdecken.",
   "blockedTitle": "Dein Konto ist gesperrt",
-  "blockedMessage": "Ein Admin hat dein Konto gesperrt, daher kannst du Grigri vorerst nicht nutzen."
+  "blockedMessage": "Ein Admin hat dein Konto gesperrt, daher kannst du Grigri vorerst nicht nutzen.",
+  "yourPics": "Deine Fotos",
+  "grigriPics": "GriGri Pics",
+  "yourPicsEmpty": "Noch keine Fotos. Füge eins hinzu oder schick eins im Chat.",
+  "grigriPicsEmpty": "Noch keine GriGri Pics von diesem Ort.",
+  "addPlanPic": "Foto zum Plan hinzufügen",
+  "deletePic": "Foto löschen",
+  "deletePicQuestion": "Dieses Foto löschen?",
+  "deletePicMessage": "Es verschwindet für alle aus den Fotos des Plans.",
+  "deleteChatPicMessage": "Es verschwindet aus den Fotos des Plans; der Chat behält es.",
+  "delete": "Löschen",
+  "picCredit": "Foto: {author}, {license}",
+  "picAddedBy": "Hinzugefügt von {name}",
+  "picFromChat": "Im Chat gesendet von {name}"
 }

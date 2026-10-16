@@ -863,4 +863,51 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get blockedMessage =>
       'Um administrador bloqueou sua conta, então por enquanto você não pode usar o Grigri.';
+
+  @override
+  String get yourPics => 'Suas fotos';
+
+  @override
+  String get grigriPics => 'GriGri Pics';
+
+  @override
+  String get yourPicsEmpty =>
+      'Ainda não há fotos. Adicione uma, ou envie uma no chat.';
+
+  @override
+  String get grigriPicsEmpty => 'Ainda não há GriGri Pics deste lugar.';
+
+  @override
+  String get addPlanPic => 'Adicionar uma foto ao plano';
+
+  @override
+  String get deletePic => 'Apagar a foto';
+
+  @override
+  String get deletePicQuestion => 'Apagar esta foto?';
+
+  @override
+  String get deletePicMessage => 'Ela sai das fotos do plano para todos.';
+
+  @override
+  String get deleteChatPicMessage =>
+      'Ela sai das fotos do plano; o chat a mantém.';
+
+  @override
+  String get delete => 'Apagar';
+
+  @override
+  String picCredit(String author, String license) {
+    return 'Foto: $author, $license';
+  }
+
+  @override
+  String picAddedBy(String name) {
+    return 'Adicionada por $name';
+  }
+
+  @override
+  String picFromChat(String name) {
+    return 'Enviada no chat por $name';
+  }
 }

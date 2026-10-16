@@ -21,6 +21,8 @@ An admin can list everyone and block or unblock them ([admin.md](admin.md)).
 - Photos, and the chat's photos and videos, in S3 (private), uploaded with
   presigned POSTs, served by the same CloudFront under `/photos/*` (origin
   access control). Never in DynamoDB (400 KB item limit).
+- GriGri Pics, Grigri's own crag photos, in a bucket of their own, served
+  under `/pics/*`; the API reads only their catalog ([pics.md](pics.md)).
 - Auth: the API's own **sessions** (see [Sessions](#sessions)). The app
   trades a Google ID token for a session token once (`POST /api/session`,
   where the function verifies the token), then sends
@@ -155,6 +157,11 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   a request note carries requestId so the chat shows it as a card. A
   member's message has text, an attachment, or both; `text` is `""` for an
   attachment alone. The attachment is served at `/photos/<key>`.)
+- **PlanPic** (a photo of a plan's Your Pics): `{"id", "planId", "key", "uploaderId", "time", "fromChat": bool}`.
+  Served at `/photos/<key>`: `plans/<planId>/<random>.<ext>`, or a chat
+  photo's `chat/<planId>/...` (`fromChat`).
+- **GrigriPic** (a GriGri Pics photo): `{"key", "width", "height", "caption", "author", "license", "licenseUrl", "source", "cragId", "crag"}`.
+  Served at `/pics/<key>`; `crag` is the crag's (or area's) name.
 - **Match**: `{"plan": Plan, "newcomerId"}`
 - Responses that list plans, requests, notices or messages also return
   `"climbers": {id: Climber}` for every climber they mention, so the app
@@ -204,8 +211,13 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `GET /api/notices` | mine, newest first: `{"notices", "climbers"}` |
 | `POST /api/notices/read` | marks all mine read. → `{}` |
 | `GET /api/plans/{id}/messages?after=<time>` | members only, oldest first, those after `after` when given. → `{"messages", "climbers"}` |
-| `POST /api/plans/{id}/messages` | members only; body `{"text"?, "attachment"?: key}`: text up to 2000 chars, 1–2000 without an attachment. The attachment must be a key `POST /api/plans/{id}/media` issued for this plan (`chat/<this planId>/<random>.<jpg\|png\|webp\|mp4\|mov>`; 400 otherwise) and uploaded: it loses its pending tag, only after the caller is known to be a member (400 if it isn't uploaded, or already expired). → `{"message"}` |
+| `POST /api/plans/{id}/messages` | members only; a photo attachment also joins the plan's Your Pics ([pics.md](pics.md)); body `{"text"?, "attachment"?: key}`: text up to 2000 chars, 1–2000 without an attachment. The attachment must be a key `POST /api/plans/{id}/media` issued for this plan (`chat/<this planId>/<random>.<jpg\|png\|webp\|mp4\|mov>`; 400 otherwise) and uploaded: it loses its pending tag, only after the caller is known to be a member (400 if it isn't uploaded, or already expired). → `{"message"}` |
 | `POST /api/plans/{id}/media` | members only (403; 404 for no such plan); body `{"contentType"}`: `image/jpeg`, `image/png`, `image/webp`, `video/mp4` or `video/quicktime`, nothing else (400). → `{"key", "url", "fields", "maxBytes"}`: a presigned S3 POST as `POST /api/photos` gives, ≤ 2 MB for a photo and ≤ 50 MB for a video (`maxBytes`), its content type fixed by the policy. Keys are `chat/<planId>/<random>.<ext>` (object `photos/chat/...`, served at `/photos/chat/...`), tagged pending: an upload no message sends expires after a day. Sent ones expire 400 days after their upload ([backend](backend.md#chat-media)). |
+| `GET /api/plans/{id}/pics` | the plan's [photos](pics.md): `{"yours": [PlanPic] (oldest first; members only, else empty), "grigri": [GrigriPic] (up to 12, best first, for the plan's sector, point, place and area), "member": bool, "climbers"}` (who added them). 404 for no such plan |
+| `POST /api/plans/{id}/pics/upload` | members only (403); body `{"contentType"}`: `image/jpeg`, `image/png` or `image/webp` (400 otherwise). → `{"key", "url", "fields", "maxBytes"}`: a presigned POST (≤ 2 MB) for `plans/<planId>/<random>.<ext>` (object `photos/plans/...`), tagged pending, as `POST /api/photos` gives |
+| `POST /api/plans/{id}/pics` | members only; body `{"key"}`, a key the route above issued for this plan (400 otherwise). It loses its pending tag (400 if it isn't uploaded, or expired) and joins the plan's Your Pics. The same key again gives the same photo. 409 when the plan has 100. → `{"pic": PlanPic}` |
+| `DELETE /api/plans/{id}/pics/{picId}` | whoever added it, the organizer or an admin (403 otherwise; 404 for no such photo). A photo added here is deleted from S3; a chat photo only leaves the pics (the chat keeps it). → `{}` |
+| `GET /api/pics?lat=&lon=&sector=&place=&area=` | GriGri Pics for a place (any of them; `lat` and `lon` both or neither, 400 otherwise) → `{"pics": [GrigriPic]}` |
 | `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 15 minutes (room for a chat video on a slow line). The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
 | `GET /api/admin/climbers` | admin only: every profile, by name, without location or areas, each with `"blocked": bool` → `{"climbers"}` ([admin.md](admin.md)) |
 | `POST /api/admin/climbers/{id}/block` | admin only: blocks them (400 for myself, 404 for no such climber). → `{"blocked": true}` |
@@ -242,7 +254,7 @@ Details: [live-updates.md](live-updates.md).
   account with a profile and allows only connecting with that prefix and
   subscribing to and receiving that climber's own topics; anything else
   is refused. Locally (Floci) there's no authorizer.
-- **Hints** (QoS 0, JSON): `{"kind": "message"|"request"|"notice"|"plan"|"match", "planId"?}`.
+- **Hints** (QoS 0, JSON): `{"kind": "message"|"request"|"notice"|"plan"|"match"|"pics", "planId"?}`.
   Never data: the app refetches through the routes above.
 
 | Change | Hint, to whom (never the one who made it) |
@@ -254,6 +266,7 @@ Details: [live-updates.md](live-updates.md).
 | reject | `notice` to the requester, `request` to the members |
 | `POST /api/plans/{id}/nudge` | `notice` to the members who haven't said yes |
 | `PUT /api/plans/{id}`, `POST /api/plans/{id}/leave` | `plan` to the (remaining) members |
+| `POST /api/plans/{id}/pics`, `DELETE /api/plans/{id}/pics/{picId}` | `pics` to the members |
 
 Publishing is best effort: it waits at most 1.5 s and never fails the
 request.

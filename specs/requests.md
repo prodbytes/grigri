@@ -787,7 +787,41 @@ spec.
     - [Matching](matching.md#profiles-and-plans-are-separate): the app
       takes my location from the device whenever my profile has none,
       even when I have areas (before, areas alone stopped it).
-56. **Remove every feature from the Admin tab and start it over: for
+56. **Our own version of theCrag's API, photo lookup only: photos in S3,
+    with their metadata queried in S3 as cheaply as possible, in a bucket
+    apart from user data, seeded with the crags around Siurana and
+    Margalef (ideally 5 photos each), shown on the plan; members upload
+    and delete plan photos, and chat photos join them. Two sets, apart:
+    "Your Pics" and "GriGri Pics".**
+    - [Plan photos](pics.md) (new): Your Pics (members' uploads and chat
+      photos; delete by whoever added it, the organizer or an admin) and
+      GriGri Pics (Grigri's own photos, credited, looked up by the plan's
+      sector, point, place and area).
+    - GriGri Pics in a new bucket in the site stack
+      (`<site stack>-pics-<account>`), served at `/pics/*`; each photo's
+      metadata is an S3 annotation, and a catalog made from them is what
+      the API reads (once per warm function). S3 Select, asked for first,
+      is closed to new accounts (`MethodNotAllowed` here); annotations
+      can be queried only through annotation tables and Athena (up to an
+      hour behind, seconds per query, billed per query), so the catalog
+      is the cheap lookup.
+    - The data ([grigri_api/pics/crags.json](../grigri_api/pics/crags.json)):
+      10 freely licensed Wikimedia Commons photos, 5 of Siurana and 5 of
+      Margalef as areas; no photo could be tied reliably to a single
+      OpenStreetMap crag, so the 11 Margalef crags have none yet. Loaded
+      by `grigri_api/pics/load.mjs` on every deploy and, locally, by the
+      new `6-pics` process.
+    - [API](api.md): `GET /api/plans/{id}/pics`, `POST
+      /api/plans/{id}/pics/upload`, `POST /api/plans/{id}/pics`, `DELETE
+      /api/plans/{id}/pics/{picId}`, `GET /api/pics`; a photo sent in the
+      chat joins the plan's pics; a `pics` hint.
+    - Plan photos live in the photos bucket under `photos/plans/`, with a
+      400-day lifecycle rule like chat media's; the function's role (and
+      the stages' permissions boundary) may read GriGri Pics' catalog.
+    - [Screens](screens.md): the plan screen's Your Pics and GriGri Pics.
+    - Cost: ~$0.0002/month of storage for GriGri Pics, a GET per cold
+      start; Your Pics cost as chat photos do ([pics.md](pics.md#cost)).
+57. **Remove every feature from the Admin tab and start it over: for
     now, just a list of people with the option to block or unblock.**
     - [Admin](admin.md) (new): the tab lists everyone by name
       (`GET /api/admin/climbers`), with **Block** (after a confirmation)

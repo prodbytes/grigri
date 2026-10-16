@@ -122,6 +122,12 @@ Resources:
                   - s3:DeleteObjectTagging
                   - s3:DeleteObject
                 Resource: !Sub arn:${AWS::Partition}:s3:::${Prefix}-web-photos-*/photos/*
+              # GriGri Pics (site.yaml: <prefix>-web-pics-<account>): the
+              # API reads the catalog, nothing else.
+              - Sid: PicsCatalog
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub arn:${AWS::Partition}:s3:::${Prefix}-web-pics-*/pics/catalog.json
               # Live updates: the API publishes hints to the stage's
               # climbers' MQTT topics only (grigri/<stage>/climbers/*).
               - Sid: Hints

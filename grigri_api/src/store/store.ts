@@ -17,7 +17,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Delivery, Effects } from '../domain/rules.js';
-import { type Attachment, type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, isOpen } from '../domain/model.js';
+import { type Attachment, type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, isOpen } from '../domain/model.js';
 import { index, key, prefix } from './keys.js';
 
 type Item = Record<string, unknown>;
@@ -469,9 +469,29 @@ export class Store implements SessionStore {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: messageItem(message) }));
   }
 
+  // --- Plan pics ("Your Pics") ------------------------------------------------
+
+  /** A plan's photos, oldest first. */
+  async planPics(planId: string): Promise<PlanPic[]> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+      ExpressionAttributeValues: { ':pk': prefix.plan(planId), ':sk': prefix.pic },
+    });
+    return items.map(toPlanPic).sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+  }
+
+  /** Saves a plan photo; it expires (TTL) with its object, PLAN_PIC_DAYS after it's added. */
+  async putPlanPic(pic: PlanPic): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: planPicItem(pic) }));
+  }
+
+  async deletePlanPic(planId: string, picId: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.pic(planId, picId) }));
+  }
+
   // --- Plumbing ---------------------------------------------------------------
 
-  /** Everything left in a plan's partition (requests, messages). */
+  /** Everything left in a plan's partition (requests, messages, pics). */
   async deletePlanItems(planId: string): Promise<void> {
     const items = await this.query({
       KeyConditionExpression: 'pk = :pk',
@@ -713,5 +733,36 @@ function toMessage(i: Item): Message {
     time: i.time as string,
     ...(i.requestId ? { requestId: i.requestId as string } : {}),
     ...(i.attachment ? { attachment: i.attachment as Attachment } : {}),
+  };
+}
+
+/**
+ * How long a plan photo is kept: as long as chat media (the photos
+ * bucket's lifecycle rules expire both 400 days after the upload).
+ */
+export const PLAN_PIC_DAYS = 400;
+
+export function planPicItem(p: PlanPic): Item {
+  return {
+    ...key.pic(p.planId, p.id),
+    type: 'pic',
+    id: p.id,
+    planId: p.planId,
+    key: p.key,
+    uploaderId: p.uploaderId,
+    time: p.time,
+    fromChat: p.fromChat,
+    ttl: Math.floor(new Date(p.time).getTime() / 1000) + PLAN_PIC_DAYS * 86400,
+  };
+}
+
+function toPlanPic(i: Item): PlanPic {
+  return {
+    id: i.id as string,
+    planId: i.planId as string,
+    key: i.key as string,
+    uploaderId: i.uploaderId as string,
+    time: i.time as string,
+    fromChat: i.fromChat === true,
   };
 }

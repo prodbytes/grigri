@@ -1235,5 +1235,75 @@
   "blockedMessage": "An admin blocked your account, so you can't use Grigri for now.",
   "@blockedMessage": {
     "description": "Why a blocked person can't use the app."
+  },
+  "yourPics": "Your Pics",
+  "@yourPics": {
+    "description": "Plan screen: the section of photos members added to the plan, or sent in its chat."
+  },
+  "grigriPics": "GriGri Pics",
+  "@grigriPics": {
+    "description": "Plan screen: the section of Grigri's own photos of the plan's crag (a name; keep as is)."
+  },
+  "yourPicsEmpty": "No photos yet. Add one, or send one in the chat.",
+  "@yourPicsEmpty": {
+    "description": "Plan screen: Your Pics has none yet."
+  },
+  "grigriPicsEmpty": "No GriGri Pics of this place yet.",
+  "@grigriPicsEmpty": {
+    "description": "Plan screen: GriGri Pics has none of this place."
+  },
+  "addPlanPic": "Add a photo to the plan",
+  "@addPlanPic": {
+    "description": "Plan screen: the button that adds a photo to Your Pics."
+  },
+  "deletePic": "Delete photo",
+  "@deletePic": {
+    "description": "Photo viewer: deletes a photo from Your Pics."
+  },
+  "deletePicQuestion": "Delete this photo?",
+  "@deletePicQuestion": {
+    "description": "Confirmation title before deleting a plan photo."
+  },
+  "deletePicMessage": "It leaves the plan's photos for everyone.",
+  "@deletePicMessage": {
+    "description": "Confirmation text: a photo added to the plan is deleted."
+  },
+  "deleteChatPicMessage": "It leaves the plan's photos; the chat keeps it.",
+  "@deleteChatPicMessage": {
+    "description": "Confirmation text: a chat photo leaves the plan's photos but stays in the chat."
+  },
+  "delete": "Delete",
+  "@delete": {
+    "description": "Confirms deleting."
+  },
+  "picCredit": "Photo: {author}, {license}",
+  "@picCredit": {
+    "description": "Under a GriGri Pics photo: who took it and its license, as the license asks.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "picAddedBy": "Added by {name}",
+  "@picAddedBy": {
+    "description": "Under a Your Pics photo: who added it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "picFromChat": "Sent in the chat by {name}",
+  "@picFromChat": {
+    "description": "Under a Your Pics photo that came from the chat: who sent it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }

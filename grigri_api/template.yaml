@@ -78,6 +78,13 @@ Parameters:
       The private photos bucket (the site stack's PhotosBucket,
       <site stack>-photos-<account>); the function presigns uploads to its
       photos/ prefix only.
+  PicsBucket:
+    Type: String
+    AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
+    Description: >
+      GriGri Pics' bucket (the site stack's PicsBucket,
+      <site stack>-pics-<account>): Grigri's own crag photos, never people's
+      data. The function only reads its catalog, pics/catalog.json.
   PhotosUploadUrl:
     Type: String
     Default: ''
@@ -282,7 +289,8 @@ Resources:
   # Only what the function does: its table, its logs, and under the photos
   # bucket's photos/ prefix: uploads (presigned POSTs, tagged pending),
   # clearing the pending tag of photos a profile saves and of chat media a
-  # message sends, and deleting the photos a profile drops. Its name is
+  # message sends, and deleting the photos a profile drops; and reading
+  # GriGri Pics' catalog. Its name is
   # <stack>-function, inside the deploy role's <prefix>-* scope, and it
   # carries the stage's permissions boundary.
   FunctionRole:
@@ -331,6 +339,11 @@ Resources:
                   - s3:DeleteObjectTagging
                   - s3:DeleteObject
                 Resource: !Sub arn:${AWS::Partition}:s3:::${PhotosBucket}/photos/*
+              # GriGri Pics: reads the catalog, nothing else.
+              - Sid: PicsCatalog
+                Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub arn:${AWS::Partition}:s3:::${PicsBucket}/pics/catalog.json
               # Live updates: hints to climbers' topics only (QoS 0).
               - Sid: Hints
                 Effect: Allow
@@ -363,6 +376,7 @@ Resources:
           TABLE_NAME: !Ref Table
           PHOTOS_BUCKET: !Ref PhotosBucket
           PHOTOS_UPLOAD_URL: !Ref PhotosUploadUrl
+          PICS_BUCKET: !Ref PicsBucket
           RBACR_URL: !Ref RbacrUrl
           RBACR_TOKEN: !Ref RbacrToken
           GOOGLE_WEB_CLIENT_ID: !Ref GoogleWebClientId

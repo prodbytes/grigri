@@ -5,11 +5,12 @@
 // deck itself. The
 // HTTP API can't send that event: its events always carry requestContext.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DeleteObjectCommand, DeleteObjectTaggingCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, DeleteObjectTaggingCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { Api, type Photos } from './api.js';
+import { Api, type GrigriPics, type Photos } from './api.js';
+import type { PicCatalog } from './domain/model.js';
 import { Auth, type AuthConfig } from './auth.js';
 import { rbacrAdminCheck, rbacrRoles } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
@@ -78,6 +79,41 @@ const photos: Photos = {
   },
 };
 
+// GriGri Pics: the catalog the loader (pics/load.mjs) makes from the
+// photos' S3 annotations, in its own bucket (never people's data). One
+// GET, kept while the function stays warm (an hour at most), so a lookup
+// costs nothing after the first. None yet (or no bucket): no GriGri Pics.
+const picsBucket = env.PICS_BUCKET ?? '';
+const CATALOG_TTL_MS = 60 * 60 * 1000;
+const EMPTY_CATALOG: PicCatalog = { generatedAt: '', crags: [] };
+let catalogCache: { at: number; catalog: Promise<PicCatalog> } | undefined;
+const pics: GrigriPics = {
+  catalog() {
+    if (!picsBucket) return Promise.resolve(EMPTY_CATALOG);
+    if (catalogCache && Date.now() - catalogCache.at < CATALOG_TTL_MS) return catalogCache.catalog;
+    const catalog = readCatalog();
+    catalogCache = { at: Date.now(), catalog };
+    // A failed read isn't kept: the next lookup tries again.
+    catalog.catch(() => {
+      if (catalogCache?.catalog === catalog) catalogCache = undefined;
+    });
+    return catalog;
+  },
+};
+
+async function readCatalog(): Promise<PicCatalog> {
+  try {
+    const out = await s3.send(new GetObjectCommand({ Bucket: picsBucket, Key: 'pics/catalog.json' }));
+    const parsed = JSON.parse(await out.Body!.transformToString()) as PicCatalog;
+    return Array.isArray(parsed.crags) ? parsed : EMPTY_CATALOG;
+  } catch (e) {
+    const status = (e as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+    // Not loaded yet (403 without s3:ListBucket): none, kept like a catalog.
+    if (status === 404 || status === 403) return EMPTY_CATALOG;
+    throw e;
+  }
+}
+
 // rbacr, with a root's API token: admins, and my roles on my profile.
 const rbacr = { url: env.RBACR_URL ?? '', token: env.RBACR_TOKEN ?? '' };
 const authConfig: AuthConfig = {
@@ -108,6 +144,7 @@ const matchScorer = aityxScorer({ url: env.AITYX_URL ?? '', key: env.AITYX_API_K
 const api = new Api({
   store,
   photos,
+  pics,
   auth,
   realtime,
   roles: rbacrRoles(rbacr),

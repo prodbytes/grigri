@@ -47,7 +47,7 @@ class RealtimeInfo {
 }
 
 /// What a hint names: the app refetches just that, through the API.
-enum HintKind { message, request, notice, plan, match, unknown }
+enum HintKind { message, request, notice, plan, match, pics, unknown }
 
 /// A live update: "something about [kind] changed" (and on which plan),
 /// never the data itself.

@@ -863,4 +863,51 @@ class AppLocalizationsCa extends AppLocalizations {
   @override
   String get blockedMessage =>
       'Un administrador ha bloquejat el teu compte, i de moment no pots fer servir Grigri.';
+
+  @override
+  String get yourPics => 'Les teves fotos';
+
+  @override
+  String get grigriPics => 'GriGri Pics';
+
+  @override
+  String get yourPicsEmpty =>
+      'Encara no hi ha fotos. Afegeix-ne una o envia-la al xat.';
+
+  @override
+  String get grigriPicsEmpty => 'Encara no hi ha GriGri Pics d\'aquest lloc.';
+
+  @override
+  String get addPlanPic => 'Afegeix una foto al pla';
+
+  @override
+  String get deletePic => 'Esborra la foto';
+
+  @override
+  String get deletePicQuestion => 'Vols esborrar aquesta foto?';
+
+  @override
+  String get deletePicMessage => 'Surt de les fotos del pla per a tothom.';
+
+  @override
+  String get deleteChatPicMessage =>
+      'Surt de les fotos del pla; el xat la conserva.';
+
+  @override
+  String get delete => 'Esborra';
+
+  @override
+  String picCredit(String author, String license) {
+    return 'Foto: $author, $license';
+  }
+
+  @override
+  String picAddedBy(String name) {
+    return 'Afegida per $name';
+  }
+
+  @override
+  String picFromChat(String name) {
+    return 'Enviada al xat per $name';
+  }
 }

@@ -242,5 +242,18 @@
   "blockNameQuestion": "Vols bloquejar {name}?",
   "blockMessage": "No podrà fer servir Grigri fins que el desbloquegis, i els seus plans surten de Descobreix per a tothom.",
   "blockedTitle": "El teu compte està bloquejat",
-  "blockedMessage": "Un administrador ha bloquejat el teu compte, i de moment no pots fer servir Grigri."
+  "blockedMessage": "Un administrador ha bloquejat el teu compte, i de moment no pots fer servir Grigri.",
+  "yourPics": "Les teves fotos",
+  "grigriPics": "GriGri Pics",
+  "yourPicsEmpty": "Encara no hi ha fotos. Afegeix-ne una o envia-la al xat.",
+  "grigriPicsEmpty": "Encara no hi ha GriGri Pics d'aquest lloc.",
+  "addPlanPic": "Afegeix una foto al pla",
+  "deletePic": "Esborra la foto",
+  "deletePicQuestion": "Vols esborrar aquesta foto?",
+  "deletePicMessage": "Surt de les fotos del pla per a tothom.",
+  "deleteChatPicMessage": "Surt de les fotos del pla; el xat la conserva.",
+  "delete": "Esborra",
+  "picCredit": "Foto: {author}, {license}",
+  "picAddedBy": "Afegida per {name}",
+  "picFromChat": "Enviada al xat per {name}"
 }

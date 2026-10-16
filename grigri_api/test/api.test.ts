@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Api, NO_NAME } from '../src/api.js';
 import { Auth, type Caller, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
+import type { PicCatalog } from '../src/domain/model.js';
 import { FakeStore } from './fake-store.js';
 
 let now = new Date('2030-05-01T10:00:00.000Z');
@@ -13,6 +14,8 @@ let objects: Map<string, boolean>;
 /** Each presigned upload: its key, type and size cap. */
 let presigned: { key: string; contentType: string; maxBytes: number }[];
 let removed: string[];
+/** GriGri Pics' catalog, as the fake bucket has it. */
+let catalog: PicCatalog;
 
 const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
 const ada = who('ada');
@@ -51,6 +54,7 @@ beforeEach(async () => {
   objects = new Map();
   removed = [];
   presigned = [];
+  catalog = { generatedAt: '', crags: [] };
   const photos = {
     presign: async (key: string, contentType: string, maxBytes: number) => {
       presigned.push({ key, contentType, maxBytes });
@@ -72,7 +76,7 @@ beforeEach(async () => {
     config: { devMode: false, isAdmin: async (email) => email === 'root@example.com' },
     clock: () => now,
   });
-  api = new Api({ store: store.asStore(), photos, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now, random: () => random() });
+  api = new Api({ store: store.asStore(), photos, pics: { catalog: async () => catalog }, auth, config: { stage: 'local', version: '0.1.2' }, clock: () => now, random: () => random() });
 });
 
 describe('access', () => {
@@ -468,6 +472,92 @@ describe('the matchmaking flow', () => {
   it('notices name the plan by its place', async () => {
     await call(ben, 'POST', `/api/plans/${planId}/join`);
     expect((await call(ada, 'GET', '/api/notices')).notices[0].planTitle).toBe('Somewhere');
+  });
+
+  it("plan pics: members add and delete Your Pics; chat photos join them", async () => {
+    const pics = `/api/plans/${planId}/pics`;
+    // Members only; photos only.
+    await fails(call(ben, 'POST', `${pics}/upload`, { contentType: 'image/jpeg' }), 403);
+    await fails(call(ada, 'POST', `${pics}/upload`, { contentType: 'video/mp4' }), 400);
+    const up = await call(ada, 'POST', `${pics}/upload`, { contentType: 'image/jpeg' });
+    expect(up.key).toMatch(new RegExp(`^plans/${planId}/[A-Za-z0-9_-]{16}\\.jpg$`));
+    expect(up.maxBytes).toBe(2 * 1024 * 1024);
+
+    // Not uploaded: refused. Uploaded: added, no longer pending.
+    await fails(call(ada, 'POST', pics, { key: up.key }), 400, /isn't uploaded/);
+    objects.set(up.key, true);
+    const { pic } = await call(ada, 'POST', pics, { key: up.key });
+    expect(pic).toMatchObject({ planId, key: up.key, uploaderId: ids.Ada, fromChat: false });
+    expect(objects.get(up.key)).toBe(false);
+    // Another plan's key, or a key that isn't one, is refused.
+    await fails(call(ada, 'POST', pics, { key: 'plans/other/abcdefgh.jpg' }), 400, /this plan/);
+    await fails(call(ada, 'POST', pics, { key: `chat/${planId}/abcdefgh.jpg` }), 400);
+
+    // A photo sent in the chat joins them; a video doesn't.
+    const media = await call(ada, 'POST', `/api/plans/${planId}/media`, { contentType: 'image/png' });
+    const video = await call(ada, 'POST', `/api/plans/${planId}/media`, { contentType: 'video/mp4' });
+    objects.set(media.key, true);
+    objects.set(video.key, true);
+    await call(ada, 'POST', `/api/plans/${planId}/messages`, { attachment: media.key });
+    await call(ada, 'POST', `/api/plans/${planId}/messages`, { attachment: video.key });
+    const listed = await call(ada, 'GET', pics);
+    expect(listed.member).toBe(true);
+    expect(listed.yours.map((p: any) => [p.key, p.fromChat])).toEqual([[up.key, false], [media.key, true]]);
+    expect(Object.keys(listed.climbers)).toEqual([ids.Ada]);
+
+    // Outsiders see no Your Pics.
+    expect(await call(ben, 'GET', pics)).toMatchObject({ yours: [], member: false });
+
+    // Ben joins. He can't delete Ada's photo; the organizer and admins can.
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/accept`);
+    const chatPic = listed.yours[1];
+    await fails(call(ben, 'DELETE', `${pics}/${pic.id}`), 403);
+    await call(ada, 'DELETE', `${pics}/${pic.id}`);
+    expect(removed).toEqual([up.key]);
+    // A chat photo leaves the pics, not the chat.
+    await call(root, 'DELETE', `${pics}/${chatPic.id}`);
+    expect(removed).toEqual([up.key]);
+    expect((await call(ada, 'GET', pics)).yours).toEqual([]);
+    expect((await call(ada, 'GET', `/api/plans/${planId}/messages`)).messages.some((m: any) => m.attachment?.key === media.key)).toBe(true);
+    await fails(call(ada, 'DELETE', `${pics}/${pic.id}`), 404);
+  });
+
+  it('plan pics: at most 100; a full plan keeps new chat photos in the chat only', async () => {
+    for (let i = 0; i < 100; i++) {
+      store.pics.push({ id: `p${i}`, planId, key: `plans/${planId}/k${i}xxxxxxx.jpg`, uploaderId: ids.Ada!, time: now.toISOString(), fromChat: false });
+    }
+    const up = await call(ada, 'POST', `/api/plans/${planId}/pics/upload`, { contentType: 'image/webp' });
+    objects.set(up.key, true);
+    await fails(call(ada, 'POST', `/api/plans/${planId}/pics`, { key: up.key }), 409, /at most 100/);
+    const media = await call(ada, 'POST', `/api/plans/${planId}/media`, { contentType: 'image/jpeg' });
+    objects.set(media.key, true);
+    await call(ada, 'POST', `/api/plans/${planId}/messages`, { attachment: media.key });
+    expect(store.pics).toHaveLength(100);
+  });
+
+  it("GriGri Pics: the plan's crag, then its area", async () => {
+    const photo = (name: string) => ({ key: `crags/x/${name}.jpg`, width: 1600, height: 1067, caption: name, author: 'A. Example', license: 'CC BY-SA 4.0', licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/', source: 'https://commons.wikimedia.org/wiki/File:X.jpg' });
+    catalog = {
+      generatedAt: '2030-01-01T00:00:00Z',
+      crags: [
+        { id: 'area:siurana', name: 'Siurana', area: 'Siurana', lat: 41.2577, lon: 0.9318, photos: [photo('village')] },
+        { id: 'osm:n1', name: "L'Olla", area: 'Siurana', lat: 41.2569, lon: 0.9302, photos: [photo('olla')] },
+        { id: 'osm:n2', name: 'El Pati', area: 'Siurana', lat: 41.2602, lon: 0.9380, photos: [photo('pati')] },
+      ],
+    };
+    // A plan typed by hand at "l'olla, Siurana": the crag by name, then the area by name.
+    const typed = (await call(ada, 'POST', '/api/plans', { ...planBody, place: "l'olla", area: 'Siurana, Spain' })).plan.id;
+    const got = await call(ben, 'GET', `/api/plans/${typed}/pics`);
+    expect(got.grigri.map((p: any) => [p.crag, p.caption])).toEqual([["L'Olla", 'olla'], ['Siurana', 'village']]);
+    // A plan at El Pati's sector: its own, then L'Olla (0.85 km away), then the area.
+    const atPati = (await call(ada, 'POST', '/api/plans', { ...planBody, place: 'El Pati', sectorId: 'osm:n2', lat: 41.2602, lon: 0.938 })).plan.id;
+    expect((await call(ada, 'GET', `/api/plans/${atPati}/pics`)).grigri.map((p: any) => p.cragId)).toEqual(['osm:n2', 'osm:n1', 'area:siurana']);
+    // Nowhere near: none. The lookup route takes a point.
+    expect((await call(ada, 'GET', `/api/plans/${planId}/pics`)).grigri).toEqual([]);
+    const near = await call(ada, 'GET', '/api/pics', undefined, { lat: '41.2570', lon: '0.9300' });
+    expect(near.pics.map((p: any) => p.cragId)).toEqual(['osm:n1', 'osm:n2', 'area:siurana']);
+    await fails(call(ada, 'GET', '/api/pics', undefined, { lat: 'x' }), 400);
   });
 
   it('unknown routes and bad ids', async () => {

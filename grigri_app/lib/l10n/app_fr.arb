@@ -242,5 +242,18 @@
   "blockNameQuestion": "Bloquer {name} ?",
   "blockMessage": "Cette personne ne pourra plus utiliser Grigri jusqu'à ce que vous la débloquiez, et ses sorties disparaissent de Découvrir pour tous.",
   "blockedTitle": "Votre compte est bloqué",
-  "blockedMessage": "Un administrateur a bloqué votre compte : vous ne pouvez pas utiliser Grigri pour l'instant."
+  "blockedMessage": "Un administrateur a bloqué votre compte : vous ne pouvez pas utiliser Grigri pour l'instant.",
+  "yourPics": "Tes photos",
+  "grigriPics": "GriGri Pics",
+  "yourPicsEmpty": "Pas encore de photos. Ajoutes-en une, ou envoie-la dans le chat.",
+  "grigriPicsEmpty": "Pas encore de GriGri Pics de cet endroit.",
+  "addPlanPic": "Ajouter une photo au plan",
+  "deletePic": "Supprimer la photo",
+  "deletePicQuestion": "Supprimer cette photo ?",
+  "deletePicMessage": "Elle quitte les photos du plan pour tout le monde.",
+  "deleteChatPicMessage": "Elle quitte les photos du plan ; le chat la garde.",
+  "delete": "Supprimer",
+  "picCredit": "Photo : {author}, {license}",
+  "picAddedBy": "Ajoutée par {name}",
+  "picFromChat": "Envoyée dans le chat par {name}"
 }
