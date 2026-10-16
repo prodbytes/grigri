@@ -15,7 +15,8 @@ An admin can list everyone and block or unblock them ([admin.md](admin.md)).
 - One TypeScript Lambda (Node.js 22, arm64, 256 MB) with an internal router,
   behind one API Gateway **HTTP API** ($1/M requests), served under `/api/*`
   by the site's existing CloudFront distribution (same origin as the web
-  app, so no CORS in prod).
+  app, so no CORS in prod), and only through it: a request that skips it
+  gets 403 ([origin check](origin-check.md)).
 - One DynamoDB table, on-demand (PAY_PER_REQUEST), single-table design,
   point-in-time recovery on in prod only.
 - Photos, and the chat's photos and videos, in S3 (private), uploaded with
@@ -172,7 +173,8 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
 `{"error": "<message>"}` with 400 (invalid input), 401 (`signed out`: no,
 unknown or expired session token; or a bad Google ID token at
 `POST /api/session`),
-403 (not allowed), 404 (no such thing or route), 409 (conflict: already
+403 (not allowed; `use the site` for a request that didn't come through
+the site's CloudFront, [origin check](origin-check.md)), 404 (no such thing or route), 409 (conflict: already
 asked, already a member, changed meanwhile), 413 (body over 64 KB), 415
 (a body that isn't `application/json`), 429 (too soon: a nudge within 12
 hours of the last), 500 (`{"error": "internal error"}`;

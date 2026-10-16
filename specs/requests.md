@@ -885,3 +885,23 @@ spec.
       gives each plan's cover, its best GriGri Pics photo with credit.
     - Cost: none new; the covers come from the catalog the function
       already keeps, and the photos are served by the site's CloudFront.
+63. **Just like presence and tabscan, make sure our APIs can be used only
+    by our client.**
+    - Presence's mechanism, since tabscan's APIs have none: the
+      [origin check](origin-check.md) (new). The site's CloudFront sends
+      the API a secret header (`x-grigri-origin-verify`), and the API
+      function refuses a request without it (403 `use the site`), so the
+      API answers only through `https://grigri.nu01.com/api/...` (or the
+      RC site), never at its `execute-api` host. No client holds the
+      secret, and the app is unchanged.
+    - [Deploy](deploy.md): the secret is `GRIGRI_ORIGIN_SECRET` or derived
+      per stage from `GRIGRI_RBACR_TOKEN` (no new CI secret). The API
+      demands it only once the site already sends it (two deploys to turn
+      it on), and the smoke test checks that a direct call gets 403.
+      Local is unchanged (no secret).
+    - [API](api.md): the 403 and where it comes from.
+    - Limits, as in presence: a script calling through the site with a
+      session token from a real Google sign-in looks like the app. Only
+      attestation (Play Integrity, App Attest) could tell them apart, and
+      that isn't done.
+    - Cost: none.

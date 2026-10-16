@@ -25,7 +25,10 @@ for that tag:
    stage's artifact bucket (`aws cloudformation package`) and deploys the
    `grigri-api` stack (function, which verifies Google ID tokens for
    `GOOGLE_WEB_CLIENT_ID` and issues sessions; HTTP API; DynamoDB table
-   with TTL; admins from rbacr, asked with `GRIGRI_RBACR_TOKEN`, optional:
+   with TTL; the [origin check](origin-check.md)'s secret, `GRIGRI_ORIGIN_SECRET`
+   or derived per stage from `GRIGRI_RBACR_TOKEN`, demanded by the API only
+   once the site already sends it (so turning it on takes two deploys);
+   admins from rbacr, asked with `GRIGRI_RBACR_TOKEN`, optional:
    without it the deploy warns and nobody is an admin; the
    [match scores](match-scores.md) table and scoring function, with
    `GRIGRI_AITYX_API_KEY` (and `GRIGRI_AITYX_URL`), optional: without it

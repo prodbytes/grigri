@@ -54,6 +54,16 @@ Parameters:
     Description: >
       An rbacr API token owned by an rbacr root (the RBACR_TOKEN secret),
       to ask rbacr about callers' roles. Empty: nobody is an admin.
+  OriginSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '([A-Za-z0-9_-]{32,})?'
+    Description: >
+      The secret the site's CloudFront sends in x-grigri-origin-verify
+      (specs/origin-check.md); the API function refuses a request without
+      it. Empty: every request is taken (local, and the first deploy,
+      before the site sends it).
   AityxUrl:
     Type: String
     Default: https://api.aityx.ai
@@ -384,6 +394,7 @@ Resources:
           DEV_MODE: !Ref DevMode
           IOT_ENDPOINT: !Ref IotEndpoint
           IOT_AUTHORIZER: !If [CreateIotAuthorizer, !Sub '${AWS::StackName}-realtime', '']
+          ORIGIN_SECRET: !Ref OriginSecret
           AITYX_URL: !Ref AityxUrl
           AITYX_API_KEY: !Ref AityxApiKey
           # Reuse TCP connections to DynamoDB between invocations.

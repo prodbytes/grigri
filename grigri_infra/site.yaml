@@ -31,6 +31,15 @@ Parameters:
       The API's execute-api host name (the <prefix>-api stack's ApiDomain
       output, grigri_api/template.yaml); scripts/deploy.sh deploys that
       stack first and passes it.
+  OriginSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '([A-Za-z0-9_-]{32,})?'
+    Description: >
+      Sent to the API in x-grigri-origin-verify on every /api/* request, so
+      it answers only through here (specs/origin-check.md). CloudFront
+      overwrites a viewer's header of that name. Empty: none sent.
   IotEndpoint:
     Type: String
     Default: ''
@@ -43,6 +52,7 @@ Parameters:
 
 Conditions:
   HasIot: !Not [!Equals [!Ref IotEndpoint, '']]
+  HasOriginSecret: !Not [!Equals [!Ref OriginSecret, '']]
 
 Resources:
   Certificate:
@@ -437,6 +447,12 @@ Resources:
           # (/api/plans -> /api/plans).
           - Id: api
             DomainName: !Ref ApiDomainName
+            # Proves to the API it came through here (origin-check.md).
+            OriginCustomHeaders: !If
+              - HasOriginSecret
+              - - HeaderName: x-grigri-origin-verify
+                  HeaderValue: !Ref OriginSecret
+              - !Ref AWS::NoValue
             CustomOriginConfig:
               OriginProtocolPolicy: https-only
               OriginSSLProtocols:
@@ -518,6 +534,10 @@ Resources:
         EvaluateTargetHealth: false
 
 Outputs:
+  # Whether CloudFront sends the API the origin secret: the deploy has the
+  # API demand it only once this is true (origin-check.md).
+  OriginVerified:
+    Value: !If [HasOriginSecret, 'true', 'false']
   SiteUrl:
     Value: !Sub https://${DomainName}/
   SiteBucketName:

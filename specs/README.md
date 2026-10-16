@@ -61,6 +61,9 @@ Each match opens the plan's group chat.
   sign-in sessions (365 days without use); admins; local dev mode; live
   updates' IoT Core pieces; costs.
 - [API](api.md): the routes and JSON shapes the app uses, and sessions.
+- [Origin check](origin-check.md): the API answers only through the
+  site's CloudFront (a secret header only CloudFront sends), never at its
+  own host.
 
 **Development and operations**
 
