@@ -163,6 +163,10 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   photo's `chat/<planId>/...` (`fromChat`).
 - **GrigriPic** (a GriGri Pics photo): `{"key", "width", "height", "caption", "author", "license", "licenseUrl", "source", "cragId", "crag"}`.
   Served at `/pics/<key>`; `crag` is the crag's (or area's) name.
+- **Wall** (the route finder's): `{"id", "name", "cragId"?, "lat", "lon", "views": [{"key", "width", "height", "h": [9], "addedBy", "time"}], "routes": [Route], "createdBy", "createdAt"}`.
+  The first view is the one routes are drawn on (`h` the identity); every
+  `h` takes its view's pixels to the first view's.
+- **Route**: `{"id", "name", "grade": {"scale", "grade"}, "bolts": [[x, y], ...], "addedBy", "time"}`.
 - **Match**: `{"plan": Plan, "newcomerId"}`
 - Responses that list plans, requests, notices or messages also return
   `"climbers": {id: Climber}` for every climber they mention, so the app
@@ -220,6 +224,12 @@ and `POST /api/stripe/webhook` (signed by Stripe instead).
 | `POST /api/plans/{id}/pics/upload` | members only (403); body `{"contentType"}`: `image/jpeg`, `image/png` or `image/webp` (400 otherwise). → `{"key", "url", "fields", "maxBytes"}`: a presigned POST (≤ 2 MB) for `plans/<planId>/<random>.<ext>` (object `photos/plans/...`), tagged pending, as `POST /api/photos` gives |
 | `POST /api/plans/{id}/pics` | members only; body `{"key"}`, a key the route above issued for this plan (400 otherwise). It loses its pending tag (400 if it isn't uploaded, or expired) and joins the plan's Your Pics. The same key again gives the same photo. 409 when the plan has 100. → `{"pic": PlanPic}` |
 | `DELETE /api/plans/{id}/pics/{picId}` | whoever added it, the organizer or an admin (403 otherwise; 404 for no such photo). A photo added here is deleted from S3; a chat photo only leaves the pics (the chat keeps it). → `{}` |
+| `GET /api/walls?lat=&lon=` | **premium** ([route finder](route-finder.md)): the walls within 3 km, nearest first (20 at most) → `{"walls": [Wall], "climbers"}`. 400 without both |
+| `POST /api/walls/photo` | premium; body `{"contentType"}` (JPEG, PNG or WebP) → `{"key", "url", "fields", "maxBytes"}`: a presigned POST (≤ 2 MB) for `walls/<subject hash>/<random>.<ext>`, pending until a wall or view uses it |
+| `POST /api/walls` | premium; body `{"name" (1–60), "lat", "lon", "cragId"?, "view": {"key" (mine, uploaded), "width", "height" (64–8192)}}` → `{"wall"}`, the photo its first view |
+| `POST /api/walls/{id}/routes` | premium; body `{"name", "grade": {"scale": "routes"\|"boulders", "grade": index}, "bolts": [[x, y], ...]}` (2–40 points, 0..1 of the first view, from the ground up) → `{"wall"}`. 409 past 80 routes |
+| `DELETE /api/walls/{id}/routes/{routeId}` | premium; whoever drew it, or an admin (403) → `{"wall"}` |
+| `POST /api/walls/{id}/views` | premium; the app learns the wall: body `{"key" (mine, uploaded), "width", "height", "h": [9 numbers]}` (this view's pixels → the first view's) → `{"wall"}`. Past 12 views the oldest learned one goes (its photo deleted) |
 | `GET /api/pics?lat=&lon=&sector=&place=&area=` | GriGri Pics for a place (any of them; `lat` and `lon` both or neither, 400 otherwise) → `{"pics": [GrigriPic]}` |
 | `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 15 minutes (room for a chat video on a slow line). The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
 | `GET /api/premium` | my [Premium](premium.md) and its prices: `{"premium", "prices": {"monthly": {"amount": 2000, "currency": "usd"}, "yearly": {"amount": 20000, …}} \| null}` (null: the stage has no Stripe keys) |

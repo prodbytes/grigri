@@ -560,6 +560,17 @@ class GrigriStore extends ChangeNotifier {
   /// The status of an answer that came after a sign-out: dropped quietly.
   static const _stale = -1;
 
+  /// An error from a call made outside the store (the route finder's), as
+  /// the store's own: a 401 signs out; the rest go to [errors].
+  void report(ApiException e) {
+    if (e.status == 401) {
+      _errors.add(l10n.errorSignedOut);
+      unawaited(auth.signedOut());
+      return;
+    }
+    _errors.add(_describe(e));
+  }
+
   /// Runs an action: its error, in the server's words, goes to [errors].
   Future<T?> _act<T>(Future<T> Function() call) async {
     try {

@@ -1,8 +1,10 @@
 # Premium
 
 A subscription that lets a climber **advertise on Grigri** (their
-[ads](ads.md)). Everything else stays the same for
-everyone, Premium or not: climbing, matching, chats, every feature.
+[ads](ads.md)) and use the **[route finder](route-finder.md)** (routes on
+the rock through the camera). Everything else stays the same for
+everyone, Premium or not: climbing, matching, chats, every other
+feature. Admins get both without subscribing.
 
 ## Price
 

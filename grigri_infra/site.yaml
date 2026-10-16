@@ -360,9 +360,10 @@ Resources:
         CustomHeadersConfig:
           Items:
             # The app takes where I climb from the browser's location
-            # (specs/matching.md); nothing needs the camera or microphone.
+            # (specs/matching.md), and the route finder uses the camera
+            # (specs/route-finder.md); nothing needs the microphone.
             - Header: Permissions-Policy
-              Value: camera=(), microphone=(), geolocation=(self)
+              Value: camera=(self), microphone=(), geolocation=(self)
               Override: true
 
   # The index page (/): its only script is the redirect to /app/, allowed

@@ -2,9 +2,11 @@ import 'dart:typed_data';
 
 import '../model/ad.dart';
 import '../model/climber.dart';
+import '../model/climbing.dart';
 import '../model/match_score.dart';
 import '../model/pics.dart';
 import '../model/plan.dart';
+import '../model/walls.dart';
 import '../model/premium.dart';
 import 'realtime.dart';
 
@@ -17,6 +19,10 @@ abstract interface class GrigriApi {
 
   /// Where a GriGri Pics photo is served: `<site>/pics/<key>`.
   Uri picUrl(String key);
+
+  /// A photo's bytes, from where [photoUrl] says (the route finder reads
+  /// walls' reference photos itself).
+  Future<Uint8List> photoBytes(String key);
 
   /// `GET /api/me`: my profile (null until I save one) and whether I'm an
   /// admin.
@@ -118,6 +124,45 @@ abstract interface class GrigriApi {
     PhotoUpload upload,
     Uint8List bytes, {
     void Function(double sent)? onProgress,
+  });
+
+  /// `GET /api/walls?lat=&lon=`: the route finder's walls near a point
+  /// (premium).
+  Future<List<Wall>> walls(double lat, double lon);
+
+  /// `POST /api/walls/photo`: where to upload a wall's reference photo.
+  Future<PhotoUpload> newWallPhoto(String contentType);
+
+  /// `POST /api/walls`: a new wall, from its first photo.
+  Future<Wall> createWall({
+    required String name,
+    required double lat,
+    required double lon,
+    String? cragId,
+    required String key,
+    required int width,
+    required int height,
+  });
+
+  /// `POST /api/walls/{id}/routes`: a route drawn on a wall.
+  Future<Wall> addRoute(
+    String wallId, {
+    required String name,
+    required GradeScale scale,
+    required int grade,
+    required List<(double, double)> bolts,
+  });
+
+  /// `DELETE /api/walls/{id}/routes/{routeId}`.
+  Future<Wall> deleteRoute(String wallId, String routeId);
+
+  /// `POST /api/walls/{id}/views`: the app learns a wall from another view.
+  Future<Wall> addWallView(
+    String wallId, {
+    required String key,
+    required int width,
+    required int height,
+    required List<double> h,
   });
 
   /// `GET /api/premium`: my Premium, and its prices (none when it can't be
@@ -458,6 +503,12 @@ abstract final class ApiJson {
         : null,
     premium: Premium.fromJson(json['premium']),
   );
+
+  static List<Wall> walls(Map<String, Object?> json) =>
+      _list(json['walls']).map(Wall.fromJson).toList();
+
+  static Wall wall(Map<String, Object?> json) =>
+      Wall.fromJson(_map(json['wall']));
 
   static PremiumOffer premiumOffer(Map<String, Object?> json) =>
       PremiumOffer(Premium.fromJson(json['premium']), {

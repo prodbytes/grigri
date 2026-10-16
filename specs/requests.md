@@ -949,3 +949,27 @@ spec.
       [Premium](premium.md), [Backend](backend.md#cost) revised to match;
       the bar has up to seven tabs.
     - Cost: nothing idle; a couple of reads per deck.
+
+67. **A premium-only camera view: the routes on the rock drawn bolt by
+    bolt, labeled with their grade, so climbers see which route is
+    which; climbers record and annotate new routes, and the app learns
+    them.**
+    - [Route finder](route-finder.md) (new): walls (reference photos and
+      the routes drawn on the first), recognized on the phone by matching
+      the camera's frames to the views (FAST corners, upright BRIEF,
+      RANSAC homography, in plain Dart, in a background isolate); the
+      routes drawn over the rock with their grade and name; recording a
+      route bolt by bolt on a photo (new rock becomes a wall); learning a
+      wall from each confirmed view (12 at most). The web finds routes on
+      a photo.
+    - [Premium](premium.md): the route finder is Premium's first feature
+      besides ads (an active subscription, or an admin; checked by the
+      API on every `/api/walls` route).
+    - [API](api.md): `/api/walls` (lookup, photo upload, create, routes,
+      views), premium only; walls in the table's gsi1 `WALLS` partition,
+      views in the photos bucket under `photos/walls/`.
+    - [Screens](screens.md): **Routes on the rock** on the plan screen.
+    - The site's `Permissions-Policy` allows the camera to the app
+      (`camera=(self)`); the iOS camera prompt mentions routes.
+    - Cost: nothing per frame (on the phone); ~$0.0001 a wall a month
+      ([backend](backend.md#cost)).

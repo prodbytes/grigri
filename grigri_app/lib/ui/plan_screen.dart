@@ -7,6 +7,7 @@ import 'common.dart';
 import 'chat_media.dart';
 import 'plan_editor.dart';
 import 'plan_pics.dart';
+import 'route_finder_screen.dart';
 
 /// One plan I'm in, or asked to join: the plan, its photos ("Your Pics"
 /// and GriGri Pics), its group, who's asking to join (answered in the group
@@ -150,6 +151,27 @@ class _PlanScreenState extends State<PlanScreen> {
               ),
           ],
           const SizedBox(height: 24),
+          // Premium: the routes on the rock, through the camera, where the
+          // plan is (or, for a place typed by hand, where I am).
+          if ((store.premium.active || store.admin) &&
+              (plan.lat != null || store.me.location != null)) ...[
+            OutlinedButton.icon(
+              key: const ValueKey('route finder'),
+              icon: const Icon(Icons.view_in_ar),
+              label: Text(l.routeFinder),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => RouteFinderScreen(
+                    lat: plan.lat ?? store.me.location!.lat,
+                    lon: plan.lon ?? store.me.location!.lon,
+                    place: plan.place,
+                    cragId: plan.sectorId,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           if (member) ...[
             FilledButton.icon(
               icon: const Icon(Icons.forum_outlined),

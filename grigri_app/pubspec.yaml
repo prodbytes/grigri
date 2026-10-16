@@ -59,6 +59,7 @@ dependencies:
   # Plays chat videos (specs/platforms.md): Flutter's own plugin, no
   # native-assets hook.
   video_player: ^2.14.1
+  camera: ^0.12.1
   # Opens links in the browser: Stripe's Checkout and billing portal
   # (specs/premium.md), and an ad's link (specs/ads.md).
   url_launcher: ^6.3.2

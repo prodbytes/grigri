@@ -54,6 +54,14 @@ and a file chooser on the web (the site's CSP already allows `data:` and
 `blob:` images). They're uploaded to the backend's photo store
 ([matching](matching.md#data-the-backend-api)).
 
+**The route finder's camera** ([route-finder.md](route-finder.md)) is
+the [camera](https://pub.dev/packages/camera) plugin (Flutter's own:
+CameraX on Android, which declares the camera permission itself;
+AVFoundation on iOS, with `NSCameraUsageDescription`; `getUserMedia` on
+the web, allowed by the site's `Permissions-Policy: camera=(self)`).
+Phones stream frames (YUV on Android, BGRA on iOS) to the recognizer; the
+web, which gives none, takes photos.
+
 **Chat videos** play with [video_player](https://pub.dev/packages/video_player)
 (Flutter's own plugin: ExoPlayer on Android, AVPlayer on iOS, a `<video>`
 element on the web), streamed from the site's `/photos/` (same origin on

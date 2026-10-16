@@ -6,7 +6,9 @@ import 'package:http/http.dart' as http;
 
 import '../model/ad.dart';
 import '../model/climber.dart';
+import '../model/climbing.dart';
 import '../model/pics.dart';
+import '../model/walls.dart';
 import '../model/plan.dart';
 import '../model/premium.dart';
 import '../log.dart';
@@ -45,6 +47,34 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Uri photoUrl(String key) =>
       origin.replace(pathSegments: ['photos', ...key.split('/')]);
+
+  @override
+  Future<Uint8List> photoBytes(String key) async {
+    final http.Response response;
+    try {
+      response = await _client.get(photoUrl(key)).timeout(timeout);
+    } on TimeoutException {
+      throw const ApiException(
+        0,
+        'The photo took too long.',
+        client: ClientError.photoTimeout,
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        0,
+        "Couldn't reach the photo.",
+        client: ClientError.photoUnreachable,
+      );
+    }
+    if (response.statusCode != 200) {
+      throw ApiException(
+        response.statusCode,
+        "Couldn't load the photo.",
+        client: ClientError.photoFailed,
+      );
+    }
+    return response.bodyBytes;
+  }
 
   @override
   Uri picUrl(String key) =>
@@ -259,6 +289,77 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
         await _post(['plans', planId, 'media'], {'contentType': contentType}),
         contentType,
       );
+
+  @override
+  Future<List<Wall>> walls(double lat, double lon) async =>
+      ApiJson.walls(await _get(['walls'], {'lat': '$lat', 'lon': '$lon'}));
+
+  @override
+  Future<PhotoUpload> newWallPhoto(String contentType) async =>
+      ApiJson.photoUpload(
+        await _post(['walls', 'photo'], {'contentType': contentType}),
+        contentType,
+      );
+
+  @override
+  Future<Wall> createWall({
+    required String name,
+    required double lat,
+    required double lon,
+    String? cragId,
+    required String key,
+    required int width,
+    required int height,
+  }) async => ApiJson.wall(
+    await _post(
+      ['walls'],
+      {
+        'name': name,
+        'lat': lat,
+        'lon': lon,
+        'cragId': ?cragId,
+        'view': {'key': key, 'width': width, 'height': height},
+      },
+    ),
+  );
+
+  @override
+  Future<Wall> addRoute(
+    String wallId, {
+    required String name,
+    required GradeScale scale,
+    required int grade,
+    required List<(double, double)> bolts,
+  }) async => ApiJson.wall(
+    await _post(
+      ['walls', wallId, 'routes'],
+      {
+        'name': name,
+        'grade': {'scale': scale.name, 'grade': grade},
+        'bolts': [
+          for (final (x, y) in bolts) [x, y],
+        ],
+      },
+    ),
+  );
+
+  @override
+  Future<Wall> deleteRoute(String wallId, String routeId) async =>
+      ApiJson.wall(await _send('DELETE', ['walls', wallId, 'routes', routeId]));
+
+  @override
+  Future<Wall> addWallView(
+    String wallId, {
+    required String key,
+    required int width,
+    required int height,
+    required List<double> h,
+  }) async => ApiJson.wall(
+    await _post(
+      ['walls', wallId, 'views'],
+      {'key': key, 'width': width, 'height': height, 'h': h},
+    ),
+  );
 
   @override
   Future<PlanPicsList> planPics(String planId) async =>

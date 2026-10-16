@@ -19,6 +19,8 @@ export const key = {
   message: (planId: string, time: string, messageId: string) => ({ pk: `PLAN#${planId}`, sk: `MSG#${time}#${messageId}` }),
   /** A photo in the plan's "Your Pics". */
   pic: (planId: string, picId: string) => ({ pk: `PLAN#${planId}`, sk: `PIC#${picId}` }),
+  /** A wall of the route finder, its views and routes in one item. */
+  wall: (wallId: string) => ({ pk: `WALL#${wallId}`, sk: 'WALL' }),
   /** A climber's Premium subscription, as last read from Stripe (src/premium.ts). */
   premium: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'PREMIUM' }),
   /** An ad (src/domain/ads.ts). */
@@ -44,6 +46,7 @@ export const index = {
   byStart: { name: 'gsi1', pk: 'PLANS' },
   openRequests: { name: 'gsi1', pk: 'OPENREQ' },
   climbers: { name: 'gsi1', pk: 'CLIMBERS' },
+  walls: { name: 'gsi1', pk: 'WALLS' },
   adsByStatus: { name: 'gsi1', pk: (status: string) => `ADS#${status}` },
   asked: { name: 'gsi2', pk: (climberId: string) => `ASKED#${climberId}` },
   adsBy: { name: 'gsi2', pk: (ownerId: string) => `ADSBY#${ownerId}` },

@@ -46,6 +46,9 @@ Each match opens the plan's group chat.
 - [Languages](i18n.md): English, Spanish, German, French, Portuguese and
   Catalan; the language picker in the profile, kept on the device; the
   translation bundles and the test that keeps them complete.
+- [Route finder](route-finder.md) (Premium): routes on the rock through
+  the camera, recognized on the phone; recording routes bolt by bolt, and
+  learning walls from confirmed views.
 - [Premium](premium.md): $20 a month or $200 a year, for advertising
   only; paid through Stripe Checkout, managed in Stripe's billing
   portal, kept in step by Stripe's webhook.

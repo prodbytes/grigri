@@ -1527,5 +1527,109 @@
   "adminAdsEmpty": "No ads here",
   "@adminAdsEmpty": {
     "description": "Admin ads: none in this status."
+  },
+  "routeFinder": "Routes on the rock",
+  "@routeFinder": {
+    "description": "Route finder (premium): the screen's title and the plan screen's button."
+  },
+  "routeFinderLoading": "Getting the walls here ready…",
+  "@routeFinderLoading": {
+    "description": "Route finder (premium): routeFinderLoading."
+  },
+  "routeFinderNoWalls": "No walls known here yet. Record the first route.",
+  "@routeFinderNoWalls": {
+    "description": "Route finder (premium): routeFinderNoWalls."
+  },
+  "routeFinderSeen": "{wall}: {count, plural, =0{no routes yet} =1{1 route} other{{count} routes}}",
+  "@routeFinderSeen": {
+    "description": "Route finder: the wall in sight and how many routes it has.",
+    "placeholders": {
+      "wall": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "routeFinderPoint": "Point the camera at the wall",
+  "@routeFinderPoint": {
+    "description": "Route finder (premium): routeFinderPoint."
+  },
+  "routeFinderSnap": "Take a photo of the wall to find its routes",
+  "@routeFinderSnap": {
+    "description": "Route finder (premium): routeFinderSnap."
+  },
+  "cameraUnavailable": "The camera isn't available.",
+  "@cameraUnavailable": {
+    "description": "Route finder (premium): cameraUnavailable."
+  },
+  "recordRoute": "Record a route",
+  "@recordRoute": {
+    "description": "Route finder (premium): recordRoute."
+  },
+  "teachView": "Learn this view",
+  "@teachView": {
+    "description": "Route finder (premium): teachView."
+  },
+  "findRoutes": "Find routes",
+  "@findRoutes": {
+    "description": "Route finder (premium): findRoutes."
+  },
+  "learnedView": "Thanks! Grigri knows this wall better now.",
+  "@learnedView": {
+    "description": "Route finder (premium): learnedView."
+  },
+  "needTwoBolts": "Tap at least two bolts.",
+  "@needTwoBolts": {
+    "description": "Route finder (premium): needTwoBolts."
+  },
+  "routeSaved": "Route saved.",
+  "@routeSaved": {
+    "description": "Route finder (premium): routeSaved."
+  },
+  "undoBolt": "Undo the last bolt",
+  "@undoBolt": {
+    "description": "Route finder (premium): undoBolt."
+  },
+  "tapBolts": "Tap each bolt, from the ground up to the anchor",
+  "@tapBolts": {
+    "description": "Route finder (premium): tapBolts."
+  },
+  "tapBoltsNewWall": "New rock: tap each bolt, from the ground up. This photo will teach Grigri the wall.",
+  "@tapBoltsNewWall": {
+    "description": "Route finder (premium): tapBoltsNewWall."
+  },
+  "notRecognized": "Grigri didn't recognize this wall.",
+  "@notRecognized": {
+    "description": "Route finder (premium): notRecognized."
+  },
+  "saveRoute": "Save the route",
+  "@saveRoute": {
+    "description": "Route finder (premium): saveRoute."
+  },
+  "newWallNote": "A new wall: this photo will teach Grigri what it looks like.",
+  "@newWallNote": {
+    "description": "Route finder (premium): newWallNote."
+  },
+  "wallName": "Wall",
+  "@wallName": {
+    "description": "Route finder (premium): wallName."
+  },
+  "routeName": "Route name",
+  "@routeName": {
+    "description": "Route finder (premium): routeName."
+  },
+  "routeScale": "Route",
+  "@routeScale": {
+    "description": "Route finder (premium): routeScale."
+  },
+  "boulderScale": "Boulder",
+  "@boulderScale": {
+    "description": "Route finder (premium): boulderScale."
+  },
+  "routeGrade": "Grade",
+  "@routeGrade": {
+    "description": "Route finder (premium): routeGrade."
   }
 }

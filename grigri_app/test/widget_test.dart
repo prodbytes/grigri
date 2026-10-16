@@ -814,13 +814,15 @@ void main() {
       WidgetTester tester, {
       List<ChatMedia?> picks = const [],
       bool member = true,
+      bool premium = false,
     }) async {
       tester.view.physicalSize = const Size(1080, 2340);
       tester.view.devicePixelRatio = 2.6;
       addTearDown(tester.view.reset);
-      final api = sampleApi();
+      final api = sampleApi()..myPremium = Premium(active: premium);
       api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
         memberIds: member ? ['robin', 'me'] : ['robin'],
+        point: () => (lat: 41.2577, lon: 0.9318),
       );
       api.grigriPics['crag-day'] = const [
         GrigriPic(
@@ -910,6 +912,16 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.textContaining('Sent in the chat by'), findsOneWidget);
       expect(find.byTooltip('Delete photo'), findsNothing);
+    });
+
+    testWidgets('the route finder: on the plan for premium climbers only', (
+      tester,
+    ) async {
+      await openPlan(tester);
+      expect(find.byKey(const ValueKey('route finder')), findsNothing);
+      await openPlan(tester, premium: true);
+      expect(find.byKey(const ValueKey('route finder')), findsOneWidget);
+      expect(find.text('Routes on the rock'), findsOneWidget);
     });
 
     testWidgets('GriGri Pics show their crag and credit; outsiders see no '

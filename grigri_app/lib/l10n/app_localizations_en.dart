@@ -1072,4 +1072,88 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminAdsEmpty => 'No ads here';
+
+  @override
+  String get routeFinder => 'Routes on the rock';
+
+  @override
+  String get routeFinderLoading => 'Getting the walls here ready…';
+
+  @override
+  String get routeFinderNoWalls =>
+      'No walls known here yet. Record the first route.';
+
+  @override
+  String routeFinderSeen(String wall, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count routes',
+      one: '1 route',
+      zero: 'no routes yet',
+    );
+    return '$wall: $_temp0';
+  }
+
+  @override
+  String get routeFinderPoint => 'Point the camera at the wall';
+
+  @override
+  String get routeFinderSnap => 'Take a photo of the wall to find its routes';
+
+  @override
+  String get cameraUnavailable => 'The camera isn\'t available.';
+
+  @override
+  String get recordRoute => 'Record a route';
+
+  @override
+  String get teachView => 'Learn this view';
+
+  @override
+  String get findRoutes => 'Find routes';
+
+  @override
+  String get learnedView => 'Thanks! Grigri knows this wall better now.';
+
+  @override
+  String get needTwoBolts => 'Tap at least two bolts.';
+
+  @override
+  String get routeSaved => 'Route saved.';
+
+  @override
+  String get undoBolt => 'Undo the last bolt';
+
+  @override
+  String get tapBolts => 'Tap each bolt, from the ground up to the anchor';
+
+  @override
+  String get tapBoltsNewWall =>
+      'New rock: tap each bolt, from the ground up. This photo will teach Grigri the wall.';
+
+  @override
+  String get notRecognized => 'Grigri didn\'t recognize this wall.';
+
+  @override
+  String get saveRoute => 'Save the route';
+
+  @override
+  String get newWallNote =>
+      'A new wall: this photo will teach Grigri what it looks like.';
+
+  @override
+  String get wallName => 'Wall';
+
+  @override
+  String get routeName => 'Route name';
+
+  @override
+  String get routeScale => 'Route';
+
+  @override
+  String get boulderScale => 'Boulder';
+
+  @override
+  String get routeGrade => 'Grade';
 }

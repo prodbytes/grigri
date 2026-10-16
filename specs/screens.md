@@ -40,7 +40,8 @@ is "Alerts" in English.
   Pics** (everyone: wider thumbnails with the crag's name; tap one for
   the photo, its caption and its credit, "Photo: <author>, <license>",
   and its source, tapped to copy; "No GriGri Pics of this place yet"
-  when there are none). Members get
+  when there are none). Premium climbers get **Routes on the rock** (the
+  [route finder](route-finder.md#the-screens)). Members get
   **Group chat** and **Cancel the plan**. Its confirmation ("Cancel the
   plan?", **Keep it** or **Cancel it**) says what happens: alone, the plan
   and its chat are gone; with others, it leaves my plans and chats while

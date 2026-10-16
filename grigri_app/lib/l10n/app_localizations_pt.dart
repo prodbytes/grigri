@@ -1076,4 +1076,90 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get adminAdsEmpty => 'Nenhum anúncio aqui';
+
+  @override
+  String get routeFinder => 'Vias na rocha';
+
+  @override
+  String get routeFinderLoading => 'Preparando as paredes daqui…';
+
+  @override
+  String get routeFinderNoWalls =>
+      'Ainda não há paredes conhecidas aqui. Registre a primeira via.';
+
+  @override
+  String routeFinderSeen(String wall, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count vias',
+      one: '1 via',
+      zero: 'ainda sem vias',
+    );
+    return '$wall: $_temp0';
+  }
+
+  @override
+  String get routeFinderPoint => 'Aponte a câmera para a parede';
+
+  @override
+  String get routeFinderSnap =>
+      'Tire uma foto da parede para encontrar suas vias';
+
+  @override
+  String get cameraUnavailable => 'A câmera não está disponível.';
+
+  @override
+  String get recordRoute => 'Registrar uma via';
+
+  @override
+  String get teachView => 'Aprender esta vista';
+
+  @override
+  String get findRoutes => 'Encontrar vias';
+
+  @override
+  String get learnedView =>
+      'Obrigado! O Grigri agora conhece melhor esta parede.';
+
+  @override
+  String get needTwoBolts => 'Toque pelo menos duas chapeletas.';
+
+  @override
+  String get routeSaved => 'Via salva.';
+
+  @override
+  String get undoBolt => 'Desfazer a última chapeleta';
+
+  @override
+  String get tapBolts => 'Toque cada chapeleta, do chão até a parada';
+
+  @override
+  String get tapBoltsNewWall =>
+      'Rocha nova: toque cada chapeleta, a partir do chão. Esta foto vai ensinar a parede ao Grigri.';
+
+  @override
+  String get notRecognized => 'O Grigri não reconheceu esta parede.';
+
+  @override
+  String get saveRoute => 'Salvar a via';
+
+  @override
+  String get newWallNote =>
+      'Uma parede nova: esta foto vai ensinar ao Grigri como ela é.';
+
+  @override
+  String get wallName => 'Parede';
+
+  @override
+  String get routeName => 'Nome da via';
+
+  @override
+  String get routeScale => 'Via';
+
+  @override
+  String get boulderScale => 'Boulder';
+
+  @override
+  String get routeGrade => 'Grau';
 }
