@@ -832,4 +832,81 @@ class AppLocalizationsEs extends AppLocalizations {
   String errorVideoTooBig(int mb) {
     return 'Los vídeos pueden ocupar como mucho $mb MB: envía uno más corto.';
   }
+
+  @override
+  String matchScore(int percent, String level) {
+    return 'Afinidad $percent% · $level';
+  }
+
+  @override
+  String get matchLevelLongShot => 'poco probable';
+
+  @override
+  String get matchLevelPossible => 'posible';
+
+  @override
+  String get matchLevelGood => 'buena';
+
+  @override
+  String get matchLevelGreat => 'excelente';
+
+  @override
+  String get matchReasonOtherDiscipline => 'No escalas esta disciplina';
+
+  @override
+  String get matchReasonTooHard =>
+      'Sus grados están muy por encima de los tuyos';
+
+  @override
+  String get matchReasonTooEasy =>
+      'Sus grados están muy por debajo de los tuyos';
+
+  @override
+  String get matchReasonStartsSoon => 'Empieza en menos de 12 horas';
+
+  @override
+  String get matchReasonFar => 'A más de 100 km';
+
+  @override
+  String get matchReasonBigGroup =>
+      'Cinco o más personas tienen que decir que sí';
+
+  @override
+  String get matchReasonCrowded => 'Hay diez o más esperando';
+
+  @override
+  String get matchReasonInGradesNearby => 'En tus grados y cerca';
+
+  @override
+  String get matchReasonInGrades => 'En tus grados';
+
+  @override
+  String get matchReasonCloseGrades => 'A uno o dos grados de los tuyos';
+
+  @override
+  String get adminScoresTitle => 'Afinidad';
+
+  @override
+  String get adminScoresNone =>
+      'Aún no se ha calculado. scripts/score-matches.sh puntúa cada perfil frente a cada plan próximo.';
+
+  @override
+  String adminScoresRun(
+    String day,
+    String time,
+    int scored,
+    int pairs,
+    int climbers,
+    int plans,
+  ) {
+    return 'Último cálculo $day, $time: $scored de $pairs pares, $climbers personas × $plans planes';
+  }
+
+  @override
+  String adminScoresProblems(int failed, int skipped) {
+    return '$failed fallidos, $skipped por encima del límite';
+  }
+
+  @override
+  String get adminScoresEmpty => 'El último cálculo no puntuó ningún par.';
 }

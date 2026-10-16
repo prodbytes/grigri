@@ -736,3 +736,27 @@ spec.
     - The `CloudFrontFunctions` statement in `grigri_infra/github-deploy.yaml`
       also allows `cloudfront:TagResource`/`UntagResource` on the stage's
       own functions (`function/<prefix>-*`).
+
+## 2026-10-16
+
+52. **Score how likely a climber and a plan end in a match, with aityx
+    (System One), and show it to admins; score every profile against
+    every plan into a table, previewed on the Admin tab.**
+    - [Match scores](match-scores.md) (new): the decision model
+      (`grigri_api/src/match/model.json`), the facts the API sends, the
+      score, level and reason it answers.
+    - [API](api.md): `GET /api/discover` carries `scores` for admins
+      (the best 30 plans, live); new `GET /api/admin/scores`.
+    - A separate scoring function (`<stack>-scorer`) and table
+      (`<stack>-scores`), run by hand with `scripts/score-matches.sh`;
+      profiles join a new gsi1 `CLIMBERS` partition when saved, and
+      `scripts/index-climbers.sh` adds the older ones once per stage.
+    - [Screens](screens.md): the Discover card shows an admin the score
+      and its reason; the Admin tab opens with the latest run's best
+      scores.
+    - [Deploy](deploy.md): the `GRIGRI_AITYX_API_KEY` secret (optional;
+      no key, no scores) and the `GRIGRI_AITYX_URL` variable.
+    - [docs/match-scores.md](../docs/match-scores.md) (new, and the new
+      docs/ folder): how it works, with references to the key code.
+    - Cost: about $0.00007 of aityx credits per score; nothing while
+      idle ([backend](backend.md#cost)).

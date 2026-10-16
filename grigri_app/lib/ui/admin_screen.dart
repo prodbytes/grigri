@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../data/grigri_store.dart';
+import '../model/match_score.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'match_score.dart';
 
-/// The Admin tab (admins only): every open join request, anyone's, to
-/// approve (they join now, as if every member had said yes) or reject.
+/// The Admin tab (admins only): a preview of the latest match scoring
+/// run, then every open join request, anyone's, to approve (they join
+/// now, as if every member had said yes) or reject.
 class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
 
@@ -28,21 +31,123 @@ class AdminScreen extends StatelessWidget {
       ),
       body: !store.isLoaded(Section.admin)
           ? const Center(child: CircularProgressIndicator())
-          : requests.isEmpty
-          ? EmptyState(
-              icon: Icons.verified_outlined,
-              title: l.noOpenRequestsTitle,
-              message: l.noOpenRequestsMessage,
-            )
           : RefreshIndicator(
               onRefresh: store.refreshAdmin,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  for (final r in requests) _AdminRequestTile(request: r),
+                  const _ScoresPreview(),
+                  const SizedBox(height: 16),
+                  if (requests.isEmpty)
+                    EmptyState(
+                      icon: Icons.verified_outlined,
+                      title: l.noOpenRequestsTitle,
+                      message: l.noOpenRequestsMessage,
+                    )
+                  else
+                    for (final r in requests) _AdminRequestTile(request: r),
                 ],
               ),
             ),
+    );
+  }
+}
+
+/// The latest match scoring run (scripts/score-matches.sh): when, how
+/// many pairs, and its best scores: who, which plan, how likely.
+class _ScoresPreview extends StatelessWidget {
+  const _ScoresPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final run = store.scoreRun;
+    final scores = store.adminScores;
+    final text = Theme.of(context).textTheme;
+    final l = context.l10n;
+    return Card(
+      key: const ValueKey('admin scores'),
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.insights_outlined, color: Mountain.sky),
+                const SizedBox(width: 8),
+                Text(l.adminScoresTitle, style: text.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (run == null)
+              Text(
+                l.adminScoresNone,
+                style: const TextStyle(color: Mountain.granite),
+              )
+            else ...[
+              Text(
+                l.adminScoresRun(
+                  dayLabel(context, run.finishedAt),
+                  clock(run.finishedAt),
+                  run.scored,
+                  run.pairs,
+                  run.climbers,
+                  run.plans,
+                ),
+                style: const TextStyle(color: Mountain.granite),
+              ),
+              if (run.failed > 0 || run.skipped > 0)
+                Text(
+                  l.adminScoresProblems(run.failed, run.skipped),
+                  style: const TextStyle(color: Mountain.clay),
+                ),
+              const SizedBox(height: 6),
+              if (scores.isEmpty)
+                Text(
+                  l.adminScoresEmpty,
+                  style: const TextStyle(color: Mountain.granite),
+                )
+              else
+                for (final s in scores) _ScoreRow(pair: s),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScoreRow extends StatelessWidget {
+  const _ScoreRow({required this.pair});
+
+  final ScoredPair pair;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final person = store.climber(pair.climberId);
+    final plan = store.plan(pair.planId);
+    final l = context.l10n;
+    return ListTile(
+      key: ValueKey('score ${pair.climberId} ${pair.planId}'),
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: Avatar(person),
+      title: Text(
+        '${person.name} → ${plan == null ? l.aPlan : '${plan.discipline.emoji} ${plan.place}'}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        pair.match.reason.label(l),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(color: Mountain.granite),
+      ),
+      trailing: MatchScoreTag(pair.match, compact: true),
+      onTap: () => showProfileSheet(context, person),
     );
   }
 }

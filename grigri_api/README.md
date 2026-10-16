@@ -50,13 +50,14 @@ deploys it to AWS.
 One table, `<stack name>` (`grigri-api`, `grigri-rc-api`,
 `grigri-local-api`), keys `pk` and `sk`, three sparse global secondary
 indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
-`ttl` (only sessions have it):
+`ttl` (only sessions have it). The match scores live in their own table,
+`<stack name>-scores` ([specs/match-scores.md](../specs/match-scores.md)):
 
 | Item | pk | sk | Index keys | Holds |
 |---|---|---|---|---|
 | Session | `SESSION#<sha256 of the token>` | `SESSION` | gsi3: `SESSIONS#<subject>`, `<createdAt>` | `subject`, `email` (only if verified), `emailVerified`, `createdAt`, `lastUsedAt`, `ttl` (epoch seconds, lastUsedAt + 365 days) |
 | Sign-in link | `SUB#<iss>#<sub>` | `SUB` | | `climberId` |
-| Profile | `CLIMBER#<id>` | `PROFILE` | | the Climber, plus `subject` (never returned; none for the seed's) |
+| Profile | `CLIMBER#<id>` | `PROFILE` | gsi1: `CLIMBERS`, `<id>` | the Climber, plus `subject` (never returned; none for the seed's) |
 | Membership | `CLIMBER#<id>` | `MEMBER#<planId>` | | "plans I'm in" |
 | Pass | `CLIMBER#<id>` | `PASS#<planId>` | | out of my deck (swiped left, left, or dismissed) |
 | Notice | `CLIMBER#<id>` | `NOTICE#<noticeId>` | | the Notice |
@@ -68,7 +69,8 @@ Access patterns: every authenticated request gets its session (an
 eventually consistent read, retried consistently on a miss, so a session
 made a moment ago is found), and writes it at most once a day to slide
 it; sign-out everywhere queries gsi3 for the subject's sessions. The deck queries gsi1 `PLANS` for starts after now; "my
-requests" queries gsi2; the admin's open requests query gsi1 `OPENREQ`
+requests" queries gsi2; the match scoring run lists every profile from gsi1
+`CLIMBERS`; the admin's open requests query gsi1 `OPENREQ`
 (only open requests carry those keys); a plan's requests and chat are one
 partition (`begins_with` on `REQ#` / `MSG#`, `after` as a key range). A
 climber's memberships, passes and notices are one partition.

@@ -836,4 +836,80 @@ class AppLocalizationsDe extends AppLocalizations {
   String errorVideoTooBig(int mb) {
     return 'Videos dürfen höchstens $mb MB groß sein: Schick ein kürzeres.';
   }
+
+  @override
+  String matchScore(int percent, String level) {
+    return 'Passung $percent% · $level';
+  }
+
+  @override
+  String get matchLevelLongShot => 'unwahrscheinlich';
+
+  @override
+  String get matchLevelPossible => 'möglich';
+
+  @override
+  String get matchLevelGood => 'gut';
+
+  @override
+  String get matchLevelGreat => 'sehr gut';
+
+  @override
+  String get matchReasonOtherDiscipline => 'Du kletterst diese Disziplin nicht';
+
+  @override
+  String get matchReasonTooHard => 'Die Grade liegen deutlich über deinen';
+
+  @override
+  String get matchReasonTooEasy => 'Die Grade liegen deutlich unter deinen';
+
+  @override
+  String get matchReasonStartsSoon => 'Beginnt in weniger als 12 Stunden';
+
+  @override
+  String get matchReasonFar => 'Mehr als 100 km entfernt';
+
+  @override
+  String get matchReasonBigGroup =>
+      'Fünf oder mehr Leute müssen alle zustimmen';
+
+  @override
+  String get matchReasonCrowded => 'Zehn oder mehr andere warten';
+
+  @override
+  String get matchReasonInGradesNearby => 'In deinen Graden und in der Nähe';
+
+  @override
+  String get matchReasonInGrades => 'In deinen Graden';
+
+  @override
+  String get matchReasonCloseGrades => 'Ein bis zwei Grade von deinen entfernt';
+
+  @override
+  String get adminScoresTitle => 'Passung';
+
+  @override
+  String get adminScoresNone =>
+      'Noch keine Berechnung. scripts/score-matches.sh bewertet jedes Profil gegen jeden anstehenden Plan.';
+
+  @override
+  String adminScoresRun(
+    String day,
+    String time,
+    int scored,
+    int pairs,
+    int climbers,
+    int plans,
+  ) {
+    return 'Letzte Berechnung $day, $time: $scored von $pairs Paaren, $climbers Personen × $plans Pläne';
+  }
+
+  @override
+  String adminScoresProblems(int failed, int skipped) {
+    return '$failed fehlgeschlagen, $skipped über dem Limit';
+  }
+
+  @override
+  String get adminScoresEmpty =>
+      'Die letzte Berechnung hat keine Paare bewertet.';
 }

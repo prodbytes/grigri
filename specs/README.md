@@ -33,6 +33,10 @@ Each match opens the plan's group chat.
   and gyms that a plan's "where" picks from, built from OpenStreetMap.
 - [Roles](roles.md): my roles in Grigri, from rbacr, at the end of the
   profile.
+- [Match scores](match-scores.md): how likely a climber and a plan end
+  in a match, from a decision model run by aityx: on admins' decks, and
+  for every profile and plan in the scores table, previewed on the Admin
+  tab.
 - [Languages](i18n.md): English, Spanish, German, French, Portuguese and
   Catalan; the language picker in the profile, kept on the device; the
   translation bundles and the test that keeps them complete.

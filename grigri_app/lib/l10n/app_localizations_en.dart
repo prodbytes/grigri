@@ -827,4 +827,78 @@ class AppLocalizationsEn extends AppLocalizations {
   String errorVideoTooBig(int mb) {
     return 'Videos can be at most $mb MB: send a shorter one.';
   }
+
+  @override
+  String matchScore(int percent, String level) {
+    return 'Match $percent% · $level';
+  }
+
+  @override
+  String get matchLevelLongShot => 'long shot';
+
+  @override
+  String get matchLevelPossible => 'possible';
+
+  @override
+  String get matchLevelGood => 'good';
+
+  @override
+  String get matchLevelGreat => 'great';
+
+  @override
+  String get matchReasonOtherDiscipline => 'You don\'t climb this discipline';
+
+  @override
+  String get matchReasonTooHard => 'Its grades are well above yours';
+
+  @override
+  String get matchReasonTooEasy => 'Its grades are well below yours';
+
+  @override
+  String get matchReasonStartsSoon => 'Starts in less than 12 hours';
+
+  @override
+  String get matchReasonFar => 'More than 100 km away';
+
+  @override
+  String get matchReasonBigGroup => 'Five or more people must all say yes';
+
+  @override
+  String get matchReasonCrowded => 'Ten or more others are waiting';
+
+  @override
+  String get matchReasonInGradesNearby => 'In your grades and nearby';
+
+  @override
+  String get matchReasonInGrades => 'In your grades';
+
+  @override
+  String get matchReasonCloseGrades => 'Within a grade or two of yours';
+
+  @override
+  String get adminScoresTitle => 'Match scores';
+
+  @override
+  String get adminScoresNone =>
+      'No scoring run yet. scripts/score-matches.sh scores every profile against every upcoming plan.';
+
+  @override
+  String adminScoresRun(
+    String day,
+    String time,
+    int scored,
+    int pairs,
+    int climbers,
+    int plans,
+  ) {
+    return 'Last run $day, $time: $scored of $pairs pairs, $climbers people × $plans plans';
+  }
+
+  @override
+  String adminScoresProblems(int failed, int skipped) {
+    return '$failed failed, $skipped over the run\'s cap';
+  }
+
+  @override
+  String get adminScoresEmpty => 'The last run scored no pairs.';
 }

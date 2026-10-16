@@ -830,4 +830,79 @@ class AppLocalizationsCa extends AppLocalizations {
   String errorVideoTooBig(int mb) {
     return 'Els vídeos poden ocupar com a màxim $mb MB: envia\'n un de més curt.';
   }
+
+  @override
+  String matchScore(int percent, String level) {
+    return 'Afinitat $percent% · $level';
+  }
+
+  @override
+  String get matchLevelLongShot => 'poc probable';
+
+  @override
+  String get matchLevelPossible => 'possible';
+
+  @override
+  String get matchLevelGood => 'bona';
+
+  @override
+  String get matchLevelGreat => 'excel·lent';
+
+  @override
+  String get matchReasonOtherDiscipline => 'No escales aquesta disciplina';
+
+  @override
+  String get matchReasonTooHard =>
+      'Els seus graus són molt per sobre dels teus';
+
+  @override
+  String get matchReasonTooEasy => 'Els seus graus són molt per sota dels teus';
+
+  @override
+  String get matchReasonStartsSoon => 'Comença en menys de 12 hores';
+
+  @override
+  String get matchReasonFar => 'A més de 100 km';
+
+  @override
+  String get matchReasonBigGroup => 'Cinc o més persones han de dir que sí';
+
+  @override
+  String get matchReasonCrowded => 'Hi ha deu o més persones esperant';
+
+  @override
+  String get matchReasonInGradesNearby => 'Als teus graus i a prop';
+
+  @override
+  String get matchReasonInGrades => 'Als teus graus';
+
+  @override
+  String get matchReasonCloseGrades => 'A un o dos graus dels teus';
+
+  @override
+  String get adminScoresTitle => 'Afinitat';
+
+  @override
+  String get adminScoresNone =>
+      'Encara no s\'ha calculat. scripts/score-matches.sh puntua cada perfil amb cada pla proper.';
+
+  @override
+  String adminScoresRun(
+    String day,
+    String time,
+    int scored,
+    int pairs,
+    int climbers,
+    int plans,
+  ) {
+    return 'Últim càlcul $day, $time: $scored de $pairs parells, $climbers persones × $plans plans';
+  }
+
+  @override
+  String adminScoresProblems(int failed, int skipped) {
+    return '$failed fallits, $skipped per sobre del límit';
+  }
+
+  @override
+  String get adminScoresEmpty => 'L\'últim càlcul no va puntuar cap parell.';
 }

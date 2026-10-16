@@ -1212,5 +1212,131 @@
         "example": "50"
       }
     }
+  },
+  "matchScore": "Match {percent}% · {level}",
+  "@matchScore": {
+    "description": "Admins only: how likely a plan on the deck ends in a match.",
+    "placeholders": {
+      "percent": {
+        "type": "int",
+        "example": "72"
+      },
+      "level": {
+        "type": "String",
+        "example": "good"
+      }
+    }
+  },
+  "matchLevelLongShot": "long shot",
+  "@matchLevelLongShot": {
+    "description": "A match score's level, lowest."
+  },
+  "matchLevelPossible": "possible",
+  "@matchLevelPossible": {
+    "description": "A match score's level."
+  },
+  "matchLevelGood": "good",
+  "@matchLevelGood": {
+    "description": "A match score's level."
+  },
+  "matchLevelGreat": "great",
+  "@matchLevelGreat": {
+    "description": "A match score's level, highest."
+  },
+  "matchReasonOtherDiscipline": "You don't climb this discipline",
+  "@matchReasonOtherDiscipline": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonTooHard": "Its grades are well above yours",
+  "@matchReasonTooHard": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonTooEasy": "Its grades are well below yours",
+  "@matchReasonTooEasy": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonStartsSoon": "Starts in less than 12 hours",
+  "@matchReasonStartsSoon": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonFar": "More than 100 km away",
+  "@matchReasonFar": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonBigGroup": "Five or more people must all say yes",
+  "@matchReasonBigGroup": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonCrowded": "Ten or more others are waiting",
+  "@matchReasonCrowded": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonInGradesNearby": "In your grades and nearby",
+  "@matchReasonInGradesNearby": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonInGrades": "In your grades",
+  "@matchReasonInGrades": {
+    "description": "Why a match score is what it is."
+  },
+  "matchReasonCloseGrades": "Within a grade or two of yours",
+  "@matchReasonCloseGrades": {
+    "description": "Why a match score is what it is."
+  },
+  "adminScoresTitle": "Match scores",
+  "@adminScoresTitle": {
+    "description": "Admin tab: the match scores preview's heading."
+  },
+  "adminScoresNone": "No scoring run yet. scripts/score-matches.sh scores every profile against every upcoming plan.",
+  "@adminScoresNone": {
+    "description": "Admin tab: no scoring run yet."
+  },
+  "adminScoresRun": "Last run {day}, {time}: {scored} of {pairs} pairs, {climbers} people × {plans} plans",
+  "@adminScoresRun": {
+    "description": "Admin tab: the latest scoring run.",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "example": "Sat 17 Oct"
+      },
+      "time": {
+        "type": "String",
+        "example": "18:30"
+      },
+      "scored": {
+        "type": "int",
+        "example": "118"
+      },
+      "pairs": {
+        "type": "int",
+        "example": "120"
+      },
+      "climbers": {
+        "type": "int",
+        "example": "12"
+      },
+      "plans": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  "adminScoresProblems": "{failed} failed, {skipped} over the run's cap",
+  "@adminScoresProblems": {
+    "description": "Admin tab: pairs the latest run couldn't score.",
+    "placeholders": {
+      "failed": {
+        "type": "int",
+        "example": "2"
+      },
+      "skipped": {
+        "type": "int",
+        "example": "0"
+      }
+    }
+  },
+  "adminScoresEmpty": "The last run scored no pairs.",
+  "@adminScoresEmpty": {
+    "description": "Admin tab: the latest run scored nothing."
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import '../model/climber.dart';
+import '../model/match_score.dart';
 import '../model/plan.dart';
 import 'realtime.dart';
 
@@ -23,7 +24,8 @@ abstract interface class GrigriApi {
   Future<Climber> saveMe(Climber profile);
 
   /// `GET /api/discover`: plans to swipe on, best first (how well they
-  /// match my profile plus how close they are), with their distances.
+  /// match my profile plus how close they are), with their distances, and
+  /// for admins the best ones' match scores.
   Future<PlanList> discover();
 
   /// `POST /api/plans`: a new plan, organized by me.
@@ -106,6 +108,10 @@ abstract interface class GrigriApi {
 
   /// `POST /api/admin/requests/{planId}/{climberId}/reject`.
   Future<void> adminReject(String planId, String climberId);
+
+  /// `GET /api/admin/scores`: the latest match scoring run and its best
+  /// scores (admins only).
+  Future<AdminScores> adminScores();
 }
 
 /// A failure the app itself describes (no server message to show): the
@@ -181,7 +187,12 @@ class Me {
 }
 
 class PlanList {
-  const PlanList(this.plans, this.climbers, {this.distanceKm = const {}});
+  const PlanList(
+    this.plans,
+    this.climbers, {
+    this.distanceKm = const {},
+    this.scores = const {},
+  });
 
   final List<Plan> plans;
   final Climbers climbers;
@@ -189,6 +200,21 @@ class PlanList {
   /// For the deck: how far each plan is from my nearest location or area,
   /// in whole km, for the plans whose distance is known.
   final Map<String, int> distanceKm;
+
+  /// Admins only: how likely each of the deck's best plans ends in a
+  /// match for me; empty for everyone else.
+  final Map<String, MatchScore> scores;
+}
+
+/// The latest match scoring run (null: never run) and its best scores,
+/// best first, with their plans and climbers.
+class AdminScores {
+  const AdminScores(this.run, this.scores, this.plans, this.climbers);
+
+  final ScoreRun? run;
+  final List<ScoredPair> scores;
+  final Map<String, Plan> plans;
+  final Climbers climbers;
 }
 
 class MyPlans {
@@ -344,6 +370,25 @@ abstract final class ApiJson {
       for (final e in (json['distanceKm'] as Map? ?? {}).entries)
         e.key as String: (e.value as num).round(),
     },
+    scores: {
+      for (final e in (json['scores'] as Map? ?? {}).entries)
+        e.key as String: ?MatchScore.fromJson(_map(e.value)),
+    },
+  );
+
+  static AdminScores adminScores(Map<String, Object?> json) => AdminScores(
+    ScoreRun.fromJson(json['run']),
+    [
+      for (final s in _list(json['scores']))
+        if (MatchScore.fromJson(s) case final match?)
+          ScoredPair(
+            climberId: s['climberId']! as String,
+            planId: s['planId']! as String,
+            match: match,
+          ),
+    ],
+    _plansById(json['plans']),
+    climbers(json),
   );
 
   static MyPlans myPlans(Map<String, Object?> json) => MyPlans(

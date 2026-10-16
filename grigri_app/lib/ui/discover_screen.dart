@@ -6,6 +6,7 @@ import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'match_score.dart';
 import 'profile_editor.dart';
 import 'swipe_deck.dart';
 
@@ -212,6 +213,8 @@ class _PlanCardState extends State<_PlanCard> {
     final text = Theme.of(context).textTheme;
     final l = context.l10n;
     final organizer = store.climber(plan.organizerId);
+    // Admins only: the API scores their decks.
+    final match = store.matchScore(plan.id);
     final others = [
       for (final id in plan.memberIds)
         if (id != organizer.id) store.climber(id),
@@ -225,6 +228,13 @@ class _PlanCardState extends State<_PlanCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             PlanHighlight(plan, fit: store.fit(plan), compact: true),
+            if (match != null) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: MatchScoreTag(match, key: ValueKey('match ${plan.id}')),
+              ),
+            ],
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),

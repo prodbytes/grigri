@@ -830,4 +830,82 @@ class AppLocalizationsFr extends AppLocalizations {
   String errorVideoTooBig(int mb) {
     return 'Les vidéos font au plus $mb Mo : envoies-en une plus courte.';
   }
+
+  @override
+  String matchScore(int percent, String level) {
+    return 'Affinité $percent% · $level';
+  }
+
+  @override
+  String get matchLevelLongShot => 'peu probable';
+
+  @override
+  String get matchLevelPossible => 'possible';
+
+  @override
+  String get matchLevelGood => 'bonne';
+
+  @override
+  String get matchLevelGreat => 'excellente';
+
+  @override
+  String get matchReasonOtherDiscipline =>
+      'Tu ne pratiques pas cette discipline';
+
+  @override
+  String get matchReasonTooHard =>
+      'Ses cotations sont bien au-dessus des tiennes';
+
+  @override
+  String get matchReasonTooEasy =>
+      'Ses cotations sont bien en dessous des tiennes';
+
+  @override
+  String get matchReasonStartsSoon => 'Commence dans moins de 12 heures';
+
+  @override
+  String get matchReasonFar => 'À plus de 100 km';
+
+  @override
+  String get matchReasonBigGroup =>
+      'Cinq personnes ou plus doivent toutes dire oui';
+
+  @override
+  String get matchReasonCrowded => 'Dix autres ou plus attendent';
+
+  @override
+  String get matchReasonInGradesNearby => 'Dans tes cotations et tout près';
+
+  @override
+  String get matchReasonInGrades => 'Dans tes cotations';
+
+  @override
+  String get matchReasonCloseGrades => 'À une ou deux cotations des tiennes';
+
+  @override
+  String get adminScoresTitle => 'Affinités';
+
+  @override
+  String get adminScoresNone =>
+      'Aucun calcul pour l\'instant. scripts/score-matches.sh évalue chaque profil face à chaque sortie à venir.';
+
+  @override
+  String adminScoresRun(
+    String day,
+    String time,
+    int scored,
+    int pairs,
+    int climbers,
+    int plans,
+  ) {
+    return 'Dernier calcul $day, $time : $scored paires sur $pairs, $climbers personnes × $plans sorties';
+  }
+
+  @override
+  String adminScoresProblems(int failed, int skipped) {
+    return '$failed échecs, $skipped au-delà de la limite';
+  }
+
+  @override
+  String get adminScoresEmpty => 'Le dernier calcul n\'a évalué aucune paire.';
 }

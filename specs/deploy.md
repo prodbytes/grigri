@@ -26,7 +26,10 @@ for that tag:
    `grigri-api` stack (function, which verifies Google ID tokens for
    `GOOGLE_WEB_CLIENT_ID` and issues sessions; HTTP API; DynamoDB table
    with TTL; admins from rbacr, asked with `GRIGRI_RBACR_TOKEN`, optional:
-   without it the deploy warns and nobody is an admin; the live updates'
+   without it the deploy warns and nobody is an admin; the
+   [match scores](match-scores.md) table and scoring function, with
+   `GRIGRI_AITYX_API_KEY` (and `GRIGRI_AITYX_URL`), optional: without it
+   the deploy warns and there are no scores; the live updates'
    IoT custom authorizer and its function), with the stage's permissions
    boundary on the functions' roles, and the account's IoT Data-ATS
    endpoint, looked up with
@@ -119,8 +122,9 @@ separated by stage. The RC seed is the only invoke allowed
 `AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
 (production's Google web client) and `GOOGLE_WEB_CLIENT_ID_RC` (the
 RC's);
-repository secret: `GRIGRI_RBACR_TOKEN` (a secret because the
-repository is public and run logs show variables). One-time setup:
+repository secrets: `GRIGRI_RBACR_TOKEN` and `GRIGRI_AITYX_API_KEY`
+(secrets because the repository is public and run logs show variables);
+optional variable `GRIGRI_AITYX_URL` (aityx's stage, for a stage key). One-time setup:
 [grigri_infra/README.md](../grigri_infra/README.md).
 
 By hand, with admin credentials: `TAG=0.1.<Z>-GA bash scripts/deploy.sh`

@@ -831,4 +831,78 @@ class AppLocalizationsPt extends AppLocalizations {
   String errorVideoTooBig(int mb) {
     return 'Os vídeos podem ter no máximo $mb MB: envie um mais curto.';
   }
+
+  @override
+  String matchScore(int percent, String level) {
+    return 'Afinidade $percent% · $level';
+  }
+
+  @override
+  String get matchLevelLongShot => 'improvável';
+
+  @override
+  String get matchLevelPossible => 'possível';
+
+  @override
+  String get matchLevelGood => 'boa';
+
+  @override
+  String get matchLevelGreat => 'ótima';
+
+  @override
+  String get matchReasonOtherDiscipline => 'Você não escala essa modalidade';
+
+  @override
+  String get matchReasonTooHard => 'As graduações estão bem acima das suas';
+
+  @override
+  String get matchReasonTooEasy => 'As graduações estão bem abaixo das suas';
+
+  @override
+  String get matchReasonStartsSoon => 'Começa em menos de 12 horas';
+
+  @override
+  String get matchReasonFar => 'A mais de 100 km';
+
+  @override
+  String get matchReasonBigGroup => 'Cinco ou mais pessoas precisam dizer sim';
+
+  @override
+  String get matchReasonCrowded => 'Dez ou mais pessoas estão esperando';
+
+  @override
+  String get matchReasonInGradesNearby => 'Nas suas graduações e perto';
+
+  @override
+  String get matchReasonInGrades => 'Nas suas graduações';
+
+  @override
+  String get matchReasonCloseGrades => 'A uma ou duas graduações das suas';
+
+  @override
+  String get adminScoresTitle => 'Afinidade';
+
+  @override
+  String get adminScoresNone =>
+      'Nenhum cálculo ainda. scripts/score-matches.sh pontua cada perfil contra cada plano futuro.';
+
+  @override
+  String adminScoresRun(
+    String day,
+    String time,
+    int scored,
+    int pairs,
+    int climbers,
+    int plans,
+  ) {
+    return 'Último cálculo $day, $time: $scored de $pairs pares, $climbers pessoas × $plans planos';
+  }
+
+  @override
+  String adminScoresProblems(int failed, int skipped) {
+    return '$failed falharam, $skipped acima do limite';
+  }
+
+  @override
+  String get adminScoresEmpty => 'O último cálculo não pontuou nenhum par.';
 }

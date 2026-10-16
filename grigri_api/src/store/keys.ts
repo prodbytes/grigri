@@ -1,6 +1,7 @@
 // The single table's keys (see grigri_api/README.md, "Data model"). Every
 // item has pk and sk; three sparse global secondary indexes:
-//   gsi1: plans by start (PLANS), and open requests (OPENREQ, the admin's)
+//   gsi1: plans by start (PLANS), open requests (OPENREQ, the admin's),
+//         and every profile (CLIMBERS, the match scores' run)
 //   gsi2: a climber's own requests (ASKED#<climberId>)
 //   gsi3 (keys only): an account's sessions (SESSIONS#<subject>)
 
@@ -31,6 +32,7 @@ export const prefix = {
 export const index = {
   byStart: { name: 'gsi1', pk: 'PLANS' },
   openRequests: { name: 'gsi1', pk: 'OPENREQ' },
+  climbers: { name: 'gsi1', pk: 'CLIMBERS' },
   asked: { name: 'gsi2', pk: (climberId: string) => `ASKED#${climberId}` },
   sessions: { name: 'gsi3', pk: (subject: string) => `SESSIONS#${subject}` },
 };

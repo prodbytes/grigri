@@ -8,6 +8,7 @@ import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/http_api.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/climber.dart';
+import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -117,6 +118,64 @@ void main() {
         expect(robin.age, isNull);
       },
     );
+
+    test('reads match scores, skipping ones this version can\'t', () async {
+      final api = apiWith(
+        (_) async => json({
+          'plans': [planJson],
+          'climbers': {'robin': robinJson},
+          'scores': {
+            'p1': {
+              'score': 0.72,
+              'level': 'good',
+              'reason': 'in_grades_nearby',
+            },
+            'p2': {'score': 0.1, 'level': 'meh', 'reason': 'far'},
+          },
+        }),
+      );
+      final scores = (await api.discover()).scores;
+      expect(scores.keys, ['p1']);
+      expect(scores['p1']!.percent, 72);
+      expect(scores['p1']!.level, MatchLevel.good);
+      expect(scores['p1']!.reason, MatchReason.inGradesNearby);
+    });
+
+    test('reads the admin\'s scores preview', () async {
+      final seen = <http.Request>[];
+      final api = apiWith(
+        (_) async => json({
+          'run': {
+            'runId': '2030-05-01T10:00:00.000Z',
+            'finishedAt': '2030-05-01T10:02:00.000Z',
+            'climbers': 3,
+            'plans': 2,
+            'pairs': 5,
+            'scored': 5,
+            'failed': 0,
+            'skipped': 0,
+          },
+          'scores': [
+            {
+              'climberId': 'robin',
+              'planId': 'p1',
+              'score': 0.9,
+              'level': 'great',
+              'reason': 'in_grades',
+            },
+          ],
+          'plans': {'p1': planJson},
+          'climbers': {'robin': robinJson},
+        }),
+        seen: seen,
+      );
+      final preview = await api.adminScores();
+      expect(seen.single.url.path, '/api/admin/scores');
+      expect(preview.run!.pairs, 5);
+      expect(preview.scores.single.climberId, 'robin');
+      expect(preview.scores.single.match.level, MatchLevel.great);
+      expect(preview.climbers.keys, ['robin']);
+    });
 
     test(
       'sends plans without id, organizer and members, dates in UTC',

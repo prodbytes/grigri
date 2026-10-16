@@ -16,6 +16,8 @@ import { ApiError } from './domain/errors.js';
 import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
+import { aityxScorer } from './match/aityx.js';
+import { ScoresStore } from './store/scores.js';
 import { Store } from './store/store.js';
 import { assertSeedable, seed, seedShowcase, showcaseIsStale } from '../seed/seed.js';
 
@@ -101,7 +103,21 @@ const realtime = new Realtime({ stage, endpoint: iotEndpoint, authorizer: env.IO
 const showcase = async (now: Date) => {
   if (await showcaseIsStale(store, now)) await seedShowcase(store, now);
 };
-const api = new Api({ store, photos, auth, realtime, roles: rbacrRoles(rbacr), showcase, config: { stage, version: env.VERSION ?? 'dev' } });
+// Match scores from aityx on admins' decks (the key never leaves the
+// function); no key: none. The scores table: the scoring function's runs.
+const matchScorer = aityxScorer({ url: env.AITYX_URL ?? '', key: env.AITYX_API_KEY ?? '' }) ?? undefined;
+const scores = env.SCORES_TABLE ? new ScoresStore(doc, env.SCORES_TABLE) : undefined;
+const api = new Api({
+  store,
+  photos,
+  auth,
+  realtime,
+  roles: rbacrRoles(rbacr),
+  matchScorer,
+  scores,
+  showcase,
+  config: { stage, version: env.VERSION ?? 'dev' },
+});
 
 type Event = APIGatewayProxyEventV2 | { grigriSeed?: boolean };
 

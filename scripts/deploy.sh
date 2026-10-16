@@ -41,6 +41,11 @@
 #                which the API asks rbacr who holds grigri's admin role
 #                (also from .env; a secret in CI). Optional: without it
 #                nobody is an admin. Not RBACR_TOKEN, the local rbacr's.
+#   GRIGRI_AITYX_API_KEY the aityx API key (aityx_sk_...): match scores on
+#                admins' decks and the scoring function (also from .env;
+#                a secret in CI). Optional: without it, no scores.
+#   GRIGRI_AITYX_URL aityx's API (default https://api.aityx.ai; a stage
+#                key needs aityx's stage)
 #   PERMISSIONS_BOUNDARY the API function role's boundary (default: the
 #                stage's, arn:aws:iam::<account>:policy/<prefix>-app-boundary)
 #   ARTIFACT_BUCKET where the API's code is uploaded (default: the stage's,
@@ -153,6 +158,13 @@ if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
 fi
 GRIGRI_RBACR_TOKEN="${GRIGRI_RBACR_TOKEN:-}"
+for name in GRIGRI_AITYX_API_KEY GRIGRI_AITYX_URL; do
+  if [[ -z "${!name:-}" && -f .env ]]; then
+    printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
+  fi
+done
+GRIGRI_AITYX_API_KEY="${GRIGRI_AITYX_API_KEY:-}"
+GRIGRI_AITYX_URL="${GRIGRI_AITYX_URL:-https://api.aityx.ai}"
 # The iOS clients whose ID tokens the API also takes (an iPhone's token is
 # its iOS client's): optional, comma-separated; empties and spaces dropped.
 GOOGLE_IOS_CLIENT_IDS="$(tr -d ' ' <<<"${GOOGLE_IOS_CLIENT_IDS:-}" | tr -s ',' | sed 's/^,//; s/,$//')"
@@ -180,6 +192,17 @@ fi
 if [[ -n "$GRIGRI_RBACR_TOKEN" && ! "$GRIGRI_RBACR_TOKEN" =~ ^rbacr_[A-Za-z0-9_-]+$ ]]; then
   echo "error: GRIGRI_RBACR_TOKEN must be an rbacr API token (rbacr_...)" >&2
   exit 1
+fi
+if [[ -n "$GRIGRI_AITYX_API_KEY" && ! "$GRIGRI_AITYX_API_KEY" =~ ^aityx_sk_[A-Za-z0-9_-]+$ ]]; then
+  echo "error: GRIGRI_AITYX_API_KEY must be an aityx API key (aityx_sk_...)" >&2
+  exit 1
+fi
+if [[ ! "$GRIGRI_AITYX_URL" =~ ^https://[A-Za-z0-9.:-]+$ ]]; then
+  echo "error: GRIGRI_AITYX_URL must be an https origin" >&2
+  exit 1
+fi
+if [[ -z "$GRIGRI_AITYX_API_KEY" ]]; then
+  echo "warning: GRIGRI_AITYX_API_KEY isn't set: no match scores" >&2
 fi
 if [[ -n "$GRIGRI_RBACR_TOKEN" ]]; then
   echo "    admins: whoever rbacr says holds grigri's admin role"
@@ -263,6 +286,7 @@ aws cloudformation deploy --stack-name "$API_STACK" \
   --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
     "GoogleIosClientIds=$GOOGLE_IOS_CLIENT_IDS" \
     "RbacrToken=$GRIGRI_RBACR_TOKEN" "PhotosBucket=$PHOTOS_BUCKET" \
+    "AityxApiKey=$GRIGRI_AITYX_API_KEY" "AityxUrl=$GRIGRI_AITYX_URL" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
     "IotEndpoint=$IOT_ENDPOINT" \

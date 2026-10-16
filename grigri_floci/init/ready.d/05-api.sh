@@ -96,12 +96,17 @@ set -- "Stage=local" "DevMode=$DEV_MODE" "PhotosBucket=$PHOTOS" "Architecture=$A
 [ -n "$CLIENT_ID" ] && set -- "$@" "GoogleWebClientId=$CLIENT_ID"
 # The Lambda's container reaches the host's rbacr as host.docker.internal.
 [ -n "$RBACR_TOKEN" ] && set -- "$@" "RbacrUrl=http://host.docker.internal:${RBACR_PORT:-2115}" "RbacrToken=$RBACR_TOKEN"
+# aityx: match scores, when .env has a key.
+[ -n "${GRIGRI_AITYX_API_KEY:-}" ] && set -- "$@" "AityxApiKey=$GRIGRI_AITYX_API_KEY"
+[ -n "${GRIGRI_AITYX_URL:-}" ] && set -- "$@" "AityxUrl=$GRIGRI_AITYX_URL"
 aws cloudformation deploy --stack-name "$STACK" --template-file /tmp/grigri-api.yaml \
   --capabilities CAPABILITY_NAMED_IAM --parameter-overrides "$@" >/dev/null
 
 # Floci's CloudFormation skips the table's TimeToLiveSpecification; its
 # DynamoDB takes the call itself. (The function checks expiry anyway.)
 aws dynamodb update-time-to-live --table-name "$STACK" \
+  --time-to-live-specification Enabled=true,AttributeName=ttl >/dev/null
+aws dynamodb update-time-to-live --table-name "$STACK-scores" \
   --time-to-live-specification Enabled=true,AttributeName=ttl >/dev/null
 
 api=$(aws cloudformation describe-stacks --stack-name "$STACK" \

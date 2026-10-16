@@ -13,6 +13,7 @@ import 'package:grigri_app/data/sector_index.dart';
 import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
+import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/model/sector.dart';
 
@@ -80,6 +81,14 @@ class FakeApi implements GrigriApi, SessionApi {
   /// What the deck says about how far each plan is (the server works it
   /// out from my location and areas; tests set it).
   final distanceKm = <String, int>{};
+
+  /// The match scores an admin's deck carries (the server's, from aityx;
+  /// tests set them).
+  final matchScores = <String, MatchScore>{};
+
+  /// The latest match scoring run and its best scores (tests set them).
+  ScoreRun? scoreRun;
+  List<ScoredPair> scoredPairs = [];
 
   /// Every call, as "METHOD /api/route".
   final calls = <String>[];
@@ -373,6 +382,10 @@ class FakeApi implements GrigriApi, SessionApi {
       list,
       _mention(list.expand(_planPeople)),
       distanceKm: {for (final p in list) p.id: ?distanceKm[p.id]},
+      // As the API: admins' decks only.
+      scores: admin
+          ? {for (final p in list) p.id: ?matchScores[p.id]}
+          : const {},
     );
   });
 
@@ -698,6 +711,21 @@ class FakeApi implements GrigriApi, SessionApi {
         _admin();
         _reject('$planId/$climberId');
       });
+
+  @override
+  Future<AdminScores> adminScores() => _route('GET /api/admin/scores', () {
+    _admin();
+    final byPlan = {for (final s in scoredPairs) s.planId: plans[s.planId]!};
+    return AdminScores(
+      scoreRun,
+      scoredPairs,
+      byPlan,
+      _mention({
+        ...scoredPairs.map((s) => s.climberId),
+        ...byPlan.values.expand(_planPeople),
+      }),
+    );
+  });
 }
 
 /// Google, made up: its button signs Pat in with a made-up ID token that

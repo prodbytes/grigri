@@ -134,6 +134,20 @@ export class Store implements SessionStore {
     }));
   }
 
+  /**
+   * Every profile (the CLIMBERS index partition). Profiles saved before
+   * the index existed show once saved again, or after
+   * scripts/index-climbers.sh.
+   */
+  async allClimbers(): Promise<Climber[]> {
+    const items = await this.query({
+      IndexName: index.climbers.name,
+      KeyConditionExpression: 'gsi1pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.climbers.pk },
+    });
+    return items.map(toClimber);
+  }
+
   /** The first profile of a subject: links it to the new climber id. */
   async createProfile(subject: string, climber: Climber, now: Date): Promise<void> {
     try {
@@ -520,6 +534,9 @@ export function climberItem(c: Climber, subject: string | undefined, now: Date):
   return {
     ...key.climber(c.id),
     type: 'climber',
+    // Every profile, for the match scores' run (allClimbers).
+    gsi1pk: index.climbers.pk,
+    gsi1sk: c.id,
     id: c.id,
     name: c.name,
     ...(c.age === undefined ? {} : { age: c.age }),

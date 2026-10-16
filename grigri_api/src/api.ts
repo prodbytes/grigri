@@ -17,7 +17,11 @@ import {
 } from './domain/model.js';
 import * as rules from './domain/rules.js';
 import { asObject, id, messageInput, parseDate, planInput, profileInput } from './domain/validate.js';
+import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
+import { matchFacts } from './match/facts.js';
+import { openByPlan, othersWaiting } from './match/run.js';
 import type { RolesLookup } from './rbacr.js';
+import type { ScoresStore } from './store/scores.js';
 import { type Params, Router } from './router.js';
 import { type Delivery, type Realtime, hintsFor } from './realtime.js';
 import { Conflict, type LoadedPlan, type Store } from './store/store.js';
@@ -27,6 +31,17 @@ export const MAX_OPEN_REQUESTS = 30;
 
 /** A new profile's name when Google didn't give one (sessions from before names were kept). */
 export const NO_NAME = 'Climber';
+
+/** The deck's plans an admin's deck scores (the best first), and how many at once. */
+export const SCORED_DECK = 30;
+const SCORE_CONCURRENCY = 10;
+/**
+ * No new call to aityx after this long: with one call's own timeout (3 s),
+ * the deck answers within about 7 s, under the HTTP API's 10.
+ */
+const SCORE_BUDGET_MS = 4000;
+/** The best scores the admin's preview shows. */
+export const SCORES_PREVIEW = 20;
 
 /** Largest photo upload (profile, gear, chat): the app downsizes them well under it. */
 export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
@@ -60,6 +75,10 @@ export interface Deps {
   realtime?: Realtime;
   /** My roles in Grigri, from rbacr (rbacr.ts); none: unknown. */
   roles?: RolesLookup;
+  /** Match scores from aityx (match/aityx.ts), on admins' decks; none: off. */
+  matchScorer?: MatchScorer;
+  /** The match scores table (store/scores.ts), for the admin's preview; none: off. */
+  scores?: Pick<ScoresStore, 'top' | 'latestRun'>;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -177,6 +196,7 @@ export class Api {
     });
 
     r('GET /api/admin/requests', 'admin', () => this.adminRequests());
+    r('GET /api/admin/scores', 'admin', () => this.adminScores());
     r('POST /api/admin/requests/{planId}/{climberId}/accept', 'admin', (req, s) => this.answer(req, s, 'accept', true));
     r('POST /api/admin/requests/{planId}/{climberId}/reject', 'admin', (req, s) => this.answer(req, s, 'reject', true));
   }
@@ -328,7 +348,38 @@ export class Api {
       this.store.askedRequests(s.me.id),
     ]);
     const deck = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
-    return { plans: deck.plans, distanceKm: deck.distanceKm, climbers: await this.climbersOf(deck.plans) };
+    const [climbers, scores] = await Promise.all([
+      this.climbersOf(deck.plans),
+      s.caller.admin ? this.deckScores(deck.plans, s) : Promise.resolve(undefined),
+    ]);
+    return { plans: deck.plans, distanceKm: deck.distanceKm, climbers, ...(scores ? { scores } : {}) };
+  }
+
+  /**
+   * Admins only: how likely each of the deck's best plans ends in a match
+   * for me, from aityx, live. Best effort: a plan aityx didn't score (or
+   * not in time) has no score; never fails the deck.
+   */
+  private async deckScores(plans: Plan[], s: Session): Promise<Record<string, MatchScore> | undefined> {
+    const scorer = this.deps.matchScorer;
+    if (!scorer || plans.length === 0) return undefined;
+    try {
+      const open = openByPlan(await this.store.openRequests());
+      const top = plans.slice(0, SCORED_DECK);
+      const deadline = Date.now() + SCORE_BUDGET_MS;
+      const results = await pooled(top, SCORE_CONCURRENCY, async (plan) =>
+        Date.now() > deadline ? null : scorer(matchFacts(s.me, plan, othersWaiting(open, plan.id, s.me.id), s.now)),
+      );
+      const scores: Record<string, MatchScore> = {};
+      top.forEach((plan, i) => {
+        const out = results[i];
+        if (out) scores[plan.id] = out.score;
+      });
+      return scores;
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'deck scores failed', error: String(e) }));
+      return undefined;
+    }
   }
 
   private async createPlan(req: Request, s: Session) {
@@ -536,6 +587,25 @@ export class Api {
       requests: requests.map(requestJson),
       plans: Object.fromEntries(plans.map((p) => [p.id, p])),
       climbers: await this.climbersOf(plans, requests),
+    };
+  }
+
+  /**
+   * GET /api/admin/scores: the latest scoring run's summary and its best
+   * scores, with their plans and climbers (null run: never run, or no
+   * scores table).
+   */
+  private async adminScores() {
+    const table = this.deps.scores;
+    const run = (await table?.latestRun()) ?? null;
+    const top = run && table ? await table.top(run.runId, SCORES_PREVIEW) : [];
+    const plans = await this.store.getPlans(top.map((t) => t.planId));
+    const ids = new Set([...top.map((t) => t.climberId), ...plans.flatMap((p) => [p.organizerId, ...p.memberIds])]);
+    return {
+      run,
+      scores: top.map(({ climberId, planId, score, level, reason, scoredAt }) => ({ climberId, planId, score, level, reason, scoredAt })),
+      plans: Object.fromEntries(plans.map((p) => [p.id, p])),
+      climbers: await this.publicClimbers(ids),
     };
   }
 

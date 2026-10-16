@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/location.dart';
+import '../model/match_score.dart';
 import '../model/plan.dart';
 import '../model/sector.dart';
 import 'api.dart';
@@ -172,10 +173,13 @@ class GrigriStore extends ChangeNotifier {
   final _plans = <String, Plan>{};
   List<String> _discover = [];
   Map<String, int> _distanceKm = {};
+  Map<String, MatchScore> _matchScores = {};
   List<String> _mine = [];
   List<JoinRequest> _asked = [];
   List<JoinRequest> _toReview = [];
   List<JoinRequest> _adminRequests = [];
+  ScoreRun? _scoreRun;
+  List<ScoredPair> _adminScores = [];
   final _open = <String, List<JoinRequest>>{};
   final _declinedHere = <String>{};
   List<Notice> _notices = [];
@@ -240,10 +244,13 @@ class GrigriStore extends ChangeNotifier {
     _plans.clear();
     _discover = [];
     _distanceKm = {};
+    _matchScores = {};
     _mine = [];
     _asked = [];
     _toReview = [];
     _adminRequests = [];
+    _scoreRun = null;
+    _adminScores = [];
     _open.clear();
     _declinedHere.clear();
     _notices = [];
@@ -340,6 +347,10 @@ class GrigriStore extends ChangeNotifier {
   /// km; null when it isn't known.
   int? distanceKm(String planId) => _distanceKm[planId];
 
+  /// Admins only: how likely a plan on the deck ends in a match for me;
+  /// null when the API didn't score it (or I'm not an admin).
+  MatchScore? matchScore(String planId) => _matchScores[planId];
+
   /// Plans I'm in, soonest first.
   List<Plan> get myPlans => [for (final id in _mine) ?_plans[id]];
 
@@ -389,6 +400,13 @@ class GrigriStore extends ChangeNotifier {
 
   /// Every open request (admins).
   List<JoinRequest> get adminRequests => _adminRequests;
+
+  /// The latest match scoring run (admins); null: never run, or not
+  /// loaded.
+  ScoreRun? get scoreRun => _scoreRun;
+
+  /// Its best scores, best first (admins).
+  List<ScoredPair> get adminScores => _adminScores;
 
   /// My notifications, newest first.
   List<Notice> get notices => _notices;
@@ -567,6 +585,7 @@ class GrigriStore extends ChangeNotifier {
     }
     _discover = [for (final p in list.plans) p.id];
     _distanceKm = list.distanceKm;
+    _matchScores = list.scores;
     _loaded.add(Section.discover);
   });
 
@@ -620,14 +639,26 @@ class GrigriStore extends ChangeNotifier {
     }
   }
 
+  /// Every open request, and the match scores' preview (admins).
   Future<void> refreshAdmin() async {
     if (!_admin) return;
-    await _refresh(api.adminRequests, (list) {
-      _learn(list.climbers);
-      _plans.addAll(list.plans);
-      _adminRequests = list.requests;
-      _loaded.add(Section.admin);
-    });
+    await Future.wait([
+      _refresh(api.adminRequests, (list) {
+        _learn(list.climbers);
+        _plans.addAll(list.plans);
+        _adminRequests = list.requests;
+        _loaded.add(Section.admin);
+      }),
+      _refresh(api.adminScores, (scores) {
+        _learn(scores.climbers);
+        _plans.addAll(scores.plans);
+        _scoreRun = scores.run;
+        _adminScores = [
+          for (final s in scores.scores)
+            if (_plans.containsKey(s.planId)) s,
+        ];
+      }),
+    ]);
   }
 
   /// One plan, with its open requests when I'm in it.
