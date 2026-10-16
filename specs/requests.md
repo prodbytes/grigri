@@ -1021,3 +1021,22 @@ spec.
     - [Screens](screens.md): the plan editor's **Where** shows each
       suggestion's distance ("· 0.7 km").
 
+
+## 2026-10-17
+
+73. **Make the index page like popular apps (Tinder, Airbnb, Strava): a
+    nice page that gets people to sign in, clear that the app is free,
+    with photos of crags near the visitor when their location is
+    available.**
+    - [Landing page](landing.md), new: `/` is no longer only a redirect.
+      It has a full-photo hero with a swiping demo card, "100% free" and
+      Sign in with Google, a row of GriGri Pics photo cards sorted nearest
+      first (the location is used in the browser only), how it works, and
+      what's free. It's in the app's six languages. Signed-in climbers and
+      links with a query string still go straight to `/app/`.
+    - [Plan photos](pics.md): CloudFront may read `pics/catalog.json` too,
+      which the page reads. The loader now gives it a cache time of one
+      hour instead of `no-cache`.
+    - [Deploy](deploy.md): the index CSP allows the page's own script,
+      style and fetches (`'self'`, no inline code), and allows location for
+      the page itself. The smoke test checks for the landing page.

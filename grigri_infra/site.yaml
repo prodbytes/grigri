@@ -218,13 +218,16 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          # Only this distribution may read the photos (not the catalog,
-          # which only the API reads).
+          # Only this distribution may read the photos and their catalog
+          # (the API reads it too; the index page lists crags near the
+          # visitor from it). Nothing else in the bucket is served.
           - Effect: Allow
             Principal:
               Service: cloudfront.amazonaws.com
             Action: s3:GetObject
-            Resource: !Sub ${PicsBucket.Arn}/pics/crags/*
+            Resource:
+              - !Sub ${PicsBucket.Arn}/pics/crags/*
+              - !Sub ${PicsBucket.Arn}/pics/catalog.json
             Condition:
               StringEquals:
                 AWS:SourceArn: !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}
@@ -366,9 +369,10 @@ Resources:
               Value: camera=(self), microphone=(), geolocation=(self)
               Override: true
 
-  # The index page (/): its only script is the redirect to /app/, allowed
-  # by its hash (update it if grigri_index/site/index.html's <script>
-  # changes; the meta refresh still redirects if it doesn't match).
+  # The index page (/), the landing page: its own script and stylesheet
+  # files only (no inline code), its images and GriGri Pics' catalog from
+  # 'self', and the browser's location (for crags near the visitor,
+  # worked out on the device).
   IndexHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
     Properties:
@@ -380,9 +384,10 @@ Resources:
             Override: true
             ContentSecurityPolicy: >-
               default-src 'none';
-              script-src 'sha256-AKfnPi3vZ46xMn5ssxBaCzpOf77ER2OwJeWySFPo0cU=';
+              script-src 'self';
               style-src 'self';
               img-src 'self';
+              connect-src 'self';
               base-uri 'none';
               form-action 'none';
               frame-ancestors 'none'
@@ -404,7 +409,7 @@ Resources:
         CustomHeadersConfig:
           Items:
             - Header: Permissions-Policy
-              Value: camera=(), microphone=(), geolocation=()
+              Value: camera=(), microphone=(), geolocation=(self)
               Override: true
 
   Distribution:
@@ -458,7 +463,7 @@ Resources:
               OriginProtocolPolicy: https-only
               OriginSSLProtocols:
                 - TLSv1.2
-        # The index page at / (redirects to /app/)
+        # The index page at / (the landing page; signed-in climbers go on to /app/)
         DefaultCacheBehavior:
           TargetOriginId: site
           ViewerProtocolPolicy: redirect-to-https

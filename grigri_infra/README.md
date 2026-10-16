@@ -23,7 +23,7 @@ Every stack carries the cost-allocation stack tags `project=grigri` and
 
 | Path | Origin |
 |---|---|
-| default (`/`) | S3 `index.html`, the [index page](../grigri_index) that redirects to `/app/` |
+| default (`/`) | S3 `index.html`, the [landing page](../specs/landing.md) ([grigri_index](../grigri_index)); signed-in climbers go on to `/app/` |
 | `/app*` | S3 `app/`, the Flutter web build (`--base-href /app/`). A CloudFront Function redirects `/app` to `/app/` and maps directory URIs to `index.html` |
 | `/api/*` | The `<prefix>-api` HTTP API: nothing cached, every viewer header but `Host` forwarded (`Authorization` included), all methods |
 | `/photos/*` | The photos bucket's `photos/` (origin access control), cached at the edge (keys are never reused) |

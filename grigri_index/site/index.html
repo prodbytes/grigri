@@ -2,14 +2,112 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Grigri</title>
-  <!-- The site root only sends visitors to the app, which lives under /app/. -->
-  <meta http-equiv="refresh" content="0; url=/app/">
-  <link rel="canonical" href="/app/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Grigri: find climbing partners</title>
+  <meta name="description" content="Find climbing partners: make a plan, or swipe right on one, and climb together. Free for every climber.">
+  <meta name="theme-color" content="#161A16">
   <link rel="icon" type="image/png" href="/favicon.png">
-  <script>location.replace('/app/' + location.search);</script>
+  <link rel="stylesheet" href="/index.css">
+  <!-- Signed-in climbers (and links with a query string) go straight to the app. -->
+  <script src="/redirect.js"></script>
+  <script src="/index.js" defer></script>
 </head>
 <body>
-  <p><a href="/app/">Open Grigri</a></p>
+  <header class="bar">
+    <a class="brand" href="/app/"><img src="/favicon.png" alt="" width="32" height="32"><span>Grigri</span></a>
+    <a class="pill pill-ghost" href="/app/" data-i18n="signIn">Sign in</a>
+  </header>
+
+  <main id="landing">
+    <section class="hero">
+      <img class="hero-bg" id="hero-bg" alt="" hidden>
+      <div class="hero-shade"></div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <p class="badge" data-i18n="freeBadge">100% free</p>
+          <h1 data-i18n="heroTitle">Find your next climbing partner.</h1>
+          <p class="lead" data-i18n="heroLead">Make a plan, or swipe right on one, and climb together.</p>
+          <a class="pill pill-google" href="/app/">
+            <svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.2 5.6c4.2-3.9 7.1-9.7 7.1-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C1 16.4 0 20.1 0 24s1 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+            <span data-i18n="signInWithGoogle">Sign in with Google</span>
+          </a>
+          <p class="fine" data-i18n="freeLine">Free for every climber: no card, no subscription.</p>
+        </div>
+
+        <div class="deck" aria-hidden="true">
+          <div class="card card-back"></div>
+          <div class="card card-top">
+            <img class="card-photo" id="deck-photo" alt="" hidden>
+            <span class="stamp" data-i18n="stampJoin">JOIN</span>
+            <div class="card-info">
+              <strong id="deck-crag">Siurana</strong>
+              <span data-i18n="deckWhen">This Saturday · Sport · 6b–7a</span>
+              <span class="who" data-i18n="deckWho">Mara, Jonas and 1 more</span>
+            </div>
+          </div>
+          <div class="deck-actions">
+            <span class="round round-no">✕</span>
+            <span class="round round-yes">✓</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="near" aria-labelledby="near-title">
+      <div class="section-head">
+        <div>
+          <h2 id="near-title" data-i18n="nearAll">Crags on Grigri</h2>
+          <p class="note" id="near-note" data-i18n="nearPrivacy">Your location stays on your device.</p>
+        </div>
+        <button class="pill pill-ghost" id="locate" type="button" hidden data-i18n="locate">Show crags near me</button>
+      </div>
+      <ul class="strip" id="strip"></ul>
+    </section>
+
+    <section class="how" aria-labelledby="how-title">
+      <h2 id="how-title" data-i18n="howTitle">How it works</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-icon" aria-hidden="true">🗓️</span>
+          <h3 data-i18n="step1Title">Make a plan</h3>
+          <p data-i18n="step1Body">Where, when and which grades: a crag, a Saturday, 6a to 7a.</p>
+        </li>
+        <li>
+          <span class="step-icon" aria-hidden="true">👉</span>
+          <h3 data-i18n="step2Title">Swipe right</h3>
+          <p data-i18n="step2Body">Like someone's plan? Swipe right. The group lets newcomers in one at a time, when everyone says yes.</p>
+        </li>
+        <li>
+          <span class="step-icon" aria-hidden="true">🧗</span>
+          <h3 data-i18n="step3Title">Climb together</h3>
+          <p data-i18n="step3Body">Every match opens the plan's group chat: sort out the rope, the ride and the coffee.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="free" aria-labelledby="free-title">
+      <h2 id="free-title" data-i18n="freeTitle">Free. Really.</h2>
+      <ul class="checks">
+        <li data-i18n="free1">Plans and swiping</li>
+        <li data-i18n="free2">Matches and group chats</li>
+        <li data-i18n="free3">Crag photos</li>
+        <li data-i18n="free4">No card to sign up</li>
+      </ul>
+      <p class="note" data-i18n="freePremium">Premium is optional: it's only for advertising on Grigri and for the route finder. Climbing with Grigri costs nothing.</p>
+    </section>
+
+    <section class="final">
+      <h2 data-i18n="finalTitle">Your next partner could be at the crag this weekend.</h2>
+      <a class="pill pill-google" href="/app/">
+        <svg class="g" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.6 13.2l7.9 6.1C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 7l7.2 5.6c4.2-3.9 7.1-9.7 7.1-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.9-6.1C1 16.4 0 20.1 0 24s1 7.6 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.2-5.6c-2 1.4-4.7 2.3-8.7 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+        <span data-i18n="joinFree">Join free with Google</span>
+      </a>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <p data-i18n="footPhotos">Crag photos are freely licensed; each card credits its author.</p>
+    <p data-i18n="footOsm">Crag locations © OpenStreetMap contributors (ODbL).</p>
+  </footer>
 </body>
 </html>

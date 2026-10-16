@@ -404,7 +404,7 @@ check() {
   live="$(curl -fsS --max-time 20 "https://$DOMAIN/app/version.json?deploy=$BUILD_NUMBER" \
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')" || return 1
   [[ "$live" == "$VERSION" ]] || { echo "    /app/version.json says $live, want $VERSION"; return 1; }
-  curl -fsS --max-time 20 "https://$DOMAIN/" | grep -q "location.replace('/app/'" || { echo "    / isn't the index page"; return 1; }
+  curl -fsS --max-time 20 "https://$DOMAIN/" | grep -q '<main id="landing">' || { echo "    / isn't the index page"; return 1; }
   curl -fsS --max-time 20 -o /dev/null "https://$DOMAIN/app/" || { echo "    /app/ failed"; return 1; }
   local health
   health="$(curl -fsS --max-time 20 "https://$DOMAIN/api/health?deploy=$BUILD_NUMBER" \
