@@ -728,10 +728,18 @@ spec.
       secret is unused and can be deleted.
     - The deploy roles keep their health check, alarm and topic
       permissions until the next GA and RC deploys have deleted them.
+51. **The cost-tagged site deploy failed on CloudFront Functions.**
+    - The RC site deploy rolled back: the deploy role may not
+      `cloudfront:TagResource` the stage's CloudFront Functions
+      (`<prefix>-web-app-index`, ...), which do take tags, so the new
+      `project`/`tenancy` stack tags couldn't reach them.
+    - The `CloudFrontFunctions` statement in `grigri_infra/github-deploy.yaml`
+      also allows `cloudfront:TagResource`/`UntagResource` on the stage's
+      own functions (`function/<prefix>-*`).
 
 ## 2026-10-16
 
-51. **Score how likely a climber and a plan end in a match, with aityx
+52. **Score how likely a climber and a plan end in a match, with aityx
     (System One), and show it to admins; score every profile against
     every plan into a table, previewed on the Admin tab.**
     - [Match scores](match-scores.md) (new): the decision model
