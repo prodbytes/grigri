@@ -19,7 +19,7 @@ import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
 import type { Delivery, Effects } from '../domain/rules.js';
-import { type Attachment, type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, isOpen } from '../domain/model.js';
+import { type Attachment, type Climber, type DayWindow, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, isOpen } from '../domain/model.js';
 import type { Wall } from '../domain/walls.js';
 import { index, key, prefix } from './keys.js';
 
@@ -726,12 +726,16 @@ export function toClimber(i: Item): Climber {
   };
 }
 
+/** An undated plan's place in the by-start index: after every date. */
+const UNDATED = '~';
+
 export function planItem(p: Plan, version: number): Item {
   return {
     ...key.plan(p.id),
     type: 'plan',
     gsi1pk: index.byStart.pk,
-    gsi1sk: `${p.start}#${p.id}`,
+    // Undated plans sort after every date ('~' after digits): always upcoming.
+    gsi1sk: `${p.start ?? UNDATED}#${p.id}`,
     version,
     id: p.id,
     organizerId: p.organizerId,
@@ -740,8 +744,8 @@ export function planItem(p: Plan, version: number): Item {
     area: p.area,
     ...(p.sectorId ? { sectorId: p.sectorId } : {}),
     ...(p.lat !== undefined && p.lon !== undefined ? { lat: p.lat, lon: p.lon } : {}),
-    start: p.start,
-    end: p.end,
+    ...(p.start && p.end ? { start: p.start, end: p.end } : {}),
+    ...(p.moreDays?.length ? { moreDays: p.moreDays } : {}),
     grades: p.grades,
     memberIds: p.memberIds,
     notes: p.notes,
@@ -758,8 +762,8 @@ export function toPlan(i: Item): Plan {
     area: (i.area as string) ?? '',
     ...(i.sectorId ? { sectorId: i.sectorId as string } : {}),
     ...(typeof i.lat === 'number' && typeof i.lon === 'number' ? { lat: i.lat, lon: i.lon } : {}),
-    start: i.start as string,
-    end: i.end as string,
+    ...(typeof i.start === 'string' && typeof i.end === 'string' ? { start: i.start, end: i.end } : {}),
+    ...(Array.isArray(i.moreDays) && i.moreDays.length ? { moreDays: i.moreDays as DayWindow[] } : {}),
     grades: i.grades as Plan['grades'],
     memberIds: (i.memberIds as string[]) ?? [],
     notes: (i.notes as string) ?? '',

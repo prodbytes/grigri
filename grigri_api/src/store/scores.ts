@@ -10,7 +10,8 @@
 //   gsi1: gsi1pk RUN#<runId>, gsi1sk <score>#<climberId>#<planId>
 //                                              a run's scores, best first
 //
-// Scores expire (the table's ttl) a day after their plan starts. A pair a
+// Scores expire (the table's ttl) a day after their plan starts (an
+// undated plan's, a month after they're scored). A pair a
 // run no longer scores (the climber joined the plan) keeps its old score,
 // under the old run's index partition, until then.
 import { BatchWriteCommand, type DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
@@ -43,6 +44,7 @@ export interface ScoreRun {
 }
 
 const DAY_S = 24 * 60 * 60;
+const UNDATED_S = 30 * DAY_S;
 
 export class ScoresStore {
   constructor(
@@ -78,8 +80,8 @@ export class ScoresStore {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { pk: 'META', sk: 'RUN', run } }));
   }
 
-  /** Writes scores; [startsAt]: each plan's start, for its scores' expiry. */
-  async put(scores: ScoredPair[], startsAt: Map<string, string>): Promise<void> {
+  /** Writes scores; [startsAt]: each plan's start (undefined while undated), for its scores' expiry. */
+  async put(scores: ScoredPair[], startsAt: Map<string, string | undefined>): Promise<void> {
     const requests = scores.map((s) => ({ PutRequest: { Item: scoreItem(s, startsAt.get(s.planId)) } }));
     for (let i = 0; i < requests.length; i += 25) {
       let pending: Item[] | undefined = requests.slice(i, i + 25);
@@ -98,7 +100,8 @@ function scoreKey(climberId: string, planId: string) {
 }
 
 export function scoreItem(s: ScoredPair, startsAt: string | undefined): Item {
-  const start = startsAt ? Math.floor(Date.parse(startsAt) / 1000) : NaN;
+  // An undated plan's: a month after the run (every run rewrites them).
+  const start = Math.floor(Date.parse(startsAt ?? s.scoredAt) / 1000) + (startsAt ? 0 : UNDATED_S);
   return {
     ...scoreKey(s.climberId, s.planId),
     gsi1pk: `RUN#${s.runId}`,

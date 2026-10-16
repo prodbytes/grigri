@@ -4,6 +4,7 @@
 // (src/scorer.ts) on demand.
 import type { Climber, JoinRequest, Plan } from '../domain/model.js';
 import { isOpen } from '../domain/model.js';
+import { soonestFirst } from '../domain/rules.js';
 import type { ScoreRun, ScoredPair, ScoresStore } from '../store/scores.js';
 import { type MatchScorer, pooled } from './aityx.js';
 import { matchFacts } from './facts.js';
@@ -59,7 +60,7 @@ export async function scoreAll(o: RunOptions): Promise<ScoreRun> {
   ]);
   // Real people only: the demo showcase's made-up climbers never swipe.
   const people = climbers.filter((c) => !c.demo);
-  const soonest = [...plans].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id.localeCompare(b.id)));
+  const soonest = soonestFirst(plans);
   const open = openByPlan(requests);
   const all: { climber: Climber; plan: Plan }[] = [];
   for (const plan of soonest) {

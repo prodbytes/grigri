@@ -990,8 +990,10 @@ void main() {
       expect(plan.sectorId, 'demo:el-pati');
       expect(plan.area, isNotEmpty);
       expect((plan.lat, plan.lon), (41.2577, 0.9318));
-      expect(plan.start.hour, 9);
-      expect(plan.end.hour, 17);
+      expect(plan.start!.hour, 9);
+      expect(plan.end!.hour, 17);
+      expect(plan.start!.weekday, DateTime.saturday);
+      expect(plan.moreDays, isEmpty);
       expect(find.text('El Pati'), findsOneWidget);
     });
 
@@ -1009,6 +1011,65 @@ void main() {
       expect(plan.sectorId, isNull);
       expect(plan.area, isEmpty);
       expect(find.text('Hidden Slab'), findsOneWidget);
+    });
+
+    testWidgets('a plan may leave its date open', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await openNewPlan(tester);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Sector, crag or gym'),
+        'Open Wall',
+      );
+      await tester.tap(find.byTooltip('Leave the date open'));
+      await tester.pumpAndSettle();
+      expect(find.text('Date to be decided'), findsOneWidget);
+      // No day, no hours and no more days.
+      expect(find.text('Add a day'), findsNothing);
+      expect(find.byType(RangeSlider), findsOneWidget);
+      await publish(tester);
+      final plan = api.plans.values.firstWhere((p) => p.place == 'Open Wall');
+      expect(plan.start, isNull);
+      expect(plan.end, isNull);
+      expect(find.text('Date to be decided'), findsOneWidget);
+    });
+
+    testWidgets('a plan takes more days, at the same hours', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await openNewPlan(tester);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Sector, crag or gym'),
+        'Long Weekend',
+      );
+      for (var i = 0; i < 2; i++) {
+        final add = find.text('Add a day');
+        await tester.ensureVisible(add);
+        await tester.pumpAndSettle();
+        await tester.tap(add);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+      }
+      expect(find.byType(InputChip), findsNWidgets(2));
+      // Removing one leaves the other.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(InputChip).first,
+          matching: find.byIcon(Icons.clear),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(InputChip), findsOneWidget);
+      await publish(tester);
+      final plan = api.plans.values.firstWhere(
+        (p) => p.place == 'Long Weekend',
+      );
+      final first = plan.start!;
+      final next = plan.moreDays.single;
+      expect(next.start.difference(first).inDays, 2);
+      expect((next.start.hour, next.end.hour), (9, 17));
+      expect(find.textContaining('+1 day'), findsOneWidget);
     });
 
     testWidgets('grades switch between European and American, on the device', (

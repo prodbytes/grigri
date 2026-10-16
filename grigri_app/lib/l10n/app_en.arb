@@ -941,6 +941,36 @@
   "@sectionWhen": {
     "description": "Plan editor section (shown uppercased)."
   },
+  "dateToBeDecided": "Date to be decided",
+  "@dateToBeDecided": {
+    "description": "A plan with no date yet, in place of its day."
+  },
+  "dayAndMoreDays": "{day} +{count, plural, =1{1 day} other{{count} days}}",
+  "@dayAndMoreDays": {
+    "description": "A plan of several days: its first day and how many more, e.g. \"Sat 17 Oct +2 days\".",
+    "placeholders": {
+      "day": {
+        "type": "String",
+        "example": "Sat 17 Oct"
+      },
+      "count": {
+        "type": "int",
+        "example": "2"
+      }
+    }
+  },
+  "addDay": "Add a day",
+  "@addDay": {
+    "description": "Plan editor button: adds another day to the plan."
+  },
+  "leaveDateOpen": "Leave the date open",
+  "@leaveDateOpen": {
+    "description": "Plan editor tooltip: removes the plan's date, leaving it to be decided."
+  },
+  "whenHelp": "The date is optional. Add more days for a longer trip.",
+  "@whenHelp": {
+    "description": "Plan editor hint under the When section."
+  },
   "sectionGrades": "Grades",
   "@sectionGrades": {
     "description": "Plan editor section (shown uppercased)."

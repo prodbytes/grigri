@@ -57,12 +57,32 @@ String clock(DateTime t) =>
 String dayLabel(BuildContext context, DateTime t) =>
     DateFormat('EEE d MMM', context.l10n.localeName).format(t);
 
-/// "Sat 17 Oct · 08:00–17:00".
-String whenLabel(BuildContext context, Plan plan) =>
-    '${dayLabel(context, plan.start)} · ${timeRangeLabel(plan)}';
+/// The plan's first day, "Sat 17 Oct"; "Sat 17 Oct +2 days" when it has
+/// more; "Date to be decided" while undated.
+String daysLabel(BuildContext context, Plan plan) {
+  final start = plan.start;
+  if (start == null) return context.l10n.dateToBeDecided;
+  final day = dayLabel(context, start);
+  return plan.moreDays.isEmpty
+      ? day
+      : context.l10n.dayAndMoreDays(day, plan.moreDays.length);
+}
 
-/// "08:00–17:00".
-String timeRangeLabel(Plan plan) => '${clock(plan.start)}–${clock(plan.end)}';
+/// Every day of the plan, "Sat 17 Oct, Sun 18 Oct"; "Date to be decided"
+/// while undated.
+String allDaysLabel(BuildContext context, Plan plan) => plan.days.isEmpty
+    ? context.l10n.dateToBeDecided
+    : plan.days.map((d) => dayLabel(context, d.start)).join(', ');
+
+/// "Sat 17 Oct · 08:00–17:00"; just "Date to be decided" while undated.
+String whenLabel(BuildContext context, Plan plan) => plan.start == null
+    ? daysLabel(context, plan)
+    : '${daysLabel(context, plan)} · ${timeRangeLabel(plan)}';
+
+/// The first day's hours, "08:00–17:00"; empty while undated.
+String timeRangeLabel(Plan plan) => plan.start == null || plan.end == null
+    ? ''
+    : '${clock(plan.start!)}–${clock(plan.end!)}';
 
 /// "Sat 17 Oct, 18:30".
 String dayAndTime(BuildContext context, DateTime t) =>

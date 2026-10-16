@@ -66,8 +66,8 @@ describe('demo showcase', () => {
     for (const { id: _id, ...c } of data.climbers) expect(() => profileInput(c, [])).not.toThrow();
     for (const { id: _id, organizerId: _o, memberIds: _m, ...p } of data.plans) {
       expect(planInput(p, now)).toEqual(p);
-      expect(Date.parse(p.start) - now.getTime()).toBeGreaterThan(0);
-      expect(Date.parse(p.start) - now.getTime()).toBeLessThan(8 * 86_400_000);
+      expect(Date.parse(p.start!) - now.getTime()).toBeGreaterThan(0);
+      expect(Date.parse(p.start!) - now.getTime()).toBeLessThan(8 * 86_400_000);
     }
   });
 });

@@ -4,6 +4,7 @@ import { badRequest } from './errors.js';
 import {
   type Attachment,
   type Climber,
+  type DayWindow,
   DISCIPLINES,
   type Discipline,
   GEAR,
@@ -176,14 +177,22 @@ export function planInput(body: unknown, now: Date): PlanInput {
   const place = text(o.place, 'place', { min: 1, max: 80 });
   const area = text(o.area, 'area', { max: 120 });
   const sectorId = text(o.sectorId, 'sectorId', { max: 64 });
-  if (typeof o.start !== 'string') throw badRequest('start must be an ISO 8601 date');
-  if (typeof o.end !== 'string') throw badRequest('end must be an ISO 8601 date');
-  const start = parseDate(o.start, 'start');
-  const end = parseDate(o.end, 'end');
-  if (start.getTime() <= now.getTime()) throw badRequest('start must be in the future');
-  if (start.getTime() > now.getTime() + 366 * 24 * HOUR) throw badRequest('start is more than a year away');
-  if (end.getTime() <= start.getTime()) throw badRequest('end must be after start');
-  if (end.getTime() > start.getTime() + 24 * HOUR) throw badRequest('end must be at most 24 hours after start');
+  // The first day: both or neither (an undated plan, its day still open).
+  const dated = (o.start !== undefined && o.start !== null) || (o.end !== undefined && o.end !== null);
+  const first = dated ? dayWindow(o, '', now) : undefined;
+  const moreDays: DayWindow[] = [];
+  if (o.moreDays !== undefined && o.moreDays !== null) {
+    if (!Array.isArray(o.moreDays)) throw badRequest('moreDays must be a list');
+    if (o.moreDays.length > 0 && !first) throw badRequest('moreDays needs a start');
+    if (o.moreDays.length > MAX_MORE_DAYS) throw badRequest(`at most ${MAX_MORE_DAYS} more days`);
+    let previousEnd = first ? Date.parse(first.end) : 0;
+    for (const [i, w] of o.moreDays.entries()) {
+      const day = dayWindow(asObject(w, `moreDays[${i}]`), `moreDays[${i}].`, now);
+      if (Date.parse(day.start) < previousEnd) throw badRequest(`moreDays[${i}] must start after the day before ends`);
+      previousEnd = Date.parse(day.end);
+      moreDays.push(day);
+    }
+  }
   const grades = gradeRange(o.grades, 'grades', scaleOf(d));
   const notes = text(o.notes, 'notes', { max: 1000 });
   // Both or neither: a crag's point (public, so kept to ~10 m).
@@ -197,11 +206,27 @@ export function planInput(body: unknown, now: Date): PlanInput {
     area,
     ...(sectorId ? { sectorId } : {}),
     ...point,
-    start: start.toISOString(),
-    end: end.toISOString(),
+    ...first,
+    ...(moreDays.length ? { moreDays } : {}),
     grades,
     notes,
   };
+}
+
+/** A plan's days, besides the first: two weeks in all. */
+export const MAX_MORE_DAYS = 13;
+
+/** One day's window (`<prefix>start`, `<prefix>end`): in the next year, up to 24 hours long. */
+function dayWindow(o: Json, prefix: string, now: Date): DayWindow {
+  if (typeof o.start !== 'string') throw badRequest(`${prefix}start must be an ISO 8601 date`);
+  if (typeof o.end !== 'string') throw badRequest(`${prefix}end must be an ISO 8601 date`);
+  const start = parseDate(o.start, `${prefix}start`);
+  const end = parseDate(o.end, `${prefix}end`);
+  if (start.getTime() <= now.getTime()) throw badRequest(`${prefix}start must be in the future`);
+  if (start.getTime() > now.getTime() + 366 * 24 * HOUR) throw badRequest(`${prefix}start is more than a year away`);
+  if (end.getTime() <= start.getTime()) throw badRequest(`${prefix}end must be after start`);
+  if (end.getTime() > start.getTime() + 24 * HOUR) throw badRequest(`${prefix}end must be at most 24 hours after start`);
+  return { start: start.toISOString(), end: end.toISOString() };
 }
 
 /**

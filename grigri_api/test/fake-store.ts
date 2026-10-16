@@ -116,7 +116,7 @@ export class FakeStore {
   }
   async planRequests(id: string) { return [...this.requests.values()].filter((r) => r.planId === id); }
   async getRequest(planId: string, climberId: string) { return this.requests.get(`${planId}/${climberId}`); }
-  async upcomingPlans(after: string) { return [...this.plans.values()].map((p) => p.plan).filter((p) => p.start > after); }
+  async upcomingPlans(after: string) { return [...this.plans.values()].map((p) => p.plan).filter((p) => (p.start ?? '~') > after); }
   async memberPlanIds(cid: string) { return [...this.plans.values()].filter((p) => p.plan.memberIds.includes(cid)).map((p) => p.plan.id); }
   async passedPlanIds(cid: string) { return [...this.passes].filter((k) => k.startsWith(`${cid}|`)).map((k) => k.split('|')[1]!); }
   left = new Set<string>();

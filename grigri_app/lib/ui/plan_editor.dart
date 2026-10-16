@@ -8,7 +8,8 @@ import '../theme.dart';
 import 'common.dart';
 
 /// Creates a plan, or edits one I organize: what, where (a sector from the
-/// index, or typed in), when (a day and a time range) and which grades.
+/// index, or typed in), when (a first day, left open if not known yet, any
+/// more days, and the hours, the same each day) and which grades.
 class PlanEditor extends StatefulWidget {
   const PlanEditor({super.key, this.plan});
 
@@ -25,14 +26,28 @@ class _PlanEditorState extends State<PlanEditor> {
   final _placeFocus = FocusNode();
   late final _notes = TextEditingController(text: widget.plan?.notes);
   late Discipline _discipline = widget.plan?.discipline ?? Discipline.sport;
-  late DateTime _day = _dayOf(widget.plan?.start ?? _nextSaturday());
 
-  /// From and to, in half hours since midnight.
-  late RangeValues _hours = widget.plan == null
+  /// The first day; null while it's left open (an undated plan). A new
+  /// plan starts on the next Saturday.
+  late DateTime? _day = widget.plan == null
+      ? _nextSaturday()
+      : widget.plan!.start == null
+      ? null
+      : _dayOf(widget.plan!.start!);
+
+  /// The days after the first, soonest first.
+  late final List<DateTime> _moreDays = [
+    for (final d in widget.plan?.moreDays ?? const <DayWindow>[])
+      _dayOf(d.start),
+  ];
+
+  /// From and to, in half hours since midnight, each day.
+  late RangeValues _hours =
+      widget.plan?.start == null || widget.plan?.end == null
       ? const RangeValues(9 * 2, 17 * 2)
       : RangeValues(
-          _halfHours(widget.plan!.start, _firstHalfHour, _lastHalfHour - 1),
-          _halfHours(widget.plan!.end, _firstHalfHour + 1, _lastHalfHour),
+          _halfHours(widget.plan!.start!, _firstHalfHour, _lastHalfHour - 1),
+          _halfHours(widget.plan!.end!, _firstHalfHour + 1, _lastHalfHour),
         );
   late RangeValues _grades;
 
@@ -52,6 +67,9 @@ class _PlanEditorState extends State<PlanEditor> {
   static const _firstHalfHour = 5 * 2;
   static const _lastHalfHour = 23 * 2 + 1;
 
+  /// Days after the first: two weeks in all (the API's limit).
+  static const _maxMoreDays = 13;
+
   static DateTime _dayOf(DateTime t) => DateTime(t.year, t.month, t.day);
 
   static DateTime _nextSaturday() {
@@ -67,11 +85,17 @@ class _PlanEditorState extends State<PlanEditor> {
   static double _halfHours(DateTime t, int min, int max) =>
       ((t.hour * 60 + t.minute) / 30).round().clamp(min, max).toDouble();
 
-  /// [_day] at [halfHours] since midnight.
-  DateTime _at(double halfHours) {
+  /// [day] at [halfHours] since midnight.
+  static DateTime _at(DateTime day, double halfHours) {
     final h = halfHours.round();
-    return DateTime(_day.year, _day.month, _day.day, h ~/ 2, h.isOdd ? 30 : 0);
+    return DateTime(day.year, day.month, day.day, h ~/ 2, h.isOdd ? 30 : 0);
   }
+
+  /// [day] from and to [_hours].
+  DayWindow _window(DateTime day) =>
+      (start: _at(day, _hours.start), end: _at(day, _hours.end));
+
+  static DateTime _nextDay(DateTime d) => DateTime(d.year, d.month, d.day + 1);
 
   static String _clockOf(double halfHours) {
     final h = halfHours.round();
@@ -116,16 +140,52 @@ class _PlanEditorState extends State<PlanEditor> {
     super.dispose();
   }
 
+  static DateTime get _lastDate =>
+      _dayOf(DateTime.now().add(const Duration(days: 365)));
+
+  /// Picks the first day; more days not after it are dropped.
   Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final today = _dayOf(now);
+    final today = _dayOf(DateTime.now());
+    final day = _day ?? _nextSaturday();
     final date = await showDatePicker(
       context: context,
-      initialDate: _day.isBefore(today) ? today : _day,
+      initialDate: day.isBefore(today) ? today : day,
       firstDate: today,
-      lastDate: now.add(const Duration(days: 365)),
+      lastDate: _lastDate,
     );
-    if (date != null) setState(() => _day = _dayOf(date));
+    if (date == null) return;
+    setState(() {
+      _day = _dayOf(date);
+      _moreDays.removeWhere((d) => !d.isAfter(_day!));
+    });
+  }
+
+  /// Adds a day after the first, one not in the plan yet.
+  Future<void> _addDay() async {
+    final first = _day;
+    if (first == null) return;
+    final taken = {first, ..._moreDays};
+    final firstDate = _nextDay(first);
+    if (firstDate.isAfter(_lastDate)) return;
+    var initial = _nextDay(_moreDays.isEmpty ? first : _moreDays.last);
+    if (initial.isAfter(_lastDate)) initial = firstDate;
+    while (taken.contains(initial) && !initial.isAfter(_lastDate)) {
+      initial = _nextDay(initial);
+    }
+    if (initial.isAfter(_lastDate)) return;
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: _lastDate,
+      selectableDayPredicate: (d) => !taken.contains(_dayOf(d)),
+    );
+    if (date == null) return;
+    setState(() {
+      _moreDays
+        ..add(_dayOf(date))
+        ..sort();
+    });
   }
 
   bool _saving = false;
@@ -134,7 +194,8 @@ class _PlanEditorState extends State<PlanEditor> {
     if (_saving || !_form.currentState!.validate()) return;
     final store = StoreScope.read(context);
     final now = DateTime.now();
-    if (!_at(_hours.start).isAfter(now)) {
+    final day = _day;
+    if (day != null && !_at(day, _hours.start).isAfter(now)) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(context.l10n.pickFutureTime)));
       return;
@@ -147,8 +208,7 @@ class _PlanEditorState extends State<PlanEditor> {
     final sector = _sector;
     final place = _place.text.trim();
     final area = sector?.where ?? '';
-    final start = _at(_hours.start);
-    final end = _at(_hours.end);
+    final first = day == null ? null : _window(day);
     final existing = widget.plan;
     final plan = (existing ?? _draft).copyWith(
       discipline: _discipline,
@@ -158,8 +218,11 @@ class _PlanEditorState extends State<PlanEditor> {
       point: () => sector?.lat == null || sector?.lon == null
           ? null
           : (lat: sector!.lat!, lon: sector.lon!),
-      start: start,
-      end: end,
+      start: () => first?.start,
+      end: () => first?.end,
+      moreDays: day == null
+          ? const []
+          : [for (final d in _moreDays) _window(d)],
       grades: grades,
       notes: _notes.text.trim(),
     );
@@ -178,8 +241,6 @@ class _PlanEditorState extends State<PlanEditor> {
     organizerId: '',
     discipline: _discipline,
     place: '',
-    start: _at(_hours.start),
-    end: _at(_hours.end),
     grades: GradeRange(_discipline.scale, 0, 0),
     memberIds: const [],
   );
@@ -311,37 +372,89 @@ class _PlanEditorState extends State<PlanEditor> {
             label(l.sectionWhere),
             _whereField(),
             label(l.sectionWhen),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.event),
-              label: Text(dayLabel(context, _day)),
-              onPressed: _pickDate,
-            ),
-            const SizedBox(height: 8),
             Row(
               children: [
-                const Icon(Icons.schedule, size: 20, color: Mountain.granite),
                 Expanded(
-                  child: RangeSlider(
-                    values: _hours,
-                    min: _firstHalfHour.toDouble(),
-                    max: _lastHalfHour.toDouble(),
-                    divisions: _lastHalfHour - _firstHalfHour,
-                    labels: RangeLabels(
-                      _clockOf(_hours.start),
-                      _clockOf(_hours.end),
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.event),
+                    label: Text(
+                      _day == null
+                          ? l.dateToBeDecided
+                          : dayLabel(context, _day!),
                     ),
-                    onChanged: (v) {
-                      // At least half an hour.
-                      if (v.end > v.start) setState(() => _hours = v);
-                    },
+                    onPressed: _pickDate,
                   ),
                 ),
-                Text(
-                  '${_clockOf(_hours.start)}–${_clockOf(_hours.end)}',
-                  style: text.titleSmall,
-                ),
+                if (_day != null)
+                  IconButton(
+                    tooltip: l.leaveDateOpen,
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() {
+                      _day = null;
+                      _moreDays.clear();
+                    }),
+                  ),
               ],
             ),
+            if (_moreDays.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final d in _moreDays)
+                    InputChip(
+                      avatar: const Icon(Icons.event, size: 18),
+                      label: Text(dayLabel(context, d)),
+                      onDeleted: () => setState(() => _moreDays.remove(d)),
+                    ),
+                ],
+              ),
+            ],
+            if (_day != null && _moreDays.length < _maxMoreDays)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.add),
+                  label: Text(l.addDay),
+                  onPressed: _addDay,
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                l.whenHelp,
+                style: text.bodySmall?.copyWith(color: Mountain.granite),
+              ),
+            ),
+            if (_day != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.schedule, size: 20, color: Mountain.granite),
+                  Expanded(
+                    child: RangeSlider(
+                      values: _hours,
+                      min: _firstHalfHour.toDouble(),
+                      max: _lastHalfHour.toDouble(),
+                      divisions: _lastHalfHour - _firstHalfHour,
+                      labels: RangeLabels(
+                        _clockOf(_hours.start),
+                        _clockOf(_hours.end),
+                      ),
+                      onChanged: (v) {
+                        // At least half an hour.
+                        if (v.end > v.start) setState(() => _hours = v);
+                      },
+                    ),
+                  ),
+                  Text(
+                    '${_clockOf(_hours.start)}–${_clockOf(_hours.end)}',
+                    style: text.titleSmall,
+                  ),
+                ],
+              ),
+            ],
             label(l.sectionGrades),
             const GradeSystemToggle(),
             const SizedBox(height: 4),

@@ -179,8 +179,45 @@ void main() {
         expect(body.containsKey('title'), isFalse);
         expect(body.containsKey('spots'), isFalse);
         expect(body.containsKey('sectorId'), isFalse);
+        expect(body['moreDays'], isEmpty);
       },
     );
+
+    test('reads and sends more days, and an undated plan', () {
+      final multi = Plan.fromJson({
+        ...planJson,
+        'moreDays': [
+          {
+            'start': '2026-10-18T07:00:00.000Z',
+            'end': '2026-10-18T14:00:00.000Z',
+          },
+        ],
+      });
+      expect(multi.days, hasLength(2));
+      expect(
+        multi.moreDays.single.start,
+        DateTime.utc(2026, 10, 18, 7).toLocal(),
+      );
+      expect(multi.toJson()['moreDays'], [
+        {
+          'start': '2026-10-18T07:00:00.000Z',
+          'end': '2026-10-18T14:00:00.000Z',
+        },
+      ]);
+
+      final undated = Plan.fromJson(
+        {...planJson}
+          ..remove('start')
+          ..remove('end'),
+      );
+      expect(undated.start, isNull);
+      expect(undated.days, isEmpty);
+      expect(undated.hasStarted(DateTime(2100)), isFalse);
+      final body = undated.toJson();
+      expect(body.containsKey('start'), isFalse);
+      expect(body.containsKey('end'), isFalse);
+      expect(undated.copyWith(start: () => null).start, isNull);
+    });
 
     test('names requests by plan and climber, and reads a match', () async {
       final seen = <http.Request>[];

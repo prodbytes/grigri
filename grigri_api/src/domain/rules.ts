@@ -122,12 +122,11 @@ export function discover(
   asked: ReadonlySet<string>,
   now: Date,
 ): Deck {
-  const nowIso = now.toISOString();
   const distances: Record<string, number> = {};
   const scored = plans
     .filter(
       (p) =>
-        p.start > nowIso &&
+        !hasStarted(p, now) &&
         !p.memberIds.includes(me.id) &&
         !passed.has(p.id) &&
         !asked.has(p.id),
@@ -140,7 +139,7 @@ export function discover(
   scored.sort((a, b) => {
     if (a.score !== b.score) return b.score - a.score;
     const [x, y] = [a.plan, b.plan];
-    return x.start < y.start ? -1 : x.start > y.start ? 1 : x.id.localeCompare(y.id);
+    return soonest(a.plan, b.plan);
   });
   return { plans: scored.map((s) => s.plan), distanceKm: distances };
 }
@@ -156,9 +155,20 @@ export function toReview(states: PlanState[], meId: string): JoinRequest[] {
   );
 }
 
-/** Plans sorted soonest first. */
+/** Plans sorted soonest first; undated ones last. */
 export function soonestFirst(plans: Plan[]): Plan[] {
-  return [...plans].sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.id.localeCompare(b.id)));
+  return [...plans].sort(soonest);
+}
+
+/** Soonest first, undated last (as the by-start index has them), then by id. */
+function soonest(a: Plan, b: Plan): number {
+  const [x, y] = [a.start ?? '~', b.start ?? '~'];
+  return x < y ? -1 : x > y ? 1 : a.id.localeCompare(b.id);
+}
+
+/** Whether the plan's first day has begun; an undated plan never has. */
+export function hasStarted(plan: Plan, now: Date): boolean {
+  return plan.start !== undefined && plan.start <= now.toISOString();
 }
 
 // --- Plans ---------------------------------------------------------------
@@ -178,8 +188,8 @@ export function createPlan(id: string, organizerId: string, input: PlanInput, ct
 /** The organizer changes a plan; its members stay. */
 export function updatePlan(plan: Plan, actorId: string, input: PlanInput): Plan {
   if (plan.organizerId !== actorId) throw forbidden('only the organizer can change the plan');
-  // Written whole: a sectorId left out is cleared.
-  const { sectorId: _old, ...rest } = plan;
+  // Written whole: a sectorId or days left out are cleared.
+  const { sectorId: _sector, start: _start, end: _end, moreDays: _more, ...rest } = plan;
   return { ...rest, ...input, id: plan.id, organizerId: plan.organizerId, memberIds: plan.memberIds };
 }
 
@@ -238,7 +248,7 @@ export function leave(state: PlanState, actorId: string, ctx: Context): Effects 
 export function ask(plan: Plan, climberId: string, existing: JoinRequest | undefined, ctx: Context): Effects {
   if (plan.memberIds.includes(climberId)) throw conflict("you're already in this plan");
   if (existing) throw conflict('you already asked to join this plan');
-  if (plan.start <= ctx.now.toISOString()) throw conflict('the plan has started');
+  if (hasStarted(plan, ctx.now)) throw conflict('the plan has started');
   const time = ctx.now.toISOString();
   const request: JoinRequest = {
     id: requestId(plan.id, climberId),
@@ -321,7 +331,7 @@ export function nudge(state: PlanState, climberId: string, ctx: Context): Effect
   if (!request) throw notFound("you haven't asked to join this plan");
   if (request.rejected) throw conflict('the request was declined');
   if (request.joined || plan.memberIds.includes(climberId)) throw conflict("you're already in this plan");
-  if (plan.start <= ctx.now.toISOString()) throw conflict('the plan has started');
+  if (hasStarted(plan, ctx.now)) throw conflict('the plan has started');
   if (request.nudgedAt && ctx.now.getTime() < Date.parse(request.nudgedAt) + NUDGE_COOLDOWN_MS) {
     throw tooMany('you nudged the group less than 12 hours ago; try again later');
   }

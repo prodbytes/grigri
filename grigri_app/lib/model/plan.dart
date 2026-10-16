@@ -6,6 +6,9 @@ DateTime _time(Object? value) => DateTime.parse(value! as String).toLocal();
 /// Writes a date as the API takes it: ISO 8601, UTC.
 String apiTime(DateTime t) => t.toUtc().toIso8601String();
 
+/// One day of a plan: from [start] to [end] (at most 24 hours later).
+typedef DayWindow = ({DateTime start, DateTime end});
+
 /// A plan to climb: a specific outing (what, where, when, which grades),
 /// separate from the people's profiles. Its members are its group, and
 /// share its chat; the organizer is its first member. The group has no
@@ -16,10 +19,11 @@ class Plan {
     required this.organizerId,
     required this.discipline,
     required this.place,
-    required this.start,
-    required this.end,
     required this.grades,
     required this.memberIds,
+    this.start,
+    this.end,
+    this.moreDays = const [],
     this.sectorId,
     this.lat,
     this.lon,
@@ -48,8 +52,15 @@ class Plan {
   /// typed in by hand (or a sector without a point).
   final double? lat;
   final double? lon;
-  final DateTime start;
-  final DateTime end;
+
+  /// The first day's start and end; both null while the day is still to
+  /// be decided (an undated plan).
+  final DateTime? start;
+  final DateTime? end;
+
+  /// The days after the first, soonest first; empty for a one-day (or
+  /// undated) plan.
+  final List<DayWindow> moreDays;
   final GradeRange grades;
 
   /// The group, organizer first, in the order they joined.
@@ -63,14 +74,25 @@ class Plan {
   /// What the plan is called in lists and chats: where it is.
   String get title => place;
 
+  /// Every day of the plan, the first one first; empty while undated.
+  List<DayWindow> get days => [
+    if (start != null && end != null) (start: start!, end: end!),
+    ...moreDays,
+  ];
+
+  /// Whether the first day has begun (joining closes then); an undated
+  /// plan never has.
+  bool hasStarted(DateTime now) => start != null && !start!.isAfter(now);
+
   Plan copyWith({
     Discipline? discipline,
     String? place,
     String? area,
     String? Function()? sectorId,
     ({double lat, double lon})? Function()? point,
-    DateTime? start,
-    DateTime? end,
+    DateTime? Function()? start,
+    DateTime? Function()? end,
+    List<DayWindow>? moreDays,
     GradeRange? grades,
     String? organizerId,
     List<String>? memberIds,
@@ -84,8 +106,9 @@ class Plan {
     sectorId: sectorId != null ? sectorId() : this.sectorId,
     lat: point != null ? point()?.lat : lat,
     lon: point != null ? point()?.lon : lon,
-    start: start ?? this.start,
-    end: end ?? this.end,
+    start: start != null ? start() : this.start,
+    end: end != null ? end() : this.end,
+    moreDays: moreDays ?? this.moreDays,
     grades: grades ?? this.grades,
     memberIds: memberIds ?? this.memberIds,
     notes: notes ?? this.notes,
@@ -102,8 +125,12 @@ class Plan {
     'sectorId': ?sectorId,
     'lat': ?lat,
     'lon': ?lon,
-    'start': apiTime(start),
-    'end': apiTime(end),
+    if (start != null) 'start': apiTime(start!),
+    if (end != null) 'end': apiTime(end!),
+    'moreDays': [
+      for (final d in moreDays)
+        {'start': apiTime(d.start), 'end': apiTime(d.end)},
+    ],
     'grades': grades.toJson(),
     'notes': notes,
   };
@@ -117,8 +144,12 @@ class Plan {
     sectorId: json['sectorId'] as String?,
     lat: (json['lat'] as num?)?.toDouble(),
     lon: (json['lon'] as num?)?.toDouble(),
-    start: _time(json['start']),
-    end: _time(json['end']),
+    start: json['start'] == null ? null : _time(json['start']),
+    end: json['end'] == null ? null : _time(json['end']),
+    moreDays: [
+      for (final d in json['moreDays'] as List? ?? const [])
+        (start: _time((d as Map)['start']), end: _time(d['end'])),
+    ],
     grades: GradeRange.fromJson((json['grades']! as Map).cast()),
     memberIds: [for (final m in json['memberIds']! as List) m as String],
     notes: json['notes'] as String? ?? '',

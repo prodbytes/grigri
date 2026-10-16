@@ -573,8 +573,9 @@ class _PlanCover extends StatelessWidget {
               const SizedBox(height: 6),
               if (plan.area.isNotEmpty)
                 _OverLine(Icons.place_outlined, plan.area),
-              _OverLine(Icons.event_outlined, dayLabel(context, plan.start)),
-              _OverLine(Icons.schedule, timeRangeLabel(plan)),
+              _OverLine(Icons.event_outlined, daysLabel(context, plan)),
+              if (plan.start != null)
+                _OverLine(Icons.schedule, timeRangeLabel(plan)),
               const SizedBox(height: 10),
               Wrap(
                 spacing: 8,

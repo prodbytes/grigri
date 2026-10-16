@@ -20,6 +20,18 @@ describe('demo data', () => {
     expect(toPlan(planItem(plan!, 1))).not.toHaveProperty('demo');
   });
 
+  it('keeps more days, and an undated plan sorts after every date in the by-start index', () => {
+    const [plan] = seedData(now).plans;
+    const moreDays = [{ start: '2030-05-20T08:00:00.000Z', end: '2030-05-20T12:00:00.000Z' }];
+    expect(toPlan(planItem({ ...plan!, moreDays }, 1)).moreDays).toEqual(moreDays);
+    const { start: _s, end: _e, ...undated } = plan!;
+    const item = planItem(undated, 1);
+    expect(item).not.toHaveProperty('start');
+    expect(item.gsi1sk as string > '9999').toBe(true);
+    expect(toPlan(item)).not.toHaveProperty('start');
+    expect(toPlan(planItem(plan!, 1))).not.toHaveProperty('moreDays');
+  });
+
   it("can't be set through the API's input", () => {
     const profile = profileInput({ name: 'Ada', bio: '', levels: {}, gear: [], demo: true }, ['me']);
     expect(profile).not.toHaveProperty('demo');

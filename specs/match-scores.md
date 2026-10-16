@@ -28,7 +28,7 @@ the model never sees a profile, a plan or a place:
 | `distance_known`, `distance_km` | the distance from the climber's nearest location or area to the plan's point, when both are known (0 otherwise) |
 | `group_size` | the people in the group, the organizer included: each one must say yes |
 | `open_requests` | the other requests waiting on the plan (the climber's own left out) |
-| `days_until_start` | days until the plan starts |
+| `days_until_start` | days until the plan starts (30 for an undated plan: time enough to answer) |
 
 No names, ages, photos, bios or coordinates leave the API.
 
@@ -100,7 +100,7 @@ The table ([store/scores.ts](../grigri_api/src/store/scores.ts)):
 
 | Item | pk | sk | Index keys | Holds |
 |---|---|---|---|---|
-| Score | `CLIMBER#<climberId>` | `PLAN#<planId>` | gsi1: `RUN#<runId>`, `<score>#<climberId>#<planId>` | `score`, `level`, `reason`, `runId`, `scoredAt`, `ttl` (a day after the plan starts) |
+| Score | `CLIMBER#<climberId>` | `PLAN#<planId>` | gsi1: `RUN#<runId>`, `<score>#<climberId>#<planId>` | `score`, `level`, `reason`, `runId`, `scoredAt`, `ttl` (a day after the plan starts; an undated plan's, a month and a day after it was scored) |
 | Latest run | `META` | `RUN` | | `run`: when it started and finished, profiles, plans, pairs, scored, failed, skipped, aityx input tokens |
 
 One climber's score for one plan is one read; a climber's scores, one
