@@ -81,6 +81,29 @@ Parameters:
       The aityx API key (the GRIGRI_AITYX_API_KEY secret). Empty: no match
       scores (admins' decks show none, and the scoring function refuses to
       run).
+  StripeSecretKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '((sk|rk)_(live|test)_[A-Za-z0-9]+)?'
+    Description: >
+      Stripe's secret key, for Premium (specs/premium.md): live in
+      production, test mode on RC and locally. Empty: no Premium.
+  StripeWebhookSecret:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '(whsec_[A-Za-z0-9]+)?'
+    Description: >
+      The signing secret of Stripe's webhook endpoint
+      (<site>/api/stripe/webhook). Empty: no Premium.
+  SiteUrl:
+    Type: String
+    Default: ''
+    AllowedPattern: '(https://[A-Za-z0-9.:-]+)?'
+    Description: >
+      The site (https://grigri.nu01.com), where Stripe's Checkout and
+      billing portal send people back.
   PhotosBucket:
     Type: String
     AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
@@ -397,6 +420,9 @@ Resources:
           ORIGIN_SECRET: !Ref OriginSecret
           AITYX_URL: !Ref AityxUrl
           AITYX_API_KEY: !Ref AityxApiKey
+          STRIPE_SECRET_KEY: !Ref StripeSecretKey
+          STRIPE_WEBHOOK_SECRET: !Ref StripeWebhookSecret
+          SITE_URL: !Ref SiteUrl
           # Reuse TCP connections to DynamoDB between invocations.
           AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
           NODE_OPTIONS: --enable-source-maps

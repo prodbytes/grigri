@@ -43,6 +43,7 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   static const _plans = 1;
   static const _chats = 2;
   static const _notices = 3;
+  static const _profile = 4;
   static const _admin = 5;
 
   /// The notifications that were unread when I opened the tab.
@@ -86,6 +87,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       _startTimer();
       _store.goLive();
       _tick();
+      // Back from Stripe's pages in the browser, maybe.
+      _store.refreshPremium();
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _timer?.cancel();
@@ -124,6 +127,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         store.refreshChats();
       case _notices when !regular:
         store.refreshNotices();
+      case _profile when !regular:
+        store.refreshPremium();
       case _admin:
         store.refreshAdmin();
     }

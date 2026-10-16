@@ -57,6 +57,9 @@ services:
       # function. Empty: no scores.
       GRIGRI_AITYX_API_KEY: ${GRIGRI_AITYX_API_KEY:-}
       GRIGRI_AITYX_URL: ${GRIGRI_AITYX_URL:-}
+      # Stripe, test mode (from .env): Premium. Empty: no Premium.
+      GRIGRI_STRIPE_SECRET_KEY: ${GRIGRI_STRIPE_SECRET_KEY:-}
+      GRIGRI_STRIPE_WEBHOOK_SECRET: ${GRIGRI_STRIPE_WEBHOOK_SECRET:-}
       # Lambda containers are named grigri-lambda-*, so shutdown can find
       # them (process-compose.yaml).
       FLOCI_SERVICES_LAMBDA_CONTAINER_NAME_PREFIX: grigri-lambda

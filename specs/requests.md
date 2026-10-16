@@ -905,3 +905,20 @@ spec.
       attestation (Play Integrity, App Attest) could tell them apart, and
       that isn't done.
     - Cost: none.
+
+61. **Let people subscribe to Premium in their profile, with real
+    payments.** (First half of the request for ads; the ads come in the
+    next entry.)
+    - [Premium](premium.md) rewritten as built: Stripe Checkout from the
+      profile's **Grigri Premium** card, the billing portal to manage it,
+      Stripe's webhook (signed) keeping each subscription in step; active
+      while paid (or retrying) to the period's end plus two days.
+    - [API](api.md): `GET /api/premium`, `POST /api/premium/checkout`,
+      `POST /api/premium/portal`, `POST /api/stripe/webhook`; `GET
+      /api/me` carries `premium`.
+    - [Deploy](deploy.md): Stripe's keys as secrets (live for GA, test
+      for RC), `StripeSecretKey`, `StripeWebhookSecret` and `SiteUrl` on
+      the API stack. The web app gets `premium.html`, where Stripe sends
+      people back. The app opens links with `url_launcher`.
+    - Cost: no new AWS resource and nothing idle; Stripe's 2.9% + $0.30
+      plus 0.7% per payment ([backend](backend.md#cost)).

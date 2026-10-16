@@ -16,6 +16,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import type { SessionRecord, SessionStore } from '../auth.js';
+import type { Subscription } from '../premium.js';
 import type { Delivery, Effects } from '../domain/rules.js';
 import { type Attachment, type Climber, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, isOpen } from '../domain/model.js';
 import { index, key, prefix } from './keys.js';
@@ -205,6 +206,26 @@ export class Store implements SessionStore {
       if (isConditionFailure(e)) return false;
       throw e;
     }
+  }
+
+  // --- Premium ----------------------------------------------------------------
+
+  async getSubscription(climberId: string): Promise<Subscription | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.premium(climberId) }));
+    if (!Item) return undefined;
+    const { pk: _pk, sk: _sk, type: _type, ...sub } = Item;
+    return sub as unknown as Subscription;
+  }
+
+  /** Several climbers' subscriptions (missing ones left out). */
+  async getSubscriptions(climberIds: Iterable<string>): Promise<Record<string, Subscription>> {
+    const items = await this.batchGet([...new Set(climberIds)].map((id) => key.premium(id)));
+    return Object.fromEntries(items.map((i) => [i.climberId as string, i as unknown as Subscription]));
+  }
+
+  /** Saves Stripe's latest copy of a subscription (a climber has one at a time: the newest wins). */
+  async putSubscription(sub: Subscription): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.premium(sub.climberId), type: 'premium', ...sub } }));
   }
 
   // --- Plans ----------------------------------------------------------------

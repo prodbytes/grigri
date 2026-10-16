@@ -1305,5 +1305,69 @@
         "type": "String"
       }
     }
+  },
+  "premiumTitle": "Grigri Premium",
+  "@premiumTitle": {
+    "description": "Profile card heading: the Premium subscription."
+  },
+  "premiumPitch": "Advertise on Grigri: your ads show between plans on everyone's Discover. Everything else stays the same.",
+  "@premiumPitch": {
+    "description": "Profile card: what Premium is for (advertising only)."
+  },
+  "premiumMonthly": "{price} a month",
+  "@premiumMonthly": {
+    "description": "Button: subscribe monthly, with the price (\"$20\").",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumYearly": "{price} a year",
+  "@premiumYearly": {
+    "description": "Button: subscribe yearly, with the price (\"$200\").",
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumCheckoutHint": "You pay on Stripe's secure page, in your browser. Come back here when you're done.",
+  "@premiumCheckoutHint": {
+    "description": "Under the subscribe buttons: payment happens on Stripe's page."
+  },
+  "premiumActiveUntil": "Premium: renews on {date}",
+  "@premiumActiveUntil": {
+    "description": "Profile card when subscribed: renews on this date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumEndsOn": "Premium: ends on {date}",
+  "@premiumEndsOn": {
+    "description": "Profile card when cancelled: Premium ends on this date.",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumManage": "Manage subscription",
+  "@premiumManage": {
+    "description": "Button: open Stripe's billing portal."
+  },
+  "premiumUnavailable": "Premium isn't available yet.",
+  "@premiumUnavailable": {
+    "description": "Profile card when Premium can't be bought yet (no payments set up)."
+  },
+  "premiumCheckRefresh": "I've paid: check again",
+  "@premiumCheckRefresh": {
+    "description": "Button: check again whether Premium is active (after paying)."
+  },
+  "errorOpenLink": "Couldn't open the link.",
+  "@errorOpenLink": {
+    "description": "Error: the browser couldn't be opened for a link."
   }
 }

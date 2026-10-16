@@ -14,6 +14,7 @@ import 'package:grigri_app/model/location.dart';
 import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/plan.dart';
+import 'package:grigri_app/model/premium.dart';
 import 'package:grigri_app/ui/chat_media.dart';
 import 'package:grigri_app/ui/chat_screen.dart';
 import 'package:grigri_app/ui/common.dart';
@@ -1095,6 +1096,72 @@ void main() {
     });
   });
 
+  group('Premium', () {
+    Future<void> openProfile(WidgetTester tester) async {
+      await tapTab(tester, 'Me');
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('premium card')),
+        200,
+      );
+    }
+
+    testWidgets('subscribing opens Stripe Checkout in the browser', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await openProfile(tester);
+      expect(find.text('\$20 a month'), findsOneWidget);
+      expect(find.text('\$200 a year'), findsOneWidget);
+      await tester.ensureVisible(find.text('\$200 a year'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('\$200 a year'));
+      await tester.pumpAndSettle();
+      expect(api.opened, [Uri.parse('https://checkout.stripe.test/yearly')]);
+
+      // Stripe told the API: checking again shows it.
+      api.myPremium = Premium(
+        active: true,
+        plan: PremiumPlan.yearly,
+        until: DateTime(2031, 5, 1),
+      );
+      await tester.ensureVisible(find.text("I've paid: check again"));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("I've paid: check again"));
+      await tester.pumpAndSettle();
+      expect(find.text('Premium: renews on May 1, 2031'), findsOneWidget);
+      await tester.ensureVisible(find.text('Manage subscription'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Manage subscription'));
+      await tester.pumpAndSettle();
+      expect(api.opened.last, Uri.parse('https://billing.stripe.test/portal'));
+    });
+
+    testWidgets('a cancelled subscription says when it ends', (tester) async {
+      final api = sampleApi()
+        ..myPremium = Premium(
+          active: true,
+          plan: PremiumPlan.monthly,
+          until: DateTime(2030, 6, 1),
+          ending: true,
+        );
+      await pumpApp(tester, api);
+      await openProfile(tester);
+      expect(find.text('Premium: ends on Jun 1, 2030'), findsOneWidget);
+      expect(find.text('\$20 a month'), findsNothing);
+    });
+
+    testWidgets('without payments set up, it says Premium isn\'t available', (
+      tester,
+    ) async {
+      final api = sampleApi()..premiumPrices = const {};
+      await pumpApp(tester, api);
+      await openProfile(tester);
+      expect(find.text("Premium isn't available yet."), findsOneWidget);
+      expect(find.text('\$20 a month'), findsNothing);
+    });
+  });
+
   group('Admin', () {
     testWidgets('the tab is only there for admins', (tester) async {
       await pumpApp(tester, sampleApi());
@@ -1498,9 +1565,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(store.locale, const Locale('es'));
-      expect(find.text('Editar perfil'), findsOneWidget);
       expect(find.text('Idioma'), findsOneWidget);
       expect(find.text('Español'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Editar perfil'), -200);
+      expect(find.text('Editar perfil'), findsOneWidget);
       await tapTab(tester, 'Buscar');
       expect(find.text('Descubre planes'), findsOneWidget);
       expect(find.text('Organiza'), findsWidgets);
@@ -1512,6 +1580,7 @@ void main() {
       await tester.tap(find.text('Idioma del sistema').last);
       await tester.pumpAndSettle();
       expect(store.locale, isNull);
+      await tester.scrollUntilVisible(find.text('Edit profile'), -200);
       expect(find.text('Edit profile'), findsOneWidget);
     });
 

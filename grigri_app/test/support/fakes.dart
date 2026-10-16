@@ -16,6 +16,7 @@ import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/plan.dart';
+import 'package:grigri_app/model/premium.dart';
 import 'package:grigri_app/model/sector.dart';
 
 /// A tiny valid PNG, standing in for photos.
@@ -67,6 +68,18 @@ class FakeApi implements GrigriApi, SessionApi {
   /// My roles from rbacr, as `GET /api/me` gives them; null: rbacr
   /// couldn't say.
   List<String>? roles = const [];
+
+  /// My Premium, as `GET /api/me` and `GET /api/premium` give it.
+  Premium myPremium = const Premium.none();
+
+  /// Premium's prices; empty: it can't be bought (no Stripe keys).
+  Map<PremiumPlan, PremiumPrice> premiumPrices = const {
+    PremiumPlan.monthly: PremiumPrice(amount: 2000, currency: 'usd'),
+    PremiumPlan.yearly: PremiumPrice(amount: 20000, currency: 'usd'),
+  };
+
+  /// The links the app opened in the browser.
+  final opened = <Uri>[];
 
   final climbers = <String, Climber>{};
   final plans = <String, Plan>{};
@@ -348,7 +361,34 @@ class FakeApi implements GrigriApi, SessionApi {
       meId = 'me';
       climbers['me'] = Climber(id: 'me', name: googleName);
     }
-    return Me(climber: climbers[meId], admin: admin, roles: roles);
+    return Me(
+      climber: climbers[meId],
+      admin: admin,
+      roles: roles,
+      premium: myPremium,
+    );
+  });
+
+  @override
+  Future<PremiumOffer> premium() =>
+      _route('GET /api/premium', () => PremiumOffer(myPremium, premiumPrices));
+
+  @override
+  Future<Uri> premiumCheckout(PremiumPlan plan) =>
+      _route('POST /api/premium/checkout', () {
+        if (premiumPrices.isEmpty) {
+          throw const ApiException(503, "Premium isn't available yet");
+        }
+        if (myPremium.active) {
+          throw const ApiException(409, "you're already Premium");
+        }
+        return Uri.parse('https://checkout.stripe.test/${plan.name}');
+      });
+
+  @override
+  Future<Uri> premiumPortal() => _route('POST /api/premium/portal', () {
+    if (!myPremium.active) throw const ApiException(404, 'no subscription');
+    return Uri.parse('https://billing.stripe.test/portal');
   });
 
   @override
@@ -961,6 +1001,10 @@ GrigriStore storeFor(
   api.headers = auth.headers;
   return GrigriStore(
     api: api,
+    openLink: (url) async {
+      api.opened.add(url);
+      return true;
+    },
     auth: auth,
     image: (_) => MemoryImage(png),
     preferences: preferences,

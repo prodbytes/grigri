@@ -4,6 +4,7 @@
 import type { SessionRecord } from '../src/auth.js';
 import type { Effects, Delivery } from '../src/domain/rules.js';
 import { type Climber, type JoinRequest, type Message, type Notice, type PlanPic, isOpen } from '../src/domain/model.js';
+import type { Subscription } from '../src/premium.js';
 import { Conflict, type LoadedPlan, type Store, type VersionedPlan } from '../src/store/store.js';
 
 export class FakeStore {
@@ -16,11 +17,28 @@ export class FakeStore {
   msgs: Message[] = [];
   pics: PlanPic[] = [];
   sessions = new Map<string, SessionRecord>();
+  subscriptions = new Map<string, Subscription>();
   /** Session writes (puts and slides), to check there's at most one a day. */
   sessionWrites = 0;
 
   asStore(): Store {
     return this as unknown as Store;
+  }
+
+  async getSubscription(climberId: string) {
+    const s = this.subscriptions.get(climberId);
+    return s ? { ...s } : undefined;
+  }
+  async getSubscriptions(ids: Iterable<string>) {
+    const out: Record<string, Subscription> = {};
+    for (const id of ids) {
+      const s = this.subscriptions.get(id);
+      if (s) out[id] = { ...s };
+    }
+    return out;
+  }
+  async putSubscription(sub: Subscription) {
+    this.subscriptions.set(sub.climberId, { ...sub });
   }
 
   async putSession(s: SessionRecord) {
