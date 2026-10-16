@@ -760,3 +760,12 @@ spec.
       docs/ folder): how it works, with references to the key code.
     - Cost: about $0.00007 of aityx credits per score; nothing while
       idle ([backend](backend.md#cost)).
+
+54. **Make the distance from me to a plan a strong weight in scoring.**
+    - [API](api.md#the-decks-ranking): the deck ranks by fit + 2 ×
+      nearness (`NEAR_WEIGHT` in `rules.ts`), so nearby plans come before
+      far ones even a few grades off; a plan next door I don't climb now
+      comes before one in my grades 50 km away.
+    - [Match scores](match-scores.md#the-model): model v2,
+      match_likelihood = grade_fit × (0.2 + 0.8 × nearness) × group_odds
+      × timing (was 0.5 + 0.5 ×). No cost change.
