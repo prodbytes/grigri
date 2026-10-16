@@ -43,13 +43,13 @@ describe('rbacr admin check', () => {
     expect(await rbacrAdminCheck({ url: 'https://r', token: 't', fetch: async () => json(200, { allowed: 'yes' }) })('a@example.com')).toBe(false);
   });
 
-  it('caches rbacr not knowing grigri (404) as no', async () => {
+  it('rbacr not knowing grigri (404) is no, asked again next time (errors are never kept, C6)', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const fetch = vi.fn(async () => json(404, { error: 'no such system' }));
     const isAdmin = rbacrAdminCheck({ url: 'https://r', token: 't', fetch });
     expect(await isAdmin('a@example.com')).toBe(false);
     expect(await isAdmin('a@example.com')).toBe(false);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('without a token or URL nobody is an admin, and rbacr is never called', async () => {
