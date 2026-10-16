@@ -266,6 +266,9 @@ class PlanHighlight extends StatelessWidget {
             Text(
               plan.notes,
               style: text.bodyMedium?.copyWith(color: Mountain.snow),
+              // On the swipe cards, about three lines, then "…".
+              maxLines: compact ? 3 : null,
+              overflow: compact ? TextOverflow.ellipsis : null,
             ),
           ],
           if (fit?.grades ?? false) ...[
@@ -306,7 +309,7 @@ class ProfileDetails extends StatelessWidget {
 
   final Climber climber;
 
-  /// Leaves out the gear.
+  /// Leaves out the gear, and cuts the bio to three lines ("…").
   final bool compact;
 
   @override
@@ -328,7 +331,13 @@ class ProfileDetails extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (climber.bio.isNotEmpty) Text(climber.bio, style: text.bodyMedium),
+        if (climber.bio.isNotEmpty)
+          Text(
+            climber.bio,
+            style: text.bodyMedium,
+            maxLines: compact ? 3 : null,
+            overflow: compact ? TextOverflow.ellipsis : null,
+          ),
         if (climber.levels.isNotEmpty) ...[
           heading(l.profileClimbs),
           Wrap(
