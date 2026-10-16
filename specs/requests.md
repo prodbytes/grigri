@@ -860,3 +860,13 @@ spec.
       advertisement (every feature stays for everyone), and the open
       questions: what advertisement covers, how it's paid, other
       currencies.
+
+61. **No GriGri Pics with watermarks or people's names.**
+    - Two Margalef photos are out of
+      [crags.json](../grigri_api/pics/crags.json): one with a watermark
+      whose caption named the climber, and one whose file is titled with
+      a first name. Margalef keeps 3; Commons has no other free photo of
+      its cliffs without a name or a watermark, so none replace them.
+    - [Plan photos](pics.md): the rule, and 8 photos (5 Siurana, 3
+      Margalef). The next deploy's loader deletes the two from the
+      bucket and the catalog.
