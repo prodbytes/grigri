@@ -996,3 +996,10 @@ spec.
     - Nobody was Premium, blocked or advertising on either stage, so
       nothing moved.
 
+69. **Barrel roll: commit what was pending.**
+    - `.env.example` documents the Google Cloud project's OAuth clients
+      and `GOOGLE_ANDROID_CLIENT_ID_GA` (reference only: Android matches
+      the client by package name and signing SHA-1).
+    - The iOS Swift Package Manager pins Xcode wrote
+      (`Package.resolved`, both workspaces) are committed, so builds
+      resolve the same package versions.
