@@ -156,7 +156,7 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Troba companys d\'escalada: fes un pla o llisca a la dreta en un, i escaleu junts.';
+      'Troba un pla d\'escalada: fes-ne un o llisca a la dreta en un, i escaleu junts.';
 
   @override
   String get signInWithGoogle => 'Inicia la sessió amb Google';

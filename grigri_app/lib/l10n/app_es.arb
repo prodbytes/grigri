@@ -42,7 +42,7 @@
   "errorSession": "No se ha podido iniciar sesión. Inténtalo de nuevo.",
   "errorSignOutEverywhere": "No se ha podido cerrar sesión en todas partes. Inténtalo de nuevo.",
   "loadFailedTitle": "No se ha podido cargar tu perfil",
-  "signInTagline": "Encuentra compañeros de escalada: crea un plan o desliza a la derecha en uno, y a escalar juntos.",
+  "signInTagline": "Encuentra un plan de escalada: crea uno o desliza a la derecha en uno, y a escalar juntos.",
   "signInWithGoogle": "Iniciar sesión con Google",
   "tabDiscover": "Buscar",
   "tabPlans": "Planes",

@@ -155,7 +155,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Encontre parceiros de escalada: crie um plano ou deslize para a direita em um, e escalem juntos.';
+      'Encontre um plano de escalada: crie um ou deslize para a direita em um, e escalem juntos.';
 
   @override
   String get signInWithGoogle => 'Entrar com o Google';

@@ -154,7 +154,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Trouve des partenaires d\'escalade : crée un plan ou swipe à droite sur un plan, et grimpez ensemble.';
+      'Trouve un plan d\'escalade : crées-en un ou swipe à droite sur un plan, et grimpez ensemble.';
 
   @override
   String get signInWithGoogle => 'Se connecter avec Google';
