@@ -1,5 +1,5 @@
 {
-  "name": "Grigri match likelihood (v1)",
+  "name": "Grigri match likelihood (v2)",
   "inputs": {
     "discipline_climbed": {
       "type": "boolean",
@@ -86,7 +86,7 @@
     "match_likelihood": {
       "type": "number",
       "desc": "How likely the climber asks to join and the whole group says yes, 0 to 1.",
-      "expr": "decimal(grade_fit * (0.5 + 0.5 * nearness) * group_odds * timing, 2)"
+      "expr": "decimal(grade_fit * (0.2 + 0.8 * nearness) * group_odds * timing, 2)"
     },
     "match_level": {
       "type": "long_shot<possible<good<great",

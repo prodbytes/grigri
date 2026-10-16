@@ -131,21 +131,27 @@ plan. It writes the demo showcase too.
 
 ## The demo showcase
 
-[grigri_api/seed/showcase.ts](../grigri_api/seed/showcase.ts): six
-fictional climbers whose names nod to late climbing legends without being
-them (Wolf Gullick, Patrice Edlin, Kurt Alberts, Roy Robbin, Uli Stack,
-Dean Potts: nobody real is portrayed, and their bios are made up), each
-organizing a plan at a well-known crag (Frankenjura, Buoux, Kalymnos,
-Yosemite, Rio de Janeiro, Fontainebleau) two to six days ahead, so the app
-has plans to show while there are few real ones. On **every stage,
+[grigri_api/seed/showcase.ts](../grigri_api/seed/showcase.ts): eleven
+fictional climbers organizing twenty plans, one to seven days ahead, so
+the app has plans to show while there are few real ones. Six names nod to
+late climbing legends without being them (Wolf Gullick, Patrice Edlin,
+Kurt Alberts, Roy Robbin, Uli Stack, Dean Potts), five are made up (Nora
+Vilaró, Teo Marlin, Anouk Veld, Lars Brekkum, Mei Tanabe); nobody real is
+portrayed, and their bios are made up. Six plans are at well-known crags
+around the world (Frankenjura, Buoux, Kalymnos, Yosemite, Rio de Janeiro,
+Fontainebleau); **seven are in Siurana and seven in Margalef**, at their
+sectors' points (sport over a spread of grades, and Margalef's boulders),
+so there's plenty to explore there. On **every stage,
 production included**; all marked `demo`, with `seed-` ids.
 
 The API keeps it upcoming itself: before building a deck
 (`GET /api/discover`), it reads one marker item (`META#SHOWCASE`) and, when
-it's over 12 hours old, rewrites the showcase's climbers and plans with
-fresh dates (as the seed does: real members stay). A failure is logged and
+it's over 12 hours old or was written by an older showcase
+(`SHOWCASE_VERSION` in [seed.ts](../grigri_api/seed/seed.ts), bumped with
+every change to the showcase, so a deploy shows it at once), rewrites the
+showcase's climbers and plans with fresh dates (as the seed does: real members stay). A failure is logged and
 never fails the deck. No scheduler or new resource: one extra read per
-deck and about 20 writes twice a day, well under a cent a month.
+deck and about 35 writes twice a day, well under a cent a month.
 
 ## Cost
 

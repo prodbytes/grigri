@@ -186,6 +186,45 @@ void main() {
       expect(api.climbers['me']!.location, home);
     });
 
+    testWidgets('with areas but no location, the device still fills it', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      const away = Location(name: 'Away', lat: 1, lon: 2);
+      api.climbers['me'] = api.climbers['me']!.copyWith(areas: [away]);
+      final device = FakeDeviceLocation((lat: 41.512, lon: 1.004));
+      await pumpApp(tester, api, deviceLocation: device);
+      expect(device.asked, 1);
+      expect(api.climbers['me']!.location?.name, 'Near Valle Alto, Spain');
+      expect(api.climbers['me']!.areas, [away]);
+    });
+
+    testWidgets('the profile screen shows my location and sets it at once', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final device = FakeDeviceLocation((lat: 41.512, lon: 1.004));
+      await pumpApp(tester, api, deviceLocation: device);
+      await tapTab(tester, 'Me');
+      // Detected from the device by default.
+      await tester.ensureVisible(find.text('Near Valle Alto, Spain'));
+      expect(find.text('Near Valle Alto, Spain'), findsOneWidget);
+
+      await tester.runAsync(SectorIndex.load);
+      await tester.tap(find.text('Near Valle Alto, Spain'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'A crag or gym near there'),
+        'margalef',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Margalef'));
+      await tester.pumpAndSettle();
+      // Saved without opening the editor.
+      expect(api.climbers['me']!.location?.name, 'Margalef, Catalonia, Spain');
+      expect(find.text('Margalef, Catalonia, Spain'), findsOneWidget);
+    });
+
     testWidgets('when the device can\'t tell, the hint asks', (tester) async {
       final api = sampleApi();
       final device = FakeDeviceLocation(null);
@@ -323,9 +362,7 @@ void main() {
     });
 
     testWidgets('demo plans and people say they are made up', (tester) async {
-      const notice =
-          'Demo: automatically generated, not real people or plans. '
-          "It's here to show how Grigri works.";
+      const notice = 'Demo: made-up people and plans.';
       final api = sampleApi();
       final plan = api.plans['boulder-night']!;
       api

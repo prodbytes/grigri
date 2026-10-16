@@ -999,12 +999,13 @@ class GrigriStore extends ChangeNotifier {
     );
   }
 
-  /// With no location or areas on my profile, takes my location from the
-  /// phone or browser and saves it, instead of asking; Discover asks only
-  /// when the device can't tell.
+  /// With no location on my profile, takes it from the phone or browser
+  /// and saves it, instead of asking (my areas don't count: the location
+  /// defaults to where I am); Discover asks only when the device can't
+  /// tell.
   Future<void> fillLocation() async {
     final me = _me;
-    if (me == null || me.location != null || me.areas.isNotEmpty) return;
+    if (me == null || me.location != null) return;
     final session = _session;
     _locating = true;
     notifyListeners();

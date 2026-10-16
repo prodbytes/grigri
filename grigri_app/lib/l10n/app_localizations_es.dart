@@ -186,8 +186,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get demoTag => 'Demo';
 
   @override
-  String get demoNotice =>
-      'Demo: generado automáticamente, no son personas ni planes reales. Está aquí para mostrar cómo funciona Grigri.';
+  String get demoNotice => 'Demo: personas y planes inventados.';
 
   @override
   String get yourGrades => 'Tu grado';

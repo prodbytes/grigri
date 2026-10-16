@@ -54,6 +54,14 @@ describe('demo showcase', () => {
     for (const c of data.climbers) expect(data.plans.some((p) => p.organizerId === c.id)).toBe(true);
   });
 
+  it('has plenty of plans in Siurana and in Margalef, all with a point', () => {
+    for (const place of ['Siurana', 'Margalef']) {
+      const there = data.plans.filter((p) => `${p.place} ${p.area}`.includes(place));
+      expect(there.length).toBeGreaterThanOrEqual(6);
+      for (const p of there) expect(p.lat !== undefined && p.lon !== undefined).toBe(true);
+    }
+  });
+
   it('passes the same validation as real input, upcoming within a week', () => {
     for (const { id: _id, ...c } of data.climbers) expect(() => profileInput(c, [])).not.toThrow();
     for (const { id: _id, organizerId: _o, memberIds: _m, ...p } of data.plans) {

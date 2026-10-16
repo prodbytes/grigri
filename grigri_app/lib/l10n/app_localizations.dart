@@ -421,7 +421,7 @@ abstract class AppLocalizations {
   /// Discreet line on a demo (automatically generated) plan or profile.
   ///
   /// In en, this message translates to:
-  /// **'Demo: automatically generated, not real people or plans. It\'s here to show how Grigri works.'**
+  /// **'Demo: made-up people and plans.'**
   String get demoNotice;
 
   /// Badge: the plan is at grades the user climbs.
