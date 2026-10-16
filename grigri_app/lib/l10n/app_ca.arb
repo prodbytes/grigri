@@ -255,5 +255,16 @@
   "delete": "Esborra",
   "picCredit": "Foto: {author}, {license}",
   "picAddedBy": "Afegida per {name}",
-  "picFromChat": "Enviada al xat per {name}"
+  "picFromChat": "Enviada al xat per {name}",
+  "premiumTitle": "Grigri Premium",
+  "premiumPitch": "Anuncia't a Grigri: els teus anuncis surten entre els plans a Cerca de tothom. La resta no canvia.",
+  "premiumMonthly": "{price} al mes",
+  "premiumYearly": "{price} l'any",
+  "premiumCheckoutHint": "Pagues a la pàgina segura de Stripe, al navegador. Torna aquí quan acabis.",
+  "premiumActiveUntil": "Premium: es renova el {date}",
+  "premiumEndsOn": "Premium: s'acaba el {date}",
+  "premiumManage": "Gestiona la subscripció",
+  "premiumUnavailable": "Premium encara no està disponible.",
+  "premiumCheckRefresh": "Ja he pagat: comprova-ho",
+  "errorOpenLink": "No s'ha pogut obrir l'enllaç."
 }

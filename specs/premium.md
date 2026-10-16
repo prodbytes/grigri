@@ -1,8 +1,8 @@
 # Premium
 
-**Status: planned, not built.** Nothing in the app, the API or the
-infrastructure implements it yet; this file records the decisions made
-so far.
+A subscription that lets a climber **advertise on Grigri** (their ads, in
+[ads.md](ads.md) once built). Everything else stays the same for
+everyone, Premium or not: climbing, matching, chats, every feature.
 
 ## Price
 
@@ -11,23 +11,89 @@ so far.
 | Monthly | **$20** a month |
 | Yearly | **$200** a year (two months free against monthly) |
 
-## What it's for
+In US dollars only, for now. The prices live in one place,
+`PREMIUM_PRICES` in [premium.ts](../grigri_api/src/premium.ts); the app
+shows what `GET /api/premium` says.
 
-Premium is **for advertisement only**: it changes what is advertised,
-not what Grigri can do. Climbing, matching, chats and every feature stay
-the same for everyone, premium or not.
+## Paying: Stripe
 
-Still to decide before building it (asked 2026-10-16, left for later):
+Payments are **Stripe's**: Stripe Checkout takes the payment and Stripe's
+billing portal handles cancelling, cards and invoices, both on Stripe's
+own pages in the browser. No card ever reaches Grigri. The API talks to
+Stripe's REST API directly ([stripe.ts](../grigri_api/src/stripe.ts), no
+SDK).
 
-- what "advertisement" means here: showing the Premium offer without
-  selling it yet, premium users' plans promoted on others' decks, or
-  premium removing ads that free users see;
-- how it's paid (App Store and Google Play in-app subscriptions, and
-  the web), and what each store's cut leaves;
-- the prices in other currencies.
+1. **Profile → Grigri Premium** shows the pitch and the two prices
+   ("$20 a month", "$200 a year"). Tapping one asks
+   `POST /api/premium/checkout {"plan"}` for a Checkout page (a
+   subscription at the plan's price, with my climber id in the
+   subscription's metadata) and opens it in the browser.
+2. Stripe sends me back to `<site>/app/premium.html` (a static page:
+   "switch back to the Grigri app"). On a phone I switch back myself.
+3. Stripe tells the API through its **webhook**,
+   `POST /api/stripe/webhook`: the API checks the event's signature
+   (the endpoint's signing secret, 5 minutes' tolerance), then reads the
+   subscription the event is about back from Stripe and saves that copy,
+   so it's always Stripe's latest whatever order events arrive in. An
+   older subscription's late event never overwrites a newer paid one.
+   Subscriptions without Grigri's metadata (other products on the
+   account) are ignored.
+4. The app reads Premium again when it comes back to the foreground, when
+   the Profile tab opens, and on **I've paid: check again**.
+
+Subscribed, the card says "Premium: renews on <date>" (or "ends on <date>"
+once cancelled) and offers **Manage subscription**: Stripe's billing
+portal (`POST /api/premium/portal`), to cancel or change the card.
+
+**Who is Premium**: a subscription whose Stripe status is `active`,
+`trialing` or `past_due` (a failed renewal Stripe is still retrying),
+until its paid period's end plus two days' grace (a late renewal webhook
+doesn't cut anyone off). Cancelled, it lasts to the end of the period
+paid for.
+
+Without Stripe's keys on a stage, Premium can't be bought: the card says
+"Premium isn't available yet." and the routes answer 503.
+
+**Apple's rules**: App Store builds may have to sell this through Apple's
+in-app purchase instead of a link to Stripe; the phone builds installed
+from Xcode don't go through review. To revisit before publishing on the
+App Store (Google Play has a similar rule).
+
+## Data
+
+One item per climber, `CLIMBER#<id>` / `PREMIUM`: Stripe's customer and
+subscription ids, its status, plan, period end, whether it's cancelled,
+and when it was read. `GET /api/me` and `GET /api/premium` answer
+`"premium": {"active", "plan"?, "until"?, "ending"?}` from it.
+
+## Keys and setup
+
+- `GRIGRI_STRIPE_SECRET_KEY` (a secret key, `sk_live_…`/`sk_test_…`, or a
+  restricted one, `rk_…`, with write access to Checkout Sessions and
+  Customer portal and read access to Subscriptions) and
+  `GRIGRI_STRIPE_WEBHOOK_SECRET` (`whsec_…`): repository secrets for
+  production (live mode), `GRIGRI_STRIPE_SECRET_KEY_RC` and
+  `GRIGRI_STRIPE_WEBHOOK_SECRET_RC` for the RC (test mode); `.env` for
+  local (test mode). [deploy.sh](../scripts/deploy.sh) passes them to the
+  API stack (`StripeSecretKey`, `StripeWebhookSecret`, no-echo) with
+  `SiteUrl`, the stage's site. Without both: no Premium (a warning).
+- In Stripe, per mode: a **webhook endpoint** at
+  `https://<site>/api/stripe/webhook` for `checkout.session.completed`,
+  `customer.subscription.created`, `customer.subscription.updated`,
+  `customer.subscription.deleted`, `invoice.paid` and
+  `invoice.payment_failed`; and the **customer portal** turned on
+  (Settings → Billing → Customer portal), allowing cancellation.
+- Locally, Stripe can't reach Floci: `stripe listen --forward-to
+  https://local.grigri.nu01.com:2543/api/stripe/webhook` forwards test
+  events (its `whsec_…` goes in `.env`).
 
 ## Cost
 
-Nothing yet. When it's built, payments should cost per transaction only
-(store or processor fees), with no monthly minimum, in line with
-[Backend's cost rules](backend.md#cost).
+Nothing while idle: no monthly fee, no new AWS resource. Per payment,
+Stripe's fees: 2.9% + $0.30 per card charge, plus Stripe Billing's 0.7%
+of subscription volume (pay as you go): about $0.88 of a $20 month, $6.50
+of a $200 year. On AWS, a webhook or a checkout is one Lambda call and a
+read and a write or two: well under a cent a month at any likely volume.
+Stripe is the cheapest option that meets it: Paddle and Lemon Squeezy
+(merchants of record) take 5% + $0.50; the App Store and Google Play
+take 15–30%.

@@ -906,4 +906,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String picFromChat(String name) {
     return 'Sent in the chat by $name';
   }
+
+  @override
+  String get premiumTitle => 'Grigri Premium';
+
+  @override
+  String get premiumPitch =>
+      'Advertise on Grigri: your ads show between plans on everyone\'s Discover. Everything else stays the same.';
+
+  @override
+  String premiumMonthly(String price) {
+    return '$price a month';
+  }
+
+  @override
+  String premiumYearly(String price) {
+    return '$price a year';
+  }
+
+  @override
+  String get premiumCheckoutHint =>
+      'You pay on Stripe\'s secure page, in your browser. Come back here when you\'re done.';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium: renews on $date';
+  }
+
+  @override
+  String premiumEndsOn(String date) {
+    return 'Premium: ends on $date';
+  }
+
+  @override
+  String get premiumManage => 'Manage subscription';
+
+  @override
+  String get premiumUnavailable => 'Premium isn\'t available yet.';
+
+  @override
+  String get premiumCheckRefresh => 'I\'ve paid: check again';
+
+  @override
+  String get errorOpenLink => 'Couldn\'t open the link.';
 }

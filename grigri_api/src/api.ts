@@ -5,7 +5,7 @@
 // Google account's name, or PUT /api/me saves it).
 import { randomBytes } from 'node:crypto';
 import { type Auth, type Caller, subjectHash } from './auth.js';
-import { ApiError, badRequest, conflict, forbidden, notFound } from './domain/errors.js';
+import { ApiError, badRequest, conflict, forbidden, notFound, unavailable } from './domain/errors.js';
 import {
   type Climber,
   type JoinRequest,
@@ -21,6 +21,8 @@ import { type PicWithCrag, type Where, picsFor } from './domain/pics.js';
 import * as rules from './domain/rules.js';
 import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
+import { PREMIUM_PRICES, type PremiumPlan, isPaid, premiumOf } from './premium.js';
+import { BadSignature, type Billing, subscriptionIdOf } from './stripe.js';
 import { matchFacts } from './match/facts.js';
 import { openByPlan, othersWaiting } from './match/run.js';
 import type { RolesLookup } from './rbacr.js';
@@ -96,6 +98,8 @@ export interface Deps {
   roles?: RolesLookup;
   /** Match scores from aityx (match/aityx.ts), on admins' decks; none: off. */
   matchScorer?: MatchScorer;
+  /** Stripe, for Premium (stripe.ts); none: no Premium (no keys). */
+  billing?: Billing;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -181,11 +185,16 @@ export class Api {
         email && deps.roles ? deps.roles(email) : Promise.resolve(null),
       ]);
       // roles: my roles in Grigri from rbacr, or null when it can't say.
-      return { climber, admin: s.caller.admin, roles };
+      const premium = premiumOf(await this.store.getSubscription(climber.id), s.now);
+      return { climber, admin: s.caller.admin, roles, premium };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
     r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });
+
+    r('GET /api/premium', 'profile', (_req, s) => this.premium(s));
+    r('POST /api/premium/checkout', 'profile', (req, s) => this.checkout(req, s));
+    r('POST /api/premium/portal', 'profile', (_req, s) => this.portal(s));
 
     r('GET /api/discover', 'profile', (_req, s) => this.discover(s));
     r('POST /api/plans', 'profile', (req, s) => this.createPlan(req, s));
@@ -457,6 +466,62 @@ export class Api {
     if (!current) throw notFound('no such plan');
     if (!current.plan.memberIds.includes(s.me.id)) throw forbidden("you're not in this plan");
     return current.plan;
+  }
+
+  // --- Premium (specs/premium.md) --------------------------------------------
+
+  /** GET /api/premium: mine, and the prices (null when Premium can't be bought here: no Stripe keys). */
+  private async premium(s: Session) {
+    const premium = premiumOf(await this.store.getSubscription(s.me.id), s.now);
+    return { premium, prices: this.deps.billing ? PREMIUM_PRICES : null };
+  }
+
+  /** POST /api/premium/checkout {plan}: Stripe Checkout's page for it, to open in a browser. */
+  private async checkout(req: Request, s: Session) {
+    const billing = this.deps.billing;
+    if (!billing) throw unavailable("Premium isn't available yet");
+    const plan = asObject(req.body).plan;
+    if (plan !== 'monthly' && plan !== 'yearly') throw badRequest('plan must be monthly or yearly');
+    const current = await this.store.getSubscription(s.me.id);
+    if (premiumOf(current, s.now).active) throw conflict("you're already Premium");
+    return { url: await billing.checkout(s.me.id, plan as PremiumPlan, current?.customerId || undefined) };
+  }
+
+  /** POST /api/premium/portal: Stripe's billing portal, to cancel or change the card. */
+  private async portal(s: Session) {
+    const billing = this.deps.billing;
+    if (!billing) throw unavailable("Premium isn't available yet");
+    const current = await this.store.getSubscription(s.me.id);
+    if (!current?.customerId) throw notFound('no subscription');
+    return { url: await billing.portal(current.customerId) };
+  }
+
+  /**
+   * POST /api/stripe/webhook (handler.ts passes the raw body): a signed
+   * event from Stripe. The subscription it's about is read back from
+   * Stripe and saved, so the copy is Stripe's latest whatever the order of
+   * events. An older subscription never overwrites a newer paid one.
+   */
+  async stripeWebhook(rawBody: string, signature: string | undefined): Promise<unknown> {
+    const billing = this.deps.billing;
+    if (!billing) throw unavailable('no billing');
+    const now = this.clock();
+    let event;
+    try {
+      event = billing.event(rawBody, signature, now);
+    } catch (e) {
+      if (e instanceof BadSignature || e instanceof SyntaxError) throw badRequest('bad signature');
+      throw e;
+    }
+    const subscriptionId = subscriptionIdOf(event);
+    if (!subscriptionId) return { received: true };
+    const sub = await billing.subscription(subscriptionId, now);
+    // Not Grigri Premium (another product on the account): nothing to do.
+    if (!sub) return { received: true };
+    const current = await this.store.getSubscription(sub.climberId);
+    const stale = current && current.subscriptionId !== sub.subscriptionId && isPaid(current.status) && !isPaid(sub.status);
+    if (!stale) await this.store.putSubscription(sub);
+    return { received: true };
   }
 
   // --- Decks and plans ------------------------------------------------------

@@ -17,6 +17,8 @@ export const key = {
   message: (planId: string, time: string, messageId: string) => ({ pk: `PLAN#${planId}`, sk: `MSG#${time}#${messageId}` }),
   /** A photo in the plan's "Your Pics". */
   pic: (planId: string, picId: string) => ({ pk: `PLAN#${planId}`, sk: `PIC#${picId}` }),
+  /** A climber's Premium subscription, as last read from Stripe (src/premium.ts). */
+  premium: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'PREMIUM' }),
   /** When the demo showcase was last written (seed/seed.ts). */
   showcase: () => ({ pk: 'META#SHOWCASE', sk: 'META' }),
 };

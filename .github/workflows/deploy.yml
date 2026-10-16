@@ -119,4 +119,7 @@ jobs:
           # secret; empty: no scores.
           GRIGRI_AITYX_API_KEY: ${{ secrets.GRIGRI_AITYX_API_KEY }}
           GRIGRI_AITYX_URL: ${{ vars.GRIGRI_AITYX_URL }}
+          # Stripe, for Premium (live mode): secrets; empty: no Premium.
+          GRIGRI_STRIPE_SECRET_KEY: ${{ secrets.GRIGRI_STRIPE_SECRET_KEY }}
+          GRIGRI_STRIPE_WEBHOOK_SECRET: ${{ secrets.GRIGRI_STRIPE_WEBHOOK_SECRET }}
         run: bash scripts/deploy.sh

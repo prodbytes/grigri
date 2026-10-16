@@ -177,7 +177,7 @@ unknown or expired session token; or a bad Google ID token at
 the site's CloudFront, [origin check](origin-check.md)), 404 (no such thing or route), 409 (conflict: already
 asked, already a member, changed meanwhile), 413 (body over 64 KB), 415
 (a body that isn't `application/json`), 429 (too soon: a nudge within 12
-hours of the last), 500 (`{"error": "internal error"}`;
+hours of the last), 503 (Premium without Stripe keys), 500 (`{"error": "internal error"}`;
 details only in the function's log). A signed-in caller without a profile
 yet (before their first `GET /api/me`) gets 409 `{"error": "no profile"}`
 from every route except `GET/PUT /api/me`, `POST /api/photos`, the
@@ -185,7 +185,8 @@ session routes and `GET /api/health`.
 
 ## Routes
 
-All need a session token except `GET /api/health` and `POST /api/session`.
+All need a session token except `GET /api/health`, `POST /api/session`
+and `POST /api/stripe/webhook` (signed by Stripe instead).
 
 | Route | Does |
 |---|---|
@@ -193,7 +194,7 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `POST /api/session` | body `{"idToken"}` (dev mode: or `{"devUser"}`) → `{"token", "expiresAt"}` (no auth; see [Sessions](#sessions)) |
 | `DELETE /api/session` | sign out: this session ends. → `{}` |
 | `DELETE /api/sessions` | sign out everywhere: all my sessions end. → `{}` |
-| `GET /api/me` | `{"climber": Climber, "admin": bool, "roles": [string] \| null}`. `roles`: my roles in Grigri from rbacr (see **Roles** above), or null when it can't say. The first time, it creates my profile from my Google account: the session's name (`Climber` when the session has none, as sessions from before names were kept), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
+| `GET /api/me` | `{"climber": Climber, "admin": bool, "roles": [string] \| null, "premium": {"active", "plan"?, "until"?, "ending"?}}` (`premium`: my [Premium](premium.md)). `roles`: my roles in Grigri from rbacr (see **Roles** above), or null when it can't say. The first time, it creates my profile from my Google account: the session's name (`Climber` when the session has none, as sessions from before names were kept), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
 | `GET /api/realtime` | where [live updates](#live-updates) come from: `{"url": "wss://<IoT endpoint>/mqtt", "authorizer": "<prefix>-api-realtime" (empty locally), "topic": "grigri/<stage>/climbers/<my climber id>/#", "clientIdPrefix": "<my climber id>-"}`, or `{"url": null}` when they're off |
 | `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars, age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
 | `GET /api/discover` | plans to swipe on: upcoming (start > now), I'm not in, I haven't passed or asked; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known); `"covers": {planId: {"key", "crag", "author", "license"}}`, each plan's best [GriGri Pics](pics.md#on-the-deck) photo (only for plans that have one; from the catalog the function keeps, never failing the deck); for admins also `"scores": {planId: {"score", "level", "reason"}}`, the best 30 plans' [match scores](match-scores.md#on-an-admins-deck) |
@@ -221,6 +222,10 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `DELETE /api/plans/{id}/pics/{picId}` | whoever added it, the organizer or an admin (403 otherwise; 404 for no such photo). A photo added here is deleted from S3; a chat photo only leaves the pics (the chat keeps it). → `{}` |
 | `GET /api/pics?lat=&lon=&sector=&place=&area=` | GriGri Pics for a place (any of them; `lat` and `lon` both or neither, 400 otherwise) → `{"pics": [GrigriPic]}` |
 | `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 15 minutes (room for a chat video on a slow line). The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
+| `GET /api/premium` | my [Premium](premium.md) and its prices: `{"premium", "prices": {"monthly": {"amount": 2000, "currency": "usd"}, "yearly": {"amount": 20000, …}} \| null}` (null: the stage has no Stripe keys) |
+| `POST /api/premium/checkout` | body `{"plan": "monthly"\|"yearly"}` → `{"url"}`, Stripe Checkout's page for it (409 when I'm already Premium; 503 without Stripe keys) |
+| `POST /api/premium/portal` | → `{"url"}`, Stripe's billing portal (404 before I ever subscribed; 503 without Stripe keys) |
+| `POST /api/stripe/webhook` | Stripe's events (no session: Stripe signs them; the raw body, up to 512 KB, any content type it sends). 400 for a bad or old signature. → `{"received": true}` ([premium.md](premium.md#paying-stripe)) |
 | `GET /api/admin/climbers` | admin only: every profile, by name, without location or areas, each with `"blocked": bool` → `{"climbers"}` ([admin.md](admin.md)) |
 | `POST /api/admin/climbers/{id}/block` | admin only: blocks them (400 for myself, 404 for no such climber). → `{"blocked": true}` |
 | `POST /api/admin/climbers/{id}/unblock` | admin only: unblocks them (404 for no such climber). → `{"blocked": false}` |

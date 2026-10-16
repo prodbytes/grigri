@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../model/climber.dart';
 import '../model/pics.dart';
 import '../model/plan.dart';
+import '../model/premium.dart';
 import '../log.dart';
 import 'api.dart';
 import 'auth.dart';
@@ -337,6 +338,18 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       );
     }
   }
+
+  @override
+  Future<PremiumOffer> premium() async =>
+      ApiJson.premiumOffer(await _get(['premium']));
+
+  @override
+  Future<Uri> premiumCheckout(PremiumPlan plan) async =>
+      ApiJson.url(await _post(['premium', 'checkout'], {'plan': plan.name}));
+
+  @override
+  Future<Uri> premiumPortal() async =>
+      ApiJson.url(await _post(['premium', 'portal']));
 
   @override
   Future<List<AdminClimber>> adminClimbers() async =>

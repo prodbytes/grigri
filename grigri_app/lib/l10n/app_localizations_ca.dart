@@ -910,4 +910,47 @@ class AppLocalizationsCa extends AppLocalizations {
   String picFromChat(String name) {
     return 'Enviada al xat per $name';
   }
+
+  @override
+  String get premiumTitle => 'Grigri Premium';
+
+  @override
+  String get premiumPitch =>
+      'Anuncia\'t a Grigri: els teus anuncis surten entre els plans a Cerca de tothom. La resta no canvia.';
+
+  @override
+  String premiumMonthly(String price) {
+    return '$price al mes';
+  }
+
+  @override
+  String premiumYearly(String price) {
+    return '$price l\'any';
+  }
+
+  @override
+  String get premiumCheckoutHint =>
+      'Pagues a la pàgina segura de Stripe, al navegador. Torna aquí quan acabis.';
+
+  @override
+  String premiumActiveUntil(String date) {
+    return 'Premium: es renova el $date';
+  }
+
+  @override
+  String premiumEndsOn(String date) {
+    return 'Premium: s\'acaba el $date';
+  }
+
+  @override
+  String get premiumManage => 'Gestiona la subscripció';
+
+  @override
+  String get premiumUnavailable => 'Premium encara no està disponible.';
+
+  @override
+  String get premiumCheckRefresh => 'Ja he pagat: comprova-ho';
+
+  @override
+  String get errorOpenLink => 'No s\'ha pogut obrir l\'enllaç.';
 }

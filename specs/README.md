@@ -45,8 +45,9 @@ Each match opens the plan's group chat.
 - [Languages](i18n.md): English, Spanish, German, French, Portuguese and
   Catalan; the language picker in the profile, kept on the device; the
   translation bundles and the test that keeps them complete.
-- [Premium](premium.md) (planned, not built): $20 a month or $200 a
-  year, for advertisement only; what that covers is still to decide.
+- [Premium](premium.md): $20 a month or $200 a year, for advertising
+  only; paid through Stripe Checkout, managed in Stripe's billing
+  portal, kept in step by Stripe's webhook.
 - [Theme](theme.md): dark, in mountain colors.
 - [Logging](logging.md): the app's developer log on every platform
   (browser console, device log, a file on phones), scrubbed of account

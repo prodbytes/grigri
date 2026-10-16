@@ -4,6 +4,7 @@ import '../model/climber.dart';
 import '../model/match_score.dart';
 import '../model/pics.dart';
 import '../model/plan.dart';
+import '../model/premium.dart';
 import 'realtime.dart';
 
 /// The Grigri backend, one method per route of its contract
@@ -118,6 +119,18 @@ abstract interface class GrigriApi {
     void Function(double sent)? onProgress,
   });
 
+  /// `GET /api/premium`: my Premium, and its prices (none when it can't be
+  /// bought here).
+  Future<PremiumOffer> premium();
+
+  /// `POST /api/premium/checkout`: Stripe Checkout's page for [plan], to
+  /// open in the browser.
+  Future<Uri> premiumCheckout(PremiumPlan plan);
+
+  /// `POST /api/premium/portal`: Stripe's billing portal (cancel, card,
+  /// invoices), to open in the browser.
+  Future<Uri> premiumPortal();
+
   /// `GET /api/admin/climbers`: everyone, by name (admins only).
   Future<List<AdminClimber>> adminClimbers();
 
@@ -190,10 +203,18 @@ class ApiException implements Exception {
 typedef Climbers = Map<String, Climber>;
 
 class Me {
-  const Me({required this.climber, required this.admin, this.roles});
+  const Me({
+    required this.climber,
+    required this.admin,
+    this.roles,
+    this.premium = const Premium.none(),
+  });
 
   final Climber? climber;
   final bool admin;
+
+  /// My Premium subscription.
+  final Premium premium;
 
   /// My roles in Grigri, from rbacr (the API asks it); null when rbacr
   /// couldn't say.
@@ -379,7 +400,17 @@ abstract final class ApiJson {
     roles: json['roles'] is List
         ? [for (final r in json['roles']! as List) r as String]
         : null,
+    premium: Premium.fromJson(json['premium']),
   );
+
+  static PremiumOffer premiumOffer(Map<String, Object?> json) =>
+      PremiumOffer(Premium.fromJson(json['premium']), {
+        for (final plan in PremiumPlan.values)
+          plan: ?PremiumPrice.fromJson((json['prices'] as Map?)?[plan.name]),
+      });
+
+  static Uri url(Map<String, Object?> json) =>
+      Uri.parse(json['url']! as String);
 
   static Climber climber(Map<String, Object?> json) =>
       Climber.fromJson(_map(json['climber']));

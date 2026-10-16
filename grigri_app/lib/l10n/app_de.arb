@@ -255,5 +255,16 @@
   "delete": "Löschen",
   "picCredit": "Foto: {author}, {license}",
   "picAddedBy": "Hinzugefügt von {name}",
-  "picFromChat": "Im Chat gesendet von {name}"
+  "picFromChat": "Im Chat gesendet von {name}",
+  "premiumTitle": "Grigri Premium",
+  "premiumPitch": "Wirb auf Grigri: Deine Anzeigen erscheinen bei allen in der Suche zwischen den Plänen. Sonst bleibt alles gleich.",
+  "premiumMonthly": "{price} im Monat",
+  "premiumYearly": "{price} im Jahr",
+  "premiumCheckoutHint": "Du bezahlst auf der sicheren Seite von Stripe in deinem Browser. Komm danach hierher zurück.",
+  "premiumActiveUntil": "Premium: verlängert sich am {date}",
+  "premiumEndsOn": "Premium: endet am {date}",
+  "premiumManage": "Abo verwalten",
+  "premiumUnavailable": "Premium ist noch nicht verfügbar.",
+  "premiumCheckRefresh": "Bezahlt: erneut prüfen",
+  "errorOpenLink": "Der Link ließ sich nicht öffnen."
 }

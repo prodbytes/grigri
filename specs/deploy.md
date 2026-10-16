@@ -32,7 +32,10 @@ for that tag:
    without it the deploy warns and nobody is an admin; the
    [match scores](match-scores.md) table and scoring function, with
    `GRIGRI_AITYX_API_KEY` (and `GRIGRI_AITYX_URL`), optional: without it
-   the deploy warns and there are no scores; the live updates'
+   the deploy warns and there are no scores; [Premium](premium.md) with
+   `GRIGRI_STRIPE_SECRET_KEY` and `GRIGRI_STRIPE_WEBHOOK_SECRET`, and
+   `SiteUrl` (`https://<domain>`), optional: without both the deploy
+   warns and there's no Premium; the live updates'
    IoT custom authorizer and its function), with the stage's permissions
    boundary on the functions' roles, and the account's IoT Data-ATS
    endpoint, looked up with
@@ -128,8 +131,11 @@ separated by stage. The RC seed is the only invoke allowed
 `AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
 (production's Google web client) and `GOOGLE_WEB_CLIENT_ID_RC` (the
 RC's);
-repository secrets: `GRIGRI_RBACR_TOKEN` and `GRIGRI_AITYX_API_KEY`
-(secrets because the repository is public and run logs show variables);
+repository secrets: `GRIGRI_RBACR_TOKEN`, `GRIGRI_AITYX_API_KEY`,
+`GRIGRI_STRIPE_SECRET_KEY` and `GRIGRI_STRIPE_WEBHOOK_SECRET` (Stripe's
+live mode), and `GRIGRI_STRIPE_SECRET_KEY_RC` and
+`GRIGRI_STRIPE_WEBHOOK_SECRET_RC` (test mode, for the RC) (secrets
+because the repository is public and run logs show variables);
 optional variable `GRIGRI_AITYX_URL` (aityx's stage, for a stage key). One-time setup:
 [grigri_infra/README.md](../grigri_infra/README.md).
 

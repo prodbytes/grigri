@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../l10n/app_localizations.dart';
+import '../model/premium.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/location.dart';
@@ -14,6 +15,7 @@ import '../model/sector.dart';
 import 'api.dart';
 import 'auth.dart';
 import 'device_location.dart';
+import 'links.dart';
 import 'preferences.dart';
 import 'realtime.dart';
 import 'sector_index.dart';
@@ -83,6 +85,7 @@ class GrigriStore extends ChangeNotifier {
     RealtimeTransport? realtime,
     this.deviceLocation = const DeviceLocation.none(),
     Future<SectorIndex> Function()? places,
+    this.openLink = openInBrowser,
   }) : _image = image ?? ((url) => NetworkImage(url.toString())),
        _places = places ?? SectorIndex.load,
        _preferences = preferences ?? Preferences.none() {
@@ -114,6 +117,9 @@ class GrigriStore extends ChangeNotifier {
 
   /// Where the phone or browser is, to fill in my location.
   final DeviceLocation deviceLocation;
+
+  /// Opens Stripe's pages, and ads' links, in the browser.
+  final OpenLink openLink;
 
   /// The sector index, to name a place the device found.
   final Future<SectorIndex> Function() _places;
@@ -170,6 +176,8 @@ class GrigriStore extends ChangeNotifier {
 
   Climber? _me;
   bool _admin = false;
+  Premium _premium = const Premium.none();
+  Map<PremiumPlan, PremiumPrice> _premiumPrices = const {};
   List<String>? _roles;
   bool _signedIn = false;
 
@@ -242,6 +250,8 @@ class GrigriStore extends ChangeNotifier {
     _session++;
     _me = null;
     _admin = false;
+    _premium = const Premium.none();
+    _premiumPrices = const {};
     _roles = null;
     _locating = false;
     _climbers.clear();
@@ -277,6 +287,7 @@ class GrigriStore extends ChangeNotifier {
       if (climber == null) throw const ApiException(409, 'no profile');
       _admin = me.admin;
       _roles = me.roles;
+      _premium = me.premium;
       _me = climber;
       _climbers[climber.id] = climber;
       _phase = Phase.ready;
@@ -306,6 +317,12 @@ class GrigriStore extends ChangeNotifier {
 
   bool get admin => _admin;
 
+  /// My Premium subscription (specs/premium.md).
+  Premium get premium => _premium;
+
+  /// What Premium costs; empty until loaded, or when it can't be bought.
+  Map<PremiumPlan, PremiumPrice> get premiumPrices => _premiumPrices;
+
   /// My roles in Grigri, from rbacr through the API, sorted; null when
   /// rbacr couldn't say.
   List<String>? get roles => _roles;
@@ -318,6 +335,7 @@ class GrigriStore extends ChangeNotifier {
       if (session != _session) return;
       _roles = me.roles;
       _admin = me.admin;
+      _premium = me.premium;
       notifyListeners();
     } on ApiException {
       // The card keeps offering Retry.
@@ -1057,6 +1075,34 @@ class GrigriStore extends ChangeNotifier {
       unawaited(loadPics(planId));
     }
     return true;
+  }
+
+  // --- Premium -----------------------------------------------------------
+
+  /// My Premium and its prices again (the profile, and coming back from
+  /// Stripe's pages in the browser).
+  Future<void> refreshPremium() => _refresh(api.premium, (offer) {
+    _premium = offer.premium;
+    _premiumPrices = offer.prices;
+  });
+
+  /// Opens Stripe Checkout for [plan] in the browser; true when it opened.
+  /// Premium shows once Stripe tells the API (a refresh).
+  Future<bool> subscribe(PremiumPlan plan) async {
+    final url = await _act(() => api.premiumCheckout(plan));
+    return url != null && await _openOrSay(url);
+  }
+
+  /// Opens Stripe's billing portal (cancel, card, invoices).
+  Future<bool> managePremium() async {
+    final url = await _act(api.premiumPortal);
+    return url != null && await _openOrSay(url);
+  }
+
+  Future<bool> _openOrSay(Uri url) async {
+    if (await openLink(url)) return true;
+    _errors.add(l10n.errorOpenLink);
+    return false;
   }
 
   // --- Admin -------------------------------------------------------------

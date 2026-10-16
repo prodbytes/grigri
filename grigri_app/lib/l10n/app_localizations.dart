@@ -1646,6 +1646,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sent in the chat by {name}'**
   String picFromChat(String name);
+
+  /// Profile card heading: the Premium subscription.
+  ///
+  /// In en, this message translates to:
+  /// **'Grigri Premium'**
+  String get premiumTitle;
+
+  /// Profile card: what Premium is for (advertising only).
+  ///
+  /// In en, this message translates to:
+  /// **'Advertise on Grigri: your ads show between plans on everyone\'s Discover. Everything else stays the same.'**
+  String get premiumPitch;
+
+  /// Button: subscribe monthly, with the price ("$20").
+  ///
+  /// In en, this message translates to:
+  /// **'{price} a month'**
+  String premiumMonthly(String price);
+
+  /// Button: subscribe yearly, with the price ("$200").
+  ///
+  /// In en, this message translates to:
+  /// **'{price} a year'**
+  String premiumYearly(String price);
+
+  /// Under the subscribe buttons: payment happens on Stripe's page.
+  ///
+  /// In en, this message translates to:
+  /// **'You pay on Stripe\'s secure page, in your browser. Come back here when you\'re done.'**
+  String get premiumCheckoutHint;
+
+  /// Profile card when subscribed: renews on this date.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium: renews on {date}'**
+  String premiumActiveUntil(String date);
+
+  /// Profile card when cancelled: Premium ends on this date.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium: ends on {date}'**
+  String premiumEndsOn(String date);
+
+  /// Button: open Stripe's billing portal.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage subscription'**
+  String get premiumManage;
+
+  /// Profile card when Premium can't be bought yet (no payments set up).
+  ///
+  /// In en, this message translates to:
+  /// **'Premium isn\'t available yet.'**
+  String get premiumUnavailable;
+
+  /// Button: check again whether Premium is active (after paying).
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve paid: check again'**
+  String get premiumCheckRefresh;
+
+  /// Error: the browser couldn't be opened for a link.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the link.'**
+  String get errorOpenLink;
 }
 
 class _AppLocalizationsDelegate

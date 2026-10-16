@@ -19,10 +19,14 @@ import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
 import { aityxScorer } from './match/aityx.js';
+import { stripeBilling } from './stripe.js';
 import { Store } from './store/store.js';
 import { assertSeedable, seed, seedShowcase, showcaseIsStale } from '../seed/seed.js';
 
 const MAX_BODY = 64 * 1024;
+/** Stripe's events are bigger than the app's requests (a subscription with its items). */
+const MAX_WEBHOOK_BODY = 512 * 1024;
+const STRIPE_WEBHOOK = '/api/stripe/webhook';
 
 const env = process.env;
 const stage = env.STAGE ?? 'local';
@@ -142,6 +146,12 @@ const showcase = async (now: Date) => {
 // Match scores from aityx on admins' decks (the key never leaves the
 // function); no key: none.
 const matchScorer = aityxScorer({ url: env.AITYX_URL ?? '', key: env.AITYX_API_KEY ?? '' }) ?? undefined;
+// Premium through Stripe (the keys never leave the function); no keys: no Premium.
+const billing = stripeBilling({
+  secretKey: env.STRIPE_SECRET_KEY ?? '',
+  webhookSecret: env.STRIPE_WEBHOOK_SECRET ?? '',
+  siteUrl: env.SITE_URL ?? '',
+}) ?? undefined;
 const api = new Api({
   store,
   photos,
@@ -150,6 +160,7 @@ const api = new Api({
   realtime,
   roles: rbacrRoles(rbacr),
   matchScorer,
+  billing,
   showcase,
   config: { stage, version: env.VERSION ?? 'dev' },
 });
@@ -177,6 +188,12 @@ async function http(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResul
     const headers = lowercase(event.headers ?? {});
     // First: a request that skipped the site gets nothing else.
     if (!throughSite(headers)) throw new ApiError(403, REFUSED);
+    // Stripe's webhook: verified against the raw body, so before any parsing.
+    if (method === 'POST' && path === STRIPE_WEBHOOK) {
+      const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body) : '';
+      if (raw.length > MAX_WEBHOOK_BODY) throw new ApiError(413, 'body too large');
+      return json(200, await api.stripeWebhook(raw, headers['stripe-signature']));
+    }
     let body: unknown;
     if (event.body) {
       const raw = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;

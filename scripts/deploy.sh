@@ -47,6 +47,11 @@
 #                a secret in CI). Optional: without it, no scores.
 #   GRIGRI_AITYX_URL aityx's API (default https://api.aityx.ai; a stage
 #                key needs aityx's stage)
+#   GRIGRI_STRIPE_SECRET_KEY, GRIGRI_STRIPE_WEBHOOK_SECRET Stripe's secret
+#                key (sk_... or rk_...) and its webhook endpoint's signing
+#                secret (whsec_...), for Premium (specs/premium.md; also
+#                from .env; secrets in CI, test mode for RC). Optional:
+#                without both, no Premium.
 #   GRIGRI_ORIGIN_SECRET what the site's CloudFront sends the API so it
 #                answers only through the site (specs/origin-check.md;
 #                also from .env). Default: derived from GRIGRI_RBACR_TOKEN
@@ -164,13 +169,15 @@ if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
 fi
 GRIGRI_RBACR_TOKEN="${GRIGRI_RBACR_TOKEN:-}"
-for name in GRIGRI_AITYX_API_KEY GRIGRI_AITYX_URL GRIGRI_ORIGIN_SECRET; do
+for name in GRIGRI_AITYX_API_KEY GRIGRI_AITYX_URL GRIGRI_ORIGIN_SECRET GRIGRI_STRIPE_SECRET_KEY GRIGRI_STRIPE_WEBHOOK_SECRET; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
   fi
 done
 GRIGRI_AITYX_API_KEY="${GRIGRI_AITYX_API_KEY:-}"
 GRIGRI_AITYX_URL="${GRIGRI_AITYX_URL:-https://api.aityx.ai}"
+GRIGRI_STRIPE_SECRET_KEY="${GRIGRI_STRIPE_SECRET_KEY:-}"
+GRIGRI_STRIPE_WEBHOOK_SECRET="${GRIGRI_STRIPE_WEBHOOK_SECRET:-}"
 # The iOS clients whose ID tokens the API also takes (an iPhone's token is
 # its iOS client's): optional, comma-separated; empties and spaces dropped.
 GOOGLE_IOS_CLIENT_IDS="$(tr -d ' ' <<<"${GOOGLE_IOS_CLIENT_IDS:-}" | tr -s ',' | sed 's/^,//; s/,$//')"
@@ -209,6 +216,17 @@ if [[ ! "$GRIGRI_AITYX_URL" =~ ^https://[A-Za-z0-9.:-]+$ ]]; then
 fi
 if [[ -z "$GRIGRI_AITYX_API_KEY" ]]; then
   echo "warning: GRIGRI_AITYX_API_KEY isn't set: no match scores" >&2
+fi
+if [[ -n "$GRIGRI_STRIPE_SECRET_KEY" && ! "$GRIGRI_STRIPE_SECRET_KEY" =~ ^(sk|rk)_(live|test)_[A-Za-z0-9]+$ ]]; then
+  echo "error: GRIGRI_STRIPE_SECRET_KEY must be a Stripe secret key (sk_... or rk_...)" >&2
+  exit 1
+fi
+if [[ -n "$GRIGRI_STRIPE_WEBHOOK_SECRET" && ! "$GRIGRI_STRIPE_WEBHOOK_SECRET" =~ ^whsec_[A-Za-z0-9]+$ ]]; then
+  echo "error: GRIGRI_STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret (whsec_...)" >&2
+  exit 1
+fi
+if [[ -z "$GRIGRI_STRIPE_SECRET_KEY" || -z "$GRIGRI_STRIPE_WEBHOOK_SECRET" ]]; then
+  echo "warning: GRIGRI_STRIPE_SECRET_KEY or GRIGRI_STRIPE_WEBHOOK_SECRET isn't set: no Premium" >&2
 fi
 # The origin secret (specs/origin-check.md): given, or derived per stage
 # from the rbacr token (one-way, so it reveals nothing of it). Never logged.
@@ -321,6 +339,8 @@ aws cloudformation deploy --stack-name "$API_STACK" \
     "RbacrToken=$GRIGRI_RBACR_TOKEN" "PhotosBucket=$PHOTOS_BUCKET" \
     "PicsBucket=$PICS_BUCKET" \
     "AityxApiKey=$GRIGRI_AITYX_API_KEY" "AityxUrl=$GRIGRI_AITYX_URL" \
+    "StripeSecretKey=$GRIGRI_STRIPE_SECRET_KEY" \
+    "StripeWebhookSecret=$GRIGRI_STRIPE_WEBHOOK_SECRET" "SiteUrl=https://$DOMAIN" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
     "IotEndpoint=$IOT_ENDPOINT" "OriginSecret=$api_origin_secret" \
