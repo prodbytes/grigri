@@ -27,6 +27,8 @@ Each match opens the plan's group chat.
   net.
 - [Sign-in](sign-in.md): Google only, per platform; the profile made
   from the Google account at the first sign-in; admins.
+- [Admin](admin.md): the Admin tab, for admins: everyone, to block
+  (they can't use Grigri, and their plans leave the deck) or unblock.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
 - [Sectors](sectors.md): the searchable index of climbing sectors, crags
@@ -35,8 +37,7 @@ Each match opens the plan's group chat.
   profile.
 - [Match scores](match-scores.md): how likely a climber and a plan end
   in a match, from a decision model run by aityx: on admins' decks, and
-  for every profile and plan in the scores table, previewed on the Admin
-  tab.
+  for every profile and plan in the scores table.
 - [Languages](i18n.md): English, Spanish, German, French, Portuguese and
   Catalan; the language picker in the profile, kept on the device; the
   translation bundles and the test that keeps them complete.

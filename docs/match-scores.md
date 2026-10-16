@@ -12,11 +12,9 @@ this document walks through the code.
 flowchart LR
   subgraph App["Flutter app (admins only)"]
     Deck["Discover card<br/>Match 72% · good"]
-    Admin["Admin tab<br/>Match scores card"]
   end
   subgraph API["grigri-api Lambda"]
     Discover["GET /api/discover<br/>deckScores()"]
-    Preview["GET /api/admin/scores<br/>adminScores()"]
   end
   subgraph Scorer["grigri-api-scorer Lambda"]
     Run["scoreAll()"]
@@ -27,7 +25,6 @@ flowchart LR
   Scores[("DynamoDB<br/>grigri-api-scores")]
 
   Deck --> Discover --> Facts --> Aityx
-  Admin --> Preview --> Scores
   Run --> Facts
   Run -- profiles, plans, open requests --> Table
   Run -- scores + run summary --> Scores
@@ -38,8 +35,9 @@ Two paths use the same model and the same facts:
 1. **Live, on an admin's deck.** The API scores the deck's best 30 plans
    while it answers `GET /api/discover`.
 2. **In bulk, on demand.** A separate function scores every profile
-   against every upcoming plan and writes the scores table; the Admin
-   tab previews its best 20.
+   against every upcoming plan and writes the scores table. Nothing in
+   the app reads the table for now (the Admin tab's preview was removed
+   when the tab started over, [specs/admin.md](../specs/admin.md)).
 
 Nobody but [admins](../specs/sign-in.md#admins) (rbacr's `admin` role in
 the `grigri` system) sees a score, and the deck's order doesn't change.
@@ -101,7 +99,6 @@ edit to [model.json](../grigri_api/src/match/model.json), not to the code.
 | `scoreItem()`: the item's keys, the best-first sort key, the TTL a day after the plan starts | [scores.ts](../grigri_api/src/store/scores.ts#L100) |
 | `allClimbers()`: every profile, from the app table's gsi1 `CLIMBERS` partition | [store.ts](../grigri_api/src/store/store.ts#L142) |
 | Profiles join that partition whenever they're saved | [store.ts](../grigri_api/src/store/store.ts#L538) |
-| `adminScores()`, behind `GET /api/admin/scores` (admins only) | [api.ts](../grigri_api/src/api.ts#L598), route at [#L199](../grigri_api/src/api.ts#L199) |
 
 ### Infrastructure and deploy
 
@@ -109,7 +106,6 @@ edit to [model.json](../grigri_api/src/match/model.json), not to the code.
 |---|---|
 | `AityxApiKey` (NoEcho) and `AityxUrl` parameters | [template.yaml](../grigri_api/template.yaml#L65) |
 | `ScoresTable`: on demand, gsi1, TTL, no backups (derived data) | [template.yaml](../grigri_api/template.yaml#L236) |
-| The API's read-only access to it | [template.yaml](../grigri_api/template.yaml#L327) |
 | `ScorerRole`: Query on the app table's gsi1, writes to the scores table only | [template.yaml](../grigri_api/template.yaml#L411) |
 | `ScorerFunction`: 256 MB arm64, 15-minute timeout, invoked by hand | [template.yaml](../grigri_api/template.yaml#L449) |
 | The key from the environment or `.env`, checked and passed | [deploy.sh](../scripts/deploy.sh#L161) |
@@ -120,12 +116,11 @@ edit to [model.json](../grigri_api/src/match/model.json), not to the code.
 
 | What | Where |
 |---|---|
-| `MatchScore`, `MatchLevel`, `MatchReason`, `ScoreRun`; unknown levels or reasons parse to no score | [match_score.dart](../grigri_app/lib/model/match_score.dart#L3) |
-| Reading `scores` on the deck and the admin's preview | [api.dart](../grigri_app/lib/data/api.dart#L373), [#L379](../grigri_app/lib/data/api.dart#L379) |
-| The store keeps the deck's scores and the preview | [grigri_store.dart](../grigri_app/lib/data/grigri_store.dart#L352), [#L643](../grigri_app/lib/data/grigri_store.dart#L643) |
+| `MatchScore`, `MatchLevel`, `MatchReason`; unknown levels or reasons parse to no score | [match_score.dart](../grigri_app/lib/model/match_score.dart#L3) |
+| Reading `scores` on the deck | [api.dart](../grigri_app/lib/data/api.dart) (`ApiJson.planList`) |
+| The store keeps the deck's scores | [grigri_store.dart](../grigri_app/lib/data/grigri_store.dart) (`matchScore`) |
 | `MatchScoreTag`: "Match 72% · good" in the level's color, the reason beside it | [match_score.dart](../grigri_app/lib/ui/match_score.dart#L40) |
 | On the Discover card, under the plan | [discover_screen.dart](../grigri_app/lib/ui/discover_screen.dart#L217) |
-| The Admin tab's Match scores card and its rows | [admin_screen.dart](../grigri_app/lib/ui/admin_screen.dart#L58), [#L122](../grigri_app/lib/ui/admin_screen.dart#L122) |
 
 ## A worked example
 
@@ -157,7 +152,7 @@ input tokens.)
    `STAGE=prod bash scripts/index-climbers.sh` (an administrator's
    credentials: it scans the table).
 3. **A scoring run:** `STAGE=prod bash scripts/score-matches.sh`. It
-   prints the run's summary; the Admin tab shows it on its next refresh.
+   prints the run's summary.
 
 Nothing schedules runs. The deploy roles and the functions' permissions
 boundary ([grigri_infra/github-deploy.yaml](../grigri_infra/github-deploy.yaml))
@@ -187,8 +182,7 @@ a schedule needs that stack changed by its administrator first.
   (key, body, errors without the key in logs), the run (pairs, cap,
   failures, waiting requests), the table's keys, and the routes (admins
   only, best effort). `npm test` in `grigri_api/`.
-- App: the deck's score for admins and nobody else, the Admin tab's
-  preview, and the JSON shapes
+- App: the deck's score for admins and nobody else, and the JSON shapes
   ([widget_test.dart](../grigri_app/test/widget_test.dart),
   [api_test.dart](../grigri_app/test/api_test.dart)). `flutter test` in
   `grigri_app/`.

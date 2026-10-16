@@ -6,7 +6,7 @@
 import { DeleteCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { isOpen } from '../src/domain/model.js';
 import { key, prefix } from '../src/store/keys.js';
-import { type Store, messageItem, planItem, requestItem, toPlan, toRequest } from '../src/store/store.js';
+import { Conflict, type Store, messageItem, planItem, requestItem, toPlan, toRequest } from '../src/store/store.js';
 import type { Climber, Plan } from '../src/domain/model.js';
 import { seedData } from './data.js';
 import { showcaseData } from './showcase.js';
@@ -54,9 +54,15 @@ export async function seed(store: Store, now: Date): Promise<SeedCounts> {
   };
 }
 
-/** The seed's climbers, marked demo (all of them are made up). */
+/** The seed's climbers, marked demo (all of them are made up). One an admin blocked stays as it is. */
 async function writeClimbers(store: Store, climbers: Climber[], now: Date): Promise<void> {
-  for (const c of climbers) await store.saveProfile({ ...c, demo: true }, undefined, now);
+  for (const c of climbers) {
+    try {
+      await store.saveProfile({ ...c, demo: true }, undefined, now);
+    } catch (e) {
+      if (!(e instanceof Conflict)) throw e;
+    }
+  }
 }
 
 /**

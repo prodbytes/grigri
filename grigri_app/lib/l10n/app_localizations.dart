@@ -1296,74 +1296,8 @@ abstract class AppLocalizations {
   /// Title of the Admin tab.
   ///
   /// In en, this message translates to:
-  /// **'Admin: join requests'**
+  /// **'Admin: people'**
   String get adminTitle;
-
-  /// Admin, empty: title.
-  ///
-  /// In en, this message translates to:
-  /// **'No open requests'**
-  String get noOpenRequestsTitle;
-
-  /// Admin, empty: message.
-  ///
-  /// In en, this message translates to:
-  /// **'When anyone asks to join a plan, their request shows up here for you to approve or reject.'**
-  String get noOpenRequestsMessage;
-
-  /// Stands for a plan the admin cannot see the details of.
-  ///
-  /// In en, this message translates to:
-  /// **'a plan'**
-  String get aPlan;
-
-  /// When someone asked to join.
-  ///
-  /// In en, this message translates to:
-  /// **'Asked {day}, {time}'**
-  String askedAt(String day, String time);
-
-  /// Admin button: reject the request.
-  ///
-  /// In en, this message translates to:
-  /// **'Reject'**
-  String get reject;
-
-  /// Admin button: approve the request.
-  ///
-  /// In en, this message translates to:
-  /// **'Approve'**
-  String get approve;
-
-  /// Admin dialog title.
-  ///
-  /// In en, this message translates to:
-  /// **'Reject {name}?'**
-  String rejectNameQuestion(String name);
-
-  /// Admin dialog body.
-  ///
-  /// In en, this message translates to:
-  /// **'They won\'t join {plan}, and they\'ll be told the group declined.'**
-  String rejectMessage(String plan);
-
-  /// Admin dialog title.
-  ///
-  /// In en, this message translates to:
-  /// **'Approve {name}?'**
-  String approveNameQuestion(String name);
-
-  /// Admin dialog body.
-  ///
-  /// In en, this message translates to:
-  /// **'They join {plan} now, as if everyone in the group had said yes.'**
-  String approveMessage(String plan);
-
-  /// Snackbar after an admin approves a request.
-  ///
-  /// In en, this message translates to:
-  /// **'{name} joined {plan}.'**
-  String adminJoined(String name, String plan);
 
   /// Heading of the roles card (shown uppercased).
   ///
@@ -1581,42 +1515,59 @@ abstract class AppLocalizations {
   /// **'Within a grade or two of yours'**
   String get matchReasonCloseGrades;
 
-  /// Admin tab: the match scores preview's heading.
+  /// Admin tab: nobody has a profile yet.
   ///
   /// In en, this message translates to:
-  /// **'Match scores'**
-  String get adminScoresTitle;
+  /// **'Nobody yet'**
+  String get adminNoClimbersTitle;
 
-  /// Admin tab: no scoring run yet.
+  /// Admin tab: what shows up there.
   ///
   /// In en, this message translates to:
-  /// **'No scoring run yet. scripts/score-matches.sh scores every profile against every upcoming plan.'**
-  String get adminScoresNone;
+  /// **'Everyone with a profile shows up here, to block or unblock.'**
+  String get adminNoClimbersMessage;
 
-  /// Admin tab: the latest scoring run.
+  /// Admin tab: block someone (they can't use Grigri).
   ///
   /// In en, this message translates to:
-  /// **'Last run {day}, {time}: {scored} of {pairs} pairs, {climbers} people × {plans} plans'**
-  String adminScoresRun(
-    String day,
-    String time,
-    int scored,
-    int pairs,
-    int climbers,
-    int plans,
-  );
+  /// **'Block'**
+  String get block;
 
-  /// Admin tab: pairs the latest run couldn't score.
+  /// Admin tab: unblock someone.
   ///
   /// In en, this message translates to:
-  /// **'{failed} failed, {skipped} over the run\'s cap'**
-  String adminScoresProblems(int failed, int skipped);
+  /// **'Unblock'**
+  String get unblock;
 
-  /// Admin tab: the latest run scored nothing.
+  /// Admin tab: under a blocked person's name.
   ///
   /// In en, this message translates to:
-  /// **'The last run scored no pairs.'**
-  String get adminScoresEmpty;
+  /// **'Blocked'**
+  String get blocked;
+
+  /// Confirms blocking someone.
+  ///
+  /// In en, this message translates to:
+  /// **'Block {name}?'**
+  String blockNameQuestion(String name);
+
+  /// What blocking someone does.
+  ///
+  /// In en, this message translates to:
+  /// **'They can\'t use Grigri until you unblock them, and their plans leave everyone\'s Discover.'**
+  String get blockMessage;
+
+  /// Shown to a blocked person instead of the app.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is blocked'**
+  String get blockedTitle;
+
+  /// Why a blocked person can't use the app.
+  ///
+  /// In en, this message translates to:
+  /// **'An admin blocked your account, so you can\'t use Grigri for now.'**
+  String get blockedMessage;
 }
 
 class _AppLocalizationsDelegate

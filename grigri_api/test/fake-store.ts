@@ -52,7 +52,19 @@ export class FakeStore {
     this.subjects.set(subject, c.id);
     this.climbers.set(c.id, c);
   }
-  async saveProfile(c: Climber) { this.climbers.set(c.id, c); }
+  async saveProfile(c: Climber) {
+    if (this.climbers.get(c.id)?.blocked) throw new Conflict('blocked');
+    const { blocked: _blocked, ...rest } = c;
+    this.climbers.set(c.id, rest);
+  }
+  async setBlocked(id: string, blocked: boolean) {
+    const c = this.climbers.get(id);
+    if (!c) return false;
+    const { blocked: _was, ...rest } = c;
+    this.climbers.set(id, blocked ? { ...rest, blocked: true } : rest);
+    return true;
+  }
+  async allClimbers() { return [...this.climbers.values()]; }
   async getPlan(id: string) { return this.plans.get(id); }
   async getPlans(ids: Iterable<string>) { return [...new Set(ids)].flatMap((id) => (this.plans.has(id) ? [this.plans.get(id)!.plan] : [])); }
   async loadPlan(id: string): Promise<LoadedPlan | undefined> {

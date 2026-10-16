@@ -100,18 +100,11 @@ abstract interface class GrigriApi {
     void Function(double sent)? onProgress,
   });
 
-  /// `GET /api/admin/requests`: every open request (admins only).
-  Future<RequestList> adminRequests();
+  /// `GET /api/admin/climbers`: everyone, by name (admins only).
+  Future<List<AdminClimber>> adminClimbers();
 
-  /// `POST /api/admin/requests/{planId}/{climberId}/accept`.
-  Future<ApiMatch?> adminAccept(String planId, String climberId);
-
-  /// `POST /api/admin/requests/{planId}/{climberId}/reject`.
-  Future<void> adminReject(String planId, String climberId);
-
-  /// `GET /api/admin/scores`: the latest match scoring run and its best
-  /// scores (admins only).
-  Future<AdminScores> adminScores();
+  /// `POST /api/admin/climbers/{id}/block` or `/unblock` (admins only).
+  Future<void> setBlocked(String climberId, bool blocked);
 }
 
 /// A failure the app itself describes (no server message to show): the
@@ -169,6 +162,9 @@ class ApiException implements Exception {
   /// 409 `{"error": "no profile"}`: signed in, but no profile saved yet.
   bool get noProfile => status == 409 && message == 'no profile';
 
+  /// 403 `{"error": "blocked"}`: an admin blocked me.
+  bool get blocked => status == 403 && message == 'blocked';
+
   @override
   String toString() => 'ApiException($status): $message';
 }
@@ -206,15 +202,12 @@ class PlanList {
   final Map<String, MatchScore> scores;
 }
 
-/// The latest match scoring run (null: never run) and its best scores,
-/// best first, with their plans and climbers.
-class AdminScores {
-  const AdminScores(this.run, this.scores, this.plans, this.climbers);
+/// Someone in the admin's list, and whether they're blocked.
+class AdminClimber {
+  const AdminClimber(this.climber, {required this.blocked});
 
-  final ScoreRun? run;
-  final List<ScoredPair> scores;
-  final Map<String, Plan> plans;
-  final Climbers climbers;
+  final Climber climber;
+  final bool blocked;
 }
 
 class MyPlans {
@@ -376,20 +369,10 @@ abstract final class ApiJson {
     },
   );
 
-  static AdminScores adminScores(Map<String, Object?> json) => AdminScores(
-    ScoreRun.fromJson(json['run']),
-    [
-      for (final s in _list(json['scores']))
-        if (MatchScore.fromJson(s) case final match?)
-          ScoredPair(
-            climberId: s['climberId']! as String,
-            planId: s['planId']! as String,
-            match: match,
-          ),
-    ],
-    _plansById(json['plans']),
-    climbers(json),
-  );
+  static List<AdminClimber> adminClimbers(Map<String, Object?> json) => [
+    for (final c in _list(json['climbers']))
+      AdminClimber(Climber.fromJson(c), blocked: c['blocked'] == true),
+  ];
 
   static MyPlans myPlans(Map<String, Object?> json) => MyPlans(
     plans: _list(json['plans']).map(Plan.fromJson).toList(),

@@ -42,6 +42,9 @@ enum Phase {
 
   /// Signed in, but my profile couldn't be loaded: try again.
   failed,
+
+  /// Signed in, but an admin blocked me: only signing out.
+  blocked,
 }
 
 /// The parts of the app's data that load separately.
@@ -66,8 +69,8 @@ class EditablePhoto {
 }
 
 /// The app's data, a cache over the [GrigriApi]: the decks, my plans and
-/// requests, notifications, chats, my profile, and (for admins) every open
-/// request. Screens read it and call its actions; it refreshes from the
+/// requests, notifications, chats, my profile, and (for admins) everyone,
+/// to block or unblock. Screens read it and call its actions; it refreshes from the
 /// API when they ask, and on live updates' hints (see specs/matching.md,
 /// Refreshing, and specs/live-updates.md).
 class GrigriStore extends ChangeNotifier {
@@ -177,9 +180,7 @@ class GrigriStore extends ChangeNotifier {
   List<String> _mine = [];
   List<JoinRequest> _asked = [];
   List<JoinRequest> _toReview = [];
-  List<JoinRequest> _adminRequests = [];
-  ScoreRun? _scoreRun;
-  List<ScoredPair> _adminScores = [];
+  List<AdminClimber> _adminClimbers = [];
   final _open = <String, List<JoinRequest>>{};
   final _declinedHere = <String>{};
   List<Notice> _notices = [];
@@ -248,9 +249,7 @@ class GrigriStore extends ChangeNotifier {
     _mine = [];
     _asked = [];
     _toReview = [];
-    _adminRequests = [];
-    _scoreRun = null;
-    _adminScores = [];
+    _adminClimbers = [];
     _open.clear();
     _declinedHere.clear();
     _notices = [];
@@ -392,21 +391,13 @@ class GrigriStore extends ChangeNotifier {
     ..._toReview,
     for (final list in _open.values) ...list,
     ..._asked,
-    ..._adminRequests,
   ].where((r) => r.id == id).firstOrNull;
 
   /// Whether I turned this request down (in this session).
   bool declinedHere(String requestId) => _declinedHere.contains(requestId);
 
-  /// Every open request (admins).
-  List<JoinRequest> get adminRequests => _adminRequests;
-
-  /// The latest match scoring run (admins); null: never run, or not
-  /// loaded.
-  ScoreRun? get scoreRun => _scoreRun;
-
-  /// Its best scores, best first (admins).
-  List<ScoredPair> get adminScores => _adminScores;
+  /// Everyone, by name, and whether they're blocked (admins).
+  List<AdminClimber> get adminClimbers => _adminClimbers;
 
   /// My notifications, newest first.
   List<Notice> get notices => _notices;
@@ -425,7 +416,8 @@ class GrigriStore extends ChangeNotifier {
   // --- Calling the API ---------------------------------------------------
 
   /// Calls the API; a 401 (the session ended) signs out. A 409 "no
-  /// profile" goes back to creating one.
+  /// profile" goes back to creating one. A 403 "blocked" leaves only
+  /// signing out ([Phase.blocked]).
   Future<T> _call<T>(Future<T> Function() call) async {
     final session = _session;
     try {
@@ -441,6 +433,12 @@ class GrigriStore extends ChangeNotifier {
         // Auth notifies, and _authChanged clears everything.
         await auth.signedOut();
         rethrow;
+      }
+      if (e.blocked) {
+        _clear();
+        _phase = Phase.blocked;
+        notifyListeners();
+        throw const ApiException(_stale, 'stale');
       }
       // My profile went missing: loading it again makes a new one.
       if (e.noProfile && _phase == Phase.ready) unawaited(loadMe());
@@ -560,7 +558,7 @@ class GrigriStore extends ChangeNotifier {
   // --- Refreshing --------------------------------------------------------
 
   /// My plans, my requests, the requests waiting for me, notifications and
-  /// the deck; for admins, every open request too.
+  /// the deck; for admins, everyone too.
   Future<void> refreshAll() async {
     await Future.wait([
       refreshPlans(),
@@ -639,26 +637,13 @@ class GrigriStore extends ChangeNotifier {
     }
   }
 
-  /// Every open request, and the match scores' preview (admins).
+  /// Everyone, to block or unblock (admins).
   Future<void> refreshAdmin() async {
     if (!_admin) return;
-    await Future.wait([
-      _refresh(api.adminRequests, (list) {
-        _learn(list.climbers);
-        _plans.addAll(list.plans);
-        _adminRequests = list.requests;
-        _loaded.add(Section.admin);
-      }),
-      _refresh(api.adminScores, (scores) {
-        _learn(scores.climbers);
-        _plans.addAll(scores.plans);
-        _scoreRun = scores.run;
-        _adminScores = [
-          for (final s in scores.scores)
-            if (_plans.containsKey(s.planId)) s,
-        ];
-      }),
-    ]);
+    await _refresh(api.adminClimbers, (list) {
+      _adminClimbers = list;
+      _loaded.add(Section.admin);
+    });
   }
 
   /// One plan, with its open requests when I'm in it.
@@ -991,30 +976,20 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Admin -------------------------------------------------------------
 
-  /// An admin lets someone in, as if every member had said yes.
-  Future<Match?> adminAccept(JoinRequest request) async {
-    final match = await _act(
-      () => api.adminAccept(request.planId, request.climberId),
-    );
-    await _afterAdmin(request);
-    if (match == null) return null;
-    _plans[match.plan.id] = match.plan;
-    return Match(plan: match.plan, newcomer: climber(match.newcomerId));
-  }
-
-  /// An admin turns someone down.
-  Future<bool> adminReject(JoinRequest request) async {
-    final ok = await _ok(
-      () => api.adminReject(request.planId, request.climberId),
-    );
-    await _afterAdmin(request);
+  /// An admin blocks someone (they can't use Grigri, and their plans
+  /// leave the deck) or unblocks them; true when it worked.
+  Future<bool> setBlocked(String climberId, bool blocked) async {
+    final ok = await _ok(() => api.setBlocked(climberId, blocked));
+    if (ok) {
+      _adminClimbers = [
+        for (final c in _adminClimbers)
+          c.climber.id == climberId
+              ? AdminClimber(c.climber, blocked: blocked)
+              : c,
+      ];
+      notifyListeners();
+    }
     return ok;
-  }
-
-  Future<void> _afterAdmin(JoinRequest request) async {
-    _adminRequests = [..._adminRequests.where((r) => r.id != request.id)];
-    notifyListeners();
-    await Future.wait([refreshAdmin(), refreshRequests(), refreshPlans()]);
   }
 
   @override

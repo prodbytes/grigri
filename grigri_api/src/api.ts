@@ -21,7 +21,6 @@ import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { matchFacts } from './match/facts.js';
 import { openByPlan, othersWaiting } from './match/run.js';
 import type { RolesLookup } from './rbacr.js';
-import type { ScoresStore } from './store/scores.js';
 import { type Params, Router } from './router.js';
 import { type Delivery, type Realtime, hintsFor } from './realtime.js';
 import { Conflict, type LoadedPlan, type Store } from './store/store.js';
@@ -40,8 +39,6 @@ const SCORE_CONCURRENCY = 10;
  * the deck answers within about 7 s, under the HTTP API's 10.
  */
 const SCORE_BUDGET_MS = 4000;
-/** The best scores the admin's preview shows. */
-export const SCORES_PREVIEW = 20;
 
 /** Largest photo upload (profile, gear, chat): the app downsizes them well under it. */
 export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
@@ -77,8 +74,6 @@ export interface Deps {
   roles?: RolesLookup;
   /** Match scores from aityx (match/aityx.ts), on admins' decks; none: off. */
   matchScorer?: MatchScorer;
-  /** The match scores table (store/scores.ts), for the admin's preview; none: off. */
-  scores?: Pick<ScoresStore, 'top' | 'latestRun'>;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -185,8 +180,8 @@ export class Api {
     r('POST /api/plans/{id}/media', 'profile', (req, s) => this.presignChatMedia(req, s));
 
     r('GET /api/requests', 'profile', (_req, s) => this.toReview(s));
-    r('POST /api/requests/{planId}/{climberId}/accept', 'profile', (req, s) => this.answer(req, s, 'accept', false));
-    r('POST /api/requests/{planId}/{climberId}/reject', 'profile', (req, s) => this.answer(req, s, 'reject', false));
+    r('POST /api/requests/{planId}/{climberId}/accept', 'profile', (req, s) => this.answer(req, s, 'accept'));
+    r('POST /api/requests/{planId}/{climberId}/reject', 'profile', (req, s) => this.answer(req, s, 'reject'));
     r('POST /api/requests/{planId}/{climberId}/dismiss', 'profile', (req, s) => this.dismiss(req, s));
 
     r('GET /api/notices', 'profile', (_req, s) => this.notices(s));
@@ -195,10 +190,9 @@ export class Api {
       return {};
     });
 
-    r('GET /api/admin/requests', 'admin', () => this.adminRequests());
-    r('GET /api/admin/scores', 'admin', () => this.adminScores());
-    r('POST /api/admin/requests/{planId}/{climberId}/accept', 'admin', (req, s) => this.answer(req, s, 'accept', true));
-    r('POST /api/admin/requests/{planId}/{climberId}/reject', 'admin', (req, s) => this.answer(req, s, 'reject', true));
+    r('GET /api/admin/climbers', 'admin', () => this.adminClimbers());
+    r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(req, s, true));
+    r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(req, s, false));
   }
 
   /** Who may call a route (404 for no such route). */
@@ -221,6 +215,8 @@ export class Api {
     const climberId = await this.store.climberIdFor(req.caller.subject);
     const me = climberId ? await this.store.getClimber(climberId) : undefined;
     if (!me && route.access !== 'caller') throw conflict('no profile');
+    // Blocked: nothing but signing out ('session' routes, above).
+    if (me?.blocked) throw forbidden('blocked');
     if (route.access === 'admin' && !req.caller.admin) throw forbidden('admins only');
     const names = new Map<string, string>();
     const session: Session = {
@@ -281,7 +277,7 @@ export class Api {
     let saved: Climber;
     if (s.me) {
       saved = { id: s.me.id, ...input };
-      await this.store.saveProfile(saved, s.caller.subject, s.now);
+      await this.saveBlocked(saved, s);
     } else {
       saved = { id: newId(), ...input };
       try {
@@ -292,7 +288,7 @@ export class Api {
         const existing = await this.store.climberIdFor(s.caller.subject);
         if (!existing) throw e;
         saved = { ...saved, id: existing };
-        await this.store.saveProfile(saved, s.caller.subject, s.now);
+        await this.saveBlocked(saved, s);
       }
     }
     if (unused.length > 0) {
@@ -302,6 +298,16 @@ export class Api {
       });
     }
     return { climber: saved };
+  }
+
+  /** Saves my profile; 403 when an admin blocked me meanwhile. */
+  private async saveBlocked(climber: Climber, s: Session): Promise<void> {
+    try {
+      await this.store.saveProfile(climber, s.caller.subject, s.now);
+    } catch (e) {
+      if (e instanceof Conflict) throw forbidden('blocked');
+      throw e;
+    }
   }
 
   private async presignPhoto(req: Request, s: Session) {
@@ -348,11 +354,15 @@ export class Api {
       this.store.askedRequests(s.me.id),
     ]);
     const deck = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
-    const [climbers, scores] = await Promise.all([
-      this.climbersOf(deck.plans),
-      s.caller.admin ? this.deckScores(deck.plans, s) : Promise.resolve(undefined),
-    ]);
-    return { plans: deck.plans, distanceKm: deck.distanceKm, climbers, ...(scores ? { scores } : {}) };
+    // Blocked organizers' plans leave the deck.
+    const everyone = await this.store.getClimbers(deck.plans.flatMap((p) => [p.organizerId, ...p.memberIds]));
+    const plans = deck.plans.filter((p) => everyone[p.organizerId]?.blocked !== true);
+    const distanceKm = Object.fromEntries(Object.entries(deck.distanceKm).filter(([pid]) => plans.some((p) => p.id === pid)));
+    const climbers = Object.fromEntries(
+      plans.flatMap((p) => [p.organizerId, ...p.memberIds]).flatMap((cid) => (everyone[cid] ? [[cid, publicClimber(everyone[cid])]] : [])),
+    );
+    const scores = s.caller.admin ? await this.deckScores(plans, s) : undefined;
+    return { plans, distanceKm, climbers, ...(scores ? { scores } : {}) };
   }
 
   /**
@@ -547,10 +557,10 @@ export class Api {
     };
   }
 
-  private async answer(req: Request, s: Session, kind: 'accept' | 'reject', admin: boolean) {
+  private async answer(req: Request, s: Session, kind: 'accept' | 'reject') {
     const planId = id(req.params.planId, 'plan id');
     const climberId = id(req.params.climberId, 'climber id');
-    const actor = { id: s.me.id, admin };
+    const actor = { id: s.me.id };
     return this.retry(async () => {
       const loaded = await this.loadPlan(planId);
       await this.loadNames(s, loaded.plan.memberIds, loaded.requests.map((r) => r.climberId));
@@ -578,35 +588,21 @@ export class Api {
     return {};
   }
 
-  private async adminRequests() {
-    const open = await this.store.openRequests();
-    const plans = await this.store.getPlans(open.map((r) => r.planId));
-    const byId = new Map(plans.map((p) => [p.id, p]));
-    const requests = open.filter((r) => isOpen(r) && byId.has(r.planId) && !byId.get(r.planId)!.memberIds.includes(r.climberId));
-    return {
-      requests: requests.map(requestJson),
-      plans: Object.fromEntries(plans.map((p) => [p.id, p])),
-      climbers: await this.climbersOf(plans, requests),
-    };
+  /** GET /api/admin/climbers: everyone, by name, with whether they're blocked. */
+  private async adminClimbers() {
+    const all = await this.store.allClimbers();
+    const climbers = all
+      .map((c) => ({ ...publicClimber(c), blocked: c.blocked === true }))
+      .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+    return { climbers };
   }
 
-  /**
-   * GET /api/admin/scores: the latest scoring run's summary and its best
-   * scores, with their plans and climbers (null run: never run, or no
-   * scores table).
-   */
-  private async adminScores() {
-    const table = this.deps.scores;
-    const run = (await table?.latestRun()) ?? null;
-    const top = run && table ? await table.top(run.runId, SCORES_PREVIEW) : [];
-    const plans = await this.store.getPlans(top.map((t) => t.planId));
-    const ids = new Set([...top.map((t) => t.climberId), ...plans.flatMap((p) => [p.organizerId, ...p.memberIds])]);
-    return {
-      run,
-      scores: top.map(({ climberId, planId, score, level, reason, scoredAt }) => ({ climberId, planId, score, level, reason, scoredAt })),
-      plans: Object.fromEntries(plans.map((p) => [p.id, p])),
-      climbers: await this.publicClimbers(ids),
-    };
+  /** POST /api/admin/climbers/{id}/block and /unblock. Never myself: I'd lock myself out. */
+  private async block(req: Request, s: Session, blocked: boolean) {
+    const climberId = id(req.params.id, 'climber id');
+    if (blocked && climberId === s.me.id) throw badRequest("you can't block yourself");
+    if (!(await this.store.setBlocked(climberId, blocked))) throw notFound('no such climber');
+    return { blocked };
   }
 
   // --- Notices and chat -------------------------------------------------------

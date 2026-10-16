@@ -73,13 +73,15 @@ export interface Climber {
   areas?: Location[];
   /** Made-up, to show how Grigri works (the seed's, on RC and local); the app says so. Never set through the API. */
   demo?: true;
+  /** Blocked by an admin: can't use Grigri, and their plans leave the deck. Never set through PUT /api/me; only admins see it. */
+  blocked?: true;
 }
 
-/** A profile as other people see it: without where its climber is. */
-export type PublicClimber = Omit<Climber, 'location' | 'areas'>;
+/** A profile as other people see it: without where its climber is, or whether they're blocked. */
+export type PublicClimber = Omit<Climber, 'location' | 'areas' | 'blocked'>;
 
 export function publicClimber(c: Climber): PublicClimber {
-  const { location: _location, areas: _areas, ...rest } = c;
+  const { location: _location, areas: _areas, blocked: _blocked, ...rest } = c;
   return rest;
 }
 

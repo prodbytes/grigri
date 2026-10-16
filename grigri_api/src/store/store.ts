@@ -174,8 +174,37 @@ export class Store implements SessionStore {
     }
   }
 
+  /**
+   * Saves a profile whole. Conflict when it's blocked (only setBlocked
+   * changes that): a save never unblocks one.
+   */
   async saveProfile(climber: Climber, subject: string | undefined, now: Date): Promise<void> {
-    await this.doc.send(new PutCommand({ TableName: this.table, Item: climberItem(climber, subject, now) }));
+    try {
+      await this.doc.send(new PutCommand({
+        TableName: this.table,
+        Item: climberItem({ ...climber, blocked: undefined }, subject, now),
+        ConditionExpression: 'attribute_not_exists(blocked)',
+      }));
+    } catch (e) {
+      throw asConflict(e);
+    }
+  }
+
+  /** Blocks or unblocks a profile (the admin's); false when there's no such profile. */
+  async setBlocked(climberId: string, blocked: boolean): Promise<boolean> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.climber(climberId),
+        UpdateExpression: blocked ? 'SET blocked = :t' : 'REMOVE blocked',
+        ConditionExpression: 'attribute_exists(pk)',
+        ...(blocked ? { ExpressionAttributeValues: { ':t': true } } : {}),
+      }));
+      return true;
+    } catch (e) {
+      if (isConditionFailure(e)) return false;
+      throw e;
+    }
   }
 
   // --- Plans ----------------------------------------------------------------
@@ -548,6 +577,7 @@ export function climberItem(c: Climber, subject: string | undefined, now: Date):
     ...(c.location ? { location: c.location } : {}),
     areas: c.areas ?? [],
     ...(c.demo ? { demo: true } : {}),
+    ...(c.blocked ? { blocked: true } : {}),
     // Who signs in as this climber (never returned); none for the seed's.
     ...(subject ? { subject } : {}),
     updatedAt: now.toISOString(),
@@ -567,6 +597,7 @@ export function toClimber(i: Item): Climber {
     ...(i.location ? { location: i.location as Location } : {}),
     areas: (i.areas as Location[]) ?? [],
     ...(i.demo === true ? { demo: true as const } : {}),
+    ...(i.blocked === true ? { blocked: true as const } : {}),
   };
 }
 
@@ -608,6 +639,7 @@ export function toPlan(i: Item): Plan {
     memberIds: (i.memberIds as string[]) ?? [],
     notes: (i.notes as string) ?? '',
     ...(i.demo === true ? { demo: true as const } : {}),
+    ...(i.blocked === true ? { blocked: true as const } : {}),
   };
 }
 

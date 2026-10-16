@@ -312,20 +312,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   }
 
   @override
-  Future<RequestList> adminRequests() async =>
-      ApiJson.requestList(await _get(['admin', 'requests']));
+  Future<List<AdminClimber>> adminClimbers() async =>
+      ApiJson.adminClimbers(await _get(['admin', 'climbers']));
 
   @override
-  Future<ApiMatch?> adminAccept(String planId, String climberId) async =>
-      ApiJson.match(
-        await _post(['admin', 'requests', planId, climberId, 'accept']),
-      );
-
-  @override
-  Future<void> adminReject(String planId, String climberId) =>
-      _post(['admin', 'requests', planId, climberId, 'reject']);
-
-  @override
-  Future<AdminScores> adminScores() async =>
-      ApiJson.adminScores(await _get(['admin', 'scores']));
+  Future<void> setBlocked(String climberId, bool blocked) =>
+      _post(['admin', 'climbers', climberId, blocked ? 'block' : 'unblock']);
 }

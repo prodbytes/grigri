@@ -8,7 +8,7 @@ the demo showcase (fictional climbers and their plans, marked `demo`); RC
 and local also get made-up test data from a seed (never in GA). Real
 plans' requests wait for real members everywhere; a demo plan's group says
 yes at once.
-An admin can approve or reject any join request.
+An admin can list everyone and block or unblock them ([admin.md](admin.md)).
 
 ## Architecture (cost first: $0 idle)
 
@@ -71,6 +71,8 @@ An admin can approve or reject any join request.
   sorted, without duplicates; kept 60 s per Lambda instance like the
   admin answer. No token, an error or a timeout (2 s) gives `null`, never
   kept. Without a verified email, `null` too.
+- **Blocked**: a climber an admin blocked ([admin.md](admin.md)) gets
+  403 `{"error": "blocked"}` from every route but signing out.
 
 ## Sessions
 
@@ -205,10 +207,9 @@ All need a session token except `GET /api/health` and `POST /api/session`.
 | `POST /api/plans/{id}/messages` | members only; body `{"text"?, "attachment"?: key}`: text up to 2000 chars, 1–2000 without an attachment. The attachment must be a key `POST /api/plans/{id}/media` issued for this plan (`chat/<this planId>/<random>.<jpg\|png\|webp\|mp4\|mov>`; 400 otherwise) and uploaded: it loses its pending tag, only after the caller is known to be a member (400 if it isn't uploaded, or already expired). → `{"message"}` |
 | `POST /api/plans/{id}/media` | members only (403; 404 for no such plan); body `{"contentType"}`: `image/jpeg`, `image/png`, `image/webp`, `video/mp4` or `video/quicktime`, nothing else (400). → `{"key", "url", "fields", "maxBytes"}`: a presigned S3 POST as `POST /api/photos` gives, ≤ 2 MB for a photo and ≤ 50 MB for a video (`maxBytes`), its content type fixed by the policy. Keys are `chat/<planId>/<random>.<ext>` (object `photos/chat/...`, served at `/photos/chat/...`), tagged pending: an upload no message sends expires after a day. Sent ones expire 400 days after their upload ([backend](backend.md#chat-media)). |
 | `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 15 minutes (room for a chat video on a slow line). The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
-| `GET /api/admin/requests` | admin only: every open request (not rejected, not joined) → `{"requests", "plans": {id: Plan}, "climbers"}` |
-| `GET /api/admin/scores` | admin only: the latest [match scoring run](match-scores.md#the-admin-tabs-preview) and its best 20 scores → `{"run": {...} \| null, "scores": [{"climberId", "planId", "score", "level", "reason", "scoredAt"}], "plans": {id: Plan}, "climbers"}` |
-| `POST /api/admin/requests/{planId}/{climberId}/accept` | admin only: they join now, as if every member accepted; same notes and Notice. → `{"match"}` |
-| `POST /api/admin/requests/{planId}/{climberId}/reject` | admin only: rejected, Notice declined. → `{}` |
+| `GET /api/admin/climbers` | admin only: every profile, by name, without location or areas, each with `"blocked": bool` → `{"climbers"}` ([admin.md](admin.md)) |
+| `POST /api/admin/climbers/{id}/block` | admin only: blocks them (400 for myself, 404 for no such climber). → `{"blocked": true}` |
+| `POST /api/admin/climbers/{id}/unblock` | admin only: unblocks them (404 for no such climber). → `{"blocked": false}` |
 
 ## The deck's ranking
 
@@ -248,9 +249,9 @@ Details: [live-updates.md](live-updates.md).
 |---|---|
 | `POST /api/plans/{id}/messages` | `message` to the members |
 | `POST /api/plans/{id}/join` | `request` to the members |
-| accept (member or admin), not everyone yet | `request` to the members |
-| accept, everyone said yes (or an admin) | `match` to the newcomer, `plan` to the other members |
-| reject (member or admin) | `notice` to the requester, `request` to the members |
+| accept, not everyone yet | `request` to the members |
+| accept, everyone said yes | `match` to the newcomer, `plan` to the other members |
+| reject | `notice` to the requester, `request` to the members |
 | `POST /api/plans/{id}/nudge` | `notice` to the members who haven't said yes |
 | `PUT /api/plans/{id}`, `POST /api/plans/{id}/leave` | `plan` to the (remaining) members |
 
@@ -261,7 +262,7 @@ request.
 
 Made-up climbers (never real people) and their plans, dates relative to
 now so plans are always upcoming, a few open requests between made-up
-climbers so the admin view and Requests have something. The made-up
+climbers so Requests has something. The made-up
 climbers have no Google subject (nobody signs in as them) and ids prefixed
 `seed-`. The seed is idempotent (re-running refreshes the seed records and
 their dates, never touches real people's data) and refuses to run against
