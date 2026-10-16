@@ -905,8 +905,21 @@ spec.
       attestation (Play Integrity, App Attest) could tell them apart, and
       that isn't done.
     - Cost: none.
+64. **GriGri Pics by crag, not by whole region.**
+    - [crags.json](../grigri_api/pics/crags.json) now lists every named
+      OpenStreetMap crag and climbing sector (`sport=climbing` too, not
+      only `climbing=crag`) around Siurana and Margalef: 45, with
+      Racó de la Finestra.
+    - Photos were searched per crag (by name, by Commons' geosearch
+      around each crag, and on Flickr through Openverse) and placed on a
+      crag only when they reliably show it: Racó de la Finestra has its
+      own. The rest stay with their area, now 12 for Siurana and 6 for
+      Margalef (6 new from Flickr, CC BY and CC BY-SA). 19 photos in all,
+      every one without a watermark or a person's name; one more Margalef
+      photo is out (its description named a climber).
+    - [Plan photos](pics.md): how photos are placed, and the counts.
 
-64. **Let people subscribe to Premium in their profile, with real
+65. **Let people subscribe to Premium in their profile, with real
     payments.** (First half of the request for ads; the ads come in the
     next entry.)
     - [Premium](premium.md) rewritten as built: Stripe Checkout from the
