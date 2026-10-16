@@ -17,6 +17,9 @@ Each match opens the plan's group chat.
 
 **App**
 
+- [Landing page](landing.md): the site root, which gets visitors to
+  sign in (free, Google), with GriGri Pics of crags near them; signed-in
+  climbers go straight to the app.
 - [Matching](matching.md): profiles and plans, the Discover deck,
   join requests answered in the group chat, the group's unanimous yes, my requests' status (pending, accepted,
   declined), matches, notifications and group chats; the data, all from

@@ -173,7 +173,8 @@ await s3.send(new PutObjectCommand({
   Key: 'pics/catalog.json',
   Body: JSON.stringify(catalog),
   ContentType: 'application/json',
-  CacheControl: 'no-cache',
+  // The index page reads it through CloudFront too; deploys invalidate it.
+  CacheControl: 'public, max-age=3600',
 }));
 const photos = catalog.crags.reduce((n, c) => n + c.photos.length, 0);
 console.log(`pics: ${catalog.crags.length} crags, ${photos} photos in ${bucket} (${uploaded} uploaded, ${deleted} deleted, ${failed} failed)`);

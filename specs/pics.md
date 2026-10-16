@@ -67,7 +67,8 @@ backdrop instead.
 - **The bucket**: `<site stack>-pics-<account>` (`grigri-web-pics-…`,
   `grigri-rc-web-pics-…`; `grigri-local-pics` in Floci), in the site
   stack, private, served by the site's CloudFront at `/pics/*` (origin
-  access control; only `pics/crags/*` is readable there). Photos are at
+  access control; only `pics/crags/*` and `pics/catalog.json` are
+  readable there). Photos are at
   `pics/crags/<crag>/<hash of their source>.jpg`: keys never change for a
   source, so they're cached for a year.
 - **Metadata**: each photo carries an [S3
@@ -77,7 +78,9 @@ backdrop instead.
   `licenseUrl` and `source`. The annotations are the source of truth,
   kept on the objects themselves.
 - **Querying**: `pics/catalog.json`, made from the annotations by the
-  loader, holds every crag with its photos. The API reads it with one S3
+  loader, holds every crag with its photos. The [landing page](landing.md)
+  reads it through CloudFront (cached for an hour) to show crags near the
+  visitor. The API reads it with one S3
   GET and keeps it while the function is warm (an hour at most), then
   looks photos up in memory. Its role may read that one object, nothing
   else in the bucket.
