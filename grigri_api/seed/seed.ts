@@ -97,6 +97,8 @@ async function writePlans(store: Store, plans: Plan[], now: Date): Promise<void>
 }
 
 const SHOWCASE_EVERY_MS = 12 * 3_600_000;
+/** Bumped when showcase.ts changes, so stages rewrite it at once, not up to 12 hours later. */
+export const SHOWCASE_VERSION = 2;
 
 /**
  * The demo showcase (seed/showcase.ts), on every stage: its climbers and
@@ -107,13 +109,13 @@ export async function seedShowcase(store: Store, now: Date): Promise<{ climbers:
   const data = showcaseData(now);
   await writeClimbers(store, data.climbers, now);
   await writePlans(store, data.plans, now);
-  await store.doc.send(new PutCommand({ TableName: store.table, Item: { ...key.showcase(), type: 'showcase', time: now.toISOString() } }));
+  await store.doc.send(new PutCommand({ TableName: store.table, Item: { ...key.showcase(), type: 'showcase', time: now.toISOString(), version: SHOWCASE_VERSION } }));
   return { climbers: data.climbers.length, plans: data.plans.length };
 }
 
-/** Whether the showcase was last written over 12 hours ago (or never). */
+/** Whether the showcase was last written over 12 hours ago, by an older showcase.ts, or never. */
 export async function showcaseIsStale(store: Store, now: Date): Promise<boolean> {
   const { Item } = await store.doc.send(new GetCommand({ TableName: store.table, Key: key.showcase() }));
   const time = typeof Item?.time === 'string' ? Date.parse(Item.time) : NaN;
-  return !(now.getTime() - time < SHOWCASE_EVERY_MS);
+  return Item?.version !== SHOWCASE_VERSION || !(now.getTime() - time < SHOWCASE_EVERY_MS);
 }

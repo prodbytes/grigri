@@ -30,8 +30,9 @@ person, and a plan can take a whole group.
     brings my profile back without them). They rank my
     [deck](#the-deck).
 
-    The app **takes my location from the device instead of asking**:
-    when my profile has no location or areas, it asks the phone or
+    The app **takes my location from the device instead of asking**, so
+    it defaults to where I am: when my profile has no location (areas or
+    not), it asks the phone or
     browser where it is once signed in (the system's location
     permission prompt the first time; coarse, through `geolocator`, at
     no running cost) and saves it as my location, rounded to 0.01°
@@ -43,6 +44,9 @@ person, and a plan can take a whole group.
     Android declares `ACCESS_COARSE_LOCATION`, iOS
     `NSLocationWhenInUseUsageDescription`, and the web app's
     `Permissions-Policy` allows `geolocation=(self)` ([deploy](deploy.md)).
+    I can change my location from the **Profile** tab itself
+    ([screens](screens.md)), saved at once, or in the profile editor
+    with my areas.
 
   When is only the plan's: a profile has no availability or years
   climbing.
@@ -59,10 +63,10 @@ person, and a plan can take a whole group.
 
 - **Discover**: plans to join. Upcoming plans that I'm
   not in and haven't swiped on, **ranked by how well they match my
-  profile plus how close they are** to the nearest of my location and
-  areas ([the score](api.md#the-decks-ranking)): a plan in my grades
-  nearby first; one in my grades far away still before one next door
-  that I don't climb; ties soonest first. A plan typed in by hand (no
+  profile plus, weighing twice as much, how close they are** to the
+  nearest of my location and areas ([the score](api.md#the-decks-ranking)):
+  a plan in my grades nearby first; nearby plans before far ones, even
+  ones a few grades off; ties soonest first. A plan typed in by hand (no
   point), or a deck without my location or areas, counts as about 70 km
   away. Each card shows **the plan first, highlighted** (the place, the
   date and the time range on lines of their own, the grades, a "Your
@@ -70,7 +74,10 @@ person, and a plan can take a whole group.
   rank), then the organizer with how many others are in the group
   ("Kit Marlow" and **+1**: tap it to show or hide the group's list,
   collapsed at first) and their profile (without the gear). The card
-  is compact, to fit small phones.
+  is compact, to fit small phones: its text is 10% smaller than the
+  rest of the app's (on top of the system's text size), and the plan's
+  notes and the organizer's bio stop at three lines, with "…" when cut
+  (the plan's screen and the profile sheet show them whole).
   - Right / ✓: I ask to join (a join request); a snackbar says "Asked to
     join. You'll get an alert when you're accepted." On a **demo** plan
     the group says yes at once (its made-up members can't answer): I
@@ -207,8 +214,7 @@ loads my profile again (`GET /api/me`, which makes a new one).
   RC and local also get made-up test data from the backend's seed (never
   in GA). All of it is marked **demo**: a demo plan (on the deck, its
   screen, the match screen) and a demo person's profile sheet begin with
-  one discreet line, "Demo: automatically generated, not real people or
-  plans. It's here to show how Grigri works.", and a demo person's name
+  one discreet line, "Demo: made-up people and plans.", and a demo person's name
   has a **Demo** tag. A real plan's requests wait for its real members
   (or an [admin](sign-in.md#admins)); a demo plan's group says yes at once.
 - **Photos** are in the backend's photo store, never in the database or on

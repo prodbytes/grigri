@@ -15,6 +15,8 @@ export const key = {
   notice: (climberId: string, noticeId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `NOTICE#${noticeId}` }),
   request: (planId: string, climberId: string) => ({ pk: `PLAN#${planId}`, sk: `REQ#${climberId}` }),
   message: (planId: string, time: string, messageId: string) => ({ pk: `PLAN#${planId}`, sk: `MSG#${time}#${messageId}` }),
+  /** A photo in the plan's "Your Pics". */
+  pic: (planId: string, picId: string) => ({ pk: `PLAN#${planId}`, sk: `PIC#${picId}` }),
   /** When the demo showcase was last written (seed/seed.ts). */
   showcase: () => ({ pk: 'META#SHOWCASE', sk: 'META' }),
 };
@@ -27,6 +29,7 @@ export const prefix = {
   notice: 'NOTICE#',
   request: 'REQ#',
   message: 'MSG#',
+  pic: 'PIC#',
 };
 
 export const index = {

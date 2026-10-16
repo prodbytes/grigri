@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../model/climber.dart';
+import '../model/pics.dart';
 import '../model/plan.dart';
 import '../log.dart';
 import 'api.dart';
@@ -42,6 +43,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Uri photoUrl(String key) =>
       origin.replace(pathSegments: ['photos', ...key.split('/')]);
+
+  @override
+  Uri picUrl(String key) =>
+      origin.replace(pathSegments: ['pics', ...key.split('/')]);
 
   Future<Map<String, Object?>> _send(
     String method,
@@ -252,6 +257,28 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
         await _post(['plans', planId, 'media'], {'contentType': contentType}),
         contentType,
       );
+
+  @override
+  Future<PlanPicsList> planPics(String planId) async =>
+      ApiJson.planPics(await _get(['plans', planId, 'pics']));
+
+  @override
+  Future<PhotoUpload> newPlanPic(String planId, String contentType) async =>
+      ApiJson.photoUpload(
+        await _post(
+          ['plans', planId, 'pics', 'upload'],
+          {'contentType': contentType},
+        ),
+        contentType,
+      );
+
+  @override
+  Future<PlanPic> addPlanPic(String planId, String key) async =>
+      ApiJson.planPic(await _post(['plans', planId, 'pics'], {'key': key}));
+
+  @override
+  Future<void> deletePlanPic(String planId, String picId) =>
+      _send('DELETE', ['plans', planId, 'pics', picId]);
 
   /// A multipart POST straight to S3: the presigned fields, then the file.
   /// No Authorization header: the signature is in the fields. The file goes

@@ -29,10 +29,16 @@
     (its roles then fail, with Retry, and nobody is an admin).
   - `5-index`: [grigri_index/site](../grigri_index) on
     http://localhost:2113/.
+  - `6-pics`: [scripts/pics-local.sh](../scripts/pics-local.sh) loads
+    [GriGri Pics](pics.md) into Floci's `grigri-local-pics` bucket with
+    `grigri_api/pics/load.mjs` whenever it has no catalog (Floci keeps
+    nothing between starts), checking every 30 s; photos are downloaded
+    once, then cached in `grigri_api/pics/.cache`.
   - `4-floci`: [Floci](https://floci.io/) as the local CloudFront and the
     local AWS ([grigri_floci/](../grigri_floci), Docker, bound to
     127.0.0.1): `/app*` to the web app, `/api/*` to the local API,
-    `/photos/*` to the local photos bucket, everything else to the index,
+    `/photos/*` to the local photos bucket, `/pics/*` to the local GriGri
+    Pics bucket, everything else to the index,
     as in production. Before it starts, `scripts/build-api.sh` builds the
     API when its sources changed; its ready hook deploys the API's
     template into Floci (Lambda, HTTP API, DynamoDB, S3, and the live

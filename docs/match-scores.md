@@ -141,9 +141,10 @@ waiting, three days out. `matchFacts()` sends:
 
 The model works out grade_fit 1 (the grades overlap), nearness
 e^(−7.1/50) = 0.87, crowding 1, timing 1, group_odds 0.9, so
-1 × (0.5 + 0.5 × 0.87) × 0.9 × 1 = **0.84**: level **great**, reason
-**in grades and nearby**. That is what aityx production answered on
-2026-10-16, for 1,570 input tokens.
+1 × (0.2 + 0.8 × 0.87) × 0.9 × 1 = **0.81**: level **great**, reason
+**in grades and nearby**. (With model v1's 0.5 + 0.5 × nearness it was
+0.84, which is what aityx production answered on 2026-10-16, for 1,570
+input tokens.)
 
 ## Operating it
 

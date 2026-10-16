@@ -421,7 +421,7 @@ abstract class AppLocalizations {
   /// Discreet line on a demo (automatically generated) plan or profile.
   ///
   /// In en, this message translates to:
-  /// **'Demo: automatically generated, not real people or plans. It\'s here to show how Grigri works.'**
+  /// **'Demo: made-up people and plans.'**
   String get demoNotice;
 
   /// Badge: the plan is at grades the user climbs.
@@ -1617,6 +1617,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The last run scored no pairs.'**
   String get adminScoresEmpty;
+
+  /// Plan screen: the section of photos members added to the plan, or sent in its chat.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Pics'**
+  String get yourPics;
+
+  /// Plan screen: the section of Grigri's own photos of the plan's crag (a name; keep as is).
+  ///
+  /// In en, this message translates to:
+  /// **'GriGri Pics'**
+  String get grigriPics;
+
+  /// Plan screen: Your Pics has none yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No photos yet. Add one, or send one in the chat.'**
+  String get yourPicsEmpty;
+
+  /// Plan screen: GriGri Pics has none of this place.
+  ///
+  /// In en, this message translates to:
+  /// **'No GriGri Pics of this place yet.'**
+  String get grigriPicsEmpty;
+
+  /// Plan screen: the button that adds a photo to Your Pics.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a photo to the plan'**
+  String get addPlanPic;
+
+  /// Photo viewer: deletes a photo from Your Pics.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete photo'**
+  String get deletePic;
+
+  /// Confirmation title before deleting a plan photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this photo?'**
+  String get deletePicQuestion;
+
+  /// Confirmation text: a photo added to the plan is deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves the plan\'s photos for everyone.'**
+  String get deletePicMessage;
+
+  /// Confirmation text: a chat photo leaves the plan's photos but stays in the chat.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves the plan\'s photos; the chat keeps it.'**
+  String get deleteChatPicMessage;
+
+  /// Confirms deleting.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// Under a GriGri Pics photo: who took it and its license, as the license asks.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo: {author}, {license}'**
+  String picCredit(String author, String license);
+
+  /// Under a Your Pics photo: who added it.
+  ///
+  /// In en, this message translates to:
+  /// **'Added by {name}'**
+  String picAddedBy(String name);
+
+  /// Under a Your Pics photo that came from the chat: who sent it.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent in the chat by {name}'**
+  String picFromChat(String name);
 }
 
 class _AppLocalizationsDelegate

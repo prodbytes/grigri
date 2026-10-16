@@ -100,6 +100,9 @@ export function nearScore(km: number | undefined): number {
   return km === undefined ? UNKNOWN_NEARNESS : Math.exp(-km / NEAR_KM);
 }
 
+/** How much more nearness counts than grade fit in the deck's ranking: distance weighs strongly. */
+export const NEAR_WEIGHT = 2;
+
 /** A deck: the plans, best first, and how far each is from me (km, rounded), when known. */
 export interface Deck {
   plans: Plan[];
@@ -109,7 +112,8 @@ export interface Deck {
 /**
  * Plans to swipe on (never full: groups have no size limit): upcoming, I'm
  * not in, I haven't passed or asked. Ranked by how well they match my
- * profile plus how close they are (fitScore + nearScore), then soonest.
+ * profile plus, twice as much, how close they are (fitScore + NEAR_WEIGHT
+ * × nearScore), then soonest.
  */
 export function discover(
   plans: Plan[],
@@ -131,7 +135,7 @@ export function discover(
     .map((plan) => {
       const km = distanceKm(me, plan);
       if (km !== undefined) distances[plan.id] = Math.round(km);
-      return { plan, score: fitScore(me, plan) + nearScore(km) };
+      return { plan, score: fitScore(me, plan) + NEAR_WEIGHT * nearScore(km) };
     });
   scored.sort((a, b) => {
     if (a.score !== b.score) return b.score - a.score;

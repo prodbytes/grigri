@@ -12,10 +12,12 @@ import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/location.dart';
 import 'package:grigri_app/model/match_score.dart';
+import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/ui/chat_media.dart';
 import 'package:grigri_app/ui/chat_screen.dart';
 import 'package:grigri_app/ui/common.dart';
+import 'package:grigri_app/ui/plan_screen.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
@@ -184,6 +186,45 @@ void main() {
       expect(api.climbers['me']!.location, home);
     });
 
+    testWidgets('with areas but no location, the device still fills it', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      const away = Location(name: 'Away', lat: 1, lon: 2);
+      api.climbers['me'] = api.climbers['me']!.copyWith(areas: [away]);
+      final device = FakeDeviceLocation((lat: 41.512, lon: 1.004));
+      await pumpApp(tester, api, deviceLocation: device);
+      expect(device.asked, 1);
+      expect(api.climbers['me']!.location?.name, 'Near Valle Alto, Spain');
+      expect(api.climbers['me']!.areas, [away]);
+    });
+
+    testWidgets('the profile screen shows my location and sets it at once', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final device = FakeDeviceLocation((lat: 41.512, lon: 1.004));
+      await pumpApp(tester, api, deviceLocation: device);
+      await tapTab(tester, 'Me');
+      // Detected from the device by default.
+      await tester.ensureVisible(find.text('Near Valle Alto, Spain'));
+      expect(find.text('Near Valle Alto, Spain'), findsOneWidget);
+
+      await tester.runAsync(SectorIndex.load);
+      await tester.tap(find.text('Near Valle Alto, Spain'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'A crag or gym near there'),
+        'margalef',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Margalef'));
+      await tester.pumpAndSettle();
+      // Saved without opening the editor.
+      expect(api.climbers['me']!.location?.name, 'Margalef, Catalonia, Spain');
+      expect(find.text('Margalef, Catalonia, Spain'), findsOneWidget);
+    });
+
     testWidgets('when the device can\'t tell, the hint asks', (tester) async {
       final api = sampleApi();
       final device = FakeDeviceLocation(null);
@@ -320,10 +361,47 @@ void main() {
       expect(api.calls.where((c) => c.contains('boulder-night')), isEmpty);
     });
 
+    testWidgets('the card trims long notes and bios, in smaller text', (
+      tester,
+    ) async {
+      final long = List.filled(40, 'Long approach, steep pockets.').join(' ');
+      final api = sampleApi();
+      final plan = api.plans['boulder-night']!;
+      api
+        ..addPlan(
+          Plan(
+            id: plan.id,
+            organizerId: plan.organizerId,
+            discipline: plan.discipline,
+            place: plan.place,
+            start: plan.start,
+            end: plan.end,
+            grades: plan.grades,
+            memberIds: plan.memberIds,
+            notes: long,
+          ),
+        )
+        ..addClimber(Climber(id: 'kit', name: 'Kit Marlow', bio: long));
+      await pumpApp(tester, api);
+      final texts = tester.widgetList<Text>(find.text(long)).toList();
+      expect(texts, hasLength(2));
+      for (final t in texts) {
+        expect(t.maxLines, 3);
+        expect(t.overflow, TextOverflow.ellipsis);
+      }
+      final element = tester.element(find.text(long).first);
+      expect(MediaQuery.textScalerOf(element).scale(10), closeTo(9, 0.001));
+      // The whole profile, in its sheet, isn't trimmed.
+      await tester.tap(find.text('Kit Marlow'));
+      await tester.pumpAndSettle();
+      final whole = tester
+          .widgetList<Text>(find.text(long))
+          .where((t) => t.maxLines == null);
+      expect(whole, isNotEmpty);
+    });
+
     testWidgets('demo plans and people say they are made up', (tester) async {
-      const notice =
-          'Demo: automatically generated, not real people or plans. '
-          "It's here to show how Grigri works.";
+      const notice = 'Demo: made-up people and plans.';
       final api = sampleApi();
       final plan = api.plans['boulder-night']!;
       api
@@ -694,6 +772,150 @@ void main() {
       expect(errors.last, 'Videos can be at most 50 MB: send a shorter one.');
       expect(api.calls, isNot(contains('POST /api/plans/crag-day/media')));
       expect(api.uploads, isEmpty);
+    });
+  });
+
+  group('plan photos: Your Pics and GriGri Pics', () {
+    final jpeg = Uint8List.fromList([
+      0xFF,
+      0xD8,
+      0xFF,
+      0xE0,
+      ...List.filled(20, 0),
+    ]);
+
+    /// crag-day (Robin organizes; I'm in it), its screen picking [picks].
+    Future<(FakeApi, GrigriStore)> openPlan(
+      WidgetTester tester, {
+      List<ChatMedia?> picks = const [],
+      bool member = true,
+    }) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 2.6;
+      addTearDown(tester.view.reset);
+      final api = sampleApi();
+      api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
+        memberIds: member ? ['robin', 'me'] : ['robin'],
+      );
+      api.grigriPics['crag-day'] = const [
+        GrigriPic(
+          key: 'crags/area-siurana/a.jpg',
+          crag: 'Siurana',
+          caption: 'The El Pati sector',
+          author: 'A. Example',
+          license: 'CC BY-SA 4.0',
+          source: 'https://commons.wikimedia.org/wiki/File:Example.jpg',
+        ),
+      ];
+      final store = storeFor(api);
+      await store.start();
+      final queue = [...picks];
+      await tester.pumpWidget(
+        StoreScope(
+          store: store,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: PlanScreen(
+              planId: 'crag-day',
+              pick: (source) async => queue.removeAt(0),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return (api, store);
+    }
+
+    testWidgets('members add a photo; it shows in Your Pics, and whoever '
+        'added it deletes it', (tester) async {
+      final (api, _) = await openPlan(
+        tester,
+        picks: [ChatMedia(jpeg, MediaKind.image)],
+      );
+      expect(find.text('YOUR PICS'), findsOneWidget);
+      expect(
+        find.text('No photos yet. Add one, or send one in the chat.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const ValueKey('add plan pic')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Choose a photo'));
+      await tester.pumpAndSettle();
+      expect(api.calls.where((c) => c.startsWith('POST ')).toList(), [
+        'POST /api/plans/crag-day/pics/upload',
+        'POST https://bucket.test/ (${api.uploads.keys.single})',
+        'POST /api/plans/crag-day/pics',
+      ]);
+      final pic = api.allPics.single;
+      expect(find.byKey(ValueKey('pic ${pic.id}')), findsOneWidget);
+
+      await tester.tap(find.byKey(ValueKey('pic ${pic.id}')));
+      await tester.pumpAndSettle();
+      expect(find.text('Added by You'), findsOneWidget);
+      await tester.tap(find.byTooltip('Delete photo'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("It leaves the plan's photos for everyone."),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+      expect(api.allPics, isEmpty);
+      expect(find.byKey(ValueKey('pic ${pic.id}')), findsNothing);
+    });
+
+    testWidgets("someone else's chat photo: in Your Pics, not mine to delete", (
+      tester,
+    ) async {
+      final (api, store) = await openPlan(tester);
+      api.allPics.add(
+        PlanPic(
+          id: 'pic-robin',
+          planId: 'crag-day',
+          key: 'chat/crag-day/robin.jpg',
+          uploaderId: 'robin',
+          time: DateTime.utc(2030),
+          fromChat: true,
+        ),
+      );
+      await store.loadPics('crag-day');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('pic pic-robin')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Sent in the chat by'), findsOneWidget);
+      expect(find.byTooltip('Delete photo'), findsNothing);
+    });
+
+    testWidgets('GriGri Pics show their crag and credit; outsiders see no '
+        'Your Pics', (tester) async {
+      await openPlan(tester, member: false);
+      expect(find.text('YOUR PICS'), findsNothing);
+      expect(find.text('GRIGRI PICS'), findsOneWidget);
+      await tester.tap(
+        find.byKey(const ValueKey('grigri crags/area-siurana/a.jpg')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('The El Pati sector'), findsOneWidget);
+      expect(find.text('Photo: A. Example, CC BY-SA 4.0'), findsOneWidget);
+    });
+
+    testWidgets('a photo sent in the chat joins Your Pics', (tester) async {
+      final (api, store) = await openPlan(tester);
+      final upload = await api.newChatMedia('crag-day', 'image/jpeg');
+      await api.uploadPhoto(upload, jpeg);
+      api.calls.clear();
+      expect(
+        await store.send(
+          'crag-day',
+          '',
+          media: ChatMedia(jpeg, MediaKind.image),
+        ),
+        isTrue,
+      );
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('GET /api/plans/crag-day/pics'));
+      expect(store.pics('crag-day')!.yours.single.fromChat, isTrue);
     });
   });
 

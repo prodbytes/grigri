@@ -4,14 +4,24 @@ import '../model/plan.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
+import 'chat_media.dart';
 import 'plan_editor.dart';
+import 'plan_pics.dart';
 
-/// One plan I'm in, or asked to join: the plan, its group, who's asking to
-/// join (answered in the group chat), and what I can do with it.
+/// One plan I'm in, or asked to join: the plan, its photos ("Your Pics"
+/// and GriGri Pics), its group, who's asking to join (answered in the group
+/// chat), and what I can do with it.
 class PlanScreen extends StatefulWidget {
-  const PlanScreen({super.key, required this.planId});
+  const PlanScreen({
+    super.key,
+    required this.planId,
+    this.pick = pickChatMedia,
+  });
 
   final String planId;
+
+  /// Picks a photo for the plan's "Your Pics"; tests swap it.
+  final ChatMediaPicker pick;
 
   @override
   State<PlanScreen> createState() => _PlanScreenState();
@@ -23,7 +33,10 @@ class _PlanScreenState extends State<PlanScreen> {
     super.initState();
     // After the first frame: loading notifies, which can't happen mid-build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) StoreScope.read(context).loadPlan(widget.planId);
+      if (!mounted) return;
+      final store = StoreScope.read(context);
+      store.loadPlan(widget.planId);
+      store.loadPics(widget.planId);
     });
   }
 
@@ -69,6 +82,7 @@ class _PlanScreenState extends State<PlanScreen> {
         padding: const EdgeInsets.all(16),
         children: [
           PlanHighlight(plan),
+          PlanPicsSections(plan: plan, pick: widget.pick),
           if (!member && mine != null) ...[
             const SizedBox(height: 12),
             Align(

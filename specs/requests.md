@@ -761,6 +761,72 @@ spec.
     - Cost: about $0.00007 of aityx credits per score; nothing while
       idle ([backend](backend.md#cost)).
 
+53. **Plenty of demo plans in Siurana and Margalef; a shorter demo
+    disclaimer.**
+    - [Backend](backend.md#the-demo-showcase): the showcase grows to
+      eleven climbers and twenty plans, seven in Siurana (El Pati, L'Olla,
+      Can Piqué, La Siuranella, El Mirador, Grau dels Masets, Ca la
+      Isabel) and seven in Margalef (sport sectors and boulders), one to
+      seven days ahead. A `SHOWCASE_VERSION` on the showcase's marker
+      makes every stage rewrite it on the first deck after a deploy.
+    - [Matching](matching.md#data-the-backend-api): the demo line reads
+      "Demo: made-up people and plans." (in every language).
+54. **Make the distance from me to a plan a strong weight in scoring.**
+    - [API](api.md#the-decks-ranking): the deck ranks by fit + 2 ×
+      nearness (`NEAR_WEIGHT` in `rules.ts`), so nearby plans come before
+      far ones even a few grades off; a plan next door I don't climb now
+      comes before one in my grades 50 km away.
+    - [Match scores](match-scores.md#the-model): model v2,
+      match_likelihood = grade_fit × (0.2 + 0.8 × nearness) × group_odds
+      × timing (was 0.5 + 0.5 ×). No cost change.
+55. **Let me set my location on the profile screen, defaulting to where
+    I am.**
+    - [Screens](screens.md): the Profile tab has a **Where you climb**
+      card: my location (a spinner while it's being detected), tap to
+      pick a place or my current location, saved at once.
+    - [Matching](matching.md#profiles-and-plans-are-separate): the app
+      takes my location from the device whenever my profile has none,
+      even when I have areas (before, areas alone stopped it).
+56. **Our own version of theCrag's API, photo lookup only: photos in S3,
+    with their metadata queried in S3 as cheaply as possible, in a bucket
+    apart from user data, seeded with the crags around Siurana and
+    Margalef (ideally 5 photos each), shown on the plan; members upload
+    and delete plan photos, and chat photos join them. Two sets, apart:
+    "Your Pics" and "GriGri Pics".**
+    - [Plan photos](pics.md) (new): Your Pics (members' uploads and chat
+      photos; delete by whoever added it, the organizer or an admin) and
+      GriGri Pics (Grigri's own photos, credited, looked up by the plan's
+      sector, point, place and area).
+    - GriGri Pics in a new bucket in the site stack
+      (`<site stack>-pics-<account>`), served at `/pics/*`; each photo's
+      metadata is an S3 annotation, and a catalog made from them is what
+      the API reads (once per warm function). S3 Select, asked for first,
+      is closed to new accounts (`MethodNotAllowed` here); annotations
+      can be queried only through annotation tables and Athena (up to an
+      hour behind, seconds per query, billed per query), so the catalog
+      is the cheap lookup.
+    - The data ([grigri_api/pics/crags.json](../grigri_api/pics/crags.json)):
+      10 freely licensed Wikimedia Commons photos, 5 of Siurana and 5 of
+      Margalef as areas; no photo could be tied reliably to a single
+      OpenStreetMap crag, so the 11 Margalef crags have none yet. Loaded
+      by `grigri_api/pics/load.mjs` on every deploy and, locally, by the
+      new `6-pics` process.
+    - [API](api.md): `GET /api/plans/{id}/pics`, `POST
+      /api/plans/{id}/pics/upload`, `POST /api/plans/{id}/pics`, `DELETE
+      /api/plans/{id}/pics/{picId}`, `GET /api/pics`; a photo sent in the
+      chat joins the plan's pics; a `pics` hint.
+    - Plan photos live in the photos bucket under `photos/plans/`, with a
+      400-day lifecycle rule like chat media's; the function's role (and
+      the stages' permissions boundary) may read GriGri Pics' catalog.
+    - [Screens](screens.md): the plan screen's Your Pics and GriGri Pics.
+    - Cost: ~$0.0002/month of storage for GriGri Pics, a GET per cold
+      start; Your Pics cost as chat photos do ([pics.md](pics.md#cost)).
+57. **A little smaller text on Discover; plan notes and bios cut to
+    about three lines, with "…".**
+    - [Matching](matching.md#the-deck): the swipe card's text is 10%
+      smaller than the app's (on top of the system's text size); the
+      plan's notes and the organizer's bio stop at three lines, ending in
+      "…" when cut. The plan screen and the profile sheet show them whole.
 57. **The nav icons were missing labels.** With the Admin tab (six
     tabs), the bar showed only the selected tab's label.
     - [Screens](screens.md): every tab always shows its label; the short

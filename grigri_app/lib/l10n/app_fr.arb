@@ -52,7 +52,7 @@
   "tabAdmin": "Admin",
   "thePlan": "Le plan",
   "demoTag": "Démo",
-  "demoNotice": "Démo : généré automatiquement, ni vraies personnes ni vrais plans. C'est là pour montrer comment Grigri fonctionne.",
+  "demoNotice": "Démo : personnes et plans fictifs.",
   "yourGrades": "Ton niveau",
   "profileClimbs": "Grimpe",
   "profileGear": "Matériel",
@@ -249,5 +249,18 @@
   "adminScoresNone": "Aucun calcul pour l'instant. scripts/score-matches.sh évalue chaque profil face à chaque sortie à venir.",
   "adminScoresRun": "Dernier calcul {day}, {time} : {scored} paires sur {pairs}, {climbers} personnes × {plans} sorties",
   "adminScoresProblems": "{failed} échecs, {skipped} au-delà de la limite",
-  "adminScoresEmpty": "Le dernier calcul n'a évalué aucune paire."
+  "adminScoresEmpty": "Le dernier calcul n'a évalué aucune paire.",
+  "yourPics": "Tes photos",
+  "grigriPics": "GriGri Pics",
+  "yourPicsEmpty": "Pas encore de photos. Ajoutes-en une, ou envoie-la dans le chat.",
+  "grigriPicsEmpty": "Pas encore de GriGri Pics de cet endroit.",
+  "addPlanPic": "Ajouter une photo au plan",
+  "deletePic": "Supprimer la photo",
+  "deletePicQuestion": "Supprimer cette photo ?",
+  "deletePicMessage": "Elle quitte les photos du plan pour tout le monde.",
+  "deleteChatPicMessage": "Elle quitte les photos du plan ; le chat la garde.",
+  "delete": "Supprimer",
+  "picCredit": "Photo : {author}, {license}",
+  "picAddedBy": "Ajoutée par {name}",
+  "picFromChat": "Envoyée dans le chat par {name}"
 }

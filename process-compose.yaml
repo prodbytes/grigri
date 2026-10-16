@@ -108,6 +108,20 @@ processes:
       restart: always
       backoff_seconds: 5
 
+  6-pics:
+    # GriGri Pics in the local Floci: loads them whenever Floci (which
+    # keeps nothing) has none, from photos cached on the host
+    # (scripts/pics-local.sh, grigri_api/pics/load.mjs).
+    command: bash scripts/pics-local.sh
+    environment:
+      - FLOCI_PORT=${FLOCI_PORT:-2114}
+    depends_on:
+      4-floci:
+        condition: process_healthy
+    availability:
+      restart: on_failure
+      backoff_seconds: 5
+
   5-index:
     # The site root (grigri_index/site), which redirects to /app/. Floci's
     # distribution uses it as the default origin.

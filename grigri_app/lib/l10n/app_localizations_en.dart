@@ -184,8 +184,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get demoTag => 'Demo';
 
   @override
-  String get demoNotice =>
-      'Demo: automatically generated, not real people or plans. It\'s here to show how Grigri works.';
+  String get demoNotice => 'Demo: made-up people and plans.';
 
   @override
   String get yourGrades => 'Your grades';
@@ -901,4 +900,51 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adminScoresEmpty => 'The last run scored no pairs.';
+
+  @override
+  String get yourPics => 'Your Pics';
+
+  @override
+  String get grigriPics => 'GriGri Pics';
+
+  @override
+  String get yourPicsEmpty =>
+      'No photos yet. Add one, or send one in the chat.';
+
+  @override
+  String get grigriPicsEmpty => 'No GriGri Pics of this place yet.';
+
+  @override
+  String get addPlanPic => 'Add a photo to the plan';
+
+  @override
+  String get deletePic => 'Delete photo';
+
+  @override
+  String get deletePicQuestion => 'Delete this photo?';
+
+  @override
+  String get deletePicMessage => 'It leaves the plan\'s photos for everyone.';
+
+  @override
+  String get deleteChatPicMessage =>
+      'It leaves the plan\'s photos; the chat keeps it.';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String picCredit(String author, String license) {
+    return 'Photo: $author, $license';
+  }
+
+  @override
+  String picAddedBy(String name) {
+    return 'Added by $name';
+  }
+
+  @override
+  String picFromChat(String name) {
+    return 'Sent in the chat by $name';
+  }
 }

@@ -8,6 +8,7 @@ import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/location.dart';
 import '../model/match_score.dart';
+import '../model/pics.dart';
 import '../model/plan.dart';
 import '../model/sector.dart';
 import 'api.dart';
@@ -184,6 +185,7 @@ class GrigriStore extends ChangeNotifier {
   final _declinedHere = <String>{};
   List<Notice> _notices = [];
   final _messages = <String, List<Message>>{};
+  final _pics = <String, PlanPics>{};
   final _gone = <String>{};
   final _loaded = <Section>{};
   final _loadingPlans = <String>{};
@@ -255,6 +257,7 @@ class GrigriStore extends ChangeNotifier {
     _declinedHere.clear();
     _notices = [];
     _messages.clear();
+    _pics.clear();
     _gone.clear();
     _loaded.clear();
     _loadingPlans.clear();
@@ -339,6 +342,12 @@ class GrigriStore extends ChangeNotifier {
 
   /// A photo's image.
   ImageProvider photo(String key) => _image(api.photoUrl(key));
+
+  /// A GriGri Pics photo's image.
+  ImageProvider grigriPic(String key) => _image(api.picUrl(key));
+
+  /// A plan's photos, once loaded ([loadPics]).
+  PlanPics? pics(String planId) => _pics[planId];
 
   /// Plans to swipe on, best fits first (the server's order).
   List<Plan> get discover => [for (final id in _discover) ?_plans[id]];
@@ -537,6 +546,10 @@ class GrigriStore extends ChangeNotifier {
           if (chat) pollMessages(planId),
           if (open) loadPlan(planId),
         ]);
+      case HintKind.pics:
+        if (planId != null && _pics.containsKey(planId)) {
+          await loadPics(planId);
+        }
       case HintKind.match || HintKind.unknown:
         await Future.wait([
           refreshPlans(),
@@ -679,6 +692,66 @@ class GrigriStore extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  /// A plan's photos: its GriGri Pics and, when I'm in it, "Your Pics".
+  Future<void> loadPics(String planId) =>
+      _refresh(() => api.planPics(planId), (list) {
+        _learn(list.climbers);
+        _pics[planId] = list.pics;
+      });
+
+  /// Adds a photo to a plan's "Your Pics": uploaded first ([onProgress]
+  /// hears how much has gone). False when it failed.
+  Future<bool> addPlanPic(
+    String planId,
+    Uint8List bytes, {
+    void Function(double sent)? onProgress,
+  }) async {
+    final pic = await _act(() async {
+      final type = photoContentType(bytes);
+      if (type == null) {
+        throw const ApiException(
+          400,
+          'Use a JPEG, PNG or WebP photo.',
+          client: ClientError.photoType,
+        );
+      }
+      final upload = await _call(() => api.newPlanPic(planId, type));
+      await api.uploadPhoto(upload, bytes, onProgress: onProgress);
+      return _call(() => api.addPlanPic(planId, upload.key));
+    });
+    if (pic == null) return false;
+    final have = _pics[planId];
+    if (have != null && !have.yours.any((p) => p.id == pic.id)) {
+      _pics[planId] = have.copyWith(yours: [...have.yours, pic]);
+    }
+    notifyListeners();
+    return true;
+  }
+
+  /// Deletes a photo from its plan's "Your Pics" (whoever added it, or the
+  /// organizer). A chat photo stays in the chat. False when it failed.
+  Future<bool> deletePlanPic(PlanPic pic) async {
+    final done = await _ok(() => api.deletePlanPic(pic.planId, pic.id));
+    if (!done) return false;
+    final have = _pics[pic.planId];
+    if (have != null) {
+      _pics[pic.planId] = have.copyWith(
+        yours: [
+          for (final p in have.yours)
+            if (p.id != pic.id) p,
+        ],
+      );
+    }
+    notifyListeners();
+    return true;
+  }
+
+  /// Whether I may delete a plan photo: I added it, or I organize the plan.
+  bool canDeletePic(PlanPic pic) =>
+      pic.uploaderId == me.id ||
+      _plans[pic.planId]?.organizerId == me.id ||
+      _admin;
 
   /// A plan's chat: all of it the first time, then what's new.
   Future<void> pollMessages(String planId) {
@@ -926,12 +999,13 @@ class GrigriStore extends ChangeNotifier {
     );
   }
 
-  /// With no location or areas on my profile, takes my location from the
-  /// phone or browser and saves it, instead of asking; Discover asks only
-  /// when the device can't tell.
+  /// With no location on my profile, takes it from the phone or browser
+  /// and saves it, instead of asking (my areas don't count: the location
+  /// defaults to where I am); Discover asks only when the device can't
+  /// tell.
   Future<void> fillLocation() async {
     final me = _me;
-    if (me == null || me.location != null || me.areas.isNotEmpty) return;
+    if (me == null || me.location != null) return;
     final session = _session;
     _locating = true;
     notifyListeners();
@@ -986,6 +1060,11 @@ class GrigriStore extends ChangeNotifier {
     });
     if (message == null) return false;
     _addMessages(planId, [message]);
+    // A chat photo joins the plan's "Your Pics" (the server adds it).
+    if (message.attachment?.kind == MediaKind.image &&
+        _pics.containsKey(planId)) {
+      unawaited(loadPics(planId));
+    }
     return true;
   }
 
