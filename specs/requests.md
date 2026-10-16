@@ -870,3 +870,18 @@ spec.
     - [Plan photos](pics.md): the rule, and 8 photos (5 Siurana, 3
       Margalef). The next deploy's loader deletes the two from the
       bucket and the catalog.
+62. **Make the home screen look nicer, after popular apps' home screens
+    (Strava, Tinder), using the pictures.**
+    - [Screens](screens.md): the Discover card is a dating-app-style
+      card: the crag's photo edge to edge (or a backdrop in the
+      discipline's colors), the plan over it in white on a dark fade
+      (the place large and bold, area, date and time, grades, Your
+      grades, the photo's credit), and below, always in view, the
+      organizer with the group's avatars and +N; notes and profile on
+      scrolling. Still no distance, date and time apart, notes cut to
+      three lines (request 37). The ✕ and ✓ buttons are raised, ✓
+      bigger.
+    - [API](api.md), [Pics](pics.md#on-the-deck): `GET /api/discover`
+      gives each plan's cover, its best GriGri Pics photo with credit.
+    - Cost: none new; the covers come from the catalog the function
+      already keeps, and the photos are served by the site's CloudFront.

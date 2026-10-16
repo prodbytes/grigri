@@ -177,6 +177,7 @@ class GrigriStore extends ChangeNotifier {
   final _plans = <String, Plan>{};
   List<String> _discover = [];
   Map<String, int> _distanceKm = {};
+  Map<String, DeckCover> _covers = {};
   Map<String, MatchScore> _matchScores = {};
   List<String> _mine = [];
   List<JoinRequest> _asked = [];
@@ -247,6 +248,7 @@ class GrigriStore extends ChangeNotifier {
     _plans.clear();
     _discover = [];
     _distanceKm = {};
+    _covers = {};
     _matchScores = {};
     _mine = [];
     _asked = [];
@@ -354,6 +356,9 @@ class GrigriStore extends ChangeNotifier {
   /// How far a plan on the deck is from my nearest location or area, in
   /// km; null when it isn't known.
   int? distanceKm(String planId) => _distanceKm[planId];
+
+  /// A plan's cover photo on the deck, when it has one.
+  DeckCover? cover(String planId) => _covers[planId];
 
   /// Admins only: how likely a plan on the deck ends in a match for me;
   /// null when the API didn't score it (or I'm not an admin).
@@ -596,6 +601,7 @@ class GrigriStore extends ChangeNotifier {
     }
     _discover = [for (final p in list.plans) p.id];
     _distanceKm = list.distanceKm;
+    _covers = list.covers;
     _matchScores = list.scores;
     _loaded.add(Section.discover);
   });

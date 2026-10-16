@@ -538,19 +538,37 @@ class DeckButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Tooltip(
     message: tooltip,
-    child: Material(
-      color: filled ? color : Colors.transparent,
-      shape: CircleBorder(side: BorderSide(color: color, width: 2)),
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onPressed,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Icon(
-            icon,
-            size: size * 0.46,
-            color: filled ? Mountain.night : color,
+    // Raised off the page, like a dating app's swipe buttons.
+    child: DecoratedBox(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x59000000),
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: filled ? color : Mountain.surfaceHigh,
+        shape: CircleBorder(
+          side: BorderSide(
+            color: filled ? color : color.withValues(alpha: 0.55),
+            width: 1.5,
+          ),
+        ),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onPressed,
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Icon(
+              icon,
+              size: size * 0.46,
+              color: filled ? Mountain.night : color,
+            ),
           ),
         ),
       ),

@@ -70,6 +70,32 @@ class GrigriPic {
   );
 }
 
+/// A plan's cover on the Discover deck: its best GriGri Pics photo, the
+/// crag it shows and its credit.
+class DeckCover {
+  const DeckCover({
+    required this.key,
+    this.crag = '',
+    this.author = '',
+    this.license = '',
+  });
+
+  final String key;
+  final String crag;
+  final String author;
+  final String license;
+
+  static DeckCover? fromJson(Object? json) {
+    if (json is! Map || json['key'] is! String) return null;
+    return DeckCover(
+      key: json['key'] as String,
+      crag: json['crag'] as String? ?? '',
+      author: json['author'] as String? ?? '',
+      license: json['license'] as String? ?? '',
+    );
+  }
+}
+
 /// A plan's photos: its "Your Pics" (only for members) and its GriGri
 /// Pics.
 class PlanPics {
