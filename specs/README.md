@@ -29,6 +29,10 @@ Each match opens the plan's group chat.
   from the Google account at the first sign-in; admins.
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
+- [Plan photos](pics.md): a plan's **Your Pics** (what members add,
+  and every photo sent in its chat) and **GriGri Pics** (Grigri's own
+  credited photos of the plan's crag, in their own S3 bucket with their
+  metadata as S3 annotations); the loader and its data.
 - [Sectors](sectors.md): the searchable index of climbing sectors, crags
   and gyms that a plan's "where" picks from, built from OpenStreetMap.
 - [Roles](roles.md): my roles in Grigri, from rbacr, at the end of the

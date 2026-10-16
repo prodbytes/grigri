@@ -1,0 +1,222 @@
+{
+  "note": "GriGri Pics: crags around Siurana and Margalef (OpenStreetMap, climbing=crag, within 6 km) and freely licensed photos of them (Wikimedia Commons, checked by hand). grigri_api/pics/load.mjs loads it; specs/pics.md.",
+  "checkedAt": "2026-10-16T18:47:17Z",
+  "crags": [
+    {
+      "id": "area:siurana",
+      "name": "Siurana",
+      "area": "Siurana",
+      "lat": 41.2577,
+      "lon": 0.9318,
+      "photos": [
+        {
+          "title": "File:Siurana secteur El Pati.jpg",
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Siurana_secteur_El_Pati.jpg/1920px-Siurana_secteur_El_Pati.jpg",
+          "width": 2000,
+          "height": 1500,
+          "author": "Thomas Charbonneau",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Siurana_secteur_El_Pati.jpg",
+          "caption": "The El Pati sector cliff at Siurana, home of La Rambla (9a+)"
+        },
+        {
+          "title": "File:Siurana El Pati 1.jpg",
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/2c/Siurana_El_Pati_1.jpg/1920px-Siurana_El_Pati_1.jpg",
+          "width": 5616,
+          "height": 3744,
+          "author": "Tirso Maldonado",
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Siurana_El_Pati_1.jpg",
+          "caption": "View across to the El Pati climbing crag in Siurana"
+        },
+        {
+          "title": "File:Escalada en siurana-2012.JPG",
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Escalada_en_siurana-2012.JPG/1920px-Escalada_en_siurana-2012.JPG",
+          "width": 4288,
+          "height": 2848,
+          "author": "Alberto-g-rovi",
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Escalada_en_siurana-2012.JPG",
+          "caption": "Climber on a limestone sport route in Siurana"
+        },
+        {
+          "title": "File:Escalada en siurana-2012 (2).JPG",
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/Escalada_en_siurana-2012_%282%29.JPG/1920px-Escalada_en_siurana-2012_%282%29.JPG",
+          "width": 2848,
+          "height": 4288,
+          "author": "Alberto-g-rovi",
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Escalada_en_siurana-2012_(2).JPG",
+          "caption": "Climber lowering off a limestone pillar in Siurana"
+        },
+        {
+          "title": "File:Cingles de Siurana (juny 2012) - panoramio.jpg",
+          "url": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Cingles_de_Siurana_%28juny_2012%29_-_panoramio.jpg",
+          "width": 1920,
+          "height": 2560,
+          "author": "EliziR",
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Cingles_de_Siurana_(juny_2012)_-_panoramio.jpg",
+          "caption": "Path beneath the limestone cliffs of Siurana"
+        }
+      ]
+    },
+    {
+      "id": "area:margalef",
+      "name": "Margalef",
+      "area": "Margalef",
+      "lat": 41.2853,
+      "lon": 0.7536,
+      "photos": [
+        {
+          "title": "File:Perfecto Mundo Raco De La Finestra Margalef.jpg",
+          "url": "https://upload.wikimedia.org/wikipedia/commons/b/b0/Perfecto_Mundo_Raco_De_La_Finestra_Margalef.jpg",
+          "width": 1500,
+          "height": 1125,
+          "author": "Camptocamp.org",
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Perfecto_Mundo_Raco_De_La_Finestra_Margalef.jpg",
+          "caption": "Conglomerate overhangs at Racó de la Finestra, Margalef, where Perfecto Mundo (9b+) climbs"
+        },
+        {
+          "title": "File:Margalef nature.jpg",
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/77/Margalef_nature.jpg/1920px-Margalef_nature.jpg",
+          "width": 2592,
+          "height": 1944,
+          "author": "FarzanehSarafraz",
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Margalef_nature.jpg",
+          "caption": "Racó de la Finestra, Margalef: the overhang of Perfecto Mundo (9b+) with quickdraws hanging"
+        },
+        {
+          "title": "File:Al, Margalef, Spain.jpg",
+          "url": "https://upload.wikimedia.org/wikipedia/commons/6/68/Al%2C_Margalef%2C_Spain.jpg",
+          "width": 1280,
+          "height": 852,
+          "author": "N McQ",
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Al,_Margalef,_Spain.jpg",
+          "caption": "Climber on an overhanging sport route in Margalef"
+        },
+        {
+          "title": "File:Iker en Margalef.jpg",
+          "url": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Iker_en_Margalef.jpg",
+          "width": 1700,
+          "height": 956,
+          "author": "Jordicanyi",
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Iker_en_Margalef.jpg",
+          "caption": "Iker Pou resting on Demencia Senil (9a+), Margalef"
+        },
+        {
+          "title": "File:Margalef rock climbing.jpg",
+          "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/39/Margalef_rock_climbing.jpg/1920px-Margalef_rock_climbing.jpg",
+          "width": 2592,
+          "height": 1944,
+          "author": "FarzanehSarafraz",
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "source": "https://commons.wikimedia.org/wiki/File:Margalef_rock_climbing.jpg",
+          "caption": "Pocketed conglomerate rock on a climbing route in Margalef"
+        }
+      ]
+    },
+    {
+      "id": "osm:n13698310174",
+      "name": "Can xixanta",
+      "area": "Margalef",
+      "lat": 41.2609,
+      "lon": 0.74014,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698404246",
+      "name": "El Falconet",
+      "area": "Margalef",
+      "lat": 41.25807,
+      "lon": 0.75609,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698759504",
+      "name": "El Trinquet",
+      "area": "Margalef",
+      "lat": 41.26961,
+      "lon": 0.81025,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698572851",
+      "name": "Els Codinals",
+      "area": "Margalef",
+      "lat": 41.26161,
+      "lon": 0.79163,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698255917",
+      "name": "Els solans",
+      "area": "Margalef",
+      "lat": 41.25382,
+      "lon": 0.72997,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698288938",
+      "name": "Els tormegals",
+      "area": "Margalef",
+      "lat": 41.2577,
+      "lon": 0.74137,
+      "photos": []
+    },
+    {
+      "id": "osm:n6397121948",
+      "name": "Grau de l'Enderrocada",
+      "area": "Margalef",
+      "lat": 41.26213,
+      "lon": 0.78148,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698571632",
+      "name": "L'Escletxa",
+      "area": "Margalef",
+      "lat": 41.26667,
+      "lon": 0.79998,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698251151",
+      "name": "Lo paredón",
+      "area": "Margalef",
+      "lat": 41.25754,
+      "lon": 0.75115,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698612912",
+      "name": "Totxo d'Escaladei",
+      "area": "Margalef",
+      "lat": 41.26318,
+      "lon": 0.80808,
+      "photos": []
+    },
+    {
+      "id": "osm:n13698251102",
+      "name": "totxos del camí",
+      "area": "Margalef",
+      "lat": 41.25176,
+      "lon": 0.73094,
+      "photos": []
+    }
+  ]
+}

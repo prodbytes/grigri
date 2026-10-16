@@ -14,6 +14,7 @@ import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/match_score.dart';
+import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/model/sector.dart';
 
@@ -72,6 +73,13 @@ class FakeApi implements GrigriApi, SessionApi {
   final requestsById = <String, JoinRequest>{};
   final noticesFor = <String, List<Notice>>{};
   final allMessages = <Message>[];
+
+  /// Every plan's "Your Pics", oldest first.
+  final allPics = <PlanPic>[];
+
+  /// GriGri Pics, by plan (the server finds them by the plan's place;
+  /// tests set them).
+  final grigriPics = <String, List<GrigriPic>>{};
   final passed = <String>{};
 
   /// Plans I left: a refresh keeps them out of my deck.
@@ -318,6 +326,9 @@ class FakeApi implements GrigriApi, SessionApi {
 
   @override
   Uri photoUrl(String key) => Uri.parse('https://grigri.test/photos/$key');
+
+  @override
+  Uri picUrl(String key) => Uri.parse('https://grigri.test/pics/$key');
 
   /// What `GET /api/realtime` answers: null, live updates off.
   RealtimeInfo? realtimeInfo;
@@ -624,7 +635,85 @@ class FakeApi implements GrigriApi, SessionApi {
                 ),
         );
         allMessages.add(m);
+        // A chat photo joins the plan's "Your Pics", as the server does.
+        if (m.attachment?.kind == MediaKind.image) {
+          allPics.add(
+            PlanPic(
+              id: _id('pic'),
+              planId: planId,
+              key: attachment!,
+              uploaderId: meId!,
+              time: m.time,
+              fromChat: true,
+            ),
+          );
+        }
         return m;
+      });
+
+  @override
+  Future<PlanPicsList> planPics(String planId) =>
+      _route('GET /api/plans/$planId/pics', () {
+        if (!plans.containsKey(planId)) {
+          throw const ApiException(404, 'No such plan.');
+        }
+        final member = plans[planId]!.memberIds.contains(meId);
+        final yours = [
+          if (member)
+            for (final p in allPics)
+              if (p.planId == planId) p,
+        ];
+        return PlanPicsList(
+          PlanPics(
+            yours: yours,
+            grigri: grigriPics[planId] ?? const [],
+            member: member,
+          ),
+          _mention([for (final p in yours) p.uploaderId]),
+        );
+      });
+
+  @override
+  Future<PhotoUpload> newPlanPic(String planId, String contentType) =>
+      _route('POST /api/plans/$planId/pics/upload', () {
+        _member(planId);
+        final key = 'plans/$planId/pic-${++_ids}.jpg';
+        return PhotoUpload(
+          key: key,
+          url: Uri.parse('https://bucket.test/'),
+          fields: {'key': key, 'policy': 'made-up'},
+          contentType: contentType,
+        );
+      });
+
+  @override
+  Future<PlanPic> addPlanPic(String planId, String key) =>
+      _route('POST /api/plans/$planId/pics', () {
+        _member(planId);
+        if (!uploads.containsKey(key)) {
+          throw const ApiException(400, "The photo isn't uploaded.");
+        }
+        final pic = PlanPic(
+          id: _id('pic'),
+          planId: planId,
+          key: key,
+          uploaderId: meId!,
+          time: _now(),
+        );
+        allPics.add(pic);
+        return pic;
+      });
+
+  @override
+  Future<void> deletePlanPic(String planId, String picId) =>
+      _route('DELETE /api/plans/$planId/pics/$picId', () {
+        _member(planId);
+        final pic = allPics.where((p) => p.id == picId).firstOrNull;
+        if (pic == null) throw const ApiException(404, 'No such photo.');
+        if (pic.uploaderId != meId && plans[planId]!.organizerId != meId) {
+          throw const ApiException(403, 'Only whoever added it.');
+        }
+        allPics.remove(pic);
       });
 
   @override

@@ -29,7 +29,16 @@ is "Alerts" in English.
   highlighted, my request's status when I'm not in it yet (Pending, N of
   M said yes, or Declined), the group (tap someone for their profile),
   who's asking to join and how many have said yes ("Answer in the chat",
-  or "You said yes"). Members get
+  or "You said yes"), and the plan's [photos](pics.md): **Your Pics**
+  (members only: a row of thumbnails led by an add tile, camera or
+  gallery, with a progress ring while one goes up; "No photos yet" when
+  empty; tap one to see it whole, who added it or sent it in the chat,
+  and **Delete photo** for whoever added it or the organizer, after a
+  confirmation that says a chat photo stays in the chat) and **GriGri
+  Pics** (everyone: wider thumbnails with the crag's name; tap one for
+  the photo, its caption and its credit, "Photo: <author>, <license>",
+  and its source, tapped to copy; "No GriGri Pics of this place yet"
+  when there are none). Members get
   **Group chat** and **Cancel the plan**. Its confirmation ("Cancel the
   plan?", **Keep it** or **Cancel it**) says what happens: alone, the plan
   and its chat are gone; with others, it leaves my plans and chats while

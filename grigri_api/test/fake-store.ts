@@ -3,7 +3,7 @@
 // tested without DynamoDB. The real Store is exercised against Floci.
 import type { SessionRecord } from '../src/auth.js';
 import type { Effects, Delivery } from '../src/domain/rules.js';
-import { type Climber, type JoinRequest, type Message, type Notice, isOpen } from '../src/domain/model.js';
+import { type Climber, type JoinRequest, type Message, type Notice, type PlanPic, isOpen } from '../src/domain/model.js';
 import { Conflict, type LoadedPlan, type Store, type VersionedPlan } from '../src/store/store.js';
 
 export class FakeStore {
@@ -14,6 +14,7 @@ export class FakeStore {
   passes = new Set<string>();
   noticeMap = new Map<string, Map<string, Notice>>();
   msgs: Message[] = [];
+  pics: PlanPic[] = [];
   sessions = new Map<string, SessionRecord>();
   /** Session writes (puts and slides), to check there's at most one a day. */
   sessionWrites = 0;
@@ -127,4 +128,7 @@ export class FakeStore {
     return this.msgs.filter((m) => m.planId === planId && (!after || m.time > after));
   }
   async putMessage(m: Message) { this.msgs.push(m); }
+  async planPics(planId: string) { return this.pics.filter((p) => p.planId === planId); }
+  async putPlanPic(p: PlanPic) { this.pics.push(p); }
+  async deletePlanPic(planId: string, picId: string) { this.pics = this.pics.filter((p) => !(p.planId === planId && p.id === picId)); }
 }

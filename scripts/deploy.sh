@@ -10,9 +10,10 @@
 #      RC is seeded with made-up test data after each deploy
 #      (scripts/seed.sh)
 #   3. deploys the site (CloudFormation grigri_infra/site.yaml:
-#      grigri-web: certificate, buckets (site and photos), CloudFront with
-#      /api/* to the API, and DNS; uptime is watched by the central
-#      nu01-monitor stack in the nu01 repo, not by this stack)
+#      grigri-web: certificate, buckets (site, photos and GriGri Pics),
+#      CloudFront with /api/* to the API, and DNS; uptime is watched by the
+#      central nu01-monitor stack in the nu01 repo, not by this stack),
+#      then loads GriGri Pics (grigri_api/pics/load.mjs: only what's new)
 #   4. uploads the index page (/) and the web build (/app/), and
 #      invalidates the CloudFront cache
 #   5. smoke-tests the live site: /app/version.json must report this
@@ -236,6 +237,8 @@ echo "    IoT endpoint: $IOT_ENDPOINT"
 # The site stack's photos bucket (site.yaml names it so), which the API,
 # deployed first, presigns uploads to.
 PHOTOS_BUCKET="$SITE_STACK-photos-$account"
+# GriGri Pics' bucket (site.yaml), whose catalog the API reads.
+PICS_BUCKET="$SITE_STACK-pics-$account"
 
 # 1. The web app
 if [[ "${SKIP_BUILD:-}" != 1 ]]; then
@@ -286,6 +289,7 @@ aws cloudformation deploy --stack-name "$API_STACK" \
   --parameter-overrides "Stage=$STAGE" "GoogleWebClientId=$GOOGLE_WEB_CLIENT_ID" \
     "GoogleIosClientIds=$GOOGLE_IOS_CLIENT_IDS" \
     "RbacrToken=$GRIGRI_RBACR_TOKEN" "PhotosBucket=$PHOTOS_BUCKET" \
+    "PicsBucket=$PICS_BUCKET" \
     "AityxApiKey=$GRIGRI_AITYX_API_KEY" "AityxUrl=$GRIGRI_AITYX_URL" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
@@ -316,6 +320,10 @@ aws cloudformation deploy --stack-name "$SITE_STACK" \
 bucket="$(stack_output "$SITE_STACK" SiteBucketName)"
 distribution="$(stack_output "$SITE_STACK" DistributionId)"
 echo "    bucket: $bucket, distribution: $distribution"
+# GriGri Pics: new photos of grigri_api/pics/crags.json, their annotations
+# and the catalog (the API's npm ci above installed the SDK it uses).
+echo "==> loading GriGri Pics into $PICS_BUCKET"
+PICS_BUCKET="$PICS_BUCKET" node grigri_api/pics/load.mjs
 
 # 4. The content. Flutter's web files aren't content-hashed, so browsers
 # revalidate everything (no-cache); CloudFront is invalidated below.

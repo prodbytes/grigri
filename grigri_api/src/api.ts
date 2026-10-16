@@ -9,14 +9,17 @@ import { ApiError, badRequest, conflict, forbidden, notFound } from './domain/er
 import {
   type Climber,
   type JoinRequest,
+  type PicCatalog,
   type Plan,
+  type PlanPic,
   type PublicClimber,
   isOpen,
   publicClimber,
   requestJson,
 } from './domain/model.js';
+import { type PicWithCrag, type Where, picsFor } from './domain/pics.js';
 import * as rules from './domain/rules.js';
-import { asObject, id, messageInput, parseDate, planInput, profileInput } from './domain/validate.js';
+import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { matchFacts } from './match/facts.js';
 import { openByPlan, othersWaiting } from './match/run.js';
@@ -48,6 +51,9 @@ export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 /** Largest chat video upload. */
 export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
 
+/** Most photos a plan's "Your Pics" keeps (chat photos past it stay in the chat only). */
+export const MAX_PLAN_PICS = 100;
+
 export interface Photos {
   /**
    * A presigned POST for `key` (S3 object photos/<key>) of `contentType`,
@@ -61,6 +67,12 @@ export interface Photos {
   remove(keys: string[]): Promise<void>;
 }
 
+/** GriGri Pics: Grigri's own crag photos (specs/pics.md). */
+export interface GrigriPics {
+  /** The catalog (pics/catalog.json); empty when there's none yet. */
+  catalog(): Promise<PicCatalog>;
+}
+
 export interface Config {
   stage: string;
   version: string;
@@ -69,6 +81,8 @@ export interface Config {
 export interface Deps {
   store: Store;
   photos: Photos;
+  /** GriGri Pics' catalog; none: no GriGri Pics. */
+  pics?: GrigriPics;
   auth: Pick<Auth, 'signIn' | 'signOut' | 'signOutEverywhere'>;
   config: Config;
   /** Live updates' hints (realtime.ts); none: off. */
@@ -183,6 +197,11 @@ export class Api {
     r('GET /api/plans/{id}/messages', 'profile', (req, s) => this.messages(req, s));
     r('POST /api/plans/{id}/messages', 'profile', (req, s) => this.send(req, s));
     r('POST /api/plans/{id}/media', 'profile', (req, s) => this.presignChatMedia(req, s));
+    r('GET /api/plans/{id}/pics', 'profile', (req, s) => this.planPics(req, s));
+    r('POST /api/plans/{id}/pics/upload', 'profile', (req, s) => this.presignPlanPic(req, s));
+    r('POST /api/plans/{id}/pics', 'profile', (req, s) => this.addPlanPic(req, s));
+    r('DELETE /api/plans/{id}/pics/{picId}', 'profile', (req, s) => this.deletePlanPic(req, s));
+    r('GET /api/pics', 'profile', async (req) => ({ pics: await this.grigriPics(whereFrom(req.query)) }));
 
     r('GET /api/requests', 'profile', (_req, s) => this.toReview(s));
     r('POST /api/requests/{planId}/{climberId}/accept', 'profile', (req, s) => this.answer(req, s, 'accept', false));
@@ -332,6 +351,98 @@ export class Api {
     const maxBytes = Object.hasOwn(VIDEO_TYPES, contentType) ? MAX_VIDEO_BYTES : MAX_PHOTO_BYTES;
     const { url, fields } = await this.deps.photos.presign(key, contentType, maxBytes);
     return { key, url, fields, maxBytes };
+  }
+
+  // --- Plan pics: "Your Pics" and GriGri Pics ----------------------------------
+
+  /**
+   * GET /api/plans/{id}/pics: the plan's GriGri Pics (anyone who can see
+   * the plan) and, for members, its "Your Pics".
+   */
+  private async planPics(req: Request, s: Session) {
+    const current = await this.store.getPlan(id(req.params.id, 'plan id'));
+    if (!current) throw notFound('no such plan');
+    const { plan } = current;
+    const member = plan.memberIds.includes(s.me.id);
+    const [yours, grigri] = await Promise.all([
+      member ? this.store.planPics(plan.id) : Promise.resolve([] as PlanPic[]),
+      this.grigriPics({ sectorId: plan.sectorId, lat: plan.lat, lon: plan.lon, place: plan.place, area: plan.area }),
+    ]);
+    return { yours, grigri, member, climbers: await this.publicClimbers(new Set(yours.map((p) => p.uploaderId))) };
+  }
+
+  /** GriGri Pics for a place; none (never an error) when the catalog can't be read. */
+  private async grigriPics(where: Where): Promise<PicWithCrag[]> {
+    if (!this.deps.pics) return [];
+    try {
+      return picsFor(await this.deps.pics.catalog(), where);
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'pics catalog failed', error: String(e) }));
+      return [];
+    }
+  }
+
+  /** POST /api/plans/{id}/pics/upload: where a member uploads a photo for the plan (`plans/<planId>/<id>.<ext>`, pending until added). */
+  private async presignPlanPic(req: Request, s: Session) {
+    const planId = id(req.params.id, 'plan id');
+    const o = asObject(req.body);
+    const ext = typeof o.contentType === 'string' && Object.hasOwn(CONTENT_TYPES, o.contentType) ? CONTENT_TYPES[o.contentType] : undefined;
+    if (!ext) throw badRequest(`contentType must be one of ${Object.keys(CONTENT_TYPES).join(', ')}`);
+    await this.memberPlan(planId, s);
+    const key = `plans/${planId}/${newId()}.${ext}`;
+    const { url, fields } = await this.deps.photos.presign(key, o.contentType as string, MAX_PHOTO_BYTES);
+    return { key, url, fields, maxBytes: MAX_PHOTO_BYTES };
+  }
+
+  /** POST /api/plans/{id}/pics: a member adds an uploaded photo to the plan. */
+  private async addPlanPic(req: Request, s: Session) {
+    const planId = id(req.params.id, 'plan id');
+    const key = planPicKey(asObject(req.body).key, planId);
+    const plan = await this.memberPlan(planId, s);
+    const pics = await this.store.planPics(planId);
+    if (pics.length >= MAX_PLAN_PICS) throw conflict(`a plan keeps at most ${MAX_PLAN_PICS} photos; delete one first`);
+    const existing = pics.find((p) => p.key === key);
+    if (existing) return { pic: existing };
+    if (!(await this.deps.photos.keep(key))) throw badRequest("the photo isn't uploaded (or expired): upload it again");
+    const pic: PlanPic = { id: newId(), planId, key, uploaderId: s.me.id, time: s.now.toISOString(), fromChat: false };
+    await this.store.putPlanPic(pic);
+    await this.hint(hintsFor(plan.memberIds, { kind: 'pics', planId }, s.me.id));
+    return { pic };
+  }
+
+  /**
+   * DELETE /api/plans/{id}/pics/{picId}: whoever added it, the organizer or
+   * an admin. A photo added here is deleted; a chat photo stays in the chat.
+   */
+  private async deletePlanPic(req: Request, s: Session) {
+    const planId = id(req.params.id, 'plan id');
+    const picId = id(req.params.picId, 'pic id');
+    const current = await this.store.getPlan(planId);
+    if (!current) throw notFound('no such plan');
+    const { plan } = current;
+    if (!plan.memberIds.includes(s.me.id) && !s.caller.admin) throw forbidden("you're not in this plan");
+    const pic = (await this.store.planPics(planId)).find((p) => p.id === picId);
+    if (!pic) throw notFound('no such photo');
+    if (pic.uploaderId !== s.me.id && plan.organizerId !== s.me.id && !s.caller.admin) {
+      throw forbidden('only whoever added it, or the organizer, can delete it');
+    }
+    await this.store.deletePlanPic(planId, picId);
+    if (!pic.fromChat) {
+      // Best effort: a leftover only costs storage, and expires anyway.
+      await this.deps.photos.remove([pic.key]).catch((e: unknown) => {
+        console.error(JSON.stringify({ level: 'warn', msg: 'plan pic cleanup failed', error: String(e) }));
+      });
+    }
+    await this.hint(hintsFor(plan.memberIds, { kind: 'pics', planId }, s.me.id));
+    return {};
+  }
+
+  /** A plan I'm in (404: none; 403: not mine). */
+  private async memberPlan(planId: string, s: Session): Promise<Plan> {
+    const current = await this.store.getPlan(planId);
+    if (!current) throw notFound('no such plan');
+    if (!current.plan.memberIds.includes(s.me.id)) throw forbidden("you're not in this plan");
+    return current.plan;
   }
 
   // --- Decks and plans ------------------------------------------------------
@@ -644,8 +755,20 @@ export class Api {
       throw badRequest("the attachment isn't uploaded (or expired): upload it again");
     }
     await this.store.putMessage(message);
+    // A chat photo goes to the plan's "Your Pics" too.
+    if (input.attachment?.kind === 'image') await this.chatPhotoToPics(planId, input.attachment.key, s);
     await this.hint(hintsFor(current.plan.memberIds, { kind: 'message', planId }, s.me.id));
     return { message };
+  }
+
+  /** Best effort: the message is sent either way; a full plan keeps it in the chat only. */
+  private async chatPhotoToPics(planId: string, key: string, s: Session): Promise<void> {
+    try {
+      if ((await this.store.planPics(planId)).length >= MAX_PLAN_PICS) return;
+      await this.store.putPlanPic({ id: newId(), planId, key, uploaderId: s.me.id, time: s.now.toISOString(), fromChat: true });
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'chat photo to pics failed', error: String(e) }));
+    }
   }
 
   // --- Helpers ------------------------------------------------------------------
@@ -730,4 +853,22 @@ export function answerHints(
     ...hintsFor(newcomers, { kind: 'match', planId }, actorId),
     ...hintsFor(members.filter((m) => !newcomers.has(m)), { kind: 'plan', planId }, actorId),
   ];
+}
+
+/** GET /api/pics's query: `sector`, `lat` and `lon` (both or neither), `place`, `area`. */
+export function whereFrom(query: Record<string, string | undefined>): Where {
+  const where: Where = {};
+  if (query.sector) where.sectorId = query.sector.slice(0, 64);
+  if (query.place) where.place = query.place.slice(0, 120);
+  if (query.area) where.area = query.area.slice(0, 120);
+  if (query.lat !== undefined || query.lon !== undefined) {
+    const lat = Number(query.lat);
+    const lon = Number(query.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) {
+      throw badRequest('lat and lon must be numbers (both or neither)');
+    }
+    where.lat = lat;
+    where.lon = lon;
+  }
+  return where;
 }

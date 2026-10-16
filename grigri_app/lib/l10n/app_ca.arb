@@ -249,5 +249,18 @@
   "adminScoresNone": "Encara no s'ha calculat. scripts/score-matches.sh puntua cada perfil amb cada pla proper.",
   "adminScoresRun": "Últim càlcul {day}, {time}: {scored} de {pairs} parells, {climbers} persones × {plans} plans",
   "adminScoresProblems": "{failed} fallits, {skipped} per sobre del límit",
-  "adminScoresEmpty": "L'últim càlcul no va puntuar cap parell."
+  "adminScoresEmpty": "L'últim càlcul no va puntuar cap parell.",
+  "yourPics": "Les teves fotos",
+  "grigriPics": "GriGri Pics",
+  "yourPicsEmpty": "Encara no hi ha fotos. Afegeix-ne una o envia-la al xat.",
+  "grigriPicsEmpty": "Encara no hi ha GriGri Pics d'aquest lloc.",
+  "addPlanPic": "Afegeix una foto al pla",
+  "deletePic": "Esborra la foto",
+  "deletePicQuestion": "Vols esborrar aquesta foto?",
+  "deletePicMessage": "Surt de les fotos del pla per a tothom.",
+  "deleteChatPicMessage": "Surt de les fotos del pla; el xat la conserva.",
+  "delete": "Esborra",
+  "picCredit": "Foto: {author}, {license}",
+  "picAddedBy": "Afegida per {name}",
+  "picFromChat": "Enviada al xat per {name}"
 }
