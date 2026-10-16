@@ -760,3 +760,8 @@ spec.
       docs/ folder): how it works, with references to the key code.
     - Cost: about $0.00007 of aityx credits per score; nothing while
       idle ([backend](backend.md#cost)).
+
+57. **The nav icons were missing labels.** With the Admin tab (six
+    tabs), the bar showed only the selected tab's label.
+    - [Screens](screens.md): every tab always shows its label; the short
+      11 pt labels fit six tabs on a 360 dp phone.

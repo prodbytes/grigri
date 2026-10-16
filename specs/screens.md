@@ -5,8 +5,8 @@ Google account, with no screen of its own; [sign-in](sign-in.md)). Then
 five tabs, in a bottom navigation
 bar: Discover, Plans, Chats, Notifications and Profile, and a sixth,
 **Admin**, for [admins](sign-in.md#admins). The bar's labels are short
-words in 11 pt, so each fits on one line on a 360 dp wide phone (with six
-tabs, only the selected one's label shows): in English **Find**, **Plans**,
+words in 11 pt, so each fits on one line on a 360 dp wide phone, and
+every tab always shows its label, six tabs too: in English **Find**, **Plans**,
 **Chats**, **Alerts**, **Me** and **Admin** (Spanish Buscar, Planes, Chats,
 Avisos, Yo; German Suche, Pläne, Chats, Infos, Ich; French Trouve, Plans,
 Tchats, Alertes, Moi; Portuguese Buscar, Planos, Chats, Avisos, Eu;
