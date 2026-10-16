@@ -906,7 +906,7 @@ spec.
       that isn't done.
     - Cost: none.
 
-61. **Let people subscribe to Premium in their profile, with real
+64. **Let people subscribe to Premium in their profile, with real
     payments.** (First half of the request for ads; the ads come in the
     next entry.)
     - [Premium](premium.md) rewritten as built: Stripe Checkout from the
