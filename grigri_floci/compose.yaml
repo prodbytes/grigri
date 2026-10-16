@@ -53,6 +53,10 @@ services:
       # admin role. Empty: nobody is an admin locally.
       RBACR_TOKEN: ${RBACR_TOKEN:-}
       RBACR_PORT: ${RBACR_PORT:-2115}
+      # aityx (from .env): match scores on admins' decks and the scoring
+      # function. Empty: no scores.
+      GRIGRI_AITYX_API_KEY: ${GRIGRI_AITYX_API_KEY:-}
+      GRIGRI_AITYX_URL: ${GRIGRI_AITYX_URL:-}
       # Lambda containers are named grigri-lambda-*, so shutdown can find
       # them (process-compose.yaml).
       FLOCI_SERVICES_LAMBDA_CONTAINER_NAME_PREFIX: grigri-lambda

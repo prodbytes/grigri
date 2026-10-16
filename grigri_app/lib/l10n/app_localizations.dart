@@ -1490,6 +1490,133 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Videos can be at most {mb} MB: send a shorter one.'**
   String errorVideoTooBig(int mb);
+
+  /// Admins only: how likely a plan on the deck ends in a match.
+  ///
+  /// In en, this message translates to:
+  /// **'Match {percent}% · {level}'**
+  String matchScore(int percent, String level);
+
+  /// A match score's level, lowest.
+  ///
+  /// In en, this message translates to:
+  /// **'long shot'**
+  String get matchLevelLongShot;
+
+  /// A match score's level.
+  ///
+  /// In en, this message translates to:
+  /// **'possible'**
+  String get matchLevelPossible;
+
+  /// A match score's level.
+  ///
+  /// In en, this message translates to:
+  /// **'good'**
+  String get matchLevelGood;
+
+  /// A match score's level, highest.
+  ///
+  /// In en, this message translates to:
+  /// **'great'**
+  String get matchLevelGreat;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t climb this discipline'**
+  String get matchReasonOtherDiscipline;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Its grades are well above yours'**
+  String get matchReasonTooHard;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Its grades are well below yours'**
+  String get matchReasonTooEasy;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts in less than 12 hours'**
+  String get matchReasonStartsSoon;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'More than 100 km away'**
+  String get matchReasonFar;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Five or more people must all say yes'**
+  String get matchReasonBigGroup;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Ten or more others are waiting'**
+  String get matchReasonCrowded;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'In your grades and nearby'**
+  String get matchReasonInGradesNearby;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'In your grades'**
+  String get matchReasonInGrades;
+
+  /// Why a match score is what it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Within a grade or two of yours'**
+  String get matchReasonCloseGrades;
+
+  /// Admin tab: the match scores preview's heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Match scores'**
+  String get adminScoresTitle;
+
+  /// Admin tab: no scoring run yet.
+  ///
+  /// In en, this message translates to:
+  /// **'No scoring run yet. scripts/score-matches.sh scores every profile against every upcoming plan.'**
+  String get adminScoresNone;
+
+  /// Admin tab: the latest scoring run.
+  ///
+  /// In en, this message translates to:
+  /// **'Last run {day}, {time}: {scored} of {pairs} pairs, {climbers} people × {plans} plans'**
+  String adminScoresRun(
+    String day,
+    String time,
+    int scored,
+    int pairs,
+    int climbers,
+    int plans,
+  );
+
+  /// Admin tab: pairs the latest run couldn't score.
+  ///
+  /// In en, this message translates to:
+  /// **'{failed} failed, {skipped} over the run\'s cap'**
+  String adminScoresProblems(int failed, int skipped);
+
+  /// Admin tab: the latest run scored nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'The last run scored no pairs.'**
+  String get adminScoresEmpty;
 }
 
 class _AppLocalizationsDelegate

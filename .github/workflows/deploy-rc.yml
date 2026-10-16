@@ -156,4 +156,8 @@ jobs:
           # grigri's admin role. A secret, so the public run logs never
           # show it.
           GRIGRI_RBACR_TOKEN: ${{ secrets.GRIGRI_RBACR_TOKEN }}
+          # aityx: match scores for admins and the scoring function. A
+          # secret; empty: no scores.
+          GRIGRI_AITYX_API_KEY: ${{ secrets.GRIGRI_AITYX_API_KEY }}
+          GRIGRI_AITYX_URL: ${{ vars.GRIGRI_AITYX_URL }}
         run: bash scripts/deploy.sh

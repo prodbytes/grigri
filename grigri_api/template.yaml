@@ -54,6 +54,23 @@ Parameters:
     Description: >
       An rbacr API token owned by an rbacr root (the RBACR_TOKEN secret),
       to ask rbacr about callers' roles. Empty: nobody is an admin.
+  AityxUrl:
+    Type: String
+    Default: https://api.aityx.ai
+    AllowedPattern: 'https://[A-Za-z0-9.:-]+'
+    Description: >
+      aityx's API (https://aityx.ai), which runs the match model
+      (src/match/model.json) for admins' decks and the scoring function.
+      A stage key works only against aityx's stage.
+  AityxApiKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '(aityx_sk_[A-Za-z0-9_-]+)?'
+    Description: >
+      The aityx API key (the GRIGRI_AITYX_API_KEY secret). Empty: no match
+      scores (admins' decks show none, and the scoring function refuses to
+      run).
   PhotosBucket:
     Type: String
     AllowedPattern: '[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]'
@@ -209,6 +226,49 @@ Resources:
         - Key: grigri:stage
           Value: !Ref Stage
 
+  # The match scores (src/store/scores.ts): every climber's score for
+  # every upcoming plan, by climber and plan, plus each run's scores best
+  # first (gsi1). Derived data, rewritten by each scoring run, so no
+  # backups and no deletion protection: dropping it loses nothing. On
+  # demand: a run of 5,000 pairs writes 5,000 items (about $0.006) and
+  # the preview reads 20; storage is cents. Scores expire (ttl) a day after
+  # their plan starts.
+  ScoresTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub ${AWS::StackName}-scores
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+        - AttributeName: sk
+          AttributeType: S
+        - AttributeName: gsi1pk
+          AttributeType: S
+        - AttributeName: gsi1sk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+        - AttributeName: sk
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        # A run's scores (RUN#<runId>), best first.
+        - IndexName: gsi1
+          KeySchema:
+            - AttributeName: gsi1pk
+              KeyType: HASH
+            - AttributeName: gsi1sk
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
   # Two weeks of logs: enough to debug, cheap to keep.
   LogGroup:
     Type: AWS::Logs::LogGroup
@@ -263,6 +323,15 @@ Resources:
                 Resource:
                   - !GetAtt Table.Arn
                   - !Sub ${Table.Arn}/index/*
+              # The admin's preview of the match scores: read only.
+              - Sid: Scores
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                Resource:
+                  - !GetAtt ScoresTable.Arn
+                  - !Sub ${ScoresTable.Arn}/index/*
               - Sid: Photos
                 Effect: Allow
                 Action:
@@ -310,7 +379,95 @@ Resources:
           DEV_MODE: !Ref DevMode
           IOT_ENDPOINT: !Ref IotEndpoint
           IOT_AUTHORIZER: !If [CreateIotAuthorizer, !Sub '${AWS::StackName}-realtime', '']
+          SCORES_TABLE: !Ref ScoresTable
+          AITYX_URL: !Ref AityxUrl
+          AITYX_API_KEY: !Ref AityxApiKey
           # Reuse TCP connections to DynamoDB between invocations.
+          AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+          NODE_OPTIONS: --enable-source-maps
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  # --- Match scores: the scoring function ------------------------------------
+  # Scores every profile against every upcoming plan with aityx and writes
+  # the scores table (src/scorer.ts). Invoked directly, on demand
+  # (scripts/score-matches.sh); nothing else calls it, so it costs nothing
+  # until run. A run of 5,000 pairs (its cap) takes a few minutes of a
+  # 256 MB arm64 Lambda (well under a cent) and about $0.33 of aityx
+  # credits.
+  ScorerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-scorer
+      RetentionInDays: 14
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  # Reads profiles, plans and open requests (never sessions, chats or
+  # notices, though the table's keys can't tell them apart for a Query);
+  # writes only the scores table.
+  ScorerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${AWS::StackName}-scorer
+      Description: !Sub Grigri match scoring function (${AWS::StackName})
+      PermissionsBoundary: !If [HasBoundary, !Ref PermissionsBoundary, !Ref AWS::NoValue]
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: scorer
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: Logs
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub ${ScorerLogGroup.Arn}
+              - Sid: ReadIndex
+                Effect: Allow
+                Action: dynamodb:Query
+                Resource: !Sub ${Table.Arn}/index/gsi1
+              - Sid: Scores
+                Effect: Allow
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:BatchWriteItem
+                Resource: !GetAtt ScoresTable.Arn
+      Tags:
+        - Key: grigri:stage
+          Value: !Ref Stage
+
+  ScorerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${AWS::StackName}-scorer
+      Description: Grigri match scores (specs/match-scores.md)
+      Runtime: nodejs22.x
+      Handler: scorer.handler
+      Code: dist
+      Architectures:
+        - !Ref Architecture
+      MemorySize: 256
+      Timeout: 900
+      Role: !GetAtt ScorerRole.Arn
+      LoggingConfig:
+        LogGroup: !Ref ScorerLogGroup
+      Environment:
+        Variables:
+          STAGE: !Ref Stage
+          TABLE_NAME: !Ref Table
+          SCORES_TABLE: !Ref ScoresTable
+          AITYX_URL: !Ref AityxUrl
+          AITYX_API_KEY: !Ref AityxApiKey
           AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
           NODE_OPTIONS: --enable-source-maps
       Tags:
@@ -505,6 +662,11 @@ Outputs:
   FunctionName:
     Description: Invoked with {"grigriSeed":true} to seed RC (scripts/seed.sh)
     Value: !Ref Function
+  ScoresTableName:
+    Value: !Ref ScoresTable
+  ScorerFunctionName:
+    Description: Invoked to score every profile against every upcoming plan (scripts/score-matches.sh)
+    Value: !Ref ScorerFunction
   AuthorizerFunctionName:
     Description: The live updates' IoT custom authorizer function
     Value: !Ref AuthorizerFunction

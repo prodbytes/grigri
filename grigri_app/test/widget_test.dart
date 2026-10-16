@@ -11,6 +11,7 @@ import 'package:grigri_app/main.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/location.dart';
+import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/ui/chat_media.dart';
 import 'package:grigri_app/ui/chat_screen.dart';
@@ -909,6 +910,96 @@ void main() {
       );
       expect(api.requestsById['my-gym/jules']!.rejected, isTrue);
       expect(find.text('No open requests'), findsOneWidget);
+    });
+
+    testWidgets('admins see the match score on the deck, with its reason', (
+      tester,
+    ) async {
+      const great = MatchScore(
+        score: 0.81,
+        level: MatchLevel.great,
+        reason: MatchReason.inGradesNearby,
+      );
+      await pumpApp(
+        tester,
+        sampleApi(admin: true)..matchScores['boulder-night'] = great,
+      );
+      expect(find.byKey(const ValueKey('match boulder-night')), findsOneWidget);
+      expect(find.text('Match 81% · great'), findsOneWidget);
+      expect(find.text('In your grades and nearby'), findsOneWidget);
+    });
+
+    testWidgets('nobody else sees a match score', (tester) async {
+      await pumpApp(
+        tester,
+        sampleApi()
+          ..matchScores['boulder-night'] = const MatchScore(
+            score: 0.81,
+            level: MatchLevel.great,
+            reason: MatchReason.inGrades,
+          ),
+      );
+      expect(find.byKey(const ValueKey('match boulder-night')), findsNothing);
+      expect(find.textContaining('Match '), findsNothing);
+    });
+
+    testWidgets('the Admin tab previews the latest scoring run', (
+      tester,
+    ) async {
+      final api = sampleApi(admin: true)
+        ..scoreRun = ScoreRun(
+          finishedAt: DateTime(2030, 5, 1, 18, 30),
+          climbers: 3,
+          plans: 2,
+          pairs: 5,
+          scored: 4,
+          failed: 1,
+          skipped: 0,
+        )
+        ..scoredPairs = [
+          const ScoredPair(
+            climberId: 'jules',
+            planId: 'boulder-night',
+            match: MatchScore(
+              score: 0.52,
+              level: MatchLevel.good,
+              reason: MatchReason.inGrades,
+            ),
+          ),
+        ];
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Admin');
+      final preview = find.byKey(const ValueKey('admin scores'));
+      expect(
+        find.descendant(of: preview, matching: find.text('Match scores')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: preview,
+          matching: find.textContaining('4 of 5 pairs, 3 people × 2 plans'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text("1 failed, 0 over the run's cap"), findsOneWidget);
+      final row = find.byKey(const ValueKey('score jules boulder-night'));
+      expect(
+        find.descendant(of: row, matching: find.textContaining('Jules Fern')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: row, matching: find.text('Match 52% · good')),
+        findsOneWidget,
+      );
+      expect(api.calls, contains('GET /api/admin/scores'));
+    });
+
+    testWidgets('before the first run, the preview says how to run it', (
+      tester,
+    ) async {
+      await pumpApp(tester, sampleApi(admin: true));
+      await tapTab(tester, 'Admin');
+      expect(find.textContaining('No scoring run yet'), findsOneWidget);
     });
 
     testWidgets('six tabs fit a narrow phone', (tester) async {

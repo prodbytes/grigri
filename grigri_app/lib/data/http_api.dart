@@ -324,4 +324,8 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Future<void> adminReject(String planId, String climberId) =>
       _post(['admin', 'requests', planId, climberId, 'reject']);
+
+  @override
+  Future<AdminScores> adminScores() async =>
+      ApiJson.adminScores(await _get(['admin', 'scores']));
 }

@@ -1,0 +1,120 @@
+{
+  "name": "Grigri match likelihood (v1)",
+  "inputs": {
+    "discipline_climbed": {
+      "type": "boolean",
+      "desc": "Does the climber climb the plan's discipline (a grade range on the plan's scale)?"
+    },
+    "grades_short": {
+      "type": "number [0..30]",
+      "desc": "How many grades the plan's easiest grade is above the climber's hardest one (0 when within reach)?"
+    },
+    "grades_over": {
+      "type": "number [0..30]",
+      "desc": "How many grades the climber's easiest grade is above the plan's hardest one (0 when not above it)?"
+    },
+    "distance_known": {
+      "type": "boolean",
+      "desc": "Is the distance from the climber to the plan known (the plan has a point and the climber a location or area)?"
+    },
+    "distance_km": {
+      "type": "number >= 0",
+      "desc": "How far the plan is from the climber's nearest location or area, in km (0 when unknown)?"
+    },
+    "group_size": {
+      "type": "number >= 1",
+      "desc": "How many people are in the plan's group now, the organizer included? Every one of them must say yes."
+    },
+    "open_requests": {
+      "type": "number >= 0",
+      "desc": "How many other join requests are waiting on the plan?"
+    },
+    "days_until_start": {
+      "type": "number >= 0",
+      "desc": "How many days until the plan starts (fractional)?"
+    }
+  },
+  "decisions": {
+    "grade_fit": {
+      "type": "number",
+      "desc": "How well the climber's grades suit the plan, 0 to 1. Being below the plan's grades costs more than being above them.",
+      "table": [
+        ["discipline_climbed", "grades_short", "grades_over", "=>", "# why"],
+        ["false", "-", "-", "0", "Someone who doesn't climb the discipline won't be taken."],
+        ["true", "0", "0", "1", "The climber's grades overlap the plan's."],
+        ["true", "1", "-", "0.6", "One grade short: a group often takes someone close to its grades."],
+        ["true", "2", "-", "0.35", "Two grades short: the group may worry about leading or belaying."],
+        ["true", "3", "-", "0.15", "Three grades short: rarely taken."],
+        ["true", ">= 4", "-", "0", "Four or more grades short: the plan's routes are out of reach."],
+        ["true", "-", "1", "0.85", "One grade above: easy for the climber, still a welcome partner."],
+        ["true", "-", "2", "0.7", "Two grades above: may get bored, but a safe partner."],
+        ["true", "-", "3", "0.5", "Three grades above: a mismatch the climber may not want."],
+        ["-", "-", "-", "0.3", "Four or more grades above: unlikely to suit either side."]
+      ]
+    },
+    "nearness": {
+      "type": "number",
+      "desc": "How close the plan is, 0 to 1: 1 on the doorstep, 0.37 at 50 km; 0.25 when unknown (like about 70 km).",
+      "expr": "if distance_known then 2.718281828 ** (0 - distance_km / 50) else 0.25"
+    },
+    "crowding": {
+      "type": "number",
+      "desc": "How much the other waiting requests lower the chance of being taken.",
+      "table": [
+        ["open_requests", "=>", "# why"],
+        [">= 20", "0.5", "Many people are waiting: the group can take only a few."],
+        [">= 10", "0.75", "Several people are waiting: some competition for the spot."],
+        ["-", "1", "Few or no other requests: no competition worth counting."]
+      ]
+    },
+    "timing": {
+      "type": "number",
+      "desc": "Whether there is time for every member to answer before the plan starts.",
+      "table": [
+        ["days_until_start", "=>", "# why"],
+        ["< 0.5", "0.4", "Less than 12 hours: the group may not answer in time."],
+        ["< 2", "0.8", "Within two days: answers have to come quickly."],
+        ["<= 30", "1", "Enough time for every member to answer."],
+        ["-", "0.85", "More than a month away: plans that far out often change."]
+      ]
+    },
+    "group_odds": {
+      "type": "number",
+      "desc": "The chance the whole group says yes: each member besides the organizer is one more yes needed.",
+      "expr": "0.9 ** (group_size - 1) * crowding"
+    },
+    "match_likelihood": {
+      "type": "number",
+      "desc": "How likely the climber asks to join and the whole group says yes, 0 to 1.",
+      "expr": "decimal(grade_fit * (0.5 + 0.5 * nearness) * group_odds * timing, 2)"
+    },
+    "match_level": {
+      "type": "long_shot<possible<good<great",
+      "desc": "The likelihood in words.",
+      "table": [
+        ["match_likelihood", "=>", "# why"],
+        [">= 0.7", "great", "Seven in ten or better."],
+        [">= 0.45", "good", "Better than even odds, nearly."],
+        [">= 0.2", "possible", "Worth a try."],
+        ["-", "long_shot", "Unlikely to end in a match."]
+      ]
+    },
+    "match_reason": {
+      "type": "other_discipline|too_hard|too_easy|starts_soon|far|big_group|crowded|in_grades_nearby|in_grades|close_grades",
+      "desc": "The main reason behind the likelihood, the first that applies.",
+      "table": [
+        ["discipline_climbed", "grades_short", "grades_over", "days_until_start", "distance_known", "distance_km", "group_size", "open_requests", "=>", "# why"],
+        ["false", "-", "-", "-", "-", "-", "-", "-", "other_discipline", "The climber doesn't climb this discipline."],
+        ["-", ">= 2", "-", "-", "-", "-", "-", "-", "too_hard", "The plan's grades are well above the climber's."],
+        ["-", "-", ">= 3", "-", "-", "-", "-", "-", "too_easy", "The plan's grades are well below the climber's."],
+        ["-", "-", "-", "< 0.5", "-", "-", "-", "-", "starts_soon", "It starts in less than 12 hours."],
+        ["-", "-", "-", "-", "true", "> 100", "-", "-", "far", "It's more than 100 km away."],
+        ["-", "-", "-", "-", "-", "-", ">= 5", "-", "big_group", "Five or more people must all say yes."],
+        ["-", "-", "-", "-", "-", "-", "-", ">= 10", "crowded", "Ten or more others are waiting on it."],
+        ["-", "0", "0", "-", "true", "<= 25", "-", "-", "in_grades_nearby", "In the climber's grades and within 25 km."],
+        ["-", "0", "0", "-", "-", "-", "-", "-", "in_grades", "In the climber's grades."],
+        ["-", "-", "-", "-", "-", "-", "-", "-", "close_grades", "Within a grade or two of the climber's."]
+      ]
+    }
+  }
+}
