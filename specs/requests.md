@@ -779,3 +779,11 @@ spec.
     - [Match scores](match-scores.md#the-model): model v2,
       match_likelihood = grade_fit × (0.2 + 0.8 × nearness) × group_odds
       × timing (was 0.5 + 0.5 ×). No cost change.
+55. **Let me set my location on the profile screen, defaulting to where
+    I am.**
+    - [Screens](screens.md): the Profile tab has a **Where you climb**
+      card: my location (a spinner while it's being detected), tap to
+      pick a place or my current location, saved at once.
+    - [Matching](matching.md#profiles-and-plans-are-separate): the app
+      takes my location from the device whenever my profile has none,
+      even when I have areas (before, areas alone stopped it).

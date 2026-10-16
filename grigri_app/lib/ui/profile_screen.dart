@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_version.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'location_picker.dart';
 import 'profile_editor.dart';
 import 'roles_card.dart';
 
@@ -98,6 +99,8 @@ class ProfileScreen extends StatelessWidget {
               child: ProfileDetails(me),
             ),
           ),
+          const SizedBox(height: 8),
+          const _WhereIClimb(),
           const SizedBox(height: 12),
           const SizedBox(height: 4),
           const LanguagePicker(),
@@ -118,6 +121,73 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// My location, private, which ranks my deck: set here without opening the
+/// editor. The app fills it in from the device when I have none
+/// ([GrigriStore.fillLocation]); tapping picks another place, or where I am
+/// now, and saves it at once.
+class _WhereIClimb extends StatelessWidget {
+  const _WhereIClimb();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final location = store.me.location;
+    final text = Theme.of(context).textTheme;
+    final l = context.l10n;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 8, 6),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l.whereYouClimb.toUpperCase(),
+              style: text.labelSmall?.copyWith(
+                color: Mountain.granite,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              l.whereYouClimbHint,
+              style: text.bodySmall?.copyWith(color: Mountain.granite),
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: store.locating
+                  ? const SizedBox.square(
+                      dimension: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.my_location, color: Mountain.sky),
+              title: Text(location?.name ?? l.setYourLocation),
+              subtitle: Text(
+                l.yourLocation,
+                style: const TextStyle(color: Mountain.granite),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: store.locating
+                  ? null
+                  : () async {
+                      final picked = await pickLocation(
+                        context,
+                        title: l.yourLocation,
+                      );
+                      if (picked == null || picked == store.me.location) {
+                        return;
+                      }
+                      await store.saveProfile(
+                        store.me.copyWith(location: picked),
+                      );
+                    },
+            ),
+          ],
+        ),
       ),
     );
   }
