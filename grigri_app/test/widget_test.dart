@@ -361,6 +361,45 @@ void main() {
       expect(api.calls.where((c) => c.contains('boulder-night')), isEmpty);
     });
 
+    testWidgets('the card trims long notes and bios, in smaller text', (
+      tester,
+    ) async {
+      final long = List.filled(40, 'Long approach, steep pockets.').join(' ');
+      final api = sampleApi();
+      final plan = api.plans['boulder-night']!;
+      api
+        ..addPlan(
+          Plan(
+            id: plan.id,
+            organizerId: plan.organizerId,
+            discipline: plan.discipline,
+            place: plan.place,
+            start: plan.start,
+            end: plan.end,
+            grades: plan.grades,
+            memberIds: plan.memberIds,
+            notes: long,
+          ),
+        )
+        ..addClimber(Climber(id: 'kit', name: 'Kit Marlow', bio: long));
+      await pumpApp(tester, api);
+      final texts = tester.widgetList<Text>(find.text(long)).toList();
+      expect(texts, hasLength(2));
+      for (final t in texts) {
+        expect(t.maxLines, 3);
+        expect(t.overflow, TextOverflow.ellipsis);
+      }
+      final element = tester.element(find.text(long).first);
+      expect(MediaQuery.textScalerOf(element).scale(10), closeTo(9, 0.001));
+      // The whole profile, in its sheet, isn't trimmed.
+      await tester.tap(find.text('Kit Marlow'));
+      await tester.pumpAndSettle();
+      final whole = tester
+          .widgetList<Text>(find.text(long))
+          .where((t) => t.maxLines == null);
+      expect(whole, isNotEmpty);
+    });
+
     testWidgets('demo plans and people say they are made up', (tester) async {
       const notice = 'Demo: made-up people and plans.';
       final api = sampleApi();

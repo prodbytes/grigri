@@ -821,7 +821,13 @@ spec.
     - [Screens](screens.md): the plan screen's Your Pics and GriGri Pics.
     - Cost: ~$0.0002/month of storage for GriGri Pics, a GET per cold
       start; Your Pics cost as chat photos do ([pics.md](pics.md#cost)).
-57. **Remove every feature from the Admin tab and start it over: for
+57. **A little smaller text on Discover; plan notes and bios cut to
+    about three lines, with "…".**
+    - [Matching](matching.md#the-deck): the swipe card's text is 10%
+      smaller than the app's (on top of the system's text size); the
+      plan's notes and the organizer's bio stop at three lines, ending in
+      "…" when cut. The plan screen and the profile sheet show them whole.
+58. **Remove every feature from the Admin tab and start it over: for
     now, just a list of people with the option to block or unblock.**
     - [Admin](admin.md) (new): the tab lists everyone by name
       (`GET /api/admin/climbers`), with **Block** (after a confirmation)

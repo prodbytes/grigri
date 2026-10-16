@@ -219,103 +219,140 @@ class _PlanCardState extends State<_PlanCard> {
       for (final id in plan.memberIds)
         if (id != organizer.id) store.climber(id),
     ];
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            PlanHighlight(plan, fit: store.fit(plan), compact: true),
-            if (match != null) ...[
-              const SizedBox(height: 8),
+    // A little smaller than the rest of the app, to fit more of the plan
+    // and the organizer on a small phone; still following the system's
+    // text size.
+    final media = MediaQuery.of(context);
+    return MediaQuery(
+      data: media.copyWith(
+        textScaler: _Scaled(media.textScaler, _cardTextScale),
+      ),
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              PlanHighlight(plan, fit: store.fit(plan), compact: true),
+              if (match != null) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: MatchScoreTag(
+                    match,
+                    key: ValueKey('match ${plan.id}'),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: MatchScoreTag(match, key: ValueKey('match ${plan.id}')),
-              ),
-            ],
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l.organizedBy.toUpperCase(),
-                    style: text.labelSmall?.copyWith(
-                      color: Mountain.granite,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => showProfileSheet(context, organizer),
-                          child: ClimberHeader(organizer, radius: 20),
-                        ),
-                      ),
-                      if (others.isNotEmpty)
-                        Tooltip(
-                          message: _showGroup ? l.hideGroup : l.showGroup,
-                          child: TextButton.icon(
-                            onPressed: () =>
-                                setState(() => _showGroup = !_showGroup),
-                            icon: Icon(
-                              _showGroup
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
-                            ),
-                            label: Text('+${others.length}'),
-                            iconAlignment: IconAlignment.end,
-                            style: TextButton.styleFrom(
-                              foregroundColor: Mountain.sky,
-                              textStyle: text.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  if (_showGroup && others.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      l.alsoInGroup.toUpperCase(),
+                      l.organizedBy.toUpperCase(),
                       style: text.labelSmall?.copyWith(
                         color: Mountain.granite,
                         letterSpacing: 1.2,
                       ),
                     ),
-                    for (final c in others)
-                      ListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        leading: Avatar(c),
-                        title: Text(c.nameAndAge),
-                        subtitle: Text(
-                          c.levels.entries
-                              .map(
-                                (e) =>
-                                    '${e.key.label(l)} ${store.grades(e.value)}',
-                              )
-                              .join(' · '),
-                          style: const TextStyle(color: Mountain.granite),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () => showProfileSheet(context, organizer),
+                            child: ClimberHeader(organizer, radius: 20),
+                          ),
                         ),
-                        onTap: () => showProfileSheet(context, c),
+                        if (others.isNotEmpty)
+                          Tooltip(
+                            message: _showGroup ? l.hideGroup : l.showGroup,
+                            child: TextButton.icon(
+                              onPressed: () =>
+                                  setState(() => _showGroup = !_showGroup),
+                              icon: Icon(
+                                _showGroup
+                                    ? Icons.expand_less
+                                    : Icons.expand_more,
+                              ),
+                              label: Text('+${others.length}'),
+                              iconAlignment: IconAlignment.end,
+                              style: TextButton.styleFrom(
+                                foregroundColor: Mountain.sky,
+                                textStyle: text.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (_showGroup && others.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l.alsoInGroup.toUpperCase(),
+                        style: text.labelSmall?.copyWith(
+                          color: Mountain.granite,
+                          letterSpacing: 1.2,
+                        ),
                       ),
+                      for (final c in others)
+                        ListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          leading: Avatar(c),
+                          title: Text(c.nameAndAge),
+                          subtitle: Text(
+                            c.levels.entries
+                                .map(
+                                  (e) =>
+                                      '${e.key.label(l)} ${store.grades(e.value)}',
+                                )
+                                .join(' · '),
+                            style: const TextStyle(color: Mountain.granite),
+                          ),
+                          onTap: () => showProfileSheet(context, c),
+                        ),
+                    ],
+                    const SizedBox(height: 8),
+                    ProfileDetails(organizer, compact: true),
                   ],
-                  const SizedBox(height: 8),
-                  ProfileDetails(organizer, compact: true),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// How much smaller the Discover card's text is than the app's.
+const _cardTextScale = 0.9;
+
+/// The system's text scaling, then [factor] on top.
+class _Scaled extends TextScaler {
+  const _Scaled(this.base, this.factor);
+
+  final TextScaler base;
+  final double factor;
+
+  @override
+  double scale(double fontSize) => base.scale(fontSize) * factor;
+
+  @override
+  // ignore: deprecated_member_use
+  double get textScaleFactor => base.scale(1) * factor;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _Scaled && other.base == base && other.factor == factor;
+
+  @override
+  int get hashCode => Object.hash(base, factor);
 }
