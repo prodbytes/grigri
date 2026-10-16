@@ -50,10 +50,12 @@ is "Alerts" in English.
   gone" when it no longer exists.
 - **Plan editor**, top to bottom:
   - **Climbing**: the discipline.
-  - **Where**: one search field, "Sector, crag or gym". As I type it
-    lists the [sector index](sectors.md)'s matches, each with where it
-    is; picking one shows where it is under the field. A place the index
-    lacks is just typed in. Required.
+  - **Where**: one search field, "Sector, crag or gym". As I type a
+    name it lists the [sector index](sectors.md)'s matches, **nearest
+    to me first** when I've set where I am (else best match first), each
+    with where it is and how far; with nothing typed it offers the
+    nearest crags. Picking one shows where it is under the field. A place
+    the index lacks is just typed in. Required.
   - **When**: the day, then a time range slider, from and to, in half
     hours between 05:00 and 23:30 (09:00–17:00 to start); the start must
     be still to come.

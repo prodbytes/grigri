@@ -1014,3 +1014,11 @@ spec.
     - The iOS Swift Package Manager pins Xcode wrote
       (`Package.resolved`, both workspaces) are committed, so builds
       resolve the same package versions.
+71. **When creating a plan, let users search a crag by name, sorted by
+    distance first.**
+    - [Sectors](sectors.md): the search takes where I am (my location,
+      else my first area) and sorts matches nearest first, places
+      without a point last; with nothing typed it offers the nearest.
+    - [Screens](screens.md): the plan editor's **Where** shows each
+      suggestion's distance ("· 0.7 km").
+

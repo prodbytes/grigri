@@ -18,9 +18,15 @@ run:
   ([SectorIndex](../grigri_app/lib/data/sector_index.dart)): loaded once,
   when the plan editor or the location picker first opens. Every word typed must start a word of
   the sector's name or of where it is, ignoring case and accents ("pique"
-  finds "Can Piqué"). Names that start with the query come first, then
-  names with all its words, then matches on where it is; shorter names
-  first; at most 20.
+  finds "Can Piqué"). At most 20.
+  - **Nearest first** (the plan editor, when I've set where I am: my
+    location, else my first area): matches sorted by distance from me
+    (great circle), then as below; places without a point after all the
+    others. With nothing typed it offers the nearest 20 places. Each
+    shows how far it is ("Siurana, Spain · 0.7 km"; one decimal under
+    10 km).
+  - Otherwise: names that start with the query come first, then names
+    with all its words, then matches on where it is; shorter names first.
 - **The plan** keeps the sector's id (`sectorId`), its name (`place`) and
   where it is (`area`, e.g. "Siurana, Spain"), so it reads the same if the
   index changes, and its point (`lat`, `lon`), which places it for the

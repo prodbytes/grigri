@@ -2078,6 +2078,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Grade'**
   String get routeGrade;
+
+  /// Plan editor: how far a suggested crag is from me (km, one decimal under 10).
+  ///
+  /// In en, this message translates to:
+  /// **'{km} km'**
+  String kmAway(String km);
 }
 
 class _AppLocalizationsDelegate

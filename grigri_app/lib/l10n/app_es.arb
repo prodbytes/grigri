@@ -327,5 +327,6 @@
   "routeName": "Nombre de la vía",
   "routeScale": "Vía",
   "boulderScale": "Bloque",
-  "routeGrade": "Grado"
+  "routeGrade": "Grado",
+  "kmAway": "{km} km"
 }
