@@ -11,6 +11,7 @@ import 'package:grigri_app/data/preferences.dart';
 import 'package:grigri_app/data/realtime.dart';
 import 'package:grigri_app/data/sector_index.dart';
 import 'package:grigri_app/data/session_storage.dart';
+import 'package:grigri_app/model/ad.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/match_score.dart';
@@ -80,6 +81,14 @@ class FakeApi implements GrigriApi, SessionApi {
 
   /// The links the app opened in the browser.
   final opened = <Uri>[];
+
+  /// Every ad, by id; how often the deck shows them.
+  final ads = <String, Ad>{};
+  int adEvery = 5;
+  int _adIds = 0;
+
+  /// Adds an ad (already reviewed, or pending).
+  void addAd(Ad ad) => ads[ad.id] = ad;
 
   final climbers = <String, Climber>{};
   final plans = <String, Plan>{};
@@ -435,13 +444,24 @@ class FakeApi implements GrigriApi, SessionApi {
           });
     return PlanList(
       list,
-      _mention(list.expand(_planPeople)),
+      _mention([
+        ...list.expand(_planPeople),
+        for (final a in ads.values) a.ownerId,
+      ]),
       distanceKm: {for (final p in list) p.id: ?distanceKm[p.id]},
       covers: {for (final p in list) p.id: ?covers[p.id]},
       // As the API: admins' decks only.
       scores: admin
           ? {for (final p in list) p.id: ?matchScores[p.id]}
           : const {},
+      // As the API: approved, not mine; none when they're off.
+      ads: adEvery == 0
+          ? const []
+          : [
+              for (final a in ads.values)
+                if (a.status == AdStatus.approved && a.ownerId != meId) a,
+            ],
+      adEvery: adEvery,
     );
   });
 
@@ -813,6 +833,93 @@ class FakeApi implements GrigriApi, SessionApi {
   void _admin() {
     if (!admin) throw const ApiException(403, 'Admins only.');
   }
+
+  @override
+  Future<MyAds> myAds() => _route(
+    'GET /api/ads',
+    () => MyAds([
+      for (final a in ads.values.toList().reversed)
+        if (a.ownerId == meId) a,
+    ], premium: myPremium.active),
+  );
+
+  @override
+  Future<PhotoUpload> newAdMedia(String contentType) =>
+      _route('POST /api/ads/media', () {
+        if (!myPremium.active) {
+          throw const ApiException(403, 'ads are for Premium');
+        }
+        final ext = contentType.split('/').last;
+        return PhotoUpload(
+          key: 'ads/$meId/upload${++_adIds}.$ext',
+          url: Uri.parse('https://upload.grigri.test/'),
+          fields: const {},
+          contentType: contentType,
+        );
+      });
+
+  @override
+  Future<Ad> createAd({
+    required String text,
+    required String link,
+    String? mediaKey,
+  }) => _route('POST /api/ads', () {
+    if (!myPremium.active) throw const ApiException(403, 'ads are for Premium');
+    final url = Uri.tryParse(link);
+    if (url == null || !url.hasAuthority || !url.scheme.startsWith('http')) {
+      throw const ApiException(400, 'link must be a web address (https://…)');
+    }
+    final ad = Ad(
+      id: 'ad${++_adIds}',
+      ownerId: meId!,
+      text: text,
+      link: url,
+      mediaKey: mediaKey,
+      mediaKind: mediaKey == null
+          ? null
+          : (mediaKey.endsWith('.mp4') || mediaKey.endsWith('.quicktime')
+                ? MediaKind.video
+                : MediaKind.image),
+    );
+    ads[ad.id] = ad;
+    return ad;
+  });
+
+  @override
+  Future<void> deleteAd(String adId) => _route('DELETE /api/ads/$adId', () {
+    ads.remove(adId);
+  });
+
+  @override
+  Future<AdminAds> adminAds(AdStatus status) =>
+      _route('GET /api/admin/ads?status=${status.name}', () {
+        _admin();
+        final list = [
+          for (final a in ads.values.toList().reversed)
+            if (a.status == status) a,
+        ];
+        return AdminAds(list, {
+          for (final a in list) a.ownerId: ?climbers[a.ownerId],
+        }, every: adEvery);
+      });
+
+  @override
+  Future<Ad> reviewAd(String adId, {required bool approve}) =>
+      _route('POST /api/admin/ads/$adId/${approve ? 'approve' : 'reject'}', () {
+        _admin();
+        final ad = ads[adId];
+        if (ad == null) throw const ApiException(404, 'no such ad');
+        return ads[adId] = ad.copyWith(
+          status: approve ? AdStatus.approved : AdStatus.rejected,
+        );
+      });
+
+  @override
+  Future<void> setAdEvery(int every) =>
+      _route('PUT /api/admin/ads/settings', () {
+        _admin();
+        adEvery = every;
+      });
 
   @override
   Future<List<AdminClimber>> adminClimbers() =>

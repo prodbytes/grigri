@@ -7,6 +7,7 @@ import '../data/grigri_store.dart';
 import '../data/realtime.dart';
 import '../theme.dart';
 import 'admin_screen.dart';
+import 'ads_screen.dart';
 import 'chats_screen.dart';
 import 'common.dart';
 import 'discover_screen.dart';
@@ -16,8 +17,8 @@ import 'plan_editor.dart';
 import 'plans_screen.dart';
 import 'profile_screen.dart';
 
-/// The app's tabs: Discover, Plans, Chats, Notifications and Profile, and
-/// Admin for admins. While the app is in the foreground it keeps a live
+/// The app's tabs: Discover, Plans, Chats, Notifications and Profile, Ads
+/// for Premium climbers (specs/ads.md), and Admin for admins. While the app is in the foreground it keeps a live
 /// connection (specs/live-updates.md), whose hints refresh what changed,
 /// and refreshes from the API: the tab I open, and every [refreshEvery]
 /// my plans, requests, notifications and the open tab; only every
@@ -37,6 +38,8 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
+  /// The open tab, by id (not its place in the bar: Ads and Admin come
+  /// and go).
   int _tab = 0;
 
   static const _discover = 0;
@@ -44,7 +47,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   static const _chats = 2;
   static const _notices = 3;
   static const _profile = 4;
-  static const _admin = 5;
+  static const _ads = 5;
+  static const _admin = 6;
 
   /// The notifications that were unread when I opened the tab.
   Set<String> _fresh = const {};
@@ -129,6 +133,8 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
         store.refreshNotices();
       case _profile when !regular:
         store.refreshPremium();
+      case _ads when !regular:
+        store.refreshMyAds();
       case _admin:
         store.refreshAdmin();
     }
@@ -159,15 +165,29 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     final toReview = store.toReview.length;
     final unread = store.unreadNotices;
     final admin = store.admin;
+    final ads = store.premium.active;
     final l = context.l10n;
-    if (!admin && _tab == _admin) _tab = 0;
+    final tabs = [
+      _discover,
+      _plans,
+      _chats,
+      _notices,
+      _profile,
+      if (ads) _ads,
+      if (admin) _admin,
+    ];
+    if (!tabs.contains(_tab)) _tab = _discover;
     final screens = [
-      DiscoverScreen(onCreatePlan: _createPlan),
-      PlansScreen(onCreatePlan: _createPlan),
-      ChatsScreen(onDiscover: () => _select(_discover)),
-      NoticesScreen(fresh: _fresh),
-      const ProfileScreen(),
-      if (admin) const AdminScreen(),
+      for (final tab in tabs)
+        switch (tab) {
+          _discover => DiscoverScreen(onCreatePlan: _createPlan),
+          _plans => PlansScreen(onCreatePlan: _createPlan),
+          _chats => ChatsScreen(onDiscover: () => _select(_discover)),
+          _notices => NoticesScreen(fresh: _fresh),
+          _profile => const ProfileScreen(),
+          _ads => const AdsScreen(),
+          _ => const AdminScreen(),
+        },
     ];
     Widget badged(IconData icon, int count) => Badge(
       isLabelVisible: count > 0,
@@ -177,11 +197,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       child: Icon(icon),
     );
     return Scaffold(
-      body: IndexedStack(index: _tab, children: screens),
+      body: IndexedStack(index: tabs.indexOf(_tab), children: screens),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: _select,
-        // Every tab keeps its label, six tabs too: the labels are short
+        selectedIndex: tabs.indexOf(_tab),
+        onDestinationSelected: (i) => _select(tabs[i]),
+        // Every tab keeps its label, seven tabs too: the labels are short
         // words in 11 pt, which fit a 360 dp phone.
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: [
@@ -210,6 +230,12 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             selectedIcon: const Icon(Icons.person),
             label: l.tabProfile,
           ),
+          if (ads)
+            NavigationDestination(
+              icon: const Icon(Icons.campaign_outlined),
+              selectedIcon: const Icon(Icons.campaign),
+              label: l.tabAds,
+            ),
           if (admin)
             NavigationDestination(
               icon: const Icon(Icons.admin_panel_settings_outlined),

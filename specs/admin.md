@@ -1,8 +1,11 @@
 # Admin
 
 The **Admin** tab, for [admins](roles.md) only (rbacr's `admin` role of
-the `grigri` system; the API checks on every request). It starts over
-with one feature: everyone, to block or unblock.
+the `grigri` system; the API checks on every request). A sub-navigation
+(tabs under its title, "Admin") holds **Users**, everyone, to block or
+unblock (below), and **Ads**, to approve or reject Premium climbers' ads
+and set how often the deck shows them ([ads.md](ads.md#admin--ads)). The
+refresh button reloads the open one.
 
 ## The list
 

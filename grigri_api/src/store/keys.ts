@@ -1,8 +1,10 @@
 // The single table's keys (see grigri_api/README.md, "Data model"). Every
 // item has pk and sk; three sparse global secondary indexes:
 //   gsi1: plans by start (PLANS), open requests (OPENREQ, the admin's),
-//         and every profile (CLIMBERS, the match scores' run)
-//   gsi2: a climber's own requests (ASKED#<climberId>)
+//         every profile (CLIMBERS, the match scores' run), and ads by
+//         status (ADS#<status>)
+//   gsi2: a climber's own requests (ASKED#<climberId>) and ads
+//         (ADSBY#<ownerId>)
 //   gsi3 (keys only): an account's sessions (SESSIONS#<subject>)
 
 export const key = {
@@ -19,6 +21,10 @@ export const key = {
   pic: (planId: string, picId: string) => ({ pk: `PLAN#${planId}`, sk: `PIC#${picId}` }),
   /** A climber's Premium subscription, as last read from Stripe (src/premium.ts). */
   premium: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'PREMIUM' }),
+  /** An ad (src/domain/ads.ts). */
+  ad: (adId: string) => ({ pk: `AD#${adId}`, sk: 'AD' }),
+  /** How often the deck shows ads (the admins' setting). */
+  adSettings: () => ({ pk: 'META#ADS', sk: 'META' }),
   /** When the demo showcase was last written (seed/seed.ts). */
   showcase: () => ({ pk: 'META#SHOWCASE', sk: 'META' }),
 };
@@ -38,6 +44,8 @@ export const index = {
   byStart: { name: 'gsi1', pk: 'PLANS' },
   openRequests: { name: 'gsi1', pk: 'OPENREQ' },
   climbers: { name: 'gsi1', pk: 'CLIMBERS' },
+  adsByStatus: { name: 'gsi1', pk: (status: string) => `ADS#${status}` },
   asked: { name: 'gsi2', pk: (climberId: string) => `ASKED#${climberId}` },
+  adsBy: { name: 'gsi2', pk: (ownerId: string) => `ADSBY#${ownerId}` },
   sessions: { name: 'gsi3', pk: (subject: string) => `SESSIONS#${subject}` },
 };
