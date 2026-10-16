@@ -115,10 +115,32 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester, sampleApi());
-      expect(find.text('THE PLAN'), findsWidgets);
       expect(find.text('Block Hall'), findsOneWidget);
+      expect(find.text('Organized by'), findsWidgets);
       expect(find.text('Kit Marlow'), findsOneWidget);
       expect(find.text('Your grades'), findsWidgets);
+    });
+
+    testWidgets('a card shows its crag photo, credited; none without one', (
+      tester,
+    ) async {
+      final api = sampleApi()
+        ..covers['boulder-night'] = const DeckCover(
+          key: 'crags/x/a.jpg',
+          crag: 'Siurana',
+          author: 'A. Example',
+          license: 'CC BY-SA 4.0',
+        );
+      await pumpApp(tester, api);
+      expect(find.byKey(const ValueKey('cover boulder-night')), findsOneWidget);
+      expect(
+        find.text('Siurana · Photo: A. Example, CC BY-SA 4.0'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('cover grey-cliffs')), findsNothing);
+      expect(find.textContaining('Photo:'), findsNothing);
     });
 
     testWidgets('cards: the organizer +N, the date and time apart, no '
@@ -1481,7 +1503,7 @@ void main() {
       expect(find.text('Español'), findsOneWidget);
       await tapTab(tester, 'Buscar');
       expect(find.text('Descubre planes'), findsOneWidget);
-      expect(find.text('EL PLAN'), findsWidgets);
+      expect(find.text('Organiza'), findsWidgets);
 
       await tapTab(tester, 'Yo');
       await tester.scrollUntilVisible(find.text('Español'), 200);

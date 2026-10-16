@@ -860,3 +860,18 @@ spec.
       advertisement (every feature stays for everyone), and the open
       questions: what advertisement covers, how it's paid, other
       currencies.
+61. **Make the home screen look nicer, after popular apps' home screens
+    (Strava, Tinder), using the pictures.**
+    - [Screens](screens.md): the Discover card is a dating-app-style
+      card: the crag's photo edge to edge (or a backdrop in the
+      discipline's colors), the plan over it in white on a dark fade
+      (the place large and bold, area, date and time, grades, Your
+      grades, the photo's credit), and below, always in view, the
+      organizer with the group's avatars and +N; notes and profile on
+      scrolling. Still no distance, date and time apart, notes cut to
+      three lines (request 37). The ✕ and ✓ buttons are raised, ✓
+      bigger.
+    - [API](api.md), [Pics](pics.md#on-the-deck): `GET /api/discover`
+      gives each plan's cover, its best GriGri Pics photo with credit.
+    - Cost: none new; the covers come from the catalog the function
+      already keeps, and the photos are served by the site's CloudFront.

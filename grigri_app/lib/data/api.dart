@@ -205,11 +205,15 @@ class PlanList {
     this.plans,
     this.climbers, {
     this.distanceKm = const {},
+    this.covers = const {},
     this.scores = const {},
   });
 
   final List<Plan> plans;
   final Climbers climbers;
+
+  /// For the deck: each plan's cover photo, for the plans that have one.
+  final Map<String, DeckCover> covers;
 
   /// For the deck: how far each plan is from my nearest location or area,
   /// in whole km, for the plans whose distance is known.
@@ -389,6 +393,10 @@ abstract final class ApiJson {
     distanceKm: {
       for (final e in (json['distanceKm'] as Map? ?? {}).entries)
         e.key as String: (e.value as num).round(),
+    },
+    covers: {
+      for (final e in (json['covers'] as Map? ?? {}).entries)
+        e.key as String: ?DeckCover.fromJson(e.value),
     },
     scores: {
       for (final e in (json['scores'] as Map? ?? {}).entries)

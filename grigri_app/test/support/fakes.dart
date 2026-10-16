@@ -94,6 +94,10 @@ class FakeApi implements GrigriApi, SessionApi {
   /// tests set them).
   final matchScores = <String, MatchScore>{};
 
+  /// The deck's cover photos (the server's, from GriGri Pics; tests set
+  /// them).
+  final covers = <String, DeckCover>{};
+
   /// Who an admin blocked: they get 403 "blocked" from every route.
   final blocked = <String>{};
 
@@ -393,6 +397,7 @@ class FakeApi implements GrigriApi, SessionApi {
       list,
       _mention(list.expand(_planPeople)),
       distanceKm: {for (final p in list) p.id: ?distanceKm[p.id]},
+      covers: {for (final p in list) p.id: ?covers[p.id]},
       // As the API: admins' decks only.
       scores: admin
           ? {for (final p in list) p.id: ?matchScores[p.id]}

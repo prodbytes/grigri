@@ -553,6 +553,11 @@ describe('the matchmaking flow', () => {
     // A plan at El Pati's sector: its own, then L'Olla (0.85 km away), then the area.
     const atPati = (await call(ada, 'POST', '/api/plans', { ...planBody, place: 'El Pati', sectorId: 'osm:n2', lat: 41.2602, lon: 0.938 })).plan.id;
     expect((await call(ada, 'GET', `/api/plans/${atPati}/pics`)).grigri.map((p: any) => p.cragId)).toEqual(['osm:n2', 'osm:n1', 'area:siurana']);
+    // The deck's covers: each plan's best photo, with its credit.
+    const deck = await call(ben, 'GET', '/api/discover');
+    expect(deck.covers[atPati]).toEqual({ key: 'crags/x/pati.jpg', crag: 'El Pati', author: 'A. Example', license: 'CC BY-SA 4.0' });
+    expect(deck.covers[typed].crag).toBe("L'Olla");
+    expect(deck.covers[planId]).toBeUndefined();
     // Nowhere near: none. The lookup route takes a point.
     expect((await call(ada, 'GET', `/api/plans/${planId}/pics`)).grigri).toEqual([]);
     const near = await call(ada, 'GET', '/api/pics', undefined, { lat: '41.2570', lon: '0.9300' });

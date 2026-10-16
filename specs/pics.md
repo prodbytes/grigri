@@ -53,6 +53,15 @@ and source page. The app shows the crag's name on it, and the caption and
 credit ("Photo: <author>, <license>", and the source to copy) when opened,
 as the licenses ask.
 
+### On the deck
+
+`GET /api/discover` gives each plan's first photo of that lookup as its
+**cover** (`covers`: key, crag, author, license), worked out from the
+catalog the function already keeps, so it costs no extra reads or calls.
+The Discover card shows it edge to edge, with "<crag> · Photo: <author>,
+<license>" over it ([screens](screens.md)); a plan without one shows a
+backdrop instead.
+
 ### Storage: S3, with annotations
 
 - **The bucket**: `<site stack>-pics-<account>` (`grigri-web-pics-…`,
@@ -115,7 +124,9 @@ Nothing while idle beyond storage; see [backend.md](backend.md#cost).
   $0.0002/month. Annotations are billed as S3 Standard storage (bytes).
 - **Lookups**: the catalog GET, once per warm function: about $0.0004 per
   1,000 cold starts. The plan's photos come with one extra API call per
-  plan screen opened (`GET /api/plans/{id}/pics`: ~$2 per million).
+  plan screen opened (`GET /api/plans/{id}/pics`: ~$2 per million). The
+  deck's covers ride on `GET /api/discover`: no extra call; each card's
+  photo is one CloudFront request, cached by the app and the CDN.
 - **Serving**: through the CloudFront the site already has, cached for a
   year: inside its free tier (1 TB and 10 million requests a month).
 - **Loading**: per deploy, one LIST, one annotation GET per photo, and a

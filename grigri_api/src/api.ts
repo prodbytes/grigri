@@ -64,6 +64,14 @@ export interface Photos {
   remove(keys: string[]): Promise<void>;
 }
 
+/** A plan's cover on the deck: a GriGri Pics photo, its crag and its credit. */
+export interface DeckCover {
+  key: string;
+  crag: string;
+  author: string;
+  license: string;
+}
+
 /** GriGri Pics: Grigri's own crag photos (specs/pics.md). */
 export interface GrigriPics {
   /** The catalog (pics/catalog.json); empty when there's none yet. */
@@ -472,8 +480,32 @@ export class Api {
     const climbers = Object.fromEntries(
       plans.flatMap((p) => [p.organizerId, ...p.memberIds]).flatMap((cid) => (everyone[cid] ? [[cid, publicClimber(everyone[cid])]] : [])),
     );
-    const scores = s.caller.admin ? await this.deckScores(plans, s) : undefined;
-    return { plans, distanceKm, climbers, ...(scores ? { scores } : {}) };
+    const [covers, scores] = await Promise.all([
+      this.deckCovers(plans),
+      s.caller.admin ? this.deckScores(plans, s) : Promise.resolve(undefined),
+    ]);
+    return { plans, distanceKm, climbers, covers, ...(scores ? { scores } : {}) };
+  }
+
+  /**
+   * Each plan's cover on the deck: its best GriGri Pics photo, with its
+   * crag and credit. From the catalog the function keeps (no extra
+   * reads); a plan without one has none, and never fails the deck.
+   */
+  private async deckCovers(plans: Plan[]): Promise<Record<string, DeckCover>> {
+    if (!this.deps.pics || plans.length === 0) return {};
+    try {
+      const catalog = await this.deps.pics.catalog();
+      const covers: Record<string, DeckCover> = {};
+      for (const p of plans) {
+        const best = picsFor(catalog, { sectorId: p.sectorId, lat: p.lat, lon: p.lon, place: p.place, area: p.area })[0];
+        if (best) covers[p.id] = { key: best.key, crag: best.crag, author: best.author, license: best.license };
+      }
+      return covers;
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'deck covers failed', error: String(e) }));
+      return {};
+    }
   }
 
   /**
