@@ -1082,6 +1082,28 @@ void main() {
       expect(labels, ['Find', 'Plans', 'Chats', 'Alerts', 'Me']);
     });
 
+    testWidgets('every tab keeps its label, an admin\'s six too', (
+      tester,
+    ) async {
+      await pumpApp(tester, sampleApi(admin: true));
+      // On a 360 dp wide phone. (The test font's glyphs are full squares,
+      // too wide to measure whether labels fit; real fonts' do.)
+      tester.view.physicalSize = const Size(936, 2028);
+      await tester.pumpAndSettle();
+      final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(bar.labelBehavior, NavigationDestinationLabelBehavior.alwaysShow);
+      for (final label in ['Find', 'Plans', 'Chats', 'Alerts', 'Me', 'Admin']) {
+        expect(
+          find.descendant(
+            of: find.byType(NavigationBar),
+            matching: find.text(label),
+          ),
+          findsOneWidget,
+        );
+      }
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('admins list everyone, and block after a confirmation', (
       tester,
     ) async {

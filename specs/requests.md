@@ -849,3 +849,7 @@ spec.
       [docs/match-scores.md](../docs/match-scores.md) revised to match.
     - Cost: nothing new to run; the list is one index query, a block one
       write.
+59. **The nav icons were missing labels.** With the Admin tab (six
+    tabs), the bar showed only the selected tab's label.
+    - [Screens](screens.md): every tab always shows its label; the short
+      11 pt labels fit six tabs on a 360 dp phone.
