@@ -8,8 +8,8 @@ The same distribution serves the [API](api.md) under `/api/*` (the
 and people's photos under `/photos/*` (a private bucket); see
 [backend.md](backend.md).
 Both names live in the `grigri.nu01.com` Route 53 zone, delegated from
-`nu01.com`. `/` is the [index page](../grigri_index), which redirects to
-`/app/`.
+`nu01.com`. `/` is the [landing page](landing.md) ([grigri_index](../grigri_index)),
+which sends signed-in climbers on to `/app/`.
 
 ## Production
 
@@ -109,7 +109,9 @@ and a Content Security Policy:
   microphone, and allows the camera (the [route finder](route-finder.md))
   and location (which fills in [where I climb](matching.md) from the
   browser) to the app itself (`camera=(self)`, `geolocation=(self)`).
-- `/`: only the index page's redirect script, by its hash.
+- `/`: the [landing page](landing.md)'s own script, stylesheet, images and
+  the GriGri Pics catalog (`'self'`, no inline code), and location for
+  the page itself (`geolocation=(self)`).
 - `/api/*`, `/photos/*` and `/pics/*`: AWS's managed security headers policy.
 
 ## Access

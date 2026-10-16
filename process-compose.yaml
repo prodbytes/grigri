@@ -139,7 +139,7 @@ processes:
       backoff_seconds: 5
 
   5-index:
-    # The site root (grigri_index/site), which redirects to /app/. Floci's
+    # The site root (grigri_index/site), the landing page. Floci's
     # distribution uses it as the default origin.
     # GRIGRI_BIND_HOST: see scripts/flutter-web.sh.
     command: python3 -m http.server ${INDEX_PORT:-2113} --bind ${GRIGRI_BIND_HOST:-127.0.0.1} --directory grigri_index/site
