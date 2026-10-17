@@ -1242,7 +1242,7 @@ class AppLocalizationsCa extends AppLocalizations {
   String get signInBadge => '100% gratuït';
 
   @override
-  String get signInHeadline => 'Troba un pla d’escalada.';
+  String get signInHeadline => 'Uneix-te a un pla d’escalada.';
 
   @override
   String get signInFreeLine =>

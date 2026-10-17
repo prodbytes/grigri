@@ -1737,7 +1737,7 @@
   "@signInBadge": {
     "description": "Sign-in screen: badge over the headline."
   },
-  "signInHeadline": "Find a climbing plan.",
+  "signInHeadline": "Join a climbing plan.",
   "@signInHeadline": {
     "description": "Sign-in screen: the headline, Grigri's line."
   },

@@ -1196,3 +1196,13 @@ spec.
       card no longer shows the reason pill when the reason is that I
       don't climb the plan's discipline; other reasons still show.
     - Cost: none.
+
+82. **Say "Join a climbing plan" instead of "Find a climbing plan".**
+    - [README](README.md), [screens](screens.md), [landing](landing.md),
+      [App Store](app-store.md): Grigri's line is now "Join a climbing
+      plan", in all six languages: the sign-in headline, the landing
+      page's hero and title, the web app's and store's descriptions
+      (es "Únete a un plan de escalada", de "Schließ dich einem
+      Kletterplan an", fr "Rejoins un plan de grimpe", pt "Entre em um
+      plano de escalada", ca "Uneix-te a un pla d’escalada").
+    - Cost: none.

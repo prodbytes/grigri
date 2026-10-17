@@ -25,7 +25,7 @@ is "Alerts" in English.
 | **Ads** | Premium only ([ads.md](ads.md#the-ads-tab)): my ads, newest first, with their review status and **Delete**; **New ad**: text, link, a photo or video, a preview of the card, and **Send for review**. |
 | **Admin** | Admins only ([admin.md](admin.md)), with a sub-navigation: **Users** and **Ads** ([ads.md](ads.md#admin--ads): how often the deck shows ads, and the ads waiting, approved or rejected, with **Approve** / **Reject**). Users: everyone, by name (avatar and name; tap for their profile), "Blocked" under a blocked person, and **Block** (after a confirmation) or **Unblock**; nothing on my own row. |
 
-- **Sign-in**: the app's name and tagline ("Find a climbing plan: make
+- **Sign-in**: the app's name and tagline ("Join a climbing plan: make
   one, or swipe right on one, and climb together.") on the mountain night gradient,
   and **Sign in with Google** (Google's own button on the web). See
   [sign-in](sign-in.md).

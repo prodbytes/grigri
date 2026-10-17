@@ -1237,7 +1237,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInBadge => '100% free';
 
   @override
-  String get signInHeadline => 'Find a climbing plan.';
+  String get signInHeadline => 'Join a climbing plan.';
 
   @override
   String get signInFreeLine =>
