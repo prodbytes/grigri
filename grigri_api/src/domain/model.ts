@@ -4,7 +4,8 @@
 export const DISCIPLINES = ['sport', 'trad', 'bouldering', 'gym'] as const;
 export type Discipline = (typeof DISCIPLINES)[number];
 
-export const GEAR = ['rope', 'quickdraws', 'rack', 'crashPad', 'car'] as const;
+/** Gear someone owns: the group shares the first six; each climber needs their own of the rest. */
+export const GEAR = ['rope', 'quickdraws', 'rack', 'belayDevice', 'crashPad', 'car', 'harness', 'helmet', 'shoes'] as const;
 export type Gear = (typeof GEAR)[number];
 
 /**

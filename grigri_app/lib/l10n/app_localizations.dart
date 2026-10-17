@@ -172,6 +172,114 @@ abstract class AppLocalizations {
   /// **'Car'**
   String get gearCar;
 
+  /// Gear someone can bring: a belay device.
+  ///
+  /// In en, this message translates to:
+  /// **'Belay device'**
+  String get gearBelayDevice;
+
+  /// Gear someone can bring: a climbing harness.
+  ///
+  /// In en, this message translates to:
+  /// **'Harness'**
+  String get gearHarness;
+
+  /// Gear someone can bring: a climbing helmet.
+  ///
+  /// In en, this message translates to:
+  /// **'Helmet'**
+  String get gearHelmet;
+
+  /// Gear someone can bring: climbing shoes.
+  ///
+  /// In en, this message translates to:
+  /// **'Climbing shoes'**
+  String get gearShoes;
+
+  /// Title of the gear editor: the gear I own.
+  ///
+  /// In en, this message translates to:
+  /// **'Your gear'**
+  String get yourGear;
+
+  /// Button on the Profile tab's gear card: open the gear editor.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit gear'**
+  String get editGear;
+
+  /// Button on the Profile tab's gear card when I have listed none.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your gear'**
+  String get addGear;
+
+  /// The Profile tab's gear card when I have listed none.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the gear you own, with photos: your plans\' groups see it, and check they have what they need.'**
+  String get gearEmpty;
+
+  /// Gear editor section heading (shown uppercased): gear the group shares, like a rope.
+  ///
+  /// In en, this message translates to:
+  /// **'For the group'**
+  String get gearShared;
+
+  /// Hint under the "For the group" heading.
+  ///
+  /// In en, this message translates to:
+  /// **'The group shares these: a rope does for two.'**
+  String get gearSharedHint;
+
+  /// Gear editor section heading (shown uppercased): gear each climber needs their own of, like a harness.
+  ///
+  /// In en, this message translates to:
+  /// **'Your own'**
+  String get gearPersonal;
+
+  /// Hint under the "Your own" heading.
+  ///
+  /// In en, this message translates to:
+  /// **'Every climber needs their own.'**
+  String get gearPersonalHint;
+
+  /// Gear editor section heading (shown uppercased): photos of my gear.
+  ///
+  /// In en, this message translates to:
+  /// **'Photos'**
+  String get gearPhotos;
+
+  /// Plan screen, gear section: the group's listed gear covers what the plan needs.
+  ///
+  /// In en, this message translates to:
+  /// **'The group has all it needs.'**
+  String get planGearAllSet;
+
+  /// Plan screen, gear section: a discreet warning naming the gear the group lacks.
+  ///
+  /// In en, this message translates to:
+  /// **'Some gear is missing: {items}'**
+  String planGearMissing(String items);
+
+  /// Plan screen, gear section of a gym plan: nothing to check.
+  ///
+  /// In en, this message translates to:
+  /// **'The gym has ropes and mats, and rents the rest.'**
+  String get planGearGym;
+
+  /// Plan screen, gear section of a guided plan: only personal gear is checked.
+  ///
+  /// In en, this message translates to:
+  /// **'The guide brings the group\'s gear: check you have your own.'**
+  String get planGearGuided;
+
+  /// Plan screen, gear section: a member who has listed no gear.
+  ///
+  /// In en, this message translates to:
+  /// **'No gear listed'**
+  String get noGearListed;
+
   /// Button: save the form.
   ///
   /// In en, this message translates to:
@@ -609,12 +717,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pick your disciplines and the grades you climb.'**
   String get whatYouClimbHint;
-
-  /// Profile editor section heading (shown uppercased).
-  ///
-  /// In en, this message translates to:
-  /// **'Gear you can bring'**
-  String get gearYouCanBring;
 
   /// Hint under the gear heading.
   ///

@@ -44,8 +44,12 @@ extension GearL10n on Gear {
     Gear.rope => l.gearRope,
     Gear.quickdraws => l.gearQuickdraws,
     Gear.rack => l.gearRack,
+    Gear.belayDevice => l.gearBelayDevice,
     Gear.crashPad => l.gearCrashPad,
     Gear.car => l.gearCar,
+    Gear.harness => l.gearHarness,
+    Gear.helmet => l.gearHelmet,
+    Gear.shoes => l.gearShoes,
   };
 }
 

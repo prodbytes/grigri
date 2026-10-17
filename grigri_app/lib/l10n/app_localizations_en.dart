@@ -43,6 +43,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gearCar => 'Car';
 
   @override
+  String get gearBelayDevice => 'Belay device';
+
+  @override
+  String get gearHarness => 'Harness';
+
+  @override
+  String get gearHelmet => 'Helmet';
+
+  @override
+  String get gearShoes => 'Climbing shoes';
+
+  @override
+  String get yourGear => 'Your gear';
+
+  @override
+  String get editGear => 'Edit gear';
+
+  @override
+  String get addGear => 'Add your gear';
+
+  @override
+  String get gearEmpty =>
+      'Add the gear you own, with photos: your plans\' groups see it, and check they have what they need.';
+
+  @override
+  String get gearShared => 'For the group';
+
+  @override
+  String get gearSharedHint => 'The group shares these: a rope does for two.';
+
+  @override
+  String get gearPersonal => 'Your own';
+
+  @override
+  String get gearPersonalHint => 'Every climber needs their own.';
+
+  @override
+  String get gearPhotos => 'Photos';
+
+  @override
+  String get planGearAllSet => 'The group has all it needs.';
+
+  @override
+  String planGearMissing(String items) {
+    return 'Some gear is missing: $items';
+  }
+
+  @override
+  String get planGearGym => 'The gym has ropes and mats, and rents the rest.';
+
+  @override
+  String get planGearGuided =>
+      'The guide brings the group\'s gear: check you have your own.';
+
+  @override
+  String get noGearListed => 'No gear listed';
+
+  @override
   String get save => 'Save';
 
   @override
@@ -287,9 +345,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get whatYouClimbHint =>
       'Pick your disciplines and the grades you climb.';
-
-  @override
-  String get gearYouCanBring => 'Gear you can bring';
 
   @override
   String get gearHint => 'Add photos of it, too.';

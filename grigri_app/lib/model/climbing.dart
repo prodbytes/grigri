@@ -109,5 +109,21 @@ class GradeRange {
   int get hashCode => Object.hash(scale, min, max);
 }
 
-/// Gear someone can bring.
-enum Gear { rope, quickdraws, rack, crashPad, car }
+/// Gear someone owns and can bring. The group shares the [shared] kind
+/// (a rope does for two climbers); each climber needs their own of the
+/// rest (a harness).
+enum Gear {
+  rope(shared: true),
+  quickdraws(shared: true),
+  rack(shared: true),
+  belayDevice(shared: true),
+  crashPad(shared: true),
+  car(shared: true),
+  harness(shared: false),
+  helmet(shared: false),
+  shoes(shared: false);
+
+  const Gear({required this.shared});
+
+  final bool shared;
+}

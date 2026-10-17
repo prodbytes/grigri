@@ -182,7 +182,8 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   or V VB..V13); bouldering uses boulders, the rest routes. Accept the old
   names `french` (= routes) and `vScale` (= boulders) on input; always
   store and return the new names. Gear: rope, quickdraws, rack,
-  crashPad, car.
+  belayDevice, crashPad, car (for the group), harness, helmet, shoes (each
+  climber's own); see [gear](gear.md).
 - **Location**: `{"name", "lat", "lon"}`: a named point (a crag, gym
   or town), name 1–120 characters, lat −90..90, lon −180..180.
 - **Plan**: `{"id", "organizerId", "discipline", "place", "area", "sectorId"?, "lat"?, "lon"?, "start"?, "end"?, "moreDays"?: [{"start", "end"}], "grades": {"scale","min","max"}, "type"?: "open" | "guided", "price"?: {"amount", "currency"}, "memberIds": [organizer first, then in join order], "notes", "demo"?: true}`. `type`: who lets people in ([plan types](matching.md#plan-types-who-decides)); absent is private (the input takes `"private"` too, and stores it as absent). `price`: a guided plan's, per climber; only guided plans have one. `demo`: made up (the seed's), see [backend](backend.md#the-seed); only the seed sets it (the API's input ignores it).
