@@ -282,7 +282,9 @@ subscription belongs to: `APPLE#<originalTransactionId>` / `APPLE`
 ### The App Store
 
 No keys or secrets: the API trusts Apple's root certificate, in the code.
-What the owner sets up in **App Store Connect**:
+What the owner sets up in **App Store Connect** (all done on 2026-10-17
+except the review screenshots and the localizations other than English;
+see [app-store](app-store.md)):
 
 1. **Agreements, Tax, and Banking**: accept the **Paid Applications**
    agreement and fill in the bank account and tax forms (nothing can be

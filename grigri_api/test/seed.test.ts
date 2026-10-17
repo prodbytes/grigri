@@ -1,9 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { planType } from '../src/domain/model.js';
 import { planInput, profileInput } from '../src/domain/validate.js';
 import { seedData } from '../seed/data.js';
 import { SEED_ADVERTISER, seedAds, seedAdvertiser } from '../seed/ads.js';
 import { adLink, MAX_AD_TEXT } from '../src/domain/ads.js';
-import { assertSeedable } from '../seed/seed.js';
+import { assertSeedable, writeAds } from '../seed/seed.js';
+import type { Store } from '../src/store/store.js';
+import { FakeStore } from './fake-store.js';
 import { showcaseData } from '../seed/showcase.js';
 
 describe('seed data', () => {
@@ -60,6 +63,43 @@ describe('seed ads', () => {
   });
 });
 
+describe('sample ads, written with the showcase', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  const photo = () => new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/jpeg' } });
+
+  it('copies each photo once, and keeps an ad\'s status and dates', async () => {
+    const store = new FakeStore();
+    const fetch = vi.fn(async () => photo());
+    vi.stubGlobal('fetch', fetch);
+    const put: string[] = [];
+    const putPhoto = async (key: string) => { put.push(key); };
+    const first = new Date('2030-05-01T10:00:00.000Z');
+    const ads = seedAds(first);
+    await writeAds(store as unknown as Store, ads, putPhoto);
+    expect([...store.ads.values()].every((a) => a.status === 'approved' && a.media)).toBe(true);
+    expect(put).toHaveLength(ads.length);
+
+    // An admin rejects one; the showcase runs again later.
+    const rejected = ads[0]!.ad.id;
+    store.ads.set(rejected, { ...store.ads.get(rejected)!, status: 'rejected' });
+    await writeAds(store as unknown as Store, seedAds(new Date('2030-05-02T10:00:00.000Z')), putPhoto);
+    expect(fetch).toHaveBeenCalledTimes(ads.length);
+    expect(store.ads.get(rejected)!.status).toBe('rejected');
+    for (const a of store.ads.values()) expect(a.createdAt).toBe(first.toISOString());
+  });
+
+  it('saves an ad without its photo when the copy fails, and tries again next time', async () => {
+    const store = new FakeStore();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })));
+    const ads = seedAds(new Date('2030-05-01T10:00:00.000Z'));
+    await writeAds(store as unknown as Store, ads, async () => {});
+    expect([...store.ads.values()].every((a) => a.media === undefined)).toBe(true);
+    vi.stubGlobal('fetch', vi.fn(async () => photo()));
+    await writeAds(store as unknown as Store, ads, async () => {});
+    expect([...store.ads.values()].every((a) => a.media !== undefined)).toBe(true);
+  });
+});
+
 describe('demo showcase', () => {
   const now = new Date('2030-05-01T10:00:00.000Z');
   const data = showcaseData(now);
@@ -84,6 +124,18 @@ describe('demo showcase', () => {
       const there = data.plans.filter((p) => `${p.place} ${p.area}`.includes(place));
       expect(there.length).toBeGreaterThanOrEqual(6);
       for (const p of there) expect(p.lat !== undefined && p.lon !== undefined).toBe(true);
+    }
+  });
+
+  it('is mostly private plans, some open, a few guided ones led by their guide alone', () => {
+    const count = (t: string) => data.plans.filter((p) => planType(p) === t).length;
+    expect(count('private')).toBeGreaterThan(count('open') + count('guided'));
+    expect(count('open')).toBeGreaterThanOrEqual(3);
+    expect(count('guided')).toBeGreaterThanOrEqual(2);
+    expect(count('guided')).toBeLessThan(count('open'));
+    for (const p of data.plans.filter((p) => planType(p) === 'guided')) {
+      expect(p.price).toBeDefined();
+      expect(p.memberIds).toEqual([p.organizerId]);
     }
   });
 

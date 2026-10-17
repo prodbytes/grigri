@@ -1398,7 +1398,73 @@ spec.
       in the profile item, and members' profiles already come with the
       plan.
 
-91. **Increment the Y version, merge all changes, and submit for review
+91. **On Apple's App Store Connect, create all the resources needed to
+    publish the app and submit it (after merging and syncing all
+    changes); make sure the app icon shows.**
+    - [App Store](app-store.md): the App ID `com.nu01.grigri` has Sign in
+      with Apple. The app record is **Grigri Climbing** (`6823947725`;
+      "Grigri" is taken), with subtitle, categories, content rights, a
+      16+ age rating (overriding Apple's 13+), Free in 175 countries, the
+      published privacy label, review contact and notes (no demo account:
+      Sign in with Apple), and five 6.3-inch screenshots of made-up demo
+      data. Apple now requires the 6.3-inch set, not the 6.9-inch one.
+    - [Premium](premium.md): the **Grigri Premium** group with the
+      monthly ($19.99) and yearly ($199.99, paid upfront) subscriptions,
+      available everywhere, with English names and review notes, and
+      both App Store Server Notifications URLs pointing at production.
+    - The icon: App Store Connect shows a grid placeholder until a build
+      is processed. The GA archive already has the logo, so uploading it
+      is the fix; nothing needs generating.
+    - Not submitted yet: the GA build (0.1.202610171131) still has to be
+      uploaded, and each subscription needs its review screenshot.
+    - Cost: none beyond the Apple Developer Program ($99 a year). App
+      Store Connect, TestFlight and the notifications are free.
+
+92. **Generate more demo plans, mostly private, some open, a few guided.**
+    - [Backend](backend.md#the-demo-showcase): the demo showcase grows
+      from twenty plans to thirty-seven: ten more private ones (Siurana's
+      Esperó Primavera, Montsant, Arco, Céüse over two days, Rodellar,
+      Albarracín's boulders, Chulilla, Stanage, Gorges du Tarn, Red River
+      Gorge), four open ones (Barcelona's climbing gym, Montgai, an
+      afternoon at Siurana's L'Olla, Fontainebleau circuits) and three
+      guided ones (Montserrat multipitch, a Margalef gym-to-crag day, El
+      Chorro), led by two new made-up guides, Ferran Roig and Ailsa Moray.
+      Before, every showcase plan was private. `SHOWCASE_VERSION` is 4,
+      so every stage rewrites the showcase on its next deck.
+    - A test checks the mix: mostly private, at least three open, fewer
+      guided than open, and each guided plan priced with its guide alone.
+    - Cost: about 17 more DynamoDB writes twice a day per stage, a
+      fraction of a cent a month. No new resource.
+
+93. **Flipping through all the plans showed no ad: make sure the sample
+    ads are up on local, RC and GA.**
+    - Why none showed: the sample ads were merged after the last release
+      (0.1.202610171131), so RC and GA ran without them; and they were
+      written only by the test seed, which production never gets.
+    - [Ads](ads.md#sample-ads), [backend](backend.md#the-demo-showcase):
+      the sample ads (and their advertiser, Climbing Siurana) move from
+      the test seed to the demo showcase, so every stage has them,
+      production included. `SHOWCASE_VERSION` goes to 5, so each stage
+      writes them on its first deck after the deploy. Rewriting keeps an
+      ad's status and dates (a rejected one stays rejected; they never
+      jump ahead of real ads), and a photo is copied only once.
+    - Cost: none to speak of. Four more writes and reads twice a day with
+      the showcase; about 1 MB of photos in production's photos bucket (a
+      fraction of a cent a month).
+
+94. **At the top of the plan card, beside "sport", show a pill with the
+    plan's type.**
+    - [Screens](screens.md) and [matching](matching.md#plan-types-who-decides): the
+      Discover card's type pill moves from the bottom row (beside the
+      grades) to the top, beside the discipline, and private plans get
+      one too: **Private** with a lock, **Open: join at once** with an
+      open door, **Guided · €60** with a flag. The bottom row keeps the
+      grades and **Your grades**.
+    - A widget test checks a private plan's card shows **Private** in the
+      top pill.
+    - Cost: none (app only).
+
+95. **Increment the Y version, merge all changes, and submit for review
     on the App Store.**
     - [Release](release.md): `version.Y.txt` is now 2, so releases are
       `0.2.<Z>`; the App Store's first version is 0.2. The example
