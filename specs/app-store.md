@@ -68,6 +68,10 @@ TestFlight comes first, then review for the App Store.
 - **`make ipa`**: a signed release `.ipa` for App Store Connect
   (`flutter build ipa --release`, with the version, build number and
   build settings `make ios` uses), in `grigri_app/build/ios/ipa/`.
+  It only exports (`destination` `export`): nothing reaches App Store
+  Connect until it's uploaded ([Build and upload](#build-and-upload)),
+  and until then App Store Connect shows a grid placeholder for the
+  app's icon.
 
 The four the guidelines asked for are merged: **Sign in with Apple**
 (4.8), **account deletion** in Me → Delete account (5.1.1(v)),

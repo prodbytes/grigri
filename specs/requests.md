@@ -1505,3 +1505,17 @@ spec.
     - Cost: none to speak of. Nominatim is free; a search is one Lambda
       call, only when an advertiser asks; the deck's check is arithmetic
       on ads it already reads.
+
+97. **App Store Connect shows a grid instead of Grigri Climbing's app
+    icon: check why and fix it.**
+    - The icon was fine (`AppIcon` complete, the 1024 px one opaque RGB,
+      in the archive too). App Store Connect takes the icon from a
+      processed build, and the 0.1.202610171131 archive had only been
+      exported by `make ipa`, not yet processed there. It shows now.
+    - Uploaded that archive again with `xcodebuild -exportArchive`
+      (`destination` `upload`); Xcode bumped the build number, so it's
+      build `1792236693`, a duplicate of `1792236692`. Submit the 0.2
+      build `1792239420` as planned; leave the duplicate unused.
+    - [App Store](app-store.md): `make ipa` only exports, and the icon
+      placeholder lasts until a build is uploaded.
+    - Cost: none.
