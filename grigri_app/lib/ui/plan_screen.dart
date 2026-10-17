@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../model/plan.dart';
+import '../model/report.dart';
 import '../theme.dart';
 import 'chat_screen.dart';
 import 'common.dart';
 import 'chat_media.dart';
+import 'moderation.dart';
 import 'plan_editor.dart';
 import 'plan_gear.dart';
 import 'plan_pics.dart';
@@ -78,6 +80,12 @@ class _PlanScreenState extends State<PlanScreen> {
               onPressed: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => PlanEditor(plan: plan)),
               ),
+            ),
+          // ⋮: report the plan, or block its organizer (not on my own).
+          if (!organizing)
+            ModerationMenu(
+              report: ReportTarget(ReportKind.plan, plan.id),
+              person: store.climber(plan.organizerId),
             ),
         ],
       ),

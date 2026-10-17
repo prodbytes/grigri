@@ -1,5 +1,5 @@
 name: grigri_app
-description: "Grigri: find a climbing plan"
+description: "Grigri: join a climbing plan"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -39,6 +39,10 @@ dependencies:
   google_sign_in: ^7.2.0
   http: ^1.6.0
   google_sign_in_web: ^1.1.3
+  # Sign in with Apple, on iOS (specs/sign-in.md; App Store guideline 4.8).
+  sign_in_with_apple: ^8.2.0
+  # SHA-256 of Sign in with Apple's nonce.
+  crypto: ^3.0.6
   # Translations (lib/l10n, specs/i18n.md). intl is the version
   # flutter_localizations pins.
   flutter_localizations:

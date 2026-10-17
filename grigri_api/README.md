@@ -50,13 +50,14 @@ deploys it to AWS.
 One table, `<stack name>` (`grigri-api`, `grigri-rc-api`,
 `grigri-local-api`), keys `pk` and `sk`, three sparse global secondary
 indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
-`ttl` (only sessions have it). The match scores live in their own table,
+`ttl` (sessions, plan photos and handled reports). The match scores live in their own table,
 `<stack name>-scores` ([specs/match-scores.md](../specs/match-scores.md)):
 
 | Item | pk | sk | Index keys | Holds |
 |---|---|---|---|---|
 | Session | `SESSION#<sha256 of the token>` | `SESSION` | gsi3: `SESSIONS#<subject>`, `<createdAt>` | `subject`, `email` (only if verified), `emailVerified`, `createdAt`, `lastUsedAt`, `ttl` (epoch seconds, lastUsedAt + 365 days) |
-| Sign-in link | `SUB#<iss>#<sub>` | `SUB` | | `climberId` |
+| Sign-in link | `SUB#<subject>` (`https://accounts.google.com#<sub>`, `apple#<sub>`) | `SUB` | | `climberId` |
+| Apple refresh token | `SUB#apple#<sub>` | `APPLE` | | `refreshToken` (private: to revoke at account deletion, [specs/sign-in.md](../specs/sign-in.md#apple-token-revocation)), `updatedAt` |
 | Profile | `CLIMBER#<id>` | `PROFILE` | gsi1: `CLIMBERS`, `<id>` | the Climber, plus `subject` (never returned; none for the seed's) |
 | Membership | `CLIMBER#<id>` | `MEMBER#<planId>` | | "plans I'm in" |
 | Pass | `CLIMBER#<id>` | `PASS#<planId>` | | out of my deck (swiped left, left, or dismissed) |
@@ -65,6 +66,10 @@ indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
 | Join request | `PLAN#<id>` | `REQ#<climberId>` | gsi2: `ASKED#<climberId>`, `<time>#<planId>`; gsi1 while open: `OPENREQ`, `<time>#<planId>#<climberId>` | the JoinRequest (with `nudgedAt` once nudged), plus `joined` and `dismissed` |
 | Message | `PLAN#<id>` | `MSG#<time>#<messageId>` | | the Message |
 | Plan photo (Your Pics) | `PLAN#<id>` | `PIC#<picId>` | | the PlanPic, plus `ttl` (400 days after it's added) |
+| Report | `REPORT#<id>` | `REPORT` | gsi1 while open: `REPORTS#open`, `<time>#<id>` | the Report (a copy of the content, whose, who reported, why), plus `ttl` once handled (a year later) |
+| Block | `CLIMBER#<blocker>` | `BLOCK#<blocked>` | | I blocked them ([specs/moderation.md](../specs/moderation.md)) |
+| Blocked by | `CLIMBER#<blocked>` | `BLOCKEDBY#<blocker>` | | the mirror, never returned: one `begins_with(sk, 'BLOCK')` query gives a climber's blocks either way |
+| Admins | `META#ADMINS` | `META` | | `ids`, a string set: whom to tell of new reports (checked with rbacr first) |
 
 Access patterns: every authenticated request gets its session (an
 eventually consistent read, retried consistently on a miss, so a session
@@ -74,7 +79,8 @@ requests" queries gsi2; the match scoring run lists every profile from gsi1
 `CLIMBERS`; the admin's open requests query gsi1 `OPENREQ`
 (only open requests carry those keys); a plan's requests and chat are one
 partition (`begins_with` on `REQ#` / `MSG#`, `after` as a key range). A
-climber's memberships, passes and notices are one partition.
+climber's memberships, passes, notices and blocks are one partition; open
+reports are gsi1 `REPORTS#open`.
 
 Races: accept, reject, leave, admin answers and plan edits write the plan
 (version check), its changed requests, memberships and notes in one

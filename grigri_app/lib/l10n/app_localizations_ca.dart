@@ -204,6 +204,10 @@ class AppLocalizationsCa extends AppLocalizations {
       'No s\'ha pogut iniciar la sessió amb Google. Torna-ho a provar.';
 
   @override
+  String get errorSignInApple =>
+      'No s\'ha pogut iniciar la sessió amb Apple. Torna-ho a provar.';
+
+  @override
   String get errorSession =>
       'No s\'ha pogut iniciar la sessió. Torna-ho a provar.';
 
@@ -220,6 +224,9 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get signInWithGoogle => 'Inicia la sessió amb Google';
+
+  @override
+  String get signInWithApple => 'Inicia la sessió amb Apple';
 
   @override
   String get tabDiscover => 'Cerca';
@@ -329,6 +336,13 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get bioLabel => 'Sobre tu';
+
+  @override
+  String get gradeSystem => 'Sistema de graus';
+
+  @override
+  String get gradeSystemHint =>
+      'Com s\'escriuen els graus a l\'app, aquí per a una via i un bloc.';
 
   @override
   String get whatYouClimb => 'Què escales';
@@ -1299,7 +1313,7 @@ class AppLocalizationsCa extends AppLocalizations {
   String get signInBadge => '100% gratuït';
 
   @override
-  String get signInHeadline => 'Troba un pla d’escalada.';
+  String get signInHeadline => 'Uneix-te a un pla d’escalada.';
 
   @override
   String get signInFreeLine =>
@@ -1406,4 +1420,103 @@ class AppLocalizationsCa extends AppLocalizations {
   @override
   String get errorDeleteAccount =>
       'No s\'ha pogut eliminar el teu compte. Torna-ho a provar.';
+
+  @override
+  String get moreActions => 'Més';
+
+  @override
+  String get report => 'Denuncia';
+
+  @override
+  String blockPerson(String name) {
+    return 'Bloqueja $name';
+  }
+
+  @override
+  String get reportTitle => 'Per què ho denuncies?';
+
+  @override
+  String get reportReasonSpam => 'Correu brossa';
+
+  @override
+  String get reportReasonHarassment => 'Assetjament';
+
+  @override
+  String get reportReasonInappropriate => 'Contingut inadequat';
+
+  @override
+  String get reportReasonFake => 'Perfil fals';
+
+  @override
+  String get reportReasonOther => 'Un altre motiu';
+
+  @override
+  String get reportDetailsHint => 'Res més que hàgim de saber? (opcional)';
+
+  @override
+  String get reportSend => 'Envia la denúncia';
+
+  @override
+  String get reportThanks => 'Gràcies, ho revisarem en menys de 24 hores.';
+
+  @override
+  String get blockPersonMessage =>
+      'No veureu els plans de l’altre, cap dels dos podrà demanar unir-se a un pla on sigui l’altre, les seves sol·licituds als teus plans es rebutgen i no veuràs els seus missatges. No se li diu.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return 'Has bloquejat $name.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Persones bloquejades';
+
+  @override
+  String get blockedPeopleEmpty => 'No has bloquejat ningú.';
+
+  @override
+  String get adminReportsTab => 'Denúncies';
+
+  @override
+  String get adminReportsEmpty => 'No hi ha denúncies per revisar.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Denunciat per $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Perfil';
+
+  @override
+  String get reportKindPlan => 'Pla';
+
+  @override
+  String get reportKindMessage => 'Missatge del xat';
+
+  @override
+  String get reportKindPic => 'Foto del pla';
+
+  @override
+  String get reportKindAd => 'Anunci';
+
+  @override
+  String get reportDismiss => 'Descarta';
+
+  @override
+  String get reportRemove => 'Treu el contingut';
+
+  @override
+  String get reportBlock => 'Bloqueja l’escalador';
+
+  @override
+  String get noticeReportsTitle => 'Noves denúncies per revisar';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Denúncies · respon en menys de 24 hores';
+
+  @override
+  String get errorObjectionable =>
+      'Mantén un to amable: hi ha paraules que Grigri no permet.';
 }

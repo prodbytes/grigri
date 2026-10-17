@@ -154,7 +154,7 @@ Draft copy (English); keep to the "plans, not partners" wording
 ([README](README.md)):
 
 - **Name**: Grigri
-- **Subtitle** (30 characters): `Find a climbing plan`
+- **Subtitle** (30 characters): `Join a climbing plan`
 - **Promotional text** (170): `Make a plan for the crag or the gym, or
   swipe right on someone else's. Each match opens the group's chat.
   Free for every climber.`

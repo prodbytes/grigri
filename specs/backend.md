@@ -13,7 +13,7 @@ has no built-in demo data. The routes and JSON shapes are in
 | Site | https://grigri.nu01.com | https://rc.grigri.nu01.com | https://local.grigri.nu01.com:2543 |
 | API stack | `grigri-api` | `grigri-rc-api` | `grigri-local-api`, in Floci |
 | Data | **Real people's data, plus the demo showcase** (fictional, marked demo). Never gets the test seed | Made-up test data, re-seeded after each RC deploy, beside testers' real data | Made-up test data, seeded on every Floci start (Floci keeps nothing) |
-| Sign-in | A Google ID token (`GOOGLE_WEB_CLIENT_ID`) for the API's own session | Same | Same when `.env` has `GOOGLE_WEB_CLIENT_ID`; otherwise **dev mode** |
+| Sign-in | A Google ID token (`GOOGLE_WEB_CLIENT_ID`), or an Apple identity token for the bundle ID `com.nu01.grigri` (iOS), for the API's own session | Same | Same when `.env` has `GOOGLE_WEB_CLIENT_ID` (Apple's needs nothing); otherwise **dev mode** |
 | Admins | rbacr's `grigri` `admin` role, asked with `GRIGRI_RBACR_TOKEN` (repository secret) | Same | The local rbacr's, asked with `RBACR_TOKEN` in `.env` |
 | Backups | Point-in-time recovery (35 days), deletion protection | None | None |
 
@@ -57,11 +57,13 @@ who are members, or by an admin.
   `/pics/*`, with each photo's metadata in an S3 annotation; the function
   reads only its catalog, `pics/catalog.json`, once per warm instance.
 - **Auth: the API's own sessions** ([api.md](api.md#sessions)). Sign-in
-  sends a Google ID token once to `POST /api/session`; the function
-  verifies it (with [jose](https://github.com/panva/jose): RS256 against
-  Google's keys, cached while the function stays warm; issuer, audience
-  the web client ID or, for iPhones, one of the stage's iOS client IDs,
-  expiry) and returns an opaque session token (32
+  sends a Google ID token (or, on iOS, an Apple identity token) once to
+  `POST /api/session`; the function verifies it (with
+  [jose](https://github.com/panva/jose): RS256 against Google's or
+  Apple's keys, cached while the function stays warm; issuer, audience
+  the web client ID or, for iPhones, one of the stage's iOS client IDs
+  (Apple: the bundle ID), expiry, and Apple's nonce;
+  [sign-in.md](sign-in.md#token-checks)) and returns an opaque session token (32
   random bytes), stored only as its SHA-256 hash. Every other route but
   `GET /api/health` sends it as a bearer token, and the function reads
   the session (one DynamoDB read) before routing; a missing, unknown or
@@ -73,22 +75,34 @@ who are members, or by an admin.
   delete their account (`DELETE /api/me`, [sign-in](sign-in.md#deleting-my-account)). Google ID
   tokens last an hour and can't be refreshed quietly on the web, which
   had signed people out hourly.
-- **Identity**: a Google account (`https://accounts.google.com#<sub>`) is
-  linked to one climber id (random, made by the server at the first
-  `GET /api/me`, which starts the profile with the account's Google
-  name). Emails are only used to ask [rbacr](roles.md) about roles: kept on
+- **Identity**: a Google account (`https://accounts.google.com#<sub>`)
+  or an Apple ID (`apple#<sub>`) is linked to one climber id (random,
+  made by the server at the first `GET /api/me`, which starts the
+  profile with the account's name: Google's, or the one Apple gave the
+  app). An Apple account's refresh token, when a Sign in with Apple key
+  is configured, is kept privately (`SUB#apple#<sub>` / `APPLE`) only to
+  revoke it when the account is deleted
+  ([sign-in.md](sign-in.md#apple-token-revocation)). Emails are only used to ask [rbacr](roles.md) about roles: kept on
   the session (only when verified) and, privately, on a per-climber item
   (`CLIMBER#<id>` / `EMAIL`, written when the climber loads or saves their
   profile), so Grigri can ask rbacr about someone who isn't the caller
   (an ad's owner, a plan's organizer, whom an admin blocks); never on a
-  profile, never returned. The Google name is kept on the session only to
+  profile, never returned. The account's name is kept on the session only to
   start the profile.
 - **Admin**: a signed-in caller whose session's verified email holds
   rbacr's `grigri` `admin` role ([roles](roles.md)), checked on every
   request (rbacr's answer is kept 60 s). Admins list everyone and block
-  or unblock them ([admin.md](admin.md)): a profile item's `blocked`
-  attribute, which shuts its climber out of every route but signing
-  out.
+  or unblock them ([admin.md](admin.md)): rbacr's `blocked` role, which
+  shuts its climber out of every route but signing out; and they answer
+  reports ([moderation.md](moderation.md)).
+- **Moderation** ([moderation.md](moderation.md)): the API filters
+  objectionable words in what people post (a word list in the function);
+  reports are `REPORT#<id>` items, in the `REPORTS#open` partition of
+  `gsi1` while open and expiring (TTL) a year after they're handled;
+  someone's own blocks are two items, `CLIMBER#<me>` / `BLOCK#<them>` and
+  the mirror `CLIMBER#<them>` / `BLOCKEDBY#<me>`, so one query of a
+  climber's partition gives their blocks either way; the admins to tell
+  of new reports are one `META#ADMINS` item.
 - **Live updates** ([live-updates.md](live-updates.md)): after a change,
   the function publishes a tiny hint (`{"kind", "planId"}`, never data)
   to each affected climber's MQTT topic on **AWS IoT Core**
@@ -183,6 +197,7 @@ and use is billed per request. Prices are us-east-1's.
 | IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
 | Premium payments ([premium.md](premium.md#cost)) | Stripe: 2.9% + $0.30 per charge, plus 0.7% Billing; no monthly fee | $0 | Pay per payment; merchants of record take 5% + $0.50, the app stores 15–30%. One subscription item per subscriber in the table. |
 | Ads ([ads.md](ads.md#cost)) | Two reads and a small batch read per deck; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
+| Moderation ([moderation.md](moderation.md#data-and-cost)) | A report: a write, a read or two, a notice write per admin; a block: two writes; one small query more per deck and per join request | $0 | No new resources: items in the table, in-app notices (no email or push service), the word filter in the function (no moderation service), and blocked people's messages hidden in the app (no extra read per chat poll). |
 | Match scores ([match-scores.md](match-scores.md#cost)) | aityx System One: $0.042 per million input tokens (about $0.00007 a call, ~1,600 tokens); the scores table on demand; the scoring function only when run by hand | $0 | A decision API keeps the score's weights as data, each rule with its reason; it's called only for admins' decks and on-demand runs. |
 | Authorizer Lambda, arm64, 128 MB | $0.20 per million invocations + GB-seconds: one at each connect and one an hour per open connection (`refreshAfterInSeconds` 3600), ~30 ms each | $0 | A separate tiny function: the API's 256 MB bundle and role would be more than it needs. Hourly refresh, not every few minutes: sign-out reaches open connections within the hour at a twelfth of the invocations of a 5-minute refresh. |
 

@@ -141,9 +141,14 @@ RC's);
 repository secrets: `GRIGRI_RBACR_TOKEN`, `GRIGRI_AITYX_API_KEY`,
 `GRIGRI_STRIPE_SECRET_KEY` and `GRIGRI_STRIPE_WEBHOOK_SECRET` (Stripe's
 live mode), and `GRIGRI_STRIPE_SECRET_KEY_RC` and
-`GRIGRI_STRIPE_WEBHOOK_SECRET_RC` (test mode, for the RC) (secrets
-because the repository is public and run logs show variables);
-optional variable `GRIGRI_AITYX_URL` (aityx's stage, for a stage key). One-time setup:
+`GRIGRI_STRIPE_WEBHOOK_SECRET_RC` (test mode, for the RC), and
+`GRIGRI_APPLE_PRIVATE_KEY` (the Sign in with Apple key's `.p8`, for both
+stages) (secrets because the repository is public and run logs show
+variables); optional variables `GRIGRI_AITYX_URL` (aityx's stage, for a
+stage key), and `GRIGRI_APPLE_TEAM_ID` and `GRIGRI_APPLE_KEY_ID` (with
+the key: revoking Apple tokens on account deletion,
+[sign-in.md](sign-in.md#configuration-the-owner-does); without all
+three the deploy warns and Apple tokens aren't revoked). One-time setup:
 [grigri_infra/README.md](../grigri_infra/README.md).
 
 By hand, with admin credentials: `TAG=0.1.<Z>-GA bash scripts/deploy.sh`

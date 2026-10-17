@@ -87,8 +87,8 @@ Future<Uint8List?> choosePhoto(
   }
 }
 
-/// Edits my profile: my photo, about me, the grades I climb per
-/// discipline, and where I climb (my location and other areas, private,
+/// Edits my profile: my photo, about me, how grades are written, the
+/// grades I climb per discipline, and where I climb (my location and other areas, private,
 /// which rank the Discover deck). When is for plans; my gear has its own
 /// editor, from the Profile tab's gear card.
 /// My profile is made from my Google account at the first sign-in; this is
@@ -304,8 +304,9 @@ class _ProfileEditorState extends State<ProfileEditor> {
                   ),
               ],
             ),
+            label(l.gradeSystem, l.gradeSystemHint),
+            const GradeSystemToggle(examples: true),
             label(l.whatYouClimb, l.whatYouClimbHint),
-            const GradeSystemToggle(),
             for (final d in Discipline.values) _levelEditor(d),
             label(l.language),
             const LanguagePicker(),

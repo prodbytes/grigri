@@ -206,6 +206,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Anmeldung mit Google fehlgeschlagen. Versuch es noch einmal.';
 
   @override
+  String get errorSignInApple =>
+      'Anmeldung mit Apple fehlgeschlagen. Versuch es noch einmal.';
+
+  @override
   String get errorSession =>
       'Anmeldung fehlgeschlagen. Versuch es noch einmal.';
 
@@ -222,6 +226,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get signInWithGoogle => 'Mit Google anmelden';
+
+  @override
+  String get signInWithApple => 'Mit Apple anmelden';
 
   @override
   String get tabDiscover => 'Suche';
@@ -331,6 +338,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get bioLabel => 'Über dich';
+
+  @override
+  String get gradeSystem => 'Bewertungssystem';
+
+  @override
+  String get gradeSystemHint =>
+      'Wie Grade in der App geschrieben werden, hier für eine Route und einen Boulder.';
 
   @override
   String get whatYouClimb => 'Was du kletterst';
@@ -1308,7 +1322,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signInBadge => '100 % kostenlos';
 
   @override
-  String get signInHeadline => 'Finde einen Kletterplan.';
+  String get signInHeadline => 'Schließ dich einem Kletterplan an.';
 
   @override
   String get signInFreeLine => 'Kostenlos für alle: keine Karte, kein Abo.';
@@ -1415,4 +1429,104 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get errorDeleteAccount =>
       'Dein Konto konnte nicht gelöscht werden. Versuch es noch einmal.';
+
+  @override
+  String get moreActions => 'Mehr';
+
+  @override
+  String get report => 'Melden';
+
+  @override
+  String blockPerson(String name) {
+    return '$name blockieren';
+  }
+
+  @override
+  String get reportTitle => 'Warum meldest du das?';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonHarassment => 'Belästigung';
+
+  @override
+  String get reportReasonInappropriate => 'Unangemessene Inhalte';
+
+  @override
+  String get reportReasonFake => 'Falsches Profil';
+
+  @override
+  String get reportReasonOther => 'Sonstiges';
+
+  @override
+  String get reportDetailsHint =>
+      'Sonst noch etwas, das wir wissen sollten? (optional)';
+
+  @override
+  String get reportSend => 'Meldung senden';
+
+  @override
+  String get reportThanks => 'Danke, wir prüfen es innerhalb von 24 Stunden.';
+
+  @override
+  String get blockPersonMessage =>
+      'Ihr seht eure Pläne gegenseitig nicht mehr, keiner kann bei einem Plan des anderen anfragen, seine Anfragen zu deinen Plänen werden abgelehnt und du siehst seine Nachrichten nicht. Die Person erfährt es nicht.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return '$name ist blockiert.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Blockierte Personen';
+
+  @override
+  String get blockedPeopleEmpty => 'Du hast niemanden blockiert.';
+
+  @override
+  String get adminReportsTab => 'Meldungen';
+
+  @override
+  String get adminReportsEmpty => 'Keine Meldungen zu prüfen.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Gemeldet von $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Profil';
+
+  @override
+  String get reportKindPlan => 'Plan';
+
+  @override
+  String get reportKindMessage => 'Chatnachricht';
+
+  @override
+  String get reportKindPic => 'Planfoto';
+
+  @override
+  String get reportKindAd => 'Anzeige';
+
+  @override
+  String get reportDismiss => 'Verwerfen';
+
+  @override
+  String get reportRemove => 'Inhalt entfernen';
+
+  @override
+  String get reportBlock => 'Kletterer sperren';
+
+  @override
+  String get noticeReportsTitle => 'Neue Meldungen zu prüfen';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Meldungen · innerhalb von 24 Stunden beantworten';
+
+  @override
+  String get errorObjectionable =>
+      'Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt.';
 }

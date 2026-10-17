@@ -191,7 +191,107 @@ void main() {
     });
   });
 
+  group('Sign in with Apple', () {
+    test('trades Apple\'s token, nonce, code and name for a session', () async {
+      final api = sampleApi();
+      final apple = FakeApple();
+      final store = storeFor(api, signedIn: false, apple: apple);
+      await store.start();
+      expect(store.auth.appleAvailable, isTrue);
+      await store.auth.signInWithApple();
+      await store.start();
+      expect(api.sessionBodies.single, {
+        'appleIdToken': 'apple-id-token',
+        'nonce': 'made-up-nonce-0123456789',
+        'authorizationCode': 'made-up-code',
+        'name': 'Pat Quill',
+      });
+      expect(keptToken(store), isNotNull);
+      expect(store.phase, Phase.ready);
+    });
+
+    test('later sign-ins send no name (Apple gives it only once)', () {
+      const later = AppleCredential(
+        user: AuthUser(),
+        idToken: 'apple-id-token',
+        nonce: 'made-up-nonce-0123456789',
+        authorizationCode: '',
+      );
+      expect(later.sessionBody, {
+        'appleIdToken': 'apple-id-token',
+        'nonce': 'made-up-nonce-0123456789',
+      });
+    });
+
+    test('cancelling is quiet: no error, no session', () async {
+      final api = sampleApi();
+      final apple = FakeApple()..next = null;
+      final store = storeFor(api, signedIn: false, apple: apple);
+      await store.start();
+      await store.auth.signInWithApple();
+      expect(apple.sheets, 1);
+      expect(store.auth.error, isNull);
+      expect(store.auth.signedIn, isFalse);
+      expect(api.calls, isNot(contains('POST /api/session')));
+    });
+
+    test('a failure shows Apple\'s sign-in error', () async {
+      final api = sampleApi();
+      final apple = FakeApple()..error = StateError('made-up failure');
+      final store = storeFor(api, signedIn: false, apple: apple);
+      await store.start();
+      await store.auth.signInWithApple();
+      expect(store.auth.error, SignInError.apple);
+      expect(store.auth.signedIn, isFalse);
+    });
+
+    test('not offered where Apple isn\'t available', () async {
+      final apple = FakeApple(available: false);
+      final store = storeFor(sampleApi(), signedIn: false, apple: apple);
+      await store.start();
+      expect(store.auth.appleAvailable, isFalse);
+      await store.auth.signInWithApple();
+      expect(apple.sheets, 0);
+    });
+  });
+
   group('sessions on screen', () {
+    testWidgets('the sign-in screen offers Apple next to Google on iOS', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final store = await pumpApp(
+        tester,
+        storeFor(api, signedIn: false, apple: FakeApple()),
+      );
+      expect(find.text('Sign in with Google'), findsOneWidget);
+      expect(find.text('Sign in with Apple'), findsOneWidget);
+      await tester.tap(find.text('Sign in with Apple'));
+      await tester.pumpAndSettle();
+      expect(api.sessionBodies.single['appleIdToken'], 'apple-id-token');
+      expect(store.auth.signedIn, isTrue);
+    });
+
+    testWidgets('no Apple button without Apple', (tester) async {
+      await pumpApp(tester, storeFor(sampleApi(), signedIn: false));
+      expect(find.text('Sign in with Google'), findsOneWidget);
+      expect(find.text('Sign in with Apple'), findsNothing);
+    });
+
+    testWidgets('a failed Apple sign-in says so', (tester) async {
+      final apple = FakeApple()..error = StateError('made-up failure');
+      await pumpApp(
+        tester,
+        storeFor(sampleApi(), signedIn: false, apple: apple),
+      );
+      await tester.tap(find.text('Sign in with Apple'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Couldn\'t sign in with Apple. Try again.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a kept session skips the sign-in screen', (tester) async {
       await pumpApp(tester, storeFor(sampleApi()));
       expect(find.text('Sign in with Google'), findsNothing);
@@ -212,7 +312,7 @@ void main() {
           GrigriPic(key: 'crags/b/1.jpg', crag: 'Valle Gris'),
         ]);
       final store = await pumpApp(tester, storeFor(api, signedIn: false));
-      expect(find.text('Find a climbing plan.'), findsOneWidget);
+      expect(find.text('Join a climbing plan.'), findsOneWidget);
       expect(find.text('100% free'), findsOneWidget);
       expect(find.text('Sign in with Google'), findsOneWidget);
       expect(find.text('Photo: Ana Roca, CC BY 4.0'), findsOneWidget);

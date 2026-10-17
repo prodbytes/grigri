@@ -17,7 +17,7 @@ Each match opens the plan's group chat.
 
 **Wording: plans, not partners.** People match with a plan, not with a
 partner, so Grigri never says it finds you "a partner": its line is
-**"Find a climbing plan"**. Where partners are worth mentioning, it's
+**"Join a climbing plan"**. Where partners are worth mentioning, it's
 always in the plural, "partners" (a plan's group), in every language.
 
 ## Features
@@ -36,12 +36,19 @@ always in the plural, "partners" (a plan's group), in every language.
   app is open: the API's hints, the custom authorizer that keeps each
   climber to their own topic, reconnecting, and polling as a slow safety
   net.
-- [Sign-in](sign-in.md): Google only, per platform; the profile made
-  from the Google account at the first sign-in; admins; deleting my
-  account from the Profile tab.
+- [Sign-in](sign-in.md): Google on every platform, and Sign in with
+  Apple on iOS (App Store guideline 4.8); the token checks; the profile
+  made from the account at the first sign-in; admins; deleting my account
+  from the Profile tab (revoking Apple's tokens).
 - [Admin](admin.md): the Admin tab, for admins, with a sub-navigation:
   Users, everyone, to block (they can't use Grigri, and their plans
-  leave the deck) or unblock; and Ads, to approve or reject ads.
+  leave the deck) or unblock; Ads, to approve or reject ads; and
+  Reports, to answer what people reported.
+- [Moderation](moderation.md): the filter on objectionable words in what
+  people post; reporting a profile, plan, chat message, plan photo or ad,
+  and admins answering within 24 hours (dismiss, remove, block); and
+  anyone blocking someone (their plans, requests and messages out of
+  my way).
 - [Screens](screens.md): sign-in, the five tabs (and Admin), the plan and
   profile editors, the match screen, the chat and the empty states.
 - [Plan photos](pics.md): a plan's **Your Pics** (what members add,
