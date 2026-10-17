@@ -1329,4 +1329,25 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get support => 'Suporte';
+
+  @override
+  String get deleteAccount => 'Excluir conta';
+
+  @override
+  String get deleteAccountQuestion => 'Excluir sua conta?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Exclui sua conta do Grigri para sempre: seu perfil e suas fotos, suas mensagens e fotos nas conversas em grupo, seus pedidos e seus anúncios. Você sai de todos os seus planos: outra pessoa do plano assume os que você organiza, e um plano só com você termina. O Premium pago aqui com cartão é cancelado na hora, sem reembolso do tempo restante. Uma assinatura comprada pela Apple precisa ser cancelada nos Ajustes do iPhone. Você sai da conta em todos os dispositivos.';
+
+  @override
+  String get deleteAccountUnderstand =>
+      'Entendo que isso não pode ser desfeito';
+
+  @override
+  String get deleteAccountConfirm => 'Excluir para sempre';
+
+  @override
+  String get errorDeleteAccount =>
+      'Não foi possível excluir sua conta. Tente de novo.';
 }

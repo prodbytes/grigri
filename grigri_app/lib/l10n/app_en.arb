@@ -1852,5 +1852,29 @@
   "support": "Support",
   "@support": {
     "description": "Link at the end of Profile: opens the support page on the site in the browser."
+  },
+  "deleteAccount": "Delete account",
+  "@deleteAccount": {
+    "description": "Profile: the button at the end that deletes my account for good."
+  },
+  "deleteAccountQuestion": "Delete your account?",
+  "@deleteAccountQuestion": {
+    "description": "Title of the delete-account confirmation dialog."
+  },
+  "deleteAccountMessage": "This deletes your Grigri account for good: your profile and photos, your messages and photos in group chats, your join requests and your ads. You leave all your plans: someone else in a plan you organize takes it over, and a plan with only you in it ends. Premium paid with a card here is cancelled at once, with no refund of the time left. A subscription bought through Apple must be cancelled in your iPhone's Settings. You're signed out on every device.",
+  "@deleteAccountMessage": {
+    "description": "Body of the delete-account confirmation dialog: what's deleted."
+  },
+  "deleteAccountUnderstand": "I understand this can't be undone",
+  "@deleteAccountUnderstand": {
+    "description": "Checkbox in the delete-account dialog; the delete button works only once it's ticked."
+  },
+  "deleteAccountConfirm": "Delete for good",
+  "@deleteAccountConfirm": {
+    "description": "The delete-account dialog's destructive button."
+  },
+  "errorDeleteAccount": "Couldn't delete your account. Try again.",
+  "@errorDeleteAccount": {
+    "description": "Snackbar: deleting the account failed (trying again finishes the job)."
   }
 }

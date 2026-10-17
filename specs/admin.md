@@ -41,8 +41,9 @@ the same.
 A blocked climber:
 
 - gets **403 `blocked`** from every route but signing out
-  (`DELETE /api/session`, `DELETE /api/sessions`), `GET /api/me`
-  included;
+  (`DELETE /api/session`, `DELETE /api/sessions`) and deleting their
+  account (`DELETE /api/me`; the block stays on their email in rbacr),
+  `GET /api/me` included;
 - can't unblock themselves: only an admin (or an rbacr root) changes
   the role;
 - disappears from everyone's Discover: plans they organize leave the

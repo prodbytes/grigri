@@ -375,5 +375,11 @@
   "signInDeckWhen3": "Le week-end prochain · Bloc · 6C–7A",
   "signInDeckWho3": "Noor, Tomás et 2 autres",
   "privacyPolicy": "Politique de confidentialité",
-  "support": "Assistance"
+  "support": "Assistance",
+  "deleteAccount": "Supprimer le compte",
+  "deleteAccountQuestion": "Supprimer ton compte ?",
+  "deleteAccountMessage": "Supprime ton compte Grigri pour de bon : ton profil et tes photos, tes messages et photos dans les discussions de groupe, tes demandes et tes annonces. Tu quittes tous tes plans : quelqu'un d'autre du plan reprend ceux que tu organises, et un plan où tu es seul prend fin. Premium payé ici par carte est résilié tout de suite, sans remboursement du temps restant. Un abonnement acheté via Apple doit être résilié dans les Réglages de ton iPhone. Tu es déconnecté sur tous tes appareils.",
+  "deleteAccountUnderstand": "Je comprends que c'est irréversible",
+  "deleteAccountConfirm": "Supprimer pour de bon",
+  "errorDeleteAccount": "Impossible de supprimer ton compte. Réessaie."
 }

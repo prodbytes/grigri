@@ -618,6 +618,38 @@ class FakeApi implements GrigriApi, SessionApi {
     return saved;
   });
 
+  @override
+  Future<void> deleteAccount() async {
+    final token = headers == null ? null : await _caller();
+    await _route('DELETE /api/me', () {
+      final id = meId;
+      if (id != null) {
+        // Like the API: out of every plan (the last one out ends it), my
+        // requests withdrawn, my profile gone.
+        for (final p in plans.values.toList()) {
+          if (!p.memberIds.contains(id)) continue;
+          final rest = [...p.memberIds]..remove(id);
+          if (rest.isEmpty) {
+            plans.remove(p.id);
+          } else {
+            plans[p.id] = p.copyWith(
+              memberIds: rest,
+              organizerId: p.organizerId == id ? rest.first : p.organizerId,
+            );
+          }
+        }
+        requestsById.removeWhere((_, r) => r.climberId == id);
+        climbers.remove(id);
+        meId = null;
+      }
+      // Signed out everywhere.
+      if (token != null) {
+        final email = sessions[token];
+        sessions.removeWhere((_, owner) => owner == email);
+      }
+    });
+  }
+
   bool _fits(Plan p) {
     final level = climbers[meId]?.levels[p.discipline];
     return level != null && level.overlaps(p.grades);

@@ -1145,3 +1145,28 @@ spec.
     - Cost: none in AWS (two small static pages in the site bucket,
       served from CloudFront's cache). The App Store itself needs the
       Apple Developer Program, $99 a year.
+
+78. **Delete my account from inside the app (App Store guideline
+    5.1.1(v)).**
+    - [Sign-in](sign-in.md#deleting-my-account), new section: **Delete
+      account** at the end of the Profile tab, with a confirmation that
+      says what's deleted and a box to tick; then `DELETE /api/me`
+      `{"confirm": true}`, and the app is signed out and back on the
+      sign-in screen. The API cancels a Stripe subscription at once (no
+      refund of the period paid) and revokes rbacr's Premium role, runs
+      the `onDeleteAccount` hook (for Sign in with Apple's token
+      revocation), removes my messages, their media, my request notes
+      and my Your Pics photos, leaves every plan through the leave rules
+      (handed over, or ended; the note says "A climber left the plan"),
+      withdraws my requests, and deletes my ads, photos, every item keyed
+      to me, the sign-in link and every session. Each step can run
+      again, so a retry finishes the job.
+    - [API](api.md): the route; Stripe's events about a deleted
+      account's subscription are ignored.
+    - [Screens](screens.md), [Premium](premium.md), [Admin](admin.md),
+      [Backend](backend.md), [Plan photos](pics.md): the button, the
+      immediate cancellation (a restricted Stripe key now needs write
+      access to Subscriptions), blocked climbers may delete their
+      account, and photos go with it.
+    - Cost: no new resource; a deletion is a few dozen DynamoDB reads
+      and writes, free S3 deletes and one or two free Stripe calls.

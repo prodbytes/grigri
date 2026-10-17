@@ -1334,4 +1334,24 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get support => 'Assistance';
+
+  @override
+  String get deleteAccount => 'Supprimer le compte';
+
+  @override
+  String get deleteAccountQuestion => 'Supprimer ton compte ?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Supprime ton compte Grigri pour de bon : ton profil et tes photos, tes messages et photos dans les discussions de groupe, tes demandes et tes annonces. Tu quittes tous tes plans : quelqu\'un d\'autre du plan reprend ceux que tu organises, et un plan où tu es seul prend fin. Premium payé ici par carte est résilié tout de suite, sans remboursement du temps restant. Un abonnement acheté via Apple doit être résilié dans les Réglages de ton iPhone. Tu es déconnecté sur tous tes appareils.';
+
+  @override
+  String get deleteAccountUnderstand => 'Je comprends que c\'est irréversible';
+
+  @override
+  String get deleteAccountConfirm => 'Supprimer pour de bon';
+
+  @override
+  String get errorDeleteAccount =>
+      'Impossible de supprimer ton compte. Réessaie.';
 }

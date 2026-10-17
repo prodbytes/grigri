@@ -375,5 +375,11 @@
   "signInDeckWhen3": "No próximo fim de semana · Boulder · 6C–7A",
   "signInDeckWho3": "Noor, Tomás e mais 2",
   "privacyPolicy": "Política de privacidade",
-  "support": "Suporte"
+  "support": "Suporte",
+  "deleteAccount": "Excluir conta",
+  "deleteAccountQuestion": "Excluir sua conta?",
+  "deleteAccountMessage": "Exclui sua conta do Grigri para sempre: seu perfil e suas fotos, suas mensagens e fotos nas conversas em grupo, seus pedidos e seus anúncios. Você sai de todos os seus planos: outra pessoa do plano assume os que você organiza, e um plano só com você termina. O Premium pago aqui com cartão é cancelado na hora, sem reembolso do tempo restante. Uma assinatura comprada pela Apple precisa ser cancelada nos Ajustes do iPhone. Você sai da conta em todos os dispositivos.",
+  "deleteAccountUnderstand": "Entendo que isso não pode ser desfeito",
+  "deleteAccountConfirm": "Excluir para sempre",
+  "errorDeleteAccount": "Não foi possível excluir sua conta. Tente de novo."
 }

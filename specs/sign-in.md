@@ -81,6 +81,82 @@ CanvasKit and Google Identity Services) is what guards it.
 
 Signing out forgets everything loaded.
 
+## Deleting my account
+
+App Store guideline 5.1.1(v): an app that makes accounts lets people
+delete them from inside it.
+
+- **Delete account**, at the end of the Profile tab (in clay, the
+  theme's warning color), opens a confirmation that says what goes: my
+  profile and photos, my messages and photos in group chats, my join
+  requests and ads; I leave all my plans (someone else takes over the
+  ones I organize; one with only me ends); Premium paid by card is
+  cancelled at once, with no refund of the time left; a subscription
+  bought through Apple must be cancelled in the iPhone's Settings; I'm
+  signed out on every device. **Delete for good** works only once
+  "I understand this can't be undone" is ticked; **Cancel** keeps the
+  account.
+- Confirmed, the app calls `DELETE /api/me` with `{"confirm": true}`.
+  Done, the API has ended every session of mine, so the app forgets
+  its own and goes back to the sign-in screen. If it fails, the app says
+  "Couldn't delete your account. Try again." and stays signed in; trying
+  again finishes the job.
+- Only ever my own account: the route takes no id, the account is the
+  session's. It's a session route, so a [blocked](admin.md#blocking)
+  climber can delete theirs too (rbacr's block stays on their email).
+
+What the API does, in this order. Every step can run again, so a retry
+after a failure picks up where it stopped; the account's link to its
+climber and its sessions go last, so a retry still gets in.
+
+1. **Premium**: a [Stripe](premium.md) subscription that isn't cancelled
+   yet is cancelled **at once** (no more charges, no refund of the period
+   paid; Stripe keeps its invoices, as tax records require), and rbacr's
+   `premium` role is revoked. If Stripe or rbacr fails, nothing is
+   deleted. Stripe's later events about that subscription are ignored.
+   Grigri can't cancel a subscription bought through Apple: the
+   confirmation says to cancel it in Settings.
+2. **The sign-in provider's grants**: the API's `onDeleteAccount` hook
+   (`Deps.onDeleteAccount` in [api.ts](../grigri_api/src/api.ts)) runs
+   with `{subject, climberId, email}` before any data is deleted. It's
+   where Sign in with Apple revokes Apple's tokens, which Apple requires
+   on deletion (the subject's issuer, `https://appleid.apple.com`, says
+   it's an Apple account). It must be idempotent; throwing stops the
+   deletion, to be retried. Google needs nothing: its ID token is used
+   once, at sign-in.
+3. **What I wrote and added, removed** (the privacy-friendly choice, not
+   "Deleted climber" placeholders): in every plan I'm in, left or asked
+   to join, my messages (and their photos and videos in S3), the request
+   notes of my join requests, and the photos I added to its Your Pics.
+   The others get live-update hints. Notes the chat wrote earlier
+   ("… created the plan", "… joined") keep the name they were written
+   with.
+4. **Out of every plan**, through the usual [leave](matching.md) rules:
+   an organizer's plan is handed to a member picked at random, a plan
+   with only me ends (with its requests and chat), open requests stop
+   waiting for my yes; the chat's note says "A climber left the plan",
+   never my name; the others get live-update hints.
+5. **My join requests withdrawn**, whatever became of them (the plan's
+   version moves on, so an answer racing it reloads without it).
+6. **My ads**, with their photos or videos.
+7. **My profile and gear photos** in S3, then **every item keyed to me**
+   (`CLIMBER#<id>`: the profile, memberships, passes, notices, the kept
+   email, the Premium copy, and anything added there later), then the
+   sign-in subject's link to my climber (`SUB#<subject>`), then **every
+   session** (signed out on every device: an old token gets 401).
+
+Not deleted: walls and routes I added to the [route finder](route-finder.md)
+(the shared map of the rock, without personal data; they lose their
+attribution); notices other people got about me (they point to a profile
+that's gone); [match scores](match-scores.md) (they expire a day after
+their plan starts, and the next run skips me); uploads never saved
+(expired within a day by the bucket's rule). Signing in again with the
+same Google account starts a new, empty profile.
+
+Cost: no new resource. A deletion is a few dozen DynamoDB reads and
+writes, S3 deletes (free) and one or two Stripe calls (free): well under
+a cent.
+
 ## Per platform
 
 [google_sign_in](https://pub.dev/packages/google_sign_in) 7:
