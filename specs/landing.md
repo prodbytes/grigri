@@ -30,8 +30,12 @@ From top to bottom:
    headline ("Find a climbing plan."), the tagline, a
    **Sign in with Google** button and "Free for every climber: no card, no
    subscription." Beside it (below it on phones) is a demo plan card that
-   swipes right on a loop with a JOIN stamp, showing a crag photo and
-   made-up climbers (Mara, Jonas). The loop doesn't play when the browser
+   swipes right on a loop with a JOIN stamp. Each loop brings in the next
+   of three made-up plans (Saturday sport with Mara and Jonas, Sunday
+   multi-pitch with Iker and Lea, next weekend's bouldering with Noor
+   and Tomás), each at another crag with its photo: up to three crags
+   from the strip, the hero's crag last (without the catalog: Siurana,
+   Margalef, Montserrat). The loop doesn't play when the browser
    asks for reduced motion.
 3. **Crags near you**: a horizontal, snapping row of up to 12 GriGri Pics
    photo cards, at most 3 per crag. Each card shows the crag's name, its

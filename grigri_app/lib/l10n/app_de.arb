@@ -369,5 +369,9 @@
   "signInFreePremium": "Premium ist freiwillig: nur zum Werben auf Grigri und für den Routenfinder. Klettern mit Grigri kostet nichts.",
   "signInFinalTitle": "Der Kletterplan fürs Wochenende ist nur einen Wisch entfernt.",
   "signInJoinFree": "Kostenlos mit Google beitreten",
-  "signInPhotoBy": "Foto: {author}, {license}"
+  "signInPhotoBy": "Foto: {author}, {license}",
+  "signInDeckWhen2": "Sonntag · Mehrseillänge · 6a–6b",
+  "signInDeckWho2": "Iker und Lea",
+  "signInDeckWhen3": "Nächstes Wochenende · Bouldern · 6C–7A",
+  "signInDeckWho3": "Noor, Tomás und 2 weitere"
 }

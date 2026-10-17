@@ -369,5 +369,9 @@
   "signInFreePremium": "O Premium é opcional: serve só para anunciar no Grigri e para o localizador de vias. Escalar com o Grigri não custa nada.",
   "signInFinalTitle": "O plano de escalada deste fim de semana está a um deslize.",
   "signInJoinFree": "Entre grátis com o Google",
-  "signInPhotoBy": "Foto: {author}, {license}"
+  "signInPhotoBy": "Foto: {author}, {license}",
+  "signInDeckWhen2": "Domingo · Via longa · 6a–6b",
+  "signInDeckWho2": "Iker e Lea",
+  "signInDeckWhen3": "No próximo fim de semana · Boulder · 6C–7A",
+  "signInDeckWho3": "Noor, Tomás e mais 2"
 }

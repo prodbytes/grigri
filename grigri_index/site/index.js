@@ -16,6 +16,10 @@ const STRINGS = {
     stampJoin: 'JOIN',
     deckWhen: 'This Saturday · Sport · 6b–7a',
     deckWho: 'Mara, Jonas and 1 more',
+    deckWhen2: 'Sunday · Multi-pitch · 6a–6b',
+    deckWho2: 'Iker and Lea',
+    deckWhen3: 'Next weekend · Bouldering · 6C–7A',
+    deckWho3: 'Noor, Tomás and 2 more',
     nearAll: 'Crags on Grigri',
     nearHere: 'Crags near you',
     nearFar: 'The crags nearest you',
@@ -54,6 +58,10 @@ const STRINGS = {
     stampJoin: 'ME APUNTO',
     deckWhen: 'Este sábado · Deportiva · 6b–7a',
     deckWho: 'Mara, Jonas y 1 más',
+    deckWhen2: 'Domingo · Vías largas · 6a–6b',
+    deckWho2: 'Iker y Lea',
+    deckWhen3: 'El próximo finde · Búlder · 6C–7A',
+    deckWho3: 'Noor, Tomás y 2 más',
     nearAll: 'Escuelas en Grigri',
     nearHere: 'Escuelas cerca de ti',
     nearFar: 'Las escuelas más cercanas',
@@ -92,6 +100,10 @@ const STRINGS = {
     stampJoin: 'DABEI',
     deckWhen: 'Diesen Samstag · Sport · 6b–7a',
     deckWho: 'Mara, Jonas und 1 weitere Person',
+    deckWhen2: 'Sonntag · Mehrseillänge · 6a–6b',
+    deckWho2: 'Iker und Lea',
+    deckWhen3: 'Nächstes Wochenende · Bouldern · 6C–7A',
+    deckWho3: 'Noor, Tomás und 2 weitere',
     nearAll: 'Klettergebiete auf Grigri',
     nearHere: 'Klettergebiete in deiner Nähe',
     nearFar: 'Die nächsten Klettergebiete',
@@ -130,6 +142,10 @@ const STRINGS = {
     stampJoin: 'JE VIENS',
     deckWhen: 'Ce samedi · Couenne · 6b–7a',
     deckWho: 'Mara, Jonas et 1 autre',
+    deckWhen2: 'Dimanche · Grande voie · 6a–6b',
+    deckWho2: 'Iker et Lea',
+    deckWhen3: 'Le week-end prochain · Bloc · 6C–7A',
+    deckWho3: 'Noor, Tomás et 2 autres',
     nearAll: 'Les sites sur Grigri',
     nearHere: 'Des sites près de toi',
     nearFar: 'Les sites les plus proches',
@@ -168,6 +184,10 @@ const STRINGS = {
     stampJoin: 'EU VOU',
     deckWhen: 'Este sábado · Esportiva · 6b–7a',
     deckWho: 'Mara, Jonas e mais 1',
+    deckWhen2: 'Domingo · Via longa · 6a–6b',
+    deckWho2: 'Iker e Lea',
+    deckWhen3: 'No próximo fim de semana · Boulder · 6C–7A',
+    deckWho3: 'Noor, Tomás e mais 2',
     nearAll: 'Picos no Grigri',
     nearHere: 'Picos perto de você',
     nearFar: 'Os picos mais próximos',
@@ -206,6 +226,10 @@ const STRINGS = {
     stampJoin: 'M’HI APUNTO',
     deckWhen: 'Aquest dissabte · Esportiva · 6b–7a',
     deckWho: 'Mara, Jonas i 1 més',
+    deckWhen2: 'Diumenge · Via llarga · 6a–6b',
+    deckWho2: 'Iker i Lea',
+    deckWhen3: 'El cap de setmana que ve · Bloc · 6C–7A',
+    deckWho3: 'Noor, Tomás i 2 més',
     nearAll: 'Escoles a Grigri',
     nearHere: 'Escoles a prop teu',
     nearFar: 'Les escoles més properes',
@@ -371,11 +395,42 @@ function render(note) {
   $('strip').replaceChildren(...cards.map(card));
   // The nearest crag behind the pitch, and on the demo card.
   showImage($('hero-bg'), cards[0]?.photo);
-  const deck = cards[1] ?? cards[0];
-  if (deck) {
-    showImage($('deck-photo'), deck.photo);
-    $('deck-crag').textContent = deck.crag.name;
+  // The demo card's plans: up to three other crags (the hero's last).
+  const crags = [];
+  for (const c of cards) {
+    if (!crags.some((d) => d.crag.name === c.crag.name)) crags.push(c);
   }
+  demo = [...crags.slice(1), ...crags.slice(0, 1)].slice(0, DEMO.length);
+  showDemo();
+}
+
+// The demo card's plans: when they are and who's going, at the crags in
+// `demo` (made-up names, as the card says when there's no catalog).
+const DEMO = [
+  { crag: 'Siurana', when: 'deckWhen', who: 'deckWho' },
+  { crag: 'Margalef', when: 'deckWhen2', who: 'deckWho2' },
+  { crag: 'Montserrat', when: 'deckWhen3', who: 'deckWho3' },
+];
+let demo = [];
+let demoAt = 0;
+
+function showDemo() {
+  const plan = DEMO[demoAt % DEMO.length];
+  const pick = demo.length ? demo[demoAt % demo.length] : null;
+  const img = $('deck-photo');
+  if (pick) showImage(img, pick.photo);
+  else if (img) img.hidden = true;
+  $('deck-crag').textContent = pick ? pick.crag.name : plan.crag;
+  for (const [id, key] of [['deck-when', plan.when], ['deck-who', plan.who]]) {
+    $(id).dataset.i18n = key;
+    $(id).textContent = t(key);
+  }
+}
+
+// Each loop ends with the card off screen: the next plan comes in then.
+function cycleDemo() {
+  demoAt += 1;
+  showDemo();
 }
 
 function locate() {
@@ -427,5 +482,8 @@ async function loadCatalog() {
   offerLocation();
 }
 
+document.querySelector('.card-top')?.addEventListener('animationiteration', (e) => {
+  if (e.animationName === 'swipe') cycleDemo();
+});
 translate();
 loadCatalog();
