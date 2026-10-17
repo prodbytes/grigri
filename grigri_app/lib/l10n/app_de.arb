@@ -347,5 +347,11 @@
   "guidedPrice": "Geführt · {price}",
   "paidToGuide": "Wird an die Führung bezahlt, nicht über Grigri.",
   "theGuideDecides": "Die Führung entscheidet",
-  "openJoinAtOnce": "Offen: sofort dabei"
+  "openJoinAtOnce": "Offen: sofort dabei",
+  "deleteAccount": "Konto löschen",
+  "deleteAccountQuestion": "Dein Konto löschen?",
+  "deleteAccountMessage": "Löscht dein Grigri-Konto endgültig: dein Profil und deine Fotos, deine Nachrichten und Fotos in Gruppenchats, deine Anfragen und deine Anzeigen. Du verlässt alle deine Pläne: Pläne, die du organisierst, übernimmt jemand anderes aus dem Plan, und ein Plan, in dem nur du bist, endet. Premium, hier per Karte bezahlt, wird sofort gekündigt, ohne Erstattung der restlichen Zeit. Ein über Apple gekauftes Abo musst du in den Einstellungen deines iPhones kündigen. Du wirst auf allen Geräten abgemeldet.",
+  "deleteAccountUnderstand": "Ich verstehe, dass das nicht rückgängig zu machen ist",
+  "deleteAccountConfirm": "Endgültig löschen",
+  "errorDeleteAccount": "Dein Konto konnte nicht gelöscht werden. Versuch es noch einmal."
 }

@@ -193,6 +193,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       ApiJson.climber(await _put(['me'], profile.toJson()));
 
   @override
+  Future<void> deleteAccount() =>
+      _send('DELETE', ['me'], body: const {'confirm': true});
+
+  @override
   Future<PlanList> discover() async =>
       ApiJson.planList(await _get(['discover']));
 

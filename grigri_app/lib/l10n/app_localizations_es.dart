@@ -1241,4 +1241,24 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Abierto: únete al momento';
+
+  @override
+  String get deleteAccount => 'Eliminar la cuenta';
+
+  @override
+  String get deleteAccountQuestion => '¿Eliminar tu cuenta?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Elimina tu cuenta de Grigri para siempre: tu perfil y tus fotos, tus mensajes y fotos en los chats de grupo, tus solicitudes y tus anuncios. Sales de todos tus planes: en los que organizas, otra persona del plan pasa a organizarlo, y un plan en el que solo estás tú se acaba. Premium pagado aquí con tarjeta se cancela al momento, sin reembolso del tiempo que queda. Una suscripción comprada a través de Apple se tiene que cancelar en los Ajustes del iPhone. Se cierra tu sesión en todos los dispositivos.';
+
+  @override
+  String get deleteAccountUnderstand => 'Entiendo que no se puede deshacer';
+
+  @override
+  String get deleteAccountConfirm => 'Eliminar para siempre';
+
+  @override
+  String get errorDeleteAccount =>
+      'No se ha podido eliminar tu cuenta. Inténtalo de nuevo.';
 }

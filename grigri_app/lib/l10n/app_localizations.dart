@@ -2198,6 +2198,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open: join at once'**
   String get openJoinAtOnce;
+
+  /// Profile: the button at the end that deletes my account for good.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccount;
+
+  /// Title of the delete-account confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get deleteAccountQuestion;
+
+  /// Body of the delete-account confirmation dialog: what's deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes your Grigri account for good: your profile and photos, your messages and photos in group chats, your join requests and your ads. You leave all your plans: someone else in a plan you organize takes it over, and a plan with only you in it ends. Premium paid with a card here is cancelled at once, with no refund of the time left. A subscription bought through Apple must be cancelled in your iPhone\'s Settings. You\'re signed out on every device.'**
+  String get deleteAccountMessage;
+
+  /// Checkbox in the delete-account dialog; the delete button works only once it's ticked.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand this can\'t be undone'**
+  String get deleteAccountUnderstand;
+
+  /// The delete-account dialog's destructive button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for good'**
+  String get deleteAccountConfirm;
+
+  /// Snackbar: deleting the account failed (trying again finishes the job).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete your account. Try again.'**
+  String get errorDeleteAccount;
 }
 
 class _AppLocalizationsDelegate

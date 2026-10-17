@@ -360,6 +360,24 @@ class GrigriStore extends ChangeNotifier {
     }
   }
 
+  /// Deletes my account for good (`DELETE /api/me`): the API ends every
+  /// session of mine with it, so this device then forgets its session and
+  /// goes back to the sign-in screen. False, saying why, when it failed
+  /// (nothing changes here; trying again finishes the job).
+  Future<bool> deleteAccount() async {
+    try {
+      await _call(api.deleteAccount);
+    } on ApiException catch (e) {
+      // A 401 already signed out (and said so).
+      if (e.status != _stale && e.status != 401) {
+        _errors.add(l10n.errorDeleteAccount);
+      }
+      return false;
+    }
+    await auth.signedOut();
+    return true;
+  }
+
   // --- Reading -----------------------------------------------------------
 
   bool get admin => _admin;

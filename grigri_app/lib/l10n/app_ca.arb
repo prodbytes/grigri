@@ -347,5 +347,11 @@
   "guidedPrice": "Guiat · {price}",
   "paidToGuide": "Es paga al guia, no a través de Grigri.",
   "theGuideDecides": "Decideix el guia",
-  "openJoinAtOnce": "Obert: uneix-te al moment"
+  "openJoinAtOnce": "Obert: uneix-te al moment",
+  "deleteAccount": "Elimina el compte",
+  "deleteAccountQuestion": "Vols eliminar el teu compte?",
+  "deleteAccountMessage": "Elimina el teu compte de Grigri per sempre: el teu perfil i les teves fotos, els teus missatges i fotos als xats de grup, les teves sol·licituds i els teus anuncis. Surts de tots els teus plans: als que organitzes, una altra persona del pla passa a organitzar-lo, i un pla on només hi ets tu s'acaba. El Premium pagat aquí amb targeta es cancel·la al moment, sense reemborsament del temps que queda. Una subscripció comprada a través d'Apple s'ha de cancel·lar a la Configuració de l'iPhone. Es tanca la teva sessió a tots els dispositius.",
+  "deleteAccountUnderstand": "Entenc que no es pot desfer",
+  "deleteAccountConfirm": "Elimina per sempre",
+  "errorDeleteAccount": "No s'ha pogut eliminar el teu compte. Torna-ho a provar."
 }

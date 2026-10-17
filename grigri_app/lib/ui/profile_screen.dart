@@ -115,6 +115,8 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const RolesCard(),
+          const SizedBox(height: 24),
+          const _DeleteAccount(),
           if (AppVersion.version.isNotEmpty) ...[
             const SizedBox(height: 24),
             Center(
@@ -126,6 +128,85 @@ class ProfileScreen extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// Deleting my account (App Store guideline 5.1.1(v); specs/sign-in.md):
+/// a confirmation that says what goes, and a box to tick before the
+/// destructive button works. Done, the app is signed out (the API ended
+/// every session) and back on the sign-in screen.
+class _DeleteAccount extends StatelessWidget {
+  const _DeleteAccount();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Center(
+      child: TextButton.icon(
+        style: TextButton.styleFrom(foregroundColor: Mountain.clay),
+        icon: const Icon(Icons.delete_forever_outlined),
+        label: Text(l.deleteAccount),
+        onPressed: () async {
+          final store = StoreScope.read(context);
+          final sure = await showDialog<bool>(
+            context: context,
+            builder: (_) => const _DeleteAccountDialog(),
+          );
+          if (sure != true) return;
+          await store.deleteAccount();
+        },
+      ),
+    );
+  }
+}
+
+class _DeleteAccountDialog extends StatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  State<_DeleteAccountDialog> createState() => _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
+  bool _understood = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return AlertDialog(
+      title: Text(l.deleteAccountQuestion),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l.deleteAccountMessage),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              value: _understood,
+              onChanged: (v) => setState(() => _understood = v ?? false),
+              title: Text(l.deleteAccountUnderstand),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text(l.cancel),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: Mountain.clay,
+            foregroundColor: Mountain.night,
+          ),
+          onPressed: _understood ? () => Navigator.pop(context, true) : null,
+          child: Text(l.deleteAccountConfirm),
+        ),
+      ],
     );
   }
 }

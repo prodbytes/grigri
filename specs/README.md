@@ -37,7 +37,8 @@ always in the plural, "partners" (a plan's group), in every language.
   climber to their own topic, reconnecting, and polling as a slow safety
   net.
 - [Sign-in](sign-in.md): Google only, per platform; the profile made
-  from the Google account at the first sign-in; admins.
+  from the Google account at the first sign-in; admins; deleting my
+  account from the Profile tab.
 - [Admin](admin.md): the Admin tab, for admins, with a sub-navigation:
   Users, everyone, to block (they can't use Grigri, and their plans
   leave the deck) or unblock; and Ads, to approve or reject ads.

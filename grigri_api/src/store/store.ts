@@ -596,6 +596,58 @@ export class Store implements SessionStore {
     }
   }
 
+  // --- Deleting an account (DELETE /api/me) ------------------------------------
+
+  /** Deletes chat messages (by their keys). */
+  async deleteMessages(messages: Pick<Message, 'planId' | 'time' | 'id'>[]): Promise<void> {
+    await this.batchWrite(messages.map((m) => ({ DeleteRequest: { Key: key.message(m.planId, m.time, m.id) } })));
+  }
+
+  /**
+   * Withdraws a join request: deletes it and moves the plan's version on,
+   * in one transaction conditioned on the version it was read with, so an
+   * answer racing it (read before) fails and reloads without it. Conflict
+   * when the plan changed meanwhile.
+   */
+  async withdrawRequest(previous: VersionedPlan, climberId: string): Promise<void> {
+    await this.transact([
+      {
+        Update: {
+          TableName: this.table,
+          Key: key.plan(previous.plan.id),
+          UpdateExpression: 'SET version = :next',
+          ConditionExpression: 'version = :v',
+          ExpressionAttributeValues: { ':v': previous.version, ':next': previous.version + 1 },
+        },
+      },
+      { Delete: { TableName: this.table, Key: key.request(previous.plan.id, climberId) } },
+    ]);
+  }
+
+  /** Deletes a request item outright (its plan is gone). */
+  async deleteRequest(planId: string, climberId: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.request(planId, climberId) }));
+  }
+
+  /**
+   * Everything in a climber's partition: the profile, memberships, passes,
+   * notices, the kept email, the Premium copy, and whatever else is ever
+   * keyed to them there.
+   */
+  async deleteClimberItems(climberId: string): Promise<void> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': prefix.climber(climberId) },
+      ProjectionExpression: 'pk, sk',
+    });
+    await this.batchWrite(items.map((i) => ({ DeleteRequest: { Key: { pk: i.pk, sk: i.sk } } })));
+  }
+
+  /** Unlinks a sign-in subject from its climber (the last step of deleting an account). */
+  async deleteSubject(subject: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.subject(subject) }));
+  }
+
   // --- Plumbing ---------------------------------------------------------------
 
   /** Everything left in a plan's partition (requests, messages, pics). */

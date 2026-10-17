@@ -347,5 +347,11 @@
   "guidedPrice": "Guiado · {price}",
   "paidToGuide": "Se paga al guía, no a través de Grigri.",
   "theGuideDecides": "Decide el guía",
-  "openJoinAtOnce": "Abierto: únete al momento"
+  "openJoinAtOnce": "Abierto: únete al momento",
+  "deleteAccount": "Eliminar la cuenta",
+  "deleteAccountQuestion": "¿Eliminar tu cuenta?",
+  "deleteAccountMessage": "Elimina tu cuenta de Grigri para siempre: tu perfil y tus fotos, tus mensajes y fotos en los chats de grupo, tus solicitudes y tus anuncios. Sales de todos tus planes: en los que organizas, otra persona del plan pasa a organizarlo, y un plan en el que solo estás tú se acaba. Premium pagado aquí con tarjeta se cancela al momento, sin reembolso del tiempo que queda. Una suscripción comprada a través de Apple se tiene que cancelar en los Ajustes del iPhone. Se cierra tu sesión en todos los dispositivos.",
+  "deleteAccountUnderstand": "Entiendo que no se puede deshacer",
+  "deleteAccountConfirm": "Eliminar para siempre",
+  "errorDeleteAccount": "No se ha podido eliminar tu cuenta. Inténtalo de nuevo."
 }
