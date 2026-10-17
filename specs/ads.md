@@ -18,8 +18,8 @@ It's `pending` when added, then `approved` or `rejected` by an admin
 ## The Ads tab
 
 A tab of its own in the bottom bar, **Ads** ("Anuncios", "Anzeigen",
-"Pubs", "Anúncios", "Anuncis"), shown while I'm Premium, between Me and
-Admin. It lists my ads, newest first: a thumbnail, the text (or the
+"Pubs", "Anúncios", "Anuncis"), shown while I'm Premium, after
+Alerts and before Admin and Me. It lists my ads, newest first: a thumbnail, the text (or the
 link's site), the site, and its status ("Waiting for review",
 "Approved: showing", "Rejected"), with **Delete** (after a confirmation;
 the ad and its media are deleted for good). Empty: "No ads yet" and what

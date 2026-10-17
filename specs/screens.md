@@ -3,12 +3,13 @@
 Before the tabs: **sign-in** (the first one makes my profile from my
 Google account, with no screen of its own; [sign-in](sign-in.md)). Then
 five tabs, in a bottom navigation
-bar: Discover, Plans, Chats, Notifications and Profile, then **Ads**
-while I'm [Premium](premium.md) ([ads](ads.md#the-ads-tab)) and **Admin**
-for [admins](sign-in.md#admins). The bar's labels are short
+bar: Discover, Plans, Chats and Notifications, then **Ads**
+while I'm [Premium](premium.md) ([ads](ads.md#the-ads-tab)), **Admin**
+for [admins](sign-in.md#admins), and Profile, always last (the
+rightmost). The bar's labels are short
 words in 11 pt, so each fits on one line on a 360 dp wide phone, and
 every tab always shows its label, seven tabs too: in English **Find**, **Plans**,
-**Chats**, **Alerts**, **Me**, **Ads** and **Admin** (Spanish Buscar, Planes, Chats,
+**Chats**, **Alerts**, **Ads**, **Admin** and **Me** (Spanish Buscar, Planes, Chats,
 Avisos, Yo; German Suche, Pläne, Chats, Infos, Ich; French Trouve, Plans,
 Tchats, Alertes, Moi; Portuguese Buscar, Planos, Chats, Avisos, Eu;
 Catalan Cerca, Plans, Xats, Avisos, Jo). The Notifications screen's title
