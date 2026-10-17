@@ -48,6 +48,15 @@ Parameters:
       Sign in with Apple: the iOS app's bundle ID, the audience of the
       Apple identity tokens POST /api/session takes (specs/sign-in.md). A
       public identifier.
+  AppleServiceId:
+    Type: String
+    Default: com.nu01.grigri.signin
+    AllowedPattern: '[A-Za-z0-9.-]{1,155}'
+    Description: >
+      Sign in with Apple's Services ID: the audience of the identity
+      tokens Apple's web flow issues, on the web and Android
+      (specs/sign-in.md). Its return URL is <site>/api/apple/callback. A
+      public identifier.
   AppleTeamId:
     Type: String
     Default: ''
@@ -458,6 +467,7 @@ Resources:
           GOOGLE_WEB_CLIENT_ID: !Ref GoogleWebClientId
           GOOGLE_IOS_CLIENT_IDS: !Ref GoogleIosClientIds
           APPLE_BUNDLE_ID: !Ref AppleBundleId
+          APPLE_SERVICE_ID: !Ref AppleServiceId
           APPLE_TEAM_ID: !Ref AppleTeamId
           APPLE_KEY_ID: !Ref AppleKeyId
           APPLE_PRIVATE_KEY: !Ref ApplePrivateKey

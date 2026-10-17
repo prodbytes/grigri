@@ -1,8 +1,9 @@
-// Sign in with Apple (specs/sign-in.md): the identity token the iPhone app
-// gets from Apple, verified in the function like Google's (POST
-// /api/session): RS256 signature against Apple's published keys, issuer
-// https://appleid.apple.com, audience the app's bundle ID, expiry, and the
-// nonce (Apple's token carries the SHA-256 of the app's random nonce, which
+// Sign in with Apple (specs/sign-in.md): the identity token the app gets
+// from Apple, verified in the function like Google's (POST /api/session):
+// RS256 signature against Apple's published keys, issuer
+// https://appleid.apple.com, audience the iOS app's bundle ID (Apple's own
+// sheet) or the Services ID (Apple's web flow, on the web and Android),
+// expiry, and the nonce (Apple's token carries the SHA-256 of the app's random nonce, which
 // the app sends along). The key set is fetched once and cached by jose
 // across warm invocations (an unknown key ID triggers a rate-limited
 // refetch).
@@ -20,13 +21,17 @@ export const APPLE_ISSUER = 'https://appleid.apple.com';
 export const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
 export const APPLE_TOKEN_URL = 'https://appleid.apple.com/auth/token';
 export const APPLE_REVOKE_URL = 'https://appleid.apple.com/auth/revoke';
-/** The app's bundle ID: the audience of its identity tokens. */
+/** The app's bundle ID: the audience of its identity tokens on iOS. */
 export const DEFAULT_APPLE_BUNDLE_ID = 'com.nu01.grigri';
+/** The Services ID: the audience of the web flow's tokens (web and Android). */
+export const DEFAULT_APPLE_SERVICE_ID = 'com.nu01.grigri.signin';
+/** The Android app Apple's web flow returns to (apple_callback's intent). */
+export const ANDROID_PACKAGE = 'com.nu01.grigri';
 /** Subjects of Apple accounts: `apple#<sub>`. */
 export const APPLE_SUBJECT_PREFIX = 'apple#';
 
-/** A verified Apple account (the same shape as a Google one). */
-export type AppleIdentity = GoogleIdentity;
+/** A verified Apple account (a Google one's shape), and the client its token was issued to. */
+export type AppleIdentity = GoogleIdentity & { clientId: string };
 
 /** Verifies an identity token issued with the SHA-256 of `rawNonce`. */
 export type AppleTokenVerifier = (idToken: string, rawNonce: string) => Promise<AppleIdentity>;
@@ -43,20 +48,21 @@ export function sha256Hex(value: string): string {
 }
 
 /**
- * A verifier for identity tokens Apple issued to `bundleId` (the iOS app).
- * `keys` defaults to Apple's JWKS (tests pass a local key set). No bundle
- * ID: every token is refused.
+ * A verifier for identity tokens Apple issued to one of `clientIds` (the
+ * iOS app's bundle ID, the Services ID). `keys` defaults to Apple's JWKS
+ * (tests pass a local key set). No client: every token is refused.
  */
-export function appleVerifier(bundleId: string, keys: JWTVerifyGetKey = appleKeys()): AppleTokenVerifier {
+export function appleVerifier(clientIds: string | readonly string[], keys: JWTVerifyGetKey = appleKeys()): AppleTokenVerifier {
+  const audiences = (typeof clientIds === 'string' ? [clientIds] : [...clientIds]).filter((id) => id.length > 0);
   return async (idToken, rawNonce) => {
-    if (!bundleId) throw new InvalidIdToken('no Apple client configured');
+    if (audiences.length === 0) throw new InvalidIdToken('no Apple client configured');
     if (idToken.length > 4096 || idToken.split('.').length !== 3) throw new InvalidIdToken('not a JWT');
     if (rawNonce.length === 0) throw new InvalidIdToken('no nonce');
     let payload;
     try {
       ({ payload } = await jwtVerify(idToken, keys, {
         issuer: APPLE_ISSUER,
-        audience: bundleId,
+        audience: audiences,
         algorithms: ['RS256'],
         requiredClaims: ['sub', 'exp', 'iat', 'nonce'],
         clockTolerance: 30,
@@ -75,10 +81,12 @@ export function appleVerifier(bundleId: string, keys: JWTVerifyGetKey = appleKey
     // and said so as a boolean or a string.
     const verified = payload.email_verified === true || payload.email_verified === 'true';
     const email = verified && typeof payload.email === 'string' ? payload.email.toLowerCase() : undefined;
+    const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
     return {
       subject: `${APPLE_SUBJECT_PREFIX}${payload.sub}`,
       ...(email ? { email } : {}),
       emailVerified: email !== undefined,
+      clientId: audiences.find((a) => aud.includes(a))!,
     };
   };
 }
@@ -87,16 +95,26 @@ export function appleVerifier(bundleId: string, keys: JWTVerifyGetKey = appleKey
 
 /** What the Apple tokens need from the store (Store implements it). */
 export interface AppleTokenStore {
-  putAppleToken(subject: string, refreshToken: string, now: Date): Promise<void>;
-  getAppleToken(subject: string): Promise<string | undefined>;
+  putAppleToken(subject: string, token: KeptAppleToken, now: Date): Promise<void>;
+  getAppleToken(subject: string): Promise<KeptAppleToken | undefined>;
   deleteAppleToken(subject: string): Promise<void>;
   /** The subject a profile was created for, if any. */
   subjectOf(climberId: string): Promise<string | undefined>;
 }
 
+/** A refresh token, and the client it was issued to (revoking needs the same one). */
+export interface KeptAppleToken {
+  refreshToken: string;
+  /** None on tokens kept before the web flow: the bundle ID's. */
+  clientId?: string;
+}
+
 export interface AppleKeyConfig {
-  /** The client ID the codes and tokens belong to: the bundle ID. */
-  clientId: string;
+  /**
+   * The clients the codes and tokens may belong to: the bundle ID (first:
+   * a kept token without a client is its) and the Services ID.
+   */
+  clientIds: readonly string[];
   /** The Apple Developer team ID (10 characters). */
   teamId: string;
   /** The Sign in with Apple key's ID (10 characters). */
@@ -140,25 +158,30 @@ export class AppleTokens {
   ) {
     this.pem = config.privateKey ? pkcs8Pem(config.privateKey) : undefined;
     this.configured =
-      config.clientId.length > 0 &&
+      config.clientIds.some((id) => id.length > 0) &&
       /^[A-Z0-9]{10}$/.test(config.teamId) &&
       /^[A-Z0-9]{10}$/.test(config.keyId) &&
       this.pem !== undefined;
   }
 
   /**
-   * After an Apple sign-in: trades its authorization code for a refresh
-   * token and keeps it with `subject`. Best effort: a failure is logged
-   * (never the code or the token) and the sign-in goes on.
+   * After an Apple sign-in: trades its authorization code (issued to
+   * `clientId`, the identity token's audience) for a refresh token and
+   * keeps it with `subject`. Best effort: a failure is logged (never the
+   * code or the token) and the sign-in goes on.
    */
-  async keepRefreshToken(subject: string, code: string): Promise<void> {
+  async keepRefreshToken(subject: string, code: string, clientId: string): Promise<void> {
     if (!this.configured) {
       if (!this.warned) warn('Sign in with Apple key not configured: Apple refresh tokens are not kept, so they cannot be revoked');
       this.warned = true;
       return;
     }
+    if (!this.config.clientIds.includes(clientId)) {
+      warn('Apple authorization code for an unknown client: not kept');
+      return;
+    }
     try {
-      const res = await this.post(APPLE_TOKEN_URL, { code, grant_type: 'authorization_code' });
+      const res = await this.post(APPLE_TOKEN_URL, clientId, { code, grant_type: 'authorization_code' });
       if (!res.ok) {
         warn('Apple refused the authorization code', { status: res.status, error: await appleError(res) });
         return;
@@ -176,7 +199,7 @@ export class AppleTokens {
         warn('Apple authorization code is for another account: not kept');
         return;
       }
-      await this.store.putAppleToken(subject, body.refresh_token, this.clock());
+      await this.store.putAppleToken(subject, { refreshToken: body.refresh_token, clientId }, this.clock());
     } catch (e) {
       warn('Apple authorization code exchange failed', { error: errorName(e) });
     }
@@ -193,16 +216,17 @@ export class AppleTokens {
     try {
       const subject = await this.store.subjectOf(climberId);
       if (!subject?.startsWith(APPLE_SUBJECT_PREFIX)) return 'none';
-      const token = await this.store.getAppleToken(subject);
+      const kept = await this.store.getAppleToken(subject);
       if (!this.configured) {
         warn('Sign in with Apple key not configured: Apple tokens not revoked');
-        if (token) await this.store.deleteAppleToken(subject);
+        if (kept) await this.store.deleteAppleToken(subject);
         return 'skipped';
       }
-      if (!token) return 'none';
+      if (!kept) return 'none';
       let outcome: RevokeOutcome = 'revoked';
       try {
-        const res = await this.post(APPLE_REVOKE_URL, { token, token_type_hint: 'refresh_token' });
+        const clientId = kept.clientId ?? this.config.clientIds[0]!;
+        const res = await this.post(APPLE_REVOKE_URL, clientId, { token: kept.refreshToken, token_type_hint: 'refresh_token' });
         if (!res.ok) {
           warn('Apple refused to revoke the token', { status: res.status, error: await appleError(res) });
           outcome = 'failed';
@@ -219,9 +243,9 @@ export class AppleTokens {
     }
   }
 
-  /** A form POST to Apple with this client's ID and secret. */
-  private async post(url: string, form: Record<string, string>): Promise<Response> {
-    const body = new URLSearchParams({ client_id: this.config.clientId, client_secret: await this.clientSecret(), ...form });
+  /** A form POST to Apple with a client's ID and secret. */
+  private async post(url: string, clientId: string, form: Record<string, string>): Promise<Response> {
+    const body = new URLSearchParams({ client_id: clientId, client_secret: await this.clientSecret(clientId), ...form });
     return this.http(url, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -230,8 +254,8 @@ export class AppleTokens {
     });
   }
 
-  /** The client secret: a short-lived ES256 JWT signed with the key. */
-  async clientSecret(): Promise<string> {
+  /** A client's secret: a short-lived ES256 JWT signed with the key. */
+  async clientSecret(clientId: string): Promise<string> {
     this.key ??= importPKCS8(this.pem!, 'ES256');
     const now = Math.floor(this.clock().getTime() / 1000);
     return new SignJWT({})
@@ -240,7 +264,7 @@ export class AppleTokens {
       .setIssuedAt(now)
       .setExpirationTime(now + 300)
       .setAudience(APPLE_ISSUER)
-      .setSubject(this.config.clientId)
+      .setSubject(clientId)
       .sign(await this.key);
   }
 }
@@ -267,4 +291,27 @@ async function appleError(res: Response): Promise<string | undefined> {
 /** An error's kind and message, without anything a request carried. */
 function errorName(e: unknown): string {
   return e instanceof Error ? `${e.name}: ${e.message}` : 'unknown';
+}
+
+// --- The web flow's return URL on Android ---------------------------------------
+
+/** Apple's web flow posts its answer here: `<site>/api/apple/callback`. */
+export const APPLE_CALLBACK = '/api/apple/callback';
+/** What Apple's form post may carry; nothing else is passed on. */
+const CALLBACK_FIELDS = ['code', 'id_token', 'state', 'user', 'error'] as const;
+
+/**
+ * Where Apple's form post (the web flow's answer, on Android) goes next:
+ * an intent back to the Android app (sign_in_with_apple's callback
+ * activity), carrying Apple's fields, only those, as the query. Only ever
+ * to ANDROID_PACKAGE: no field picks the app.
+ */
+export function appleCallbackIntent(form: string): string {
+  const fields = new URLSearchParams(form);
+  const query = new URLSearchParams();
+  for (const name of CALLBACK_FIELDS) {
+    const value = fields.get(name);
+    if (value !== null) query.set(name, value);
+  }
+  return `intent://callback?${query.toString()}#Intent;package=${ANDROID_PACKAGE};scheme=signinwithapple;end`;
 }
