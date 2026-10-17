@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1453,6 +1455,89 @@ void main() {
       expect(shape(), 'ad plan plan plan');
       await store.swipeAd((store.deck.first as DeckAd).ad, open: false);
       expect(shape(), 'plan plan plan');
+    });
+
+    test('ads come about every adEvery plans, a little at random', () async {
+      final api = sampleApi()
+        ..adEvery = 10
+        ..addAd(chalk());
+      for (var i = 0; i < 6; i++) {
+        api.addAd(
+          Ad(
+            id: 'ad-$i',
+            ownerId: 'robin',
+            text: 'Ad $i',
+            link: Uri.parse('https://ad$i.example.com'),
+            status: AdStatus.approved,
+          ),
+        );
+      }
+      for (var i = 0; i < 60; i++) {
+        api.addPlan(
+          Plan(
+            id: 'many$i',
+            organizerId: 'robin',
+            discipline: Discipline.sport,
+            place: 'Many $i',
+            start: inDays(5 + i % 20),
+            end: inDays(5 + i % 20, 16),
+            grades: const GradeRange(GradeScale.routes, 6, 12),
+            memberIds: const ['robin'],
+          ),
+        );
+      }
+      final store = storeFor(api, random: math.Random(7));
+      await store.start();
+      List<int> gaps() {
+        final out = <int>[];
+        var run = 0;
+        for (final item in store.deck) {
+          if (item is DeckAd) {
+            out.add(run);
+            run = 0;
+          } else {
+            run++;
+          }
+        }
+        return out;
+      }
+
+      final first = gaps();
+      expect(first.length, greaterThanOrEqualTo(4));
+      for (final g in first) {
+        expect(g, inInclusiveRange(7, 13));
+      }
+      expect(first.toSet().length, greaterThan(1), reason: 'randomized');
+      // Stable as the deck rebuilds.
+      expect(gaps(), first);
+    });
+
+    test('a skipped ad never comes back; an opened one does after ⟳', () async {
+      final api = sampleApi()
+        ..adEvery = 1
+        ..addAd(chalk())
+        ..addAd(
+          Ad(
+            id: 'ad-rope',
+            ownerId: 'robin',
+            text: 'Rope sale',
+            link: Uri.parse('https://rope.example.com'),
+            status: AdStatus.approved,
+          ),
+        );
+      final store = storeFor(api);
+      await store.start();
+      List<String> ads() => [
+        for (final i in store.deck)
+          if (i is DeckAd) i.ad.id,
+      ];
+      expect(ads(), contains('ad-chalk'));
+      await store.swipeAd(api.ads['ad-chalk']!, open: false);
+      await store.swipeAd(api.ads['ad-rope']!, open: true);
+      expect(api.skippedAds, {'ad-chalk'});
+      expect(ads(), isEmpty);
+      await store.refreshDiscover(again: true);
+      expect(ads(), ['ad-rope']);
     });
 
     testWidgets('the Ads tab is for Premium: add an ad, it waits for review', (

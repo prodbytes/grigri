@@ -67,8 +67,10 @@ always in the plural, "partners" (a plan's group), in every language.
   portal, kept in step by Stripe's webhook.
 - [Ads](ads.md): Premium climbers' ads (a link, with text over a photo
   or video) in their own Ads tab; approved by admins (Admin → Ads, which
-  also sets how often they show); between plans on Discover, where ✓
-  opens the link in the browser.
+  also sets how often they show: about one every 10 plans by default,
+  a little at random); between plans on Discover, where ✓ opens the link
+  in the browser and ✕ skips it for good; sample ads from Climbing
+  Siurana on RC and local.
 - [Theme](theme.md): dark, in mountain colors.
 - [Logging](logging.md): the app's developer log on every platform
   (browser console, device log, a file on phones), scrubbed of account

@@ -260,6 +260,7 @@ export class Api {
     r('POST /api/ads/media', 'profile', (req, s) => this.presignAdMedia(req, s));
     r('POST /api/ads', 'profile', (req, s) => this.createAd(req, s));
     r('DELETE /api/ads/{id}', 'profile', (req, s) => this.deleteAd(req, s));
+    r('POST /api/ads/{id}/skip', 'profile', (req, s) => this.skipAd(req, s));
 
     r('GET /api/discover', 'profile', (_req, s) => this.discover(s));
     r('POST /api/plans', 'profile', (req, s) => this.createPlan(req, s));
@@ -935,6 +936,16 @@ export class Api {
     return {};
   }
 
+  /**
+   * POST /api/ads/{id}/skip: I skipped an ad on the deck, so it never
+   * shows to me again. One write, no read: a skip of an ad that isn't
+   * there only sits in my own partition.
+   */
+  private async skipAd(req: Request, s: Session) {
+    await this.store.skipAd(s.me.id, id(req.params.id, 'ad id'), s.now);
+    return {};
+  }
+
   /** GET /api/admin/ads?status=pending|approved|rejected: newest first, with their owners and the deck's setting. */
   private async adminAds(req: Request) {
     const status = (req.query.status ?? 'pending') as AdStatus;
@@ -953,14 +964,15 @@ export class Api {
   }
 
   /**
-   * The deck's ads: approved, not mine, their owner Premium and not
-   * blocked; and how often to show one. Never fails the deck.
+   * The deck's ads: approved, not mine, not one I skipped, their owner
+   * Premium (or the seed's made-up advertiser) and not blocked; and how
+   * often to show one. Never fails the deck.
    */
   private async deckAds(s: Session): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
     try {
       const settings = await this.store.getAdSettings();
       if (settings.every === 0) return { ads: [], adEvery: 0, adOwners: {} };
-      const approved = await this.store.adsByStatus('approved');
+      const [approved, skipped] = await Promise.all([this.store.adsByStatus('approved'), this.store.skippedAdIds(s.me.id)]);
       const owners = [...new Set(approved.map((a) => a.ownerId))];
       const [emails, climbers, blocked] = await Promise.all([this.store.getEmails(owners), this.store.getClimbers(owners), this.blockedEmails()]);
       // Owners still Premium in rbacr (each answer kept a minute).
@@ -968,8 +980,10 @@ export class Api {
       await Promise.all(owners.map(async (o) => {
         if (await this.isPremium(emails[o])) premium.add(o);
       }));
-      const ok = (ownerId: string) => premium.has(ownerId) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '');
-      const ads = deckAds(approved, s.me.id, ok);
+      // Demo owners (the seed's, RC and local only) advertise without Premium.
+      const ok = (ownerId: string) =>
+        (premium.has(ownerId) || climbers[ownerId]?.demo === true) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '');
+      const ads = deckAds(approved, s.me.id, ok, new Set(skipped));
       const adOwners = Object.fromEntries(ads.map((a) => [a.ownerId, publicClimber(climbers[a.ownerId]!)]));
       return { ads, adEvery: settings.every, adOwners };
     } catch (e) {

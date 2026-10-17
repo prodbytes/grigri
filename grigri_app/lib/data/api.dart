@@ -205,6 +205,10 @@ abstract interface class GrigriApi {
   /// `DELETE /api/ads/{id}`: takes my ad down for good.
   Future<void> deleteAd(String adId);
 
+  /// `POST /api/ads/{id}/skip`: I skipped an ad on the deck; it never
+  /// shows to me again.
+  Future<void> skipAd(String adId);
+
   /// `GET /api/admin/ads?status=`: ads in a status, newest first, with
   /// their owners and how often the deck shows ads (admins only).
   Future<AdminAds> adminAds(AdStatus status);

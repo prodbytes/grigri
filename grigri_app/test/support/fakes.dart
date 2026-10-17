@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -696,7 +697,10 @@ class FakeApi implements GrigriApi, SessionApi {
           ? const []
           : [
               for (final a in ads.values)
-                if (a.status == AdStatus.approved && a.ownerId != meId) a,
+                if (a.status == AdStatus.approved &&
+                    a.ownerId != meId &&
+                    !skippedAds.contains(a.id))
+                  a,
             ],
       adEvery: adEvery,
     );
@@ -1138,6 +1142,14 @@ class FakeApi implements GrigriApi, SessionApi {
     ads.remove(adId);
   });
 
+  /// Ads I skipped: never on my deck again.
+  final skippedAds = <String>{};
+
+  @override
+  Future<void> skipAd(String adId) => _route('POST /api/ads/$adId/skip', () {
+    skippedAds.add(adId);
+  });
+
   @override
   Future<AdminAds> adminAds(AdStatus status) =>
       _route('GET /api/admin/ads?status=${status.name}', () {
@@ -1369,6 +1381,7 @@ GrigriStore storeFor(
   Preferences? preferences,
   RealtimeTransport? realtime,
   DeviceLocation deviceLocation = const DeviceLocation.none(),
+  math.Random? random,
 }) {
   final auth = SessionAuth(
     method: FakeGoogle(mode: mode),
@@ -1393,6 +1406,7 @@ GrigriStore storeFor(
     realtime: realtime,
     deviceLocation: deviceLocation,
     places: () async => fakePlaces,
+    random: random,
   );
 }
 

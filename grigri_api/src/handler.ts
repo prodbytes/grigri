@@ -5,7 +5,7 @@
 // deck itself. The
 // HTTP API can't send that event: its events always carry requestContext.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DeleteObjectCommand, DeleteObjectTaggingCommand, GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, DeleteObjectTaggingCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
@@ -192,7 +192,11 @@ export async function handler(event: Event): Promise<APIGatewayProxyResultV2 | R
   if (!('requestContext' in event)) {
     if ((event as { grigriSeed?: boolean }).grigriSeed === true) {
       assertSeedable(stage, table);
-      return { seeded: await seed(store, new Date()) };
+      // The sample ads' photos, put straight into the photos bucket (kept: never tagged pending).
+      const putPhoto = async (key: string, body: Uint8Array, contentType: string) => {
+        await s3.send(new PutObjectCommand({ Bucket: bucket, Key: `photos/${key}`, Body: body, ContentType: contentType, CacheControl: 'public, max-age=86400' }));
+      };
+      return { seeded: await seed(store, new Date(), putPhoto) };
     }
     return { error: 'unknown event' };
   }

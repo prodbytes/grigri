@@ -136,6 +136,10 @@ API can't send that event) by [scripts/seed.sh](../scripts/seed.sh):
   `grigri-rc-api` or `grigri-local-api`, and the production deploy role
   may only invoke the RC function.
 
+The seed also writes the [sample ads](ads.md#sample-ads): Climbing
+Siurana's (a made-up advertiser account), approved, with their photos
+copied from the school's site into the photos bucket.
+
 Two seed plans show the [plan types](matching.md#plan-types-who-decides):
 Montserrat is guided (€60 a climber) and the after-work gym leads are
 open; the rest are private. A plan's type is stored as `planType` (the
@@ -188,7 +192,7 @@ and use is billed per request. Prices are us-east-1's.
 | Artifact bucket (per stage) | S3 storage of each deploy's ~200 KB zip, expired after 30 days | ~$0 | Where `aws cloudformation package` uploads the code. |
 | IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
 | Premium payments ([premium.md](premium.md#cost)) | Stripe: 2.9% + $0.30 per charge, plus 0.7% Billing; no monthly fee | $0 | Pay per payment; merchants of record take 5% + $0.50, the app stores 15–30%. One subscription item per subscriber in the table. |
-| Ads ([ads.md](ads.md#cost)) | Two reads and a small batch read per deck; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
+| Ads ([ads.md](ads.md#cost)) | Three reads and a small batch read per deck, a write per skipped ad; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
 | Match scores ([match-scores.md](match-scores.md#cost)) | aityx System One: $0.042 per million input tokens (about $0.00007 a call, ~1,600 tokens); the scores table on demand; the scoring function only when run by hand | $0 | A decision API keeps the score's weights as data, each rule with its reason; it's called only for admins' decks and on-demand runs. |
 | Authorizer Lambda, arm64, 128 MB | $0.20 per million invocations + GB-seconds: one at each connect and one an hour per open connection (`refreshAfterInSeconds` 3600), ~30 ms each | $0 | A separate tiny function: the API's 256 MB bundle and role would be more than it needs. Hourly refresh, not every few minutes: sign-out reaches open connections within the hour at a twelfth of the invocations of a 5-minute refresh. |
 
