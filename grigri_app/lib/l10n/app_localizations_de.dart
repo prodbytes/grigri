@@ -1556,6 +1556,78 @@ class AppLocalizationsDe extends AppLocalizations {
       'Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt.';
 
   @override
+  String get areaGuide => 'Gebietsführer';
+
+  @override
+  String get guideAccess => 'Zustieg';
+
+  @override
+  String get guideClimbing => 'Art der Kletterei';
+
+  @override
+  String get guideRock => 'Fels';
+
+  @override
+  String get guideRoutes => 'Routen';
+
+  @override
+  String get guideSeason => 'Saison';
+
+  @override
+  String get guideTips => 'Tipps und Hinweise';
+
+  @override
+  String get guideReading => 'Literatur';
+
+  @override
+  String get guideSectors => 'Sektoren';
+
+  @override
+  String get guideClimbs => 'Ausgewählte Routen';
+
+  @override
+  String get guideClosures => 'Sperrungen';
+
+  @override
+  String get guideClosedNow => 'Jetzt gesperrt';
+
+  @override
+  String get guideAreas => 'Klettergebiete';
+
+  @override
+  String get guideAdvice => 'Vor dem Klettern';
+
+  @override
+  String get guideServices => 'Anbieter';
+
+  @override
+  String get guideLinks => 'Nützliche Links';
+
+  @override
+  String get guideBibliography => 'Literatur';
+
+  @override
+  String get guideOpenAll => 'Der ganze Führer';
+
+  @override
+  String guideSource(String title, String publisher, int year) {
+    return 'Aus „$title“, $publisher, $year.';
+  }
+
+  @override
+  String guideCredits(String text, String photos) {
+    return 'Text: $text · Fotos: $photos';
+  }
+
+  @override
+  String guideClosure(String sector, String from, String to, String reason) {
+    return '$sector: gesperrt $from – $to ($reason)';
+  }
+
+  @override
+  String get guideAccessMap => 'Zustiegskarte';
+
+  @override
   String get adRegionsTitle => 'Wo sie erscheint';
 
   @override

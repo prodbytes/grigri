@@ -1535,6 +1535,78 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please keep it friendly: that has words Grigri doesn\'t allow.';
 
   @override
+  String get areaGuide => 'Area guide';
+
+  @override
+  String get guideAccess => 'Access';
+
+  @override
+  String get guideClimbing => 'Type of climbing';
+
+  @override
+  String get guideRock => 'Rock';
+
+  @override
+  String get guideRoutes => 'Routes';
+
+  @override
+  String get guideSeason => 'Season';
+
+  @override
+  String get guideTips => 'Tips and advice';
+
+  @override
+  String get guideReading => 'Further reading';
+
+  @override
+  String get guideSectors => 'Sectors';
+
+  @override
+  String get guideClimbs => 'Featured routes';
+
+  @override
+  String get guideClosures => 'Closures';
+
+  @override
+  String get guideClosedNow => 'Closed now';
+
+  @override
+  String get guideAreas => 'Climbing areas';
+
+  @override
+  String get guideAdvice => 'Before you climb';
+
+  @override
+  String get guideServices => 'Services';
+
+  @override
+  String get guideLinks => 'Useful links';
+
+  @override
+  String get guideBibliography => 'Bibliography';
+
+  @override
+  String get guideOpenAll => 'The whole guide';
+
+  @override
+  String guideSource(String title, String publisher, int year) {
+    return 'From “$title”, $publisher, $year.';
+  }
+
+  @override
+  String guideCredits(String text, String photos) {
+    return 'Text: $text · Photos: $photos';
+  }
+
+  @override
+  String guideClosure(String sector, String from, String to, String reason) {
+    return '$sector: closed $from – $to ($reason)';
+  }
+
+  @override
+  String get guideAccessMap => 'Access map';
+
+  @override
   String get adRegionsTitle => 'Where it shows';
 
   @override

@@ -61,6 +61,10 @@ always in the plural, "partners" (a plan's group), in every language.
   with a discreet warning when something's missing.
 - [Sectors](sectors.md): the searchable index of climbing sectors, crags
   and gyms that a plan's "where" picks from, built from OpenStreetMap.
+- [Climbing guides](guides.md): the Costa Daurada guide (its 11 areas,
+  maps, advice, services and books, in Catalan and English) bundled with
+  the app: the plan screen's **Area guide**, an area's page and the whole
+  guide; its photos as GriGri Pics.
 - [Roles](roles.md): my roles in Grigri, from rbacr, at the end of the
   profile.
 - [Match scores](match-scores.md): how likely a climber and a plan end

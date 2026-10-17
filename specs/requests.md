@@ -1519,3 +1519,40 @@ spec.
     - [App Store](app-store.md): `make ipa` only exports, and the icon
       placeholder lasts until a build is uploaded.
     - Cost: none.
+
+98. **Add the information in the Costa Daurada rock climbing guide (a
+    PDF) to the app: crag names, descriptions, images, everything
+    (the user holds the rights). Keep the guide in a git-ignored `.local`
+    folder.**
+    - The PDF (*Escalada / Rock Climbing, Costa Daurada*, Patronat de
+      Turisme de la Diputació de Tarragona, 2004) and everything
+      extracted from it (page texts and renders, its 68 images, the
+      access maps) are in `.local/guides/costa-daurada/`, git-ignored.
+    - [Climbing guides](guides.md), a new feature: the guide's 11 areas
+      (introduction, access, climbing, rock, routes, season, tips,
+      reading, sectors, featured routes, closures), its region and access
+      maps, advice, services, links and bibliography, in Catalan and
+      English, bundled with the app. The plan screen gets **Area guide**
+      when the plan is in one of its areas ([screens](screens.md)),
+      which opens the area's page and the whole guide. New texts in all
+      six languages ([languages](i18n.md)).
+    - [GriGri Pics](pics.md#the-costa-daurada-guides-photos): the guide's
+      33 photos, credited to their photographer and the Patronat, on six
+      new crags and nine new areas, and Siurana's and Margalef's. The
+      loader reads a photo from a `file` in `grigri_api/pics/` as well as
+      from a `url`, and keys it by its file (several share a page as
+      their source: the first local run put 41 of 52, now all 52). The
+      landing page's footer now says crag photos are freely licensed *or
+      used with permission* ([landing](landing.md)).
+    - [Sectors](sectors.md): the guide's areas and sectors (39 rows,
+      `guide:…`) join the bundled index; the OpenStreetMap build keeps
+      them.
+    - Tests: the guide is complete in both languages, its maps are
+      bundled, and which area a place is in (by point, by name, by
+      sector); the plan screen's card, the area page and the whole guide,
+      in English and Catalan; a rebuild of the index keeps the guide's
+      rows. The route finder test scrolls past the new card.
+    - Cost: nothing to run. About 0.6 MB more in the app (the guide and
+      its maps, fetched on the web only when a plan screen opens) and
+      0.5 MB more in the pics bucket ($0.00001 a month), served by the
+      site's CloudFront, already there.

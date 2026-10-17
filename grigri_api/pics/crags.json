@@ -1,5 +1,5 @@
 {
-  "note": "GriGri Pics: crags around Siurana and Margalef (OpenStreetMap: climbing=crag, sport=climbing or climbing=area, named, within 6 km) and freely licensed photos (Wikimedia Commons and Flickr, CC0/PD/CC BY/CC BY-SA only), each checked by hand: it clearly shows that crag (or, under area:*, that area's cliffs), with no watermark and no person's name. grigri_api/pics/load.mjs loads it; specs/pics.md.",
+  "note": "GriGri Pics: crags around Siurana and Margalef (OpenStreetMap: climbing=crag, sport=climbing or climbing=area, named, within 6 km) and freely licensed photos (Wikimedia Commons and Flickr, CC0/PD/CC BY/CC BY-SA only), each checked by hand: it clearly shows that crag (or, under area:*, that area's cliffs), with no watermark and no person's name. grigri_api/pics/load.mjs loads it; specs/pics.md. Also the photos of the Costa Daurada climbing guide (Escalada / Rock Climbing, Patronat de Turisme de la Diputació de Tarragona, 2004; photos by Joan Alberich), used with the rights holder's permission: their files are in pics/guide/ (file instead of url); specs/guides.md.",
   "checkedAt": "2026-10-16T20:39:10Z",
   "crags": [
     {
@@ -140,6 +140,28 @@
           "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
           "source": "https://commons.wikimedia.org/wiki/File:Grau_de_la_Tornera_-_panoramio.jpg",
           "caption": "Limestone towers along the cliffs east of Siurana"
+        },
+        {
+          "title": "siurana-gargamel",
+          "file": "guide/costa-daurada/siurana-gargamel.jpg",
+          "width": 314,
+          "height": 753,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 7",
+          "caption": "Gargamel (6a), Siurana"
+        },
+        {
+          "title": "siurana-church",
+          "file": "guide/costa-daurada/siurana-church.jpg",
+          "width": 152,
+          "height": 177,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 6",
+          "caption": "The Romanesque doorway of Siurana's church"
         }
       ]
     },
@@ -215,6 +237,329 @@
           "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
           "source": "https://www.flickr.com/photos/90479905@N06/16801622747",
           "caption": "Climber on the Can Llepafills sector near the Margalef reservoir"
+        },
+        {
+          "title": "margalef-reservoir",
+          "file": "guide/costa-daurada/margalef-reservoir.jpg",
+          "width": 647,
+          "height": 309,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 14",
+          "caption": "Climbing above the Margalef reservoir"
+        },
+        {
+          "title": "margalef-tomatic",
+          "file": "guide/costa-daurada/margalef-tomatic.jpg",
+          "width": 325,
+          "height": 681,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 15",
+          "caption": "Tomàtic (7a+), Margalef"
+        },
+        {
+          "title": "margalef-hermitage",
+          "file": "guide/costa-daurada/margalef-hermitage.jpg",
+          "width": 133,
+          "height": 200,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 15",
+          "caption": "The hermitage of Margalef, under the cliff"
+        },
+        {
+          "title": "margalef-bolt",
+          "file": "guide/costa-daurada/margalef-bolt.jpg",
+          "width": 260,
+          "height": 93,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 14",
+          "caption": "A glue-in bolt on Margalef's conglomerate"
+        }
+      ]
+    },
+    {
+      "id": "area:la-mussara",
+      "name": "La Mussara",
+      "area": "La Mussara",
+      "lat": 41.2538,
+      "lon": 1.03099,
+      "photos": [
+        {
+          "title": "la-mussara-village",
+          "file": "guide/costa-daurada/la-mussara-village.jpg",
+          "width": 130,
+          "height": 169,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 8",
+          "caption": "The village of La Mussara, now deserted, above its crags"
+        },
+        {
+          "title": "la-mussara-refuge",
+          "file": "guide/costa-daurada/la-mussara-refuge.jpg",
+          "width": 152,
+          "height": 182,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 8",
+          "caption": "The La Mussara refuge, where climbers meet"
+        }
+      ]
+    },
+    {
+      "id": "area:arboli",
+      "name": "Arbolí",
+      "area": "Arbolí",
+      "lat": 41.24259,
+      "lon": 0.94877,
+      "photos": [
+        {
+          "title": "arboli-la-tortuga",
+          "file": "guide/costa-daurada/arboli-la-tortuga.jpg",
+          "width": 248,
+          "height": 489,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 9",
+          "caption": "Bouldering at La Tortuga, Arbolí"
+        },
+        {
+          "title": "arboli-refuge",
+          "file": "guide/costa-daurada/arboli-refuge.jpg",
+          "width": 197,
+          "height": 112,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 9",
+          "caption": "The refuge sign in Arbolí"
+        }
+      ]
+    },
+    {
+      "id": "area:montsant",
+      "name": "Montsant",
+      "area": "Montsant",
+      "lat": 41.25927,
+      "lon": 0.82903,
+      "photos": [
+        {
+          "title": "montsant-serra-major",
+          "file": "guide/costa-daurada/montsant-serra-major.jpg",
+          "width": 616,
+          "height": 378,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 10",
+          "caption": "The south face of the Serra Major, El Montsant Natural Park"
+        }
+      ]
+    },
+    {
+      "id": "area:vilanova-de-prades",
+      "name": "Vilanova de Prades",
+      "area": "Vilanova de Prades",
+      "lat": 41.34787,
+      "lon": 0.95715,
+      "photos": [
+        {
+          "title": "vilanova-de-prades-al-lorut",
+          "file": "guide/costa-daurada/vilanova-de-prades-al-lorut.jpg",
+          "width": 213,
+          "height": 493,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 12",
+          "caption": "Al Lorut (7c+), above the village of Vilanova de Prades"
+        },
+        {
+          "title": "vilanova-de-prades-valley",
+          "file": "guide/costa-daurada/vilanova-de-prades-valley.jpg",
+          "width": 484,
+          "height": 150,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 12",
+          "caption": "Vilanova de Prades and its valley, below the Serra de la Llena"
+        }
+      ]
+    },
+    {
+      "id": "area:ulldemolins",
+      "name": "Ulldemolins",
+      "area": "Ulldemolins",
+      "lat": 41.32229,
+      "lon": 0.87614,
+      "photos": [
+        {
+          "title": "ulldemolins-quickdraw",
+          "file": "guide/costa-daurada/ulldemolins-quickdraw.jpg",
+          "width": 211,
+          "height": 143,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 13",
+          "caption": "Clipping a quickdraw on the conglomerate of Ulldemolins"
+        }
+      ]
+    },
+    {
+      "id": "area:la-riba",
+      "name": "La Riba",
+      "area": "La Riba",
+      "lat": 41.317,
+      "lon": 1.17713,
+      "photos": [
+        {
+          "title": "la-riba-via-de-brian",
+          "file": "guide/costa-daurada/la-riba-via-de-brian.jpg",
+          "width": 210,
+          "height": 433,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 16",
+          "caption": "Via de Brian (6b+), La Riba"
+        },
+        {
+          "title": "la-riba-riu-brugent",
+          "file": "guide/costa-daurada/la-riba-riu-brugent.jpg",
+          "width": 381,
+          "height": 265,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 16",
+          "caption": "Walking along the River Brugent, La Riba"
+        }
+      ]
+    },
+    {
+      "id": "area:mont-ral",
+      "name": "Mont-ral",
+      "area": "Mont-ral",
+      "lat": 41.28674,
+      "lon": 1.09832,
+      "photos": [
+        {
+          "title": "mont-ral-ta",
+          "file": "guide/costa-daurada/mont-ral-ta.jpg",
+          "width": 213,
+          "height": 546,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 17",
+          "caption": "Ta (6b+), Mont-ral"
+        },
+        {
+          "title": "mont-ral-village",
+          "file": "guide/costa-daurada/mont-ral-village.jpg",
+          "width": 255,
+          "height": 118,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 17",
+          "caption": "Mont-ral and its church above the woods"
+        }
+      ]
+    },
+    {
+      "id": "area:els-cogullons",
+      "name": "Els Cogullons",
+      "area": "Els Cogullons",
+      "lat": 41.3293,
+      "lon": 1.089,
+      "photos": [
+        {
+          "title": "els-cogullons-paella-mixta",
+          "file": "guide/costa-daurada/els-cogullons-paella-mixta.jpg",
+          "width": 133,
+          "height": 153,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 18",
+          "caption": "La Paella Mixta (7b+), Els Cogullons"
+        },
+        {
+          "title": "els-cogullons-paella-mixta-2",
+          "file": "guide/costa-daurada/els-cogullons-paella-mixta-2.jpg",
+          "width": 325,
+          "height": 697,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 19",
+          "caption": "On La Paella Mixta (7b+), Els Cogullons"
+        },
+        {
+          "title": "els-cogullons-pocket",
+          "file": "guide/costa-daurada/els-cogullons-pocket.jpg",
+          "width": 222,
+          "height": 191,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 19",
+          "caption": "A pocket in the rock of Els Cogullons"
+        },
+        {
+          "title": "els-cogullons-signposts",
+          "file": "guide/costa-daurada/els-cogullons-signposts.jpg",
+          "width": 393,
+          "height": 270,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 18",
+          "caption": "Signposts to Cogullons, Farena, Mas Mateu and Mas Roquerola"
+        }
+      ]
+    },
+    {
+      "id": "area:l-hospitalet",
+      "name": "L'Hospitalet",
+      "area": "L'Hospitalet",
+      "lat": 40.99965,
+      "lon": 0.9124,
+      "photos": [
+        {
+          "title": "l-hospitalet-via-ferrada",
+          "file": "guide/costa-daurada/l-hospitalet-via-ferrada.jpg",
+          "width": 213,
+          "height": 478,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 20",
+          "caption": "On the via ferrata of L'Hospitalet, above the sea"
+        },
+        {
+          "title": "l-hospitalet-arete",
+          "file": "guide/costa-daurada/l-hospitalet-arete.jpg",
+          "width": 251,
+          "height": 187,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 20",
+          "caption": "The arête the via ferrata of L'Hospitalet climbs"
         }
       ]
     },
@@ -581,6 +926,159 @@
       "lat": 41.25176,
       "lon": 0.73094,
       "photos": []
+    },
+    {
+      "id": "guide:siuranella",
+      "name": "Siuranella",
+      "area": "Siurana",
+      "lat": 41.26498,
+      "lon": 0.93361,
+      "photos": [
+        {
+          "title": "siuranella",
+          "file": "guide/costa-daurada/siuranella.jpg",
+          "width": 591,
+          "height": 333,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 4",
+          "caption": "The red walls of Siuranella, Siurana"
+        },
+        {
+          "title": "siuranella-climber",
+          "file": "guide/costa-daurada/siuranella-climber.jpg",
+          "width": 795,
+          "height": 259,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 4",
+          "caption": "Siuranella: the Prades Mountains and a climber on its red wall"
+        },
+        {
+          "title": "siuranella-centre",
+          "file": "guide/costa-daurada/siuranella-centre.jpg",
+          "width": 260,
+          "height": 162,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 7",
+          "caption": "At the foot of the wall, Siuranella Centre"
+        }
+      ]
+    },
+    {
+      "id": "guide:les-airasses",
+      "name": "Les Airasses",
+      "area": "La Mussara",
+      "lat": 41.25137,
+      "lon": 1.02868,
+      "photos": [
+        {
+          "title": "la-mussara-les-airasses",
+          "file": "guide/costa-daurada/la-mussara-les-airasses.jpg",
+          "width": 212,
+          "height": 474,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 8",
+          "caption": "Les Airasses (5+), La Mussara"
+        }
+      ]
+    },
+    {
+      "id": "guide:raco-de-missa",
+      "name": "El Racó de Missa",
+      "area": "Montsant",
+      "lat": 41.27015,
+      "lon": 0.81708,
+      "photos": [
+        {
+          "title": "montsant-raco-de-missa-7b",
+          "file": "guide/costa-daurada/montsant-raco-de-missa-7b.jpg",
+          "width": 317,
+          "height": 744,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 11",
+          "caption": "El Racó de Missa (7b+), El Montsant"
+        },
+        {
+          "title": "montsant-raco-de-missa",
+          "file": "guide/costa-daurada/montsant-raco-de-missa.jpg",
+          "width": 183,
+          "height": 207,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 10",
+          "caption": "The overhanging conglomerate of El Racó de Missa"
+        }
+      ]
+    },
+    {
+      "id": "guide:fraguerau",
+      "name": "Fraguerau",
+      "area": "Ulldemolins",
+      "lat": 41.31766,
+      "lon": 0.8253,
+      "photos": [
+        {
+          "title": "ulldemolins-fraguerau",
+          "file": "guide/costa-daurada/ulldemolins-fraguerau.jpg",
+          "width": 215,
+          "height": 366,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 13",
+          "caption": "Fraguerau (7b), Ulldemolins"
+        }
+      ]
+    },
+    {
+      "id": "guide:codolles-fondes",
+      "name": "Codolles Fondes",
+      "area": "Ulldemolins",
+      "lat": 41.31536,
+      "lon": 0.84243,
+      "photos": [
+        {
+          "title": "ulldemolins-codolles-fondes",
+          "file": "guide/costa-daurada/ulldemolins-codolles-fondes.jpg",
+          "width": 259,
+          "height": 147,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 13",
+          "caption": "The Montsant river through the Codolles Fondes gorge"
+        }
+      ]
+    },
+    {
+      "id": "guide:mola-roquerola",
+      "name": "Mola Roquerola",
+      "area": "Els Cogullons",
+      "lat": 41.32034,
+      "lon": 1.0653,
+      "photos": [
+        {
+          "title": "els-cogullons-kavernicola",
+          "file": "guide/costa-daurada/els-cogullons-kavernicola.jpg",
+          "width": 266,
+          "height": 506,
+          "author": "Joan Alberich",
+          "license": "© Patronat de Turisme de la Diputació de Tarragona",
+          "licenseUrl": "",
+          "source": "Escalada / Rock Climbing, Costa Daurada (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 18",
+          "caption": "Kavernícola (6b), Mola Roquerola"
+        }
+      ]
     }
   ]
 }

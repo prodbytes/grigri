@@ -5,7 +5,8 @@
 //   flutter pub get
 //   dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
 //
-// It writes the file only when every country came through.
+// It writes the file only when every country came through. The rows a
+// climbing guide added (ids "guide:…", specs/guides.md) are kept.
 //
 // The data is © OpenStreetMap contributors, under the ODbL: the app shows
 // the attribution, and the index stays open.
@@ -40,7 +41,9 @@ Future<void> main(List<String> args) async {
   } finally {
     client.close();
   }
-  File(args.first).writeAsStringSync(indexJson(sectors));
+  final file = File(args.first);
+  if (file.existsSync()) sectors.addAll(guideSectors(file.readAsStringSync()));
+  file.writeAsStringSync(indexJson(sectors));
   stderr.writeln('${sectors.length} sectors in ${args.first}');
 }
 
@@ -139,6 +142,13 @@ List<Sector> sectorsFrom(Map<String, Object?> overpass) {
   }
   return sectors.values.toList()..sort((a, b) => a.name.compareTo(b.name));
 }
+
+/// The rows of an index file that came from a climbing guide (ids
+/// "guide:…"), not from OpenStreetMap: a rebuild keeps them.
+List<Sector> guideSectors(String json) => [
+  for (final row in (jsonDecode(json) as Map)['sectors'] as List? ?? const [])
+    if (row is List && '${row.first}'.startsWith('guide:')) Sector.fromRow(row),
+];
 
 /// The index file the app reads (SectorIndex.parse).
 String indexJson(List<Sector> sectors) =>

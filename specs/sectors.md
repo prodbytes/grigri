@@ -48,7 +48,8 @@ dart run tool/build_sectors.dart assets/sectors.json ES FR IT PT
 ```
 
 - It writes the file only when every country came through, so a failed
-  run leaves the index as it was.
+  run leaves the index as it was. It keeps the rows a climbing guide
+  added (ids `guide:…`).
 - It takes the country's crags and sectors (`climbing=crag`) and climbing
   gyms (`climbing=gym`, or `leisure=sports_centre` with `sport=climbing`),
   with their points (`out center`: a node's own, a way's or relation's
@@ -68,6 +69,10 @@ allow reuse.
 
 The bundled file is a placeholder with a few crags (ids
 `demo:…`, approximate points, no attribution), until the build runs where Overpass can be
-reached. It needs no change in the app: the build's output replaces it.
+reached. It also has the [Costa Daurada guide](guides.md)'s areas and the
+sectors it names (39 rows, ids `guide:…`: La Mussara, Arbolí, El
+Montsant, Siuranella, El Racó de Missa, Fraguerau, Mola Roquerola…), with
+points from OpenStreetMap's Nominatim where it has them, approximate;
+the build keeps them. It needs no change in the app: the build's output replaces it.
 Splitting the file per country, downloaded as needed, is the next step
 once it grows big.

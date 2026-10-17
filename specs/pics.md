@@ -6,7 +6,7 @@ A plan's screen shows two sets of photos, apart:
   in its chat. Members only. People's data, in the photos bucket with
   their profile and chat photos.
 - **GriGri Pics**: Grigri's own photos of the plan's crag, freely
-  licensed and credited. Anyone who can see the plan. App content, in a
+  licensed (or a guide's, used with permission) and credited. Anyone who can see the plan. App content, in a
   bucket of its own, never mixed with people's data.
 
 Routes and JSON shapes are in [api.md](api.md#routes); the screen is in
@@ -112,15 +112,20 @@ backdrop instead.
   cliff); the rest, good photos of the area's cliffs that no single crag
   can claim, go to the area (`area:siurana`, `area:margalef`), so every
   plan there still gets some.
-- As of 2026-10-16: **19 photos**. Racó de la Finestra (Margalef) has 1
-  of its own; Siurana's area has 12 (El Pati's 3 among them: El Pati
-  isn't in OpenStreetMap, so it has no point to hang them on) and
-  Margalef's 6. The other 44 crags have none yet: Commons, Flickr and
-  Openverse have no free photo that can be tied to them. A plan at a crag
-  with photos shows those first, then its area's (within 8 km).
+- As of 2026-10-17: **52 photos**: 19 freely licensed and the
+  [Costa Daurada guide's](#the-costa-daurada-guides-photos) 33. Of the
+  free ones, Racó de la Finestra (Margalef) has 1 of its own; Siurana's
+  area has 12 (El Pati's 3 among them: El Pati isn't in OpenStreetMap,
+  so it has no point to hang them on) and Margalef's 6. The other 44
+  OpenStreetMap crags have none yet: Commons, Flickr and Openverse have
+  no free photo that can be tied to them. A plan at a crag with photos
+  shows those first, then its area's (within 8 km).
 - [grigri_api/pics/load.mjs](../grigri_api/pics/load.mjs) loads it,
   idempotently: it downloads each photo not in the bucket yet (Commons'
   1920 px thumbnail; cached in `grigri_api/pics/.cache`, git-ignored),
+  or reads it from `grigri_api/pics/` when it has a `file` instead of a
+  `url` (a guide's photos; their key comes from the file, as several
+  share a page for their source),
   puts it, sets its annotation (again when `crags.json` changed it),
   deletes photos taken out of the file, and rebuilds the catalog from the
   annotations. A photo that fails to download is skipped and reported.
@@ -129,12 +134,39 @@ backdrop instead.
   ([dev-environment.md](dev-environment.md)) runs it whenever Floci's
   pics bucket has no catalog (Floci keeps nothing between starts).
 
+
+### The Costa Daurada guide's photos
+
+The [Costa Daurada climbing guide](guides.md)'s 33 photos (by Joan
+Alberich, © Patronat de Turisme de la Diputació de Tarragona, used with
+permission) are GriGri Pics too. They're small (the brochure's own
+images, 130 to 800 px wide), so they're shown as they are.
+
+- **Files**: [grigri_api/pics/guide/costa-daurada/](../grigri_api/pics/guide/costa-daurada),
+  extracted from the PDF (kept in `.local/`, git-ignored), named for what
+  they show.
+- **Credit**: author "Joan Alberich", license "© Patronat de Turisme de
+  la Diputació de Tarragona" (no license URL), and for source the
+  brochure and its page ("Escalada / Rock Climbing, Costa Daurada
+  (Patronat de Turisme de la Diputació de Tarragona, 2004), p. 7"):
+  "Photo: Joan Alberich, © Patronat de Turisme de la Diputació de
+  Tarragona". Captions describe the place, or name the route and its
+  grade, as the guide does; never a person.
+- **Where they go**: the guide's crags that have a point (Siuranella,
+  Les Airasses, El Racó de Missa, Fraguerau, Codolles Fondes and Mola
+  Roquerola, ids `guide:…`), else the area: Siurana's and Margalef's
+  (after their free photos), and nine new areas (`area:la-mussara`,
+  `area:arboli`, `area:montsant`, `area:vilanova-de-prades`,
+  `area:ulldemolins`, `area:la-riba`, `area:mont-ral`,
+  `area:els-cogullons`, `area:l-hospitalet`), so every area of the guide
+  has some. Village, refuge and river photos come after the climbing
+  ones.
 ## Cost
 
 Nothing while idle beyond storage; see [backend.md](backend.md#cost).
 
-- **GriGri Pics storage**: ~11 MB now (19 photos of 0.3–0.7 MB):
-  $0.0003/month. Annotations are billed as S3 Standard storage (bytes).
+- **GriGri Pics storage**: ~12 MB now (19 photos of 0.3–0.7 MB, and
+  the guide's 33, 0.5 MB in all): $0.0003/month. Annotations are billed as S3 Standard storage (bytes).
 - **Lookups**: the catalog GET, once per warm function: about $0.0004 per
   1,000 cold starts. The plan's photos come with one extra API call per
   plan screen opened (`GET /api/plans/{id}/pics`: ~$2 per million). The

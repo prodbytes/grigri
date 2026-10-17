@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Loads GriGri Pics (specs/pics.md) into a stage's pics bucket:
 //   1. each photo of pics/crags.json (freely licensed, mostly from
-//      Wikimedia Commons) not in the bucket yet is downloaded (cached in
-//      pics/.cache) and put at pics/crags/<crag>/<hash>.<ext>, immutable;
+//      Wikimedia Commons; or a guide's, used with permission, whose file
+//      is in pics/guide/) not in the bucket yet is downloaded (cached in
+//      pics/.cache) or read and put at pics/crags/<crag>/<hash>.<ext>,
+//      immutable;
 //   2. each photo carries its metadata as an S3 annotation named "grigri"
 //      (the crag, its point, the caption, the author and the license):
 //      the source of truth, kept on the object itself;
@@ -50,10 +52,15 @@ const dataset = JSON.parse(await readFile(join(here, 'crags.json'), 'utf8'));
 
 /** A crag id as a key segment: "osm:n123" → "osm-n123". */
 const slug = (id) => id.replace(/[^A-Za-z0-9_-]+/g, '-');
+/**
+ * What a photo is, for its key: its file (a guide's photos share a page as
+ * their source), else its source.
+ */
+const idOf = (photo) => photo.file ?? photo.source;
 /** A photo's key under pics/: stable for its source, so it's never re-uploaded. */
 const keyOf = (crag, photo, ext) =>
-  `crags/${slug(crag.id)}/${createHash('sha1').update(photo.source).digest('hex').slice(0, 12)}.${ext}`;
-const extOf = (url) => (/\.png($|\?)/i.test(url) ? 'png' : 'jpg');
+  `crags/${slug(crag.id)}/${createHash('sha1').update(idOf(photo)).digest('hex').slice(0, 12)}.${ext}`;
+const extOf = (photo) => (/\.png($|\?)/i.test(photo.url ?? photo.file) ? 'png' : 'jpg');
 
 async function listKeys() {
   const keys = [];
@@ -66,8 +73,12 @@ async function listKeys() {
   return keys;
 }
 
-/** The photo's bytes, from the cache or downloaded (politely: one at a time, retried on 429). */
+/**
+ * The photo's bytes: its file in pics/ (a guide's photos), else from the
+ * cache or downloaded (politely: one at a time, retried on 429).
+ */
 async function fetchPhoto(photo, file) {
+  if (photo.file) return readFile(join(here, photo.file));
   try {
     return await readFile(file);
   } catch {}
@@ -93,7 +104,7 @@ let uploaded = 0;
 let failed = 0;
 for (const crag of dataset.crags) {
   for (const photo of crag.photos) {
-    const ext = extOf(photo.url);
+    const ext = extOf(photo);
     const key = keyOf(crag, photo, ext);
     const object = `pics/${key}`;
     wanted.add(object);
@@ -144,7 +155,7 @@ for (const crag of dataset.crags) {
 let deleted = 0;
 for (const object of existing) {
   if (wanted.has(object)) continue;
-  if (dataset.crags.some((c) => c.photos.some((p) => `pics/${keyOf(c, p, extOf(p.url))}` === object))) continue;
+  if (dataset.crags.some((c) => c.photos.some((p) => `pics/${keyOf(c, p, extOf(p))}` === object))) continue;
   await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: object }));
   deleted++;
 }
@@ -161,12 +172,12 @@ for (const object of await listKeys()) {
 }
 // crags.json's order: areas first, then each crag's photos as listed.
 const order = new Map(dataset.crags.map((c, i) => [c.id, i]));
-const sources = new Map(dataset.crags.flatMap((c) => c.photos.map((p, i) => [p.source, i])));
+const places = new Map(dataset.crags.flatMap((c) => c.photos.map((p, i) => [keyOf(c, p, extOf(p)), i])));
 const catalog = {
   generatedAt: new Date().toISOString(),
   crags: [...crags.values()]
     .sort((a, b) => (order.get(a.id) ?? 1e9) - (order.get(b.id) ?? 1e9))
-    .map((c) => ({ ...c, photos: c.photos.sort((a, b) => (sources.get(a.source) ?? 0) - (sources.get(b.source) ?? 0)) })),
+    .map((c) => ({ ...c, photos: c.photos.sort((a, b) => (places.get(a.key) ?? 0) - (places.get(b.key) ?? 0)) })),
 };
 await s3.send(new PutObjectCommand({
   Bucket: bucket,

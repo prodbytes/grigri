@@ -1049,9 +1049,21 @@ void main() {
     testWidgets('the route finder: on the plan for premium climbers only', (
       tester,
     ) async {
+      // The plan screen is a lazy list: scrolled to its end, below the
+      // area guide, everything has been built.
+      Future<void> toTheEnd() async {
+        await tester.drag(find.byType(ListView).first, const Offset(0, -4000));
+        await tester.pumpAndSettle();
+      }
+
       await openPlan(tester);
+      await toTheEnd();
       expect(find.byKey(const ValueKey('route finder')), findsNothing);
       await openPlan(tester, premium: true);
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('route finder')),
+        300,
+      );
       expect(find.byKey(const ValueKey('route finder')), findsOneWidget);
       expect(find.text('Routes on the rock'), findsOneWidget);
     });

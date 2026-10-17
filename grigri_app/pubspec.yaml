@@ -104,6 +104,9 @@ flutter:
   # The sector index, built by tool/build_sectors.dart.
   assets:
     - assets/sectors.json
+    # Climbing guides to areas (specs/guides.md).
+    - assets/guides/
+    - assets/guides/costa-daurada/
     # The logo on the sign-in screen (web/icons/Icon-192.png).
     - assets/logo.png
 

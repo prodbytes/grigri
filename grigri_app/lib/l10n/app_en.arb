@@ -2135,6 +2135,127 @@
   "@errorObjectionable": {
     "description": "Error: the server refused text with words Grigri does not allow."
   },
+  "areaGuide": "Area guide",
+  "@areaGuide": {
+    "description": "Plan screen: the section with the climbing guide's page on the plan's area."
+  },
+  "guideAccess": "Access",
+  "@guideAccess": {
+    "description": "Climbing guide: heading, how to get to the crags."
+  },
+  "guideClimbing": "Type of climbing",
+  "@guideClimbing": {
+    "description": "Climbing guide: heading, what the climbing is like."
+  },
+  "guideRock": "Rock",
+  "@guideRock": {
+    "description": "Climbing guide: heading, the kind of rock."
+  },
+  "guideRoutes": "Routes",
+  "@guideRoutes": {
+    "description": "Climbing guide: heading, how many routes and their grades."
+  },
+  "guideSeason": "Season",
+  "@guideSeason": {
+    "description": "Climbing guide: heading, the best time of year."
+  },
+  "guideTips": "Tips and advice",
+  "@guideTips": {
+    "description": "Climbing guide: heading, practical tips (water, shops, places to stay)."
+  },
+  "guideReading": "Further reading",
+  "@guideReading": {
+    "description": "Climbing guide: heading, books and topos about the area."
+  },
+  "guideSectors": "Sectors",
+  "@guideSectors": {
+    "description": "Climbing guide: heading, the sectors the guide names."
+  },
+  "guideClimbs": "Featured routes",
+  "@guideClimbs": {
+    "description": "Climbing guide: heading, notable routes the guide names, with their grades."
+  },
+  "guideClosures": "Closures",
+  "@guideClosures": {
+    "description": "Climbing guide: heading, sectors closed part of the year (e.g. bird nesting)."
+  },
+  "guideClosedNow": "Closed now",
+  "@guideClosedNow": {
+    "description": "Climbing guide: a tag on a closure that applies today."
+  },
+  "guideAreas": "Climbing areas",
+  "@guideAreas": {
+    "description": "Climbing guide: heading, the list of the guide's climbing areas."
+  },
+  "guideAdvice": "Before you climb",
+  "@guideAdvice": {
+    "description": "Climbing guide: heading, the guide's general advice (restrictions, bolts, insurance, environment)."
+  },
+  "guideServices": "Services",
+  "@guideServices": {
+    "description": "Climbing guide: heading, businesses and clubs (guides, gear, courses)."
+  },
+  "guideLinks": "Useful links",
+  "@guideLinks": {
+    "description": "Climbing guide: heading, useful websites."
+  },
+  "guideBibliography": "Bibliography",
+  "@guideBibliography": {
+    "description": "Climbing guide: heading, the books the guide recommends."
+  },
+  "guideOpenAll": "The whole guide",
+  "@guideOpenAll": {
+    "description": "Climbing guide: button on an area's page, opens the whole guide (all areas)."
+  },
+  "guideSource": "From “{title}”, {publisher}, {year}.",
+  "@guideSource": {
+    "description": "Climbing guide: where the text comes from, at the end of every page.",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "publisher": {
+        "type": "String"
+      },
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "guideCredits": "Text: {text} · Photos: {photos}",
+  "@guideCredits": {
+    "description": "Climbing guide: who wrote the text and took the photos.",
+    "placeholders": {
+      "text": {
+        "type": "String"
+      },
+      "photos": {
+        "type": "String"
+      }
+    }
+  },
+  "guideClosure": "{sector}: closed {from} – {to} ({reason})",
+  "@guideClosure": {
+    "description": "Climbing guide: a yearly closure: the sector, the dates and why.",
+    "placeholders": {
+      "sector": {
+        "type": "String"
+      },
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      },
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "guideAccessMap": "Access map",
+  "@guideAccessMap": {
+    "description": "Climbing guide: heading over the guide's map of how to reach an area's sectors."
+  },
   "adRegionsTitle": "Where it shows",
   "@adRegionsTitle": {
     "description": "Heading of the ad editor's regions."

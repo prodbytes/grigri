@@ -2751,6 +2751,138 @@ abstract class AppLocalizations {
   /// **'Please keep it friendly: that has words Grigri doesn\'t allow.'**
   String get errorObjectionable;
 
+  /// Plan screen: the section with the climbing guide's page on the plan's area.
+  ///
+  /// In en, this message translates to:
+  /// **'Area guide'**
+  String get areaGuide;
+
+  /// Climbing guide: heading, how to get to the crags.
+  ///
+  /// In en, this message translates to:
+  /// **'Access'**
+  String get guideAccess;
+
+  /// Climbing guide: heading, what the climbing is like.
+  ///
+  /// In en, this message translates to:
+  /// **'Type of climbing'**
+  String get guideClimbing;
+
+  /// Climbing guide: heading, the kind of rock.
+  ///
+  /// In en, this message translates to:
+  /// **'Rock'**
+  String get guideRock;
+
+  /// Climbing guide: heading, how many routes and their grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Routes'**
+  String get guideRoutes;
+
+  /// Climbing guide: heading, the best time of year.
+  ///
+  /// In en, this message translates to:
+  /// **'Season'**
+  String get guideSeason;
+
+  /// Climbing guide: heading, practical tips (water, shops, places to stay).
+  ///
+  /// In en, this message translates to:
+  /// **'Tips and advice'**
+  String get guideTips;
+
+  /// Climbing guide: heading, books and topos about the area.
+  ///
+  /// In en, this message translates to:
+  /// **'Further reading'**
+  String get guideReading;
+
+  /// Climbing guide: heading, the sectors the guide names.
+  ///
+  /// In en, this message translates to:
+  /// **'Sectors'**
+  String get guideSectors;
+
+  /// Climbing guide: heading, notable routes the guide names, with their grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured routes'**
+  String get guideClimbs;
+
+  /// Climbing guide: heading, sectors closed part of the year (e.g. bird nesting).
+  ///
+  /// In en, this message translates to:
+  /// **'Closures'**
+  String get guideClosures;
+
+  /// Climbing guide: a tag on a closure that applies today.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed now'**
+  String get guideClosedNow;
+
+  /// Climbing guide: heading, the list of the guide's climbing areas.
+  ///
+  /// In en, this message translates to:
+  /// **'Climbing areas'**
+  String get guideAreas;
+
+  /// Climbing guide: heading, the guide's general advice (restrictions, bolts, insurance, environment).
+  ///
+  /// In en, this message translates to:
+  /// **'Before you climb'**
+  String get guideAdvice;
+
+  /// Climbing guide: heading, businesses and clubs (guides, gear, courses).
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get guideServices;
+
+  /// Climbing guide: heading, useful websites.
+  ///
+  /// In en, this message translates to:
+  /// **'Useful links'**
+  String get guideLinks;
+
+  /// Climbing guide: heading, the books the guide recommends.
+  ///
+  /// In en, this message translates to:
+  /// **'Bibliography'**
+  String get guideBibliography;
+
+  /// Climbing guide: button on an area's page, opens the whole guide (all areas).
+  ///
+  /// In en, this message translates to:
+  /// **'The whole guide'**
+  String get guideOpenAll;
+
+  /// Climbing guide: where the text comes from, at the end of every page.
+  ///
+  /// In en, this message translates to:
+  /// **'From “{title}”, {publisher}, {year}.'**
+  String guideSource(String title, String publisher, int year);
+
+  /// Climbing guide: who wrote the text and took the photos.
+  ///
+  /// In en, this message translates to:
+  /// **'Text: {text} · Photos: {photos}'**
+  String guideCredits(String text, String photos);
+
+  /// Climbing guide: a yearly closure: the sector, the dates and why.
+  ///
+  /// In en, this message translates to:
+  /// **'{sector}: closed {from} – {to} ({reason})'**
+  String guideClosure(String sector, String from, String to, String reason);
+
+  /// Climbing guide: heading over the guide's map of how to reach an area's sectors.
+  ///
+  /// In en, this message translates to:
+  /// **'Access map'**
+  String get guideAccessMap;
+
   /// Heading of the ad editor's regions.
   ///
   /// In en, this message translates to:
