@@ -278,6 +278,13 @@ class AppLocalizationsCa extends AppLocalizations {
   String get bioLabel => 'Sobre tu';
 
   @override
+  String get gradeSystem => 'Sistema de graus';
+
+  @override
+  String get gradeSystemHint =>
+      'Com s\'escriuen els graus a l\'app, aquí per a una via i un bloc.';
+
+  @override
   String get whatYouClimb => 'Què escales';
 
   @override

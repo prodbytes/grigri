@@ -276,6 +276,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get bioLabel => 'À propos de toi';
 
   @override
+  String get gradeSystem => 'Système de cotation';
+
+  @override
+  String get gradeSystemHint =>
+      'Comment les cotations s\'affichent dans l\'app, ici pour une voie et un bloc.';
+
+  @override
   String get whatYouClimb => 'Ce que tu grimpes';
 
   @override

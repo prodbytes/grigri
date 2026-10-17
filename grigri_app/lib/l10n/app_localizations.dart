@@ -586,6 +586,18 @@ abstract class AppLocalizations {
   /// **'About you'**
   String get bioLabel;
 
+  /// Profile editor section heading (shown uppercased) above the European/American grade toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Grade system'**
+  String get gradeSystem;
+
+  /// Hint under the "Grade system" heading; each option shows a route grade and a boulder grade as examples.
+  ///
+  /// In en, this message translates to:
+  /// **'How grades are written across the app, here for a route and a boulder.'**
+  String get gradeSystemHint;
+
   /// Profile editor section heading (shown uppercased).
   ///
   /// In en, this message translates to:

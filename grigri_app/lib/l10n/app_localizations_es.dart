@@ -278,6 +278,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get bioLabel => 'Sobre ti';
 
   @override
+  String get gradeSystem => 'Sistema de grados';
+
+  @override
+  String get gradeSystemHint =>
+      'Cómo se escriben los grados en la app, aquí para una vía y un bloque.';
+
+  @override
   String get whatYouClimb => 'Qué escalas';
 
   @override

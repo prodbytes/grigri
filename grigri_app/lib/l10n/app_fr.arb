@@ -80,6 +80,8 @@
   "ageLabel": "Âge (facultatif)",
   "ageRange": "De {min} à {max}",
   "bioLabel": "À propos de toi",
+  "gradeSystem": "Système de cotation",
+  "gradeSystemHint": "Comment les cotations s'affichent dans l'app, ici pour une voie et un bloc.",
   "whatYouClimb": "Ce que tu grimpes",
   "whatYouClimbHint": "Choisis tes disciplines et les niveaux que tu grimpes.",
   "gearYouCanBring": "Matériel que tu peux apporter",
