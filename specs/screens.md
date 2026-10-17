@@ -77,7 +77,7 @@ is "Alerts" in English.
   - **Grades**: the European / American switch (my grade system,
     everywhere in the app), then a range on the discipline's scale,
     starting at my own grades.
-  - **Who can join**: Shared (a group icon, the default), Open or Guided, with a
+  - **Who can join**: Shared (a group icon, the default), Open or Guided (off without Premium), with a
     line on what the chosen one means ([plan
     types](matching.md#plan-types-who-decides)). Guided adds **Price per
     climber** (typed with a dot or a comma; required, above 0, at most two

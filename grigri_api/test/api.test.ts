@@ -277,7 +277,22 @@ describe('the matchmaking flow', () => {
     expect((await call(ada, 'GET', '/api/notices')).notices).toEqual([]);
   });
 
+  it('only Premium climbers make a plan guided', async () => {
+    await fails(call(ben, 'POST', '/api/plans', { ...planBody, type: 'guided', price: { amount: 45, currency: 'EUR' } }), 403, /Premium/);
+    await fails(call(ada, 'PUT', `/api/plans/${planId}`, { ...planBody, type: 'guided', price: { amount: 45, currency: 'EUR' } }), 403, /Premium/);
+    rbacr.give('ada@example.com', 'premium');
+    const { plan } = await call(ada, 'PUT', `/api/plans/${planId}`, { ...planBody, type: 'guided', price: { amount: 45, currency: 'EUR' } });
+    expect(plan.type).toBe('guided');
+    // Premium ends: the guided plan stays editable.
+    await rbacr.api.revoke('ada@example.com', 'premium');
+    expect((await call(ada, 'PUT', `/api/plans/${planId}`, { ...planBody, type: 'guided', price: { amount: 50, currency: 'EUR' } })).plan.price.amount).toBe(50);
+    // Admins (rbacr's root) hold Premium.
+    rbacr.give('root@example.com', 'root');
+    expect((await call(root, 'POST', '/api/plans', { ...planBody, type: 'guided', price: { amount: 45, currency: 'EUR' } })).plan.type).toBe('guided');
+  });
+
   it('a guided plan has a price, and only its guide answers', async () => {
+    rbacr.give('ada@example.com', 'premium');
     await fails(call(ada, 'POST', '/api/plans', { ...planBody, type: 'guided' }), 400, /needs a price/);
     const guided = (await call(ada, 'POST', '/api/plans', { ...planBody, type: 'guided', price: { amount: 45, currency: 'EUR' } })).plan;
     expect(guided).toMatchObject({ type: 'guided', price: { amount: 45, currency: 'EUR' } });

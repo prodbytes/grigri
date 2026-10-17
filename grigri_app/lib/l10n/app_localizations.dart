@@ -2319,6 +2319,12 @@ abstract class AppLocalizations {
   /// **'You guide, and climbers pay you. Only you answer requests to join.'**
   String get planTypeGuidedHint;
 
+  /// Plan editor, under Who can join: Guided is off without Premium.
+  ///
+  /// In en, this message translates to:
+  /// **'Guided plans are for Grigri Premium.'**
+  String get guidedNeedsPremium;
+
   /// Plan editor: a guided plan's price field.
   ///
   /// In en, this message translates to:

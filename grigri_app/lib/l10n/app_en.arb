@@ -1812,6 +1812,10 @@
   "@planTypeGuidedHint": {
     "description": "Plan editor: what a guided plan means (the organizer is the guide)."
   },
+  "guidedNeedsPremium": "Guided plans are for Grigri Premium.",
+  "@guidedNeedsPremium": {
+    "description": "Plan editor, under Who can join: Guided is off without Premium."
+  },
   "pricePerClimber": "Price per climber",
   "@pricePerClimber": {
     "description": "Plan editor: a guided plan's price field."

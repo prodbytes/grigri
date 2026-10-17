@@ -1603,3 +1603,18 @@ spec.
      - [App Store](app-store.md): the description's bullet says "Shared
        plans"; App Store Connect's copy still needs the same change.
      - Cost: none (app only).
+
+103. **Make creating guided plans available to Premium climbers only.**
+     - [Premium](premium.md), [matching](matching.md#plan-types-who-decides)
+       and [API](api.md): `POST /api/plans` with type guided, or a `PUT`
+       that changes a plan to guided, needs Premium (rbacr's role; admins
+       hold it): 403 "guided plans are for Premium climbers" otherwise. A
+       plan that's guided already stays editable after Premium ends.
+     - [Screens](screens.md): without Premium the editor's **Guided** chip
+       is off, with "Guided plans are for Grigri Premium." (every
+       language).
+     - Tests: the API's guided plans need Premium (and admins have it), a
+       lapsed Premium still edits its guided plan; the app's editor turns
+       Guided off without Premium.
+     - Cost: none: the check is the same cached rbacr lookup Premium's
+       other routes make, only when a plan is made guided.

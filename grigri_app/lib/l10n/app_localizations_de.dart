@@ -1308,6 +1308,9 @@ class AppLocalizationsDe extends AppLocalizations {
       'Du führst, und die Kletternden bezahlen dich. Nur du beantwortest Anfragen.';
 
   @override
+  String get guidedNeedsPremium => 'Geführte Pläne gibt es mit Grigri Premium.';
+
+  @override
   String get pricePerClimber => 'Preis pro Person';
 
   @override

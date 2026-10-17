@@ -355,7 +355,12 @@ class _PlanEditorState extends State<PlanEditor> {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     final l = context.l10n;
-    final scale = _discipline.scale.grades(StoreScope.of(context).gradeSystem);
+    final store = StoreScope.of(context);
+    final scale = _discipline.scale.grades(store.gradeSystem);
+    // Guided plans are Premium's (specs/premium.md); one that's guided
+    // already stays editable after Premium ends.
+    final mayGuide =
+        store.premium.active || widget.plan?.type == PlanType.guided;
     Widget label(String s) => Padding(
       padding: const EdgeInsets.only(top: 20, bottom: 8),
       child: Text(
@@ -523,7 +528,9 @@ class _PlanEditorState extends State<PlanEditor> {
                     avatar: Icon(planTypeIcon(t), size: 18),
                     label: Text(t.label(l)),
                     selected: _type == t,
-                    onSelected: (_) => setState(() => _type = t),
+                    onSelected: t == PlanType.guided && !mayGuide
+                        ? null
+                        : (_) => setState(() => _type = t),
                   ),
               ],
             ),
@@ -532,6 +539,14 @@ class _PlanEditorState extends State<PlanEditor> {
               _type.hint(l),
               style: text.bodySmall?.copyWith(color: Mountain.granite),
             ),
+            if (!mayGuide) ...[
+              const SizedBox(height: 4),
+              Text(
+                l.guidedNeedsPremium,
+                key: const ValueKey('guided needs premium'),
+                style: text.bodySmall?.copyWith(color: Mountain.tan),
+              ),
+            ],
             if (_type == PlanType.guided) ...[
               const SizedBox(height: 12),
               Row(

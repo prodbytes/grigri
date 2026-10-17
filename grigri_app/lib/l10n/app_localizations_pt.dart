@@ -1298,6 +1298,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Você guia e os escaladores pagam você. Só você responde aos pedidos.';
 
   @override
+  String get guidedNeedsPremium => 'Planos guiados são para o Grigri Premium.';
+
+  @override
   String get pricePerClimber => 'Preço por escalador';
 
   @override

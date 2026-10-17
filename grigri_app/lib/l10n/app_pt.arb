@@ -368,6 +368,7 @@
   "planTypePrivateHint": "Todo o grupo diz sim para cada novato.",
   "planTypeOpenHint": "Qualquer um pode entrar na hora, sem esperar um sim.",
   "planTypeGuidedHint": "Você guia e os escaladores pagam você. Só você responde aos pedidos.",
+  "guidedNeedsPremium": "Planos guiados são para o Grigri Premium.",
   "pricePerClimber": "Preço por escalador",
   "priceInvalid": "Informe um preço acima de 0, com no máximo duas casas decimais",
   "currency": "Moeda",

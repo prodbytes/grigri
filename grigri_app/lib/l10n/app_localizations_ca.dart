@@ -1299,6 +1299,9 @@ class AppLocalizationsCa extends AppLocalizations {
       'Tu guies i els escaladors et paguen. Només tu respons les sol·licituds.';
 
   @override
+  String get guidedNeedsPremium => 'Els plans guiats són per a Grigri Premium.';
+
+  @override
   String get pricePerClimber => 'Preu per escalador';
 
   @override
