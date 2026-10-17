@@ -322,7 +322,7 @@ class _PlanCardState extends State<_PlanCard> {
                         child: _PlanCover(plan: plan),
                       ),
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(14, 10, 8, 4),
+                        padding: const EdgeInsets.fromLTRB(14, 10, 10, 4),
                         child: Row(
                           children: [
                             Expanded(
@@ -332,8 +332,9 @@ class _PlanCardState extends State<_PlanCard> {
                                     showProfileSheet(context, organizer),
                                 child: ClimberHeader(
                                   organizer,
-                                  radius: 22,
+                                  radius: 20,
                                   subtitle: l.organizedBy,
+                                  compact: true,
                                 ),
                               ),
                             ),
@@ -359,7 +360,7 @@ class _PlanCardState extends State<_PlanCard> {
                                         const SizedBox(width: 4),
                                         Text(
                                           '+${others.length}',
-                                          style: text.titleMedium?.copyWith(
+                                          style: text.titleSmall?.copyWith(
                                             color: Mountain.sky,
                                             fontWeight: FontWeight.w700,
                                           ),
@@ -369,17 +370,13 @@ class _PlanCardState extends State<_PlanCard> {
                                               ? Icons.expand_less
                                               : Icons.expand_more,
                                           color: Mountain.sky,
+                                          size: 20,
                                         ),
                                       ],
                                     ),
                                   ),
                                 ),
                               ),
-                            // ⋮: report the plan, or block its organizer.
-                            ModerationMenu(
-                              report: ReportTarget(ReportKind.plan, plan.id),
-                              person: organizer,
-                            ),
                           ],
                         ),
                       ),

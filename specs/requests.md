@@ -1571,3 +1571,15 @@ spec.
       strings and the `.badge` style too). "Free for every climber" under
       the button stays.
     - Cost: none.
+
+100. **The Discover card's organizer row breaks (the name one letter a
+     line): fit it, move the "Demo" label to the line above, remove the
+     ⋮ menu, and make the text a little smaller.**
+     - [Screens](screens.md): the organizer's row has a Demo tag above
+       the name (on demo plans), the name on one line (cut with "…"),
+       a smaller name, avatar, **+N** and arrow, and no ⋮.
+     - [Moderation](moderation.md): a plan is still reported from its
+       screen's ⋮, its organizer from their profile sheet (tapping the
+       card's organizer). The report test now goes through the plan
+       screen and checks the card has no menu.
+     - Cost: none (app only).
