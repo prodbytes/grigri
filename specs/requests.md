@@ -1290,7 +1290,42 @@ spec.
     - [Sign-in](sign-in.md#deleting-my-account): deleting an account also
       removes its blocks both ways, so nobody's Blocked people keeps a
       deleted climber, and it's no longer a known admin.
-87. **Make sure Sign in with Apple is also available and working, besides
+
+87. **Sell Premium on iOS through Apple's in-app purchase (App Store
+    guideline 3.1.1).** Stripe Checkout isn't allowed in the iOS app
+    outside the US; the owner chose the App Store's auto-renewable
+    subscriptions on iOS, keeping Stripe on Android and the web.
+    - [Premium](premium.md): two ways to pay, per platform. On iOS, two
+      auto-renewable subscriptions in the group "Grigri Premium"
+      (`com.nu01.grigri.premium.monthly`, `.yearly`; $19.99 and $199.99),
+      bought through StoreKit 2 with an appAccountToken the API derives
+      from the climber; the app sends the signed transaction to
+      `POST /api/premium/apple`, then finishes it; Restore purchases;
+      Manage subscription opens the App Store's subscriptions. The API
+      verifies Apple's JWS offline (ES256, the x5c chain to Apple Root
+      CA - G3 only, Apple's OIDs, validity when signed), checks the bundle,
+      product and token, ties each subscription to one account, and saves
+      it in the same subscription item as Stripe's (`source: "apple"`), so
+      rbacr's `premium` role works unchanged; App Store Server
+      Notifications V2 keep it in step (renewals, lapses, grace periods,
+      refunds; out of order and repeated ones are safe). Sandbox is
+      accepted and recorded. Apple's 15% (Small Business Program) or 30%
+      commission, and the owner's App Store Connect setup.
+    - [API](api.md): `POST /api/premium/apple`, `POST /api/apple/notifications`
+      (public, Apple's signature is the gate), `appleAccountToken` in
+      `GET /api/premium`, `source` in Premium.
+    - [Screens](screens.md): on iOS, the Premium card shows the App
+      Store's localized prices, Apple's subscription terms, the privacy
+      policy and EULA links and Restore purchases, and no Stripe.
+    - [Platforms](platforms.md): the in_app_purchase plugin; the iOS app
+      never mentions Stripe.
+    - [Backend](backend.md): the App Store's cost; no new AWS resource.
+    - [Roles](roles.md): the App Store grants and revokes `premium` too.
+    - [Sign-in](sign-in.md#deleting-my-account): deleting an account with
+      an App Store subscription doesn't ask Stripe; it unties the
+      subscription from the account instead. The App Store's verifier is
+      `grigri_api/src/app-store.ts` (Sign in with Apple keeps `apple.ts`).
+88. **Make sure Sign in with Apple is also available and working, besides
     Google, in every stage (local, RC, GA) and on every platform (web,
     iOS, Android).**
     - Found: Sign in with Apple (request 82) was iOS only, and the

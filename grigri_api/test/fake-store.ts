@@ -49,6 +49,19 @@ export class FakeStore {
     this.subscriptions.set(sub.climberId, { ...sub });
   }
 
+  /** App Store subscriptions' owners, by original transaction id. */
+  appleOwners = new Map<string, string>();
+  async claimAppleSubscription(originalTransactionId: string, climberId: string) {
+    if (!this.appleOwners.has(originalTransactionId)) this.appleOwners.set(originalTransactionId, climberId);
+    return this.appleOwners.get(originalTransactionId)!;
+  }
+  async releaseAppleSubscription(originalTransactionId: string, climberId: string) {
+    if (this.appleOwners.get(originalTransactionId) === climberId) this.appleOwners.delete(originalTransactionId);
+  }
+  async appleOwner(originalTransactionId: string) {
+    return this.appleOwners.get(originalTransactionId);
+  }
+
   async getAd(id: string) {
     const a = this.ads.get(id);
     return a ? { ...a } : undefined;

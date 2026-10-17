@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/data/api.dart';
+import 'package:grigri_app/data/app_store.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/device_location.dart';
 import 'package:grigri_app/data/grigri_store.dart';
@@ -36,6 +37,7 @@ Future<GrigriStore> pumpApp(
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
   DeviceLocation deviceLocation = const DeviceLocation.none(),
+  AppStore? appStore,
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 2.6;
@@ -45,6 +47,7 @@ Future<GrigriStore> pumpApp(
     signedIn: signedIn,
     mode: mode,
     deviceLocation: deviceLocation,
+    appStore: appStore,
   );
   await tester.pumpWidget(GrigriApp(store: store));
   await store.start();
@@ -1327,6 +1330,7 @@ void main() {
         active: true,
         plan: PremiumPlan.yearly,
         until: DateTime(2031, 5, 1),
+        source: PremiumSource.stripe,
       );
       await tester.ensureVisible(find.text("I've paid: check again"));
       await tester.pumpAndSettle();
@@ -1363,6 +1367,215 @@ void main() {
       expect(find.text("Premium isn't available yet."), findsOneWidget);
       expect(find.text('\$20 a month'), findsNothing);
     });
+
+    // The first one: the Premium card's (Profile also ends with a
+    // "Privacy policy" link of its own).
+    Future<void> tapText(WidgetTester tester, String label) async {
+      await tester.ensureVisible(find.text(label).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(label).first);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'on iOS: App Store prices, its terms, no Stripe; buying makes me Premium',
+      (tester) async {
+        final api = sampleApi();
+        final appStore = FakeAppStore();
+        await pumpApp(tester, api, appStore: appStore);
+        await openProfile(tester);
+        // The App Store's localized prices, not Stripe's, and no Stripe.
+        expect(find.text('\$19.99 a month'), findsOneWidget);
+        expect(find.text('\$199.99 a year'), findsOneWidget);
+        expect(find.text('\$20 a month'), findsNothing);
+        expect(find.textContaining('Stripe'), findsNothing);
+        expect(find.text("I've paid: check again"), findsNothing);
+        // Apple's required disclosures, next to the buttons.
+        expect(
+          find.textContaining(
+            'auto-renewing subscription: \$19.99 a month, \$199.99 a year',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.textContaining('Manage or cancel it in your App Store account'),
+          findsOneWidget,
+        );
+        await tapText(tester, 'Privacy policy');
+        await tapText(tester, 'Terms of use (EULA)');
+        expect(api.opened, [privacyPolicyUrl, appleEulaUrl]);
+        expect(find.text('Restore purchases'), findsOneWidget);
+
+        await tapText(tester, '\$199.99 a year');
+        // Bought for my account, sent to the API, then finished.
+        expect(appStore.bought, [
+          'com.nu01.grigri.premium.yearly for ${api.appleAccountToken}',
+        ]);
+        expect(api.appleTransactions, [
+          'jws|com.nu01.grigri.premium.yearly|${api.appleAccountToken}',
+        ]);
+        expect(appStore.completed, hasLength(1));
+        expect(find.text('Premium: renews on May 1, 2031'), findsOneWidget);
+        // Managed in the App Store, not Stripe's portal.
+        await tapText(tester, 'Manage subscription');
+        expect(api.opened.last, appStoreSubscriptionsUrl);
+        expect(api.calls, isNot(contains('POST /api/premium/portal')));
+        expect(api.calls, isNot(contains('POST /api/premium/checkout')));
+      },
+    );
+
+    testWidgets('on iOS: cancelling the App Store sheet changes nothing', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final appStore = FakeAppStore()..outcome = StorePurchaseStatus.canceled;
+      await pumpApp(tester, api, appStore: appStore);
+      await openProfile(tester);
+      await tapText(tester, '\$19.99 a month');
+      expect(api.appleTransactions, isEmpty);
+      expect(find.text('\$19.99 a month'), findsOneWidget);
+      expect(
+        tester
+            .widget<FilledButton>(
+              find.widgetWithText(FilledButton, '\$19.99 a month'),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    });
+
+    testWidgets('on iOS: no products, no buttons; the App Store is down', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api, appStore: FakeAppStore(prices: {}));
+      await openProfile(tester);
+      expect(
+        find.text("The App Store can't be reached right now."),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('premium card')),
+          matching: find.byType(FilledButton),
+        ),
+        findsNothing,
+      );
+      expect(find.text('Restore purchases'), findsOneWidget);
+    });
+
+    testWidgets('on iOS: Restore purchases sends my subscription to the API', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final appStore = FakeAppStore();
+      await pumpApp(tester, api, appStore: appStore);
+      await openProfile(tester);
+      // Nothing to restore yet.
+      await tapText(tester, 'Restore purchases');
+      expect(
+        find.text('No App Store subscription to restore.'),
+        findsOneWidget,
+      );
+      appStore.owned = [
+        StorePurchase(
+          productId: 'com.nu01.grigri.premium.monthly',
+          status: StorePurchaseStatus.restored,
+          signedTransaction:
+              'jws|com.nu01.grigri.premium.monthly|${api.appleAccountToken}',
+        ),
+      ];
+      await tapText(tester, 'Restore purchases');
+      expect(api.appleTransactions, hasLength(1));
+      expect(find.text('Premium: renews on May 1, 2031'), findsOneWidget);
+    });
+
+    testWidgets("on iOS: another account's purchase is refused, and finished", (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final appStore = FakeAppStore();
+      await pumpApp(tester, api, appStore: appStore);
+      await openProfile(tester);
+      const theirs = StorePurchase(
+        productId: 'com.nu01.grigri.premium.monthly',
+        status: StorePurchaseStatus.purchased,
+        signedTransaction:
+            'jws|com.nu01.grigri.premium.monthly|'
+            '11111111-2222-8333-8444-555555555555',
+        needsCompleting: true,
+      );
+      appStore.report([theirs]);
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'this App Store purchase was made from another Grigri account',
+        ),
+        findsOneWidget,
+      );
+      expect(appStore.completed, [theirs]);
+      expect(find.text('\$19.99 a month'), findsOneWidget);
+    });
+
+    testWidgets(
+      'on iOS: a purchase that failed on its way to the API is left for later',
+      (tester) async {
+        final api = sampleApi();
+        final appStore = FakeAppStore();
+        await pumpApp(tester, api, appStore: appStore);
+        await openProfile(tester);
+        api.failNext = const ApiException(503, 'try later');
+        await tapText(tester, '\$19.99 a month');
+        expect(appStore.completed, isEmpty);
+        // StoreKit hands it over again (next launch): now it goes through.
+        appStore.report([
+          StorePurchase(
+            productId: 'com.nu01.grigri.premium.monthly',
+            status: StorePurchaseStatus.purchased,
+            signedTransaction:
+                'jws|com.nu01.grigri.premium.monthly|${api.appleAccountToken}',
+            needsCompleting: true,
+          ),
+        ]);
+        await tester.pumpAndSettle();
+        expect(appStore.completed, hasLength(1));
+        expect(find.text('Premium: renews on May 1, 2031'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'on iOS: a subscription bought through Stripe shows, without a link out',
+      (tester) async {
+        final api = sampleApi()
+          ..myPremium = Premium(
+            active: true,
+            plan: PremiumPlan.monthly,
+            until: DateTime(2030, 6, 1),
+            source: PremiumSource.stripe,
+          );
+        await pumpApp(tester, api, appStore: FakeAppStore());
+        await openProfile(tester);
+        expect(find.text('Premium: renews on Jun 1, 2030'), findsOneWidget);
+        expect(find.text('Manage subscription'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'elsewhere, an App Store subscription is managed in the App Store',
+      (tester) async {
+        final api = sampleApi()
+          ..myPremium = Premium(
+            active: true,
+            plan: PremiumPlan.monthly,
+            until: DateTime(2030, 6, 1),
+            source: PremiumSource.apple,
+          );
+        await pumpApp(tester, api);
+        await openProfile(tester);
+        await tapText(tester, 'Manage subscription');
+        expect(api.opened, [appStoreSubscriptionsUrl]);
+      },
+    );
   });
 
   group('Ads', () {

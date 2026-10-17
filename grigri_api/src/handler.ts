@@ -21,6 +21,7 @@ import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
 import { aityxScorer } from './match/aityx.js';
 import { stripeBilling } from './stripe.js';
+import { appStoreVerifier } from './app-store.js';
 import { Store } from './store/store.js';
 import { assertSeedable, seed, seedShowcase, showcaseIsStale } from '../seed/seed.js';
 
@@ -179,6 +180,10 @@ const api = new Api({
   grants: rbacrGrants(rbacr) ?? undefined,
   matchScorer,
   billing,
+  // Premium on iOS through the App Store: its signed transactions and
+  // notifications, verified offline against Apple Root CA - G3 only (no
+  // key, no call to Apple).
+  appStore: appStoreVerifier(),
   appleTokens,
   showcase,
   config: { stage, version: env.VERSION ?? 'dev', roleSuffix: env.ROLE_SUFFIX ?? '' },

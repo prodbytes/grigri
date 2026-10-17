@@ -89,6 +89,18 @@ the web, allowed by the site's `Permissions-Policy: camera=(self)`).
 Phones stream frames (YUV on Android, BGRA on iOS) to the recognizer; the
 web, which gives none, takes photos.
 
+**Premium** ([premium.md](premium.md)) is sold differently per platform:
+through Stripe in the browser on Android and the web, and on iOS through
+the App Store's in-app purchase (auto-renewable subscriptions
+`com.nu01.grigri.premium.monthly` and `.yearly`, App Store guideline
+3.1.1) with Flutter's [in_app_purchase](https://pub.dev/packages/in_app_purchase)
+plugin (StoreKit 2, iOS 15 and later; no entitlement needed, In-App
+Purchase is on for every App ID). The iOS app never links to or mentions
+Stripe. The plugin also brings Google Play Billing's library into the
+Android build (with its `com.android.vending.BILLING` permission), unused
+for now. App Store Connect's setup is in
+[premium.md](premium.md#the-app-store).
+
 **Chat videos** play with [video_player](https://pub.dev/packages/video_player)
 (Flutter's own plugin: ExoPlayer on Android, AVPlayer on iOS, a `<video>`
 element on the web), streamed from the site's `/photos/` (same origin on
