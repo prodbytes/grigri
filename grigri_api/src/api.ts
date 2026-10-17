@@ -13,6 +13,7 @@ import {
   type PicCatalog,
   type Plan,
   type PlanPic,
+  type PlanType,
   type PublicClimber,
   type Message,
   deciders,
@@ -1281,9 +1282,17 @@ export class Api {
 
   private async createPlan(req: Request, s: Session) {
     const input = cleanPlan(planInput(req.body, s.now));
+    await this.mayGuide(req, input.type);
     const effects = rules.createPlan(newId(), s.me.id, input, s.ctx);
     await this.store.apply(null, effects, s.now);
     return { plan: effects.plan };
+  }
+
+  /** Guided plans are made by Premium climbers only (specs/premium.md; admins hold it too). */
+  private async mayGuide(req: Request, type: PlanType | undefined): Promise<void> {
+    if (type === 'guided' && !(await this.isPremium(req.caller?.email))) {
+      throw forbidden('guided plans are for Premium climbers');
+    }
   }
 
   private async myPlans(s: Session) {
@@ -1324,6 +1333,8 @@ export class Api {
     return this.retry(async () => {
       const current = await this.loadPlan(planId);
       const input = cleanPlan(planInput(req.body, s.now));
+      // A plan that's guided already stays editable after Premium ends.
+      if (planType(current.plan) !== 'guided') await this.mayGuide(req, input.type);
       const changed = rules.updatePlan(current.plan, s.me.id, input);
       // A new type may need fewer yeses (open: none): who now has them joins.
       await this.loadNames(s, changed.memberIds, current.requests.map((r) => r.climberId));

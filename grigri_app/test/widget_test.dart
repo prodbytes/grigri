@@ -1183,10 +1183,24 @@ void main() {
       expect(find.text('Date to be decided'), findsOneWidget);
     });
 
+    testWidgets('without Premium, Guided is off in the editor', (tester) async {
+      await pumpApp(tester, sampleApi());
+      await openNewPlan(tester);
+      final guided = find.byKey(const ValueKey('type guided'));
+      await tester.dragUntilVisible(
+        guided,
+        find.byType(ListView).last,
+        const Offset(0, -300),
+      );
+      expect(tester.widget<ChoiceChip>(guided).onSelected, isNull);
+      expect(find.text('Guided plans are for Grigri Premium.'), findsOneWidget);
+    });
+
     testWidgets('a guided plan needs a price; an open one says who joins', (
       tester,
     ) async {
-      final api = sampleApi();
+      // Guided plans are Premium's.
+      final api = sampleApi()..myPremium = const Premium(active: true);
       await pumpApp(tester, api);
       await openNewPlan(tester);
       await tester.enterText(

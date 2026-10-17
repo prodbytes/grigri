@@ -368,6 +368,7 @@
   "planTypePrivateHint": "Alle in der Gruppe sagen Ja zu jeder neuen Person.",
   "planTypeOpenHint": "Alle können sofort mitmachen, ohne auf ein Ja zu warten.",
   "planTypeGuidedHint": "Du führst, und die Kletternden bezahlen dich. Nur du beantwortest Anfragen.",
+  "guidedNeedsPremium": "Geführte Pläne gibt es mit Grigri Premium.",
   "pricePerClimber": "Preis pro Person",
   "priceInvalid": "Gib einen Preis über 0 mit höchstens zwei Nachkommastellen ein",
   "currency": "Währung",

@@ -1,8 +1,9 @@
 # Premium
 
 A subscription that lets a climber **advertise on Grigri** (their
-[ads](ads.md)) and use the **[route finder](route-finder.md)** (routes on
-the rock through the camera). Everything else stays the same for
+[ads](ads.md)), use the **[route finder](route-finder.md)** (routes on
+the rock through the camera) and make **[guided plans](matching.md#plan-types-who-decides)**
+(a guide's paid outing). Everything else stays the same for
 everyone, Premium or not: climbing, matching, chats, every other
 feature. Admins get both without subscribing.
 
@@ -237,7 +238,10 @@ role, it's [rbacr's](roles.md); Grigri keeps only the billing.
   per function instance; `GET /api/premium` asks afresh, so **I've paid:
   check again** sees a payment at once, and so does the iOS app after
   `POST /api/premium/apple`). Ad owners in the deck are checked by their
-  kept emails. Checkout needs a verified email (Google's always is).
+  kept emails. Making a plan guided (`POST /api/plans`, or a `PUT` that
+  changes its type to guided) checks the caller the same way: 403 "guided
+  plans are for Premium climbers" without it. A plan that's guided
+  already stays editable once Premium ends. Checkout needs a verified email (Google's always is).
 
 ## Data
 

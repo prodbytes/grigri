@@ -152,8 +152,11 @@ join**, which says who lets newcomers in (the plan's **deciders**):
   notices to the group; the chat just says "<name> joined the plan 🎉".
   The deck's card says **Open: join at once** at the top, beside the
   discipline.
-- **Guided**: the plan is a guide's outing, **expected to be paid**. It
-  has a **price per climber** (an amount above 0, at most 10,000 with two
+- **Guided**: the plan is a guide's outing, **expected to be paid**.
+  Only [Premium](premium.md) climbers (and admins) make a plan guided:
+  without Premium the editor's **Guided** is off, with "Guided plans are
+  for Grigri Premium." under it, and the API refuses it (403); a plan
+  that's guided already stays editable after Premium ends. It has a **price per climber** (an amount above 0, at most 10,000 with two
   decimals, in EUR, USD, GBP, CHF or BRL), shown as **Guided · €60** on
   the card and the plan, with "Paid to the guide, not through Grigri":
   Grigri takes no payment (Premium's Stripe isn't involved). Only the

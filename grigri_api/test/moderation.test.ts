@@ -314,6 +314,7 @@ describe('blocking someone', () => {
 
   it("declines their open requests on plans I decide on, and not on others'", async () => {
     const adas = (await call(ada, 'POST', '/api/plans', planBody)).plan;
+    rbacr.give('cy@example.com', 'premium');
     const guided = (await call(cy, 'POST', '/api/plans', { ...planBody, type: 'guided', price: { amount: 30, currency: 'EUR' } })).plan;
     await call(ada, 'POST', `/api/plans/${guided.id}/join`);
     await call(cy, 'POST', `/api/requests/${guided.id}/${ids.Ada}/accept`);
