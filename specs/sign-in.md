@@ -176,6 +176,13 @@ or `.env`; see [.env.example](../.env.example)):
   the repository variable `GOOGLE_WEB_CLIENT_ID` (Deploy, and Release for
   GA tags) and the RC's from `GOOGLE_WEB_CLIENT_ID_RC` (Deploy RC, and
   Release for the other tags).
+- `GOOGLE_WEB_CLIENT_ID_LOCAL`: the local site's web client
+  (`devbox services up`), whose JavaScript origin is
+  `https://local.grigri.nu01.com:2543`: Google matches the port too, so
+  the origin without it isn't enough. `scripts/flutter-web.sh` builds the
+  local web app with it, and the local API checks it (process-compose's
+  Floci); without it both use `GOOGLE_WEB_CLIENT_ID`. Device builds still
+  use `GOOGLE_WEB_CLIENT_ID`, as they talk to a deployed stage.
 - `GOOGLE_IOS_CLIENT_ID`: iOS only. `scripts/dart-defines.sh` also writes
   it, and its reversed form `com.googleusercontent.apps.<id>`, to the
   git-ignored `grigri_app/ios/Flutter/Private.xcconfig` as
