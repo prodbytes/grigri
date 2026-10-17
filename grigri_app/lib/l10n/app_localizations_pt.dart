@@ -1257,7 +1257,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get signInBadge => '100% grátis';
 
   @override
-  String get signInHeadline => 'Encontre um plano de escalada.';
+  String get signInHeadline => 'Entre em um plano de escalada.';
 
   @override
   String get signInFreeLine => 'Grátis para todos: sem cartão, sem assinatura.';

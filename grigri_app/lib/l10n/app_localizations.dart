@@ -2232,7 +2232,7 @@ abstract class AppLocalizations {
   /// Sign-in screen: the headline, Grigri's line.
   ///
   /// In en, this message translates to:
-  /// **'Find a climbing plan.'**
+  /// **'Join a climbing plan.'**
   String get signInHeadline;
 
   /// Sign-in screen: under the sign-in button.

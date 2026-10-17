@@ -17,7 +17,7 @@ Each match opens the plan's group chat.
 
 **Wording: plans, not partners.** People match with a plan, not with a
 partner, so Grigri never says it finds you "a partner": its line is
-**"Find a climbing plan"**. Where partners are worth mentioning, it's
+**"Join a climbing plan"**. Where partners are worth mentioning, it's
 always in the plural, "partners" (a plan's group), in every language.
 
 ## Features
