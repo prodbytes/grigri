@@ -369,5 +369,9 @@
   "signInFreePremium": "Premium est facultatif : il ne sert qu’à faire de la publicité sur Grigri et au détecteur de voies. Grimper avec Grigri ne coûte rien.",
   "signInFinalTitle": "Le plan de grimpe de ce week-end n’est qu’à un swipe.",
   "signInJoinFree": "Rejoindre gratuitement avec Google",
-  "signInPhotoBy": "Photo : {author}, {license}"
+  "signInPhotoBy": "Photo : {author}, {license}",
+  "signInDeckWhen2": "Dimanche · Grande voie · 6a–6b",
+  "signInDeckWho2": "Iker et Lea",
+  "signInDeckWhen3": "Le week-end prochain · Bloc · 6C–7A",
+  "signInDeckWho3": "Noor, Tomás et 2 autres"
 }

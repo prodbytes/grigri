@@ -1311,4 +1311,16 @@ class AppLocalizationsPt extends AppLocalizations {
   String signInPhotoBy(String author, String license) {
     return 'Foto: $author, $license';
   }
+
+  @override
+  String get signInDeckWhen2 => 'Domingo · Via longa · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker e Lea';
+
+  @override
+  String get signInDeckWhen3 => 'No próximo fim de semana · Boulder · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás e mais 2';
 }

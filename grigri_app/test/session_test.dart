@@ -217,6 +217,14 @@ void main() {
       expect(find.text('Sign in with Google'), findsOneWidget);
       expect(find.text('Photo: Ana Roca, CC BY 4.0'), findsOneWidget);
       expect(find.text('Valle Gris'), findsOneWidget);
+      expect(find.text('Mara, Jonas and 1 more'), findsOneWidget);
+      // The demo card swipes away, and the next plan, at another crag,
+      // comes in.
+      for (final ms in [2300, 800, 700, 400]) {
+        await tester.pump(Duration(milliseconds: ms));
+      }
+      expect(find.text('Iker and Lea'), findsOneWidget);
+      expect(find.text('Peña Alta'), findsOneWidget);
       expect(find.text('How it works', skipOffstage: false), findsOneWidget);
 
       await tester.scrollUntilVisible(find.text('Join free with Google'), 300);

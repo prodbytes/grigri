@@ -48,8 +48,9 @@ CanvasKit and Google Identity Services) is what guards it.
    Pics photo edge to edge (the first photo in the catalog, credited
    under it), the logo, "100% free", the headline **Find a climbing
    plan.**, the tagline and the sign-in button, with a demo plan card
-   that swipes right on a loop (still when the device asks for less
-   motion). Below: how it works, what's free, and a last call, **Join free
+   that swipes right on a loop, bringing in the landing page's three
+   made-up plans in turn, each at another crag (still, on the first,
+   when the device asks for less motion). Below: how it works, what's free, and a last call, **Join free
    with Google**, which signs in (on the web it scrolls back up to
    Google's button, the only one that can). The photos come from GriGri
    Pics' catalog, `<site>/pics/catalog.json`, a static file read without

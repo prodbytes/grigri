@@ -369,5 +369,9 @@
   "signInFreePremium": "Premium és opcional: només serveix per anunciar-se a Grigri i per al cercador de vies. Escalar amb Grigri no costa res.",
   "signInFinalTitle": "El pla d’escalada d’aquest cap de setmana és a un lliscament.",
   "signInJoinFree": "Uneix-te gratis amb Google",
-  "signInPhotoBy": "Foto: {author}, {license}"
+  "signInPhotoBy": "Foto: {author}, {license}",
+  "signInDeckWhen2": "Diumenge · Via llarga · 6a–6b",
+  "signInDeckWho2": "Iker i Lea",
+  "signInDeckWhen3": "El cap de setmana que ve · Bloc · 6C–7A",
+  "signInDeckWho3": "Noor, Tomás i 2 més"
 }

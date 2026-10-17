@@ -2330,6 +2330,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Photo: {author}, {license}'**
   String signInPhotoBy(String author, String license);
+
+  /// Sign-in screen: the second demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday · Multi-pitch · 6a–6b'**
+  String get signInDeckWhen2;
+
+  /// Sign-in screen: the second demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Iker and Lea'**
+  String get signInDeckWho2;
+
+  /// Sign-in screen: the third demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Next weekend · Bouldering · 6C–7A'**
+  String get signInDeckWhen3;
+
+  /// Sign-in screen: the third demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Noor, Tomás and 2 more'**
+  String get signInDeckWho3;
 }
 
 class _AppLocalizationsDelegate

@@ -1828,5 +1828,21 @@
         "type": "String"
       }
     }
+  },
+  "signInDeckWhen2": "Sunday · Multi-pitch · 6a–6b",
+  "@signInDeckWhen2": {
+    "description": "Sign-in screen: the second demo card's day, style and grades."
+  },
+  "signInDeckWho2": "Iker and Lea",
+  "@signInDeckWho2": {
+    "description": "Sign-in screen: the second demo card's made-up climbers."
+  },
+  "signInDeckWhen3": "Next weekend · Bouldering · 6C–7A",
+  "@signInDeckWhen3": {
+    "description": "Sign-in screen: the third demo card's day, style and grades."
+  },
+  "signInDeckWho3": "Noor, Tomás and 2 more",
+  "@signInDeckWho3": {
+    "description": "Sign-in screen: the third demo card's made-up climbers."
   }
 }
