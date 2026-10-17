@@ -9,11 +9,12 @@ import 'chat_media.dart';
 import 'moderation.dart';
 import 'plan_editor.dart';
 import 'plan_gear.dart';
+import 'plan_guide.dart';
 import 'plan_pics.dart';
 import 'route_finder_screen.dart';
 
 /// One plan I'm in, or asked to join: the plan, its photos ("Your Pics"
-/// and GriGri Pics), its group, the group's gear against what the plan
+/// and GriGri Pics), its area's climbing guide, its group, the group's gear against what the plan
 /// needs, who's asking to join (answered in the group chat), and what I
 /// can do with it.
 class PlanScreen extends StatefulWidget {
@@ -94,6 +95,7 @@ class _PlanScreenState extends State<PlanScreen> {
         children: [
           PlanHighlight(plan),
           PlanPicsSections(plan: plan, pick: widget.pick),
+          PlanGuideSection(plan: plan),
           if (!member && mine != null) ...[
             const SizedBox(height: 12),
             Align(

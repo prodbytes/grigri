@@ -61,7 +61,8 @@ From top to bottom:
    photos, no card to sign up. Premium is described as optional, only for
    advertising and the route finder ([premium.md](premium.md)).
 6. **A last call** ("This weekend's climbing plan is one swipe away.")
-   with **Join free with Google**, and a footer crediting
+   with **Join free with Google**, and a footer saying the crag photos
+   are freely licensed or used with permission, crediting
    the photos' authors and OpenStreetMap for the crags' locations, with
    links to the **Privacy policy** and **Support** pages.
 

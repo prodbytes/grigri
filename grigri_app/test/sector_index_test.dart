@@ -193,4 +193,18 @@ void main() {
     expect(again.attribution, contains('OpenStreetMap'));
     expect(build.query('ES'), contains('"ISO3166-1"="ES"'));
   });
+
+  test("a rebuild keeps the climbing guide's rows", () {
+    final kept = build.guideSectors(
+      '{"sectors":[["osm:n1","Pared Gris","Valle Alto","Spain",41.1,0.5],'
+      '["guide:x","Roca Fosca","Valle Alto","Spain",41.2,0.6],'
+      '["demo:y","Gris Est","","France"]]}',
+    );
+    expect(
+      [for (final s in kept) s.toRow()],
+      [
+        ['guide:x', 'Roca Fosca', 'Valle Alto', 'Spain', 41.2, 0.6],
+      ],
+    );
+  });
 }

@@ -1,0 +1,541 @@
+{
+  "id": "costa-daurada",
+  "title": { "en": "Rock Climbing · Costa Daurada", "ca": "Escalada · Costa Daurada" },
+  "publisher": "Patronat de Turisme de la Diputació de Tarragona",
+  "year": 2004,
+  "map": "assets/guides/costa-daurada/map.jpg",
+  "credits": {
+    "text": "Albert Folch",
+    "photos": "Joan Alberich",
+    "design": "L'Agència",
+    "printing": "GRAMAR",
+    "legalDeposit": "T-867-2004"
+  },
+  "contact": {
+    "address": "Passeig de Torroja, s/n · 43007 Tarragona",
+    "phone": "+34 977 230 312",
+    "web": "www.costadaurada.info",
+    "email": "costadaurada@turisme.altanet.org"
+  },
+  "intro": {
+    "en": "For climbers, the Costa Daurada is a paradise of stone with the largest area of rock in Catalonia, combining sandstone, granite, and above all limestone and conglomerate. Many lines have been opened up while respecting the natural state of the rock and there is still a vast unexploited potential.",
+    "ca": "Per als escaladors, la Costa Daurada és un paradís de pedra que reuneix la major extensió de roca de Catalunya, combinant arenisca, granit i, principalment calcari i conglomerat. Les seves nombroses línies han estat obertes mirant de respectar l'estat natural de la roca, que amaga un extraordinari potencial encara per explotar."
+  },
+  "areas": [
+    {
+      "id": "siurana",
+      "accessMap": "assets/guides/costa-daurada/siurana.jpg",
+      "number": 1,
+      "name": "Siurana",
+      "subtitle": "Siurana de Prades",
+      "lat": 41.25831,
+      "lon": 0.93253,
+      "km": 4,
+      "tagline": {
+        "en": "The Siurana routes are demanding and you need to be highly motivated to take them on...",
+        "ca": "L'escalada a Siurana és exigent, s'hi ha d'anar molt motivat..."
+      },
+      "intro": {
+        "en": "The quality of the rock and the high concentration of difficult routes make this one of the best areas in Europe. There are also simpler climbs, but they are all of great beauty. The best climbers include this area in their programmes and many come every year to take on the most difficult routes, such as the Rambla, a climb rated 9a+. The village, thought to have been the last Moorish stronghold in Catalonia, now produces fine wines and high quality extra-virgin olive oil. The Siurana routes are demanding and you need to be highly motivated to take them on. You have to trust in the footholds, which are at times non-existent, and keep a tight grip on the sharp holds.",
+        "ca": "Una de les millors escoles europees; per la qualitat de la roca, la gran concentració de vies difícils i de més senzilles, però totes de gran bellesa. Els millors escaladors hi tenen projectes i no deixen de passar-hi cada any per provar les propostes més dures, com ara la Rambla, una via a la qual hi donen una graduació de 9a+. El poble, productor de grans vins i oli d'oliva verge extra, és possiblement el darrer baluard musulmà de Catalunya. L'escalada a Siurana és exigent, s'hi ha d'anar molt motivat per encadenar, s'ha de creure en els peus, de vegades inexistents i apretar fort a les regletes."
+      },
+      "access": {
+        "en": "Most of the sectors are within 5 to 20 minutes of the village. Half-way up to Siurana there is a car park from where you take the Fontscaldes footpath which leads to other sectors, such as La Olla.",
+        "ca": "La majoria de sectors es troben a 5-20 minuts del poble. A mig camí de Siurana hi ha un aparcament on s'agafa el sender de Fontscaldes que porta a altres sectors, com ara l'Olla."
+      },
+      "climbing": {
+        "en": "The climbs are highly technical with sharp holds on steep walls and, given the length of the routes, sustained.",
+        "ca": "L'escalada es caracteritza per ser molt tècnica sobre regletes en plaques desplomades i de resistència, donada la llargària de les rutes."
+      },
+      "rock": { "en": "Limestone.", "ca": "Calcària." },
+      "routes": {
+        "en": "Siurana is the Catalan climbing area with the highest concentration of difficult routes. There are currently 500 routes open, with 7s being the most common. There are also easy routes and boulder areas of all grades.",
+        "ca": "Siurana és l'escola catalana on hi ha la major concentració de vies de gran dificultat. Actualment hi ha 500 vies obertes on predomina el 7è grau. Però també hi ha vies fàcils i zones de \"boulders\" de totes les dificultats."
+      },
+      "season": {
+        "en": "Given the wide variety of rock face orientations, climbing is possible the whole year round, although the best time is from September to May.",
+        "ca": "Donada les variades orientacions de les parets es pot practicar l'escalada durant tot l'any, ara bé, la millor època és de setembre a maig."
+      },
+      "tips": {
+        "en": "You can take water from the spring in the village, where you will also find the Ciriac Bonet refuge and a campsite. Supplies can be bought in the nearby village of Cornudella, where you will also find rural accommodation establishments. There is a wide variety other accommodation available in the county. Further information: Cornudella Tourism Board, tel. 977 821 000.",
+        "ca": "Per fer compres es pot anar a Cornudella, que també compta amb diversos allotjaments rurals. Per agafar aigua hi ha fonts a Siurana on també hi ha el refugi Ciriac Bonet i un càmping. A més, hi ha una àmplia oferta d'allotjament a la comarca. Per a més informació: Patronat de Turisme de Cornudella, tel. 977 821 000."
+      },
+      "reading": {
+        "en": "Guia d'escalada a Siurana. Costa Daurada, by Rockfax.",
+        "ca": "Guia d'escalada a Siurana. Costa Daurada, de Rockfax."
+      },
+      "sectors": ["L'Olla", "El Pati", "Primavera", "Siuranella", "Siuranella Centre"],
+      "climbs": [
+        { "name": "La Rambla", "grade": "9a+" },
+        { "name": "Gargamel", "grade": "6a", "sector": "Siuranella" }
+      ]
+    },
+    {
+      "id": "la-mussara",
+      "number": 2,
+      "name": "La Mussara",
+      "lat": 41.2538,
+      "lon": 1.03099,
+      "km": 5,
+      "tagline": {
+        "en": "...where the sectors are found below the village from which the area takes its name.",
+        "ca": "...els sectors es disposen sota la població que li dóna nom."
+      },
+      "intro": {
+        "en": "One of the oldest climbing areas in our region, where the sectors are found below the village from which the area takes its name. This now-deserted village is frequently shrouded in mist, giving it magical air.\n\nIn the refuge belonging to the Tarragona Provincial Government climbers get together to make new friends and talk over their personal projects. They find out about new openings and starting points for finding the technical walls with cracks, 'V' grooves and some leaning walls.",
+        "ca": "Una de les escoles més antigues de les nostres comarques, on els sectors es disposen sota la població que li dóna nom. Aquesta localitat, ara abandonada, la veiem sovint desdibuixada per una boira que hi fa presència i que li dóna un encant especial.\n\nEl refugi de la Diputació de Tarragona és el punt de reunió on es dialoga sobre projectes personals, on es fan noves amistats, on es recullen les noves obertures i punt de partida per anar a cercar les plaques tècniques amb fissures, díedres i algun desplom."
+      },
+      "access": {
+        "en": "There are five sectors between 5 and 10 minutes walk from the refuge. The other sectors are below the TV transmitter masts on the road to Vilaplana or in the direction of Arbolí.",
+        "ca": "Des del refugi es pot accedir a peu a 5 sectors que es troben a 5 o 10 minuts. La resta són a la zona de sota les antenes, carretera de Vilaplana o bé en direcció a Arbolí."
+      },
+      "climbing": {
+        "en": "Basically technical walls with cracks and 'V' grooves for sustained climbing.",
+        "ca": "Bàsicament són plaques tècniques amb fissures, díedres i de continuïtat."
+      },
+      "rock": { "en": "Limestone.", "ca": "Calcària." },
+      "routes": {
+        "en": "Some 500 routes divided into 10 large sectors, that are in turn divided into sub sectors. Most of them range in difficulty from 6a to 6c+.",
+        "ca": "Unes 500 vies repartides en 10 grans sectors alhora dividits en subsectors. Les dificultats que predominen són de 6a a 6c+."
+      },
+      "season": {
+        "en": "Given the wide variety of rock face orientations, climbing is possible throughout the year.",
+        "ca": "Donada les variades orientacions de les parets es pot practicar l'escalada durant tot l'any."
+      },
+      "tips": {
+        "en": "For shopping you have to go to Vilaplana or Alforja. You can take water from the village springs, such as that of El Roure on the track that leads to the El Roure sector, or at the refuge. Further information on accommodation, Alforja Municipal Tourist Office, tel. 977 816 008.",
+        "ca": "Per anar a comprar, s'ha d'anar a Vilaplana o bé a Alforja, es pot agafar aigua a les fonts d'aquests pobles, com la del Roure, al camí que porta al sector del Roure o també al refugi. Per a més informació sobre allotjament, Oficina Municipal de Turisme d'Alforja, tel. 977 816 008."
+      },
+      "reading": {
+        "en": "Escaladas en Mont-ral y La Mussara. The refuge has a plan of the new openings.",
+        "ca": "Escalades a Mont-ral i la Mussara, al refugi disposen de croquis actualitzats amb les noves obertures."
+      },
+      "sectors": ["El Roure", "Les Airasses"],
+      "climbs": [{ "name": "Les Airasses", "grade": "5+" }]
+    },
+    {
+      "id": "arboli",
+      "number": 3,
+      "name": "Arbolí",
+      "lat": 41.24259,
+      "lon": 0.94877,
+      "km": 4,
+      "tagline": {
+        "en": "The boulders are just asking to be tried out...",
+        "ca": "...els \"boulders\" demanen ser provats, criden l'escalador..."
+      },
+      "intro": {
+        "en": "The village already has a \"climbing\" ambience. The boulders are just asking to be tried out, inviting the climber put down his crash-pad and use his last ounce of strength trying a hard movement.\n\nThat is, however, before or after you have roped up to lower off on one of the routes on the El Falcó buttress or one of the many other excellent sectors around this agricultural village in the heart of the Prades Mountains.",
+        "ca": "Al poble s'hi respira l'ambient d'escalada esportiva, els \"boulders\" demanen ser provats, criden l'escalador a posar el \"crash-pad\" a sota i a deixar-s'hi l'últim alè de força intentant un pas de bloc que exigeixi potència i concentració.\n\nAixò sí, abans o després d'haver-se encordat per arribar a la cadena d'alguna ruta de les que dibuixa la paret del Falcó o qualsevol altre dels molts i excel·lents sectors dels voltants d'aquesta població agrícola del cor de la Serra de Prades."
+      },
+      "access": {
+        "en": "The rock faces can be seen above the village and to the right in the direction of Siurana reservoir. There are others on the way to Siurana and also in the direction of the Coll de Alforja.",
+        "ca": "Les parets són evidents damunt del poble i a la dreta, en direcció al pantà de Siurana. També hi ha sectors en direcció a la Mussara i en direcció al coll d'Alforja."
+      },
+      "climbing": {
+        "en": "Technical climb on walls with pockets, sharp holds, and cracks.",
+        "ca": "És una escalada tècnica en plaques verticals amb forats, regletes i fissures."
+      },
+      "rock": { "en": "Limestone.", "ca": "Calcària." },
+      "routes": {
+        "en": "More than 200 routes in 17 sectors, most of which are graded up to 6c+ and are between 15 and 40 metres long. There are also three boulder areas (Les Grassetes, La Tortuga and L'Ermita) with climbs ranging from easy to difficult.",
+        "ca": "Més de 200 vies en 17 sectors, amb la majoria de rutes de dificultat fins a 6c+ amb alçades de 15 fins a 40 metres. També hi ha tres zones de \"boulder\" amb propostes de totes les dificultats: les Grassetes, la Tortuga i l'Ermita."
+      },
+      "season": {
+        "en": "Given the wide variety of rock face orientations, climbing is possible throughout the year.",
+        "ca": "Donada les variades orientacions de les parets es pot practicar l'escalada durant tot l'any."
+      },
+      "tips": {
+        "en": "The village has a small shop, a refuge, and abundant spring water. Further information on accommodation can be obtained from the Alforja Municipal Tourist Office, tel. 977 816 008 and the Cornudella Municipal Tourist Office, tel. 977 821 000.",
+        "ca": "Es pot anar a comprar a una petita botiga del poble. A Arbolí hi ha un refugi i una font on raja força aigua. Per a més informació sobre allotjament: Patronat Municipal de Turisme d'Alforja, tel. 977 816 008 i Patronat Municipal de Turisme de Cornudella, tel. 977 821 000."
+      },
+      "reading": {
+        "en": "Guia d'escalades a Arbolí. Costa Daurada, by Rockfax.",
+        "ca": "Guia d'escalades a Arbolí. Costa Daurada, de Rockfax."
+      },
+      "sectors": ["El Falcó", "Les Grassetes", "La Tortuga", "L'Ermita"],
+      "climbs": []
+    },
+    {
+      "id": "montsant",
+      "accessMap": "assets/guides/costa-daurada/montsant.jpg",
+      "number": 4,
+      "name": "El Montsant",
+      "subtitle": "Parc Natural",
+      "aliases": ["Montsant"],
+      "lat": 41.25927,
+      "lon": 0.82903,
+      "km": 7,
+      "tagline": {
+        "en": "You can climb in the middle of silence and serenity...",
+        "ca": "L'escalada es practica enmig del silenci i la serenor..."
+      },
+      "intro": {
+        "en": "The Montsant is definitely the area of the Costa Daurada with the greatest potential, given that it has almost unlimited virgin rock just waiting for new climbers eager to open up new lines where the rock allows it. Most of the sectors are along the south face of the Serra Major, from where you have fabulous views of the Priorat wine-producing country and where you can climb in the silence and serenity of a land whose history hides many secrets.",
+        "ca": "El Montsant és de ben segur la zona amb més potencial de la Costa Daurada, ja que compta amb infinitat de roca verge esperant nous escaladors amb afany d'obrir nous recorreguts allà on la roca es deixi equipar. La majoria de sectors es disposen al llarg de la cara sud de la Serra Major des d'on s'assoleixen vistes de l'encisadora comarca vinícola del Priorat i on l'escalada es practica enmig del silenci i la serenor que només ofereixen els llocs on la història hi amaga secrets."
+      },
+      "access": {
+        "en": "The sectors can be grouped into two parts according to their access routes: those of La Morera del Montsant and those of Escaladei. There are also routes at the Hermitage of Sant Joan del Codolar, which can be reached from Cornudella, and in the area of Albarca.",
+        "ca": "Els sectors es poden agrupar en dos parts segons el seu accés. Els sectors de la Morera del Montsant i els d'Escaladei. També hi ha vies a l'ermita de Sant Joan del Codolar, a la que s'hi accedeix per Cornudella i a la zona d'Albarca."
+      },
+      "climbing": {
+        "en": "The conglomerate means sustained climbing with pockets. There are also short, explosive routes on overhangs or vertical walls.",
+        "ca": "El conglomerat marca un tipus d'escalada sobre forats i de continuïtat, també podem trobar vies més curtes i explosives en sostres o plaques verticals."
+      },
+      "rock": { "en": "Conglomerate.", "ca": "Conglomerada." },
+      "routes": {
+        "en": "There are currently some 400 routes of varying difficulty with a predominance of medium to high grades. The itineraries have pitches of between 10 and 90 metres, although most are of around 30 metres.",
+        "ca": "Actualment podem trobar unes 400 vies de diferent dificultat però hi predominen les vies de dificultat mitja / alta. Els itineraris són de llargàries que poden anar dels 10 als 90 metres, però el que predominen són les vies de 30 metres."
+      },
+      "season": {
+        "en": "All year round, although in summer you should take advantage of the shade.",
+        "ca": "Tot l'any, per bé que a l'estiu cal buscar les hores d'ombra."
+      },
+      "tips": {
+        "en": "You can get provisions in Cornudella or Ulldemolins. It is important to take enough water, especially in summer, as there are no springs on the heights of the Montsant. You can fill up in the village springs and also in the majority of the hermitages found in the Montsant mountains. There is a plentiful choice of rural accommodation. Information can be obtained from the Cornudella Tourism Board, tel. 977 821 000 and at the Tourist Office.",
+        "ca": "Per a comprar es pot anar a Cornudella o Ulldemolins. És important prendre aigua ja que a dalt del Montsant no hi ha fonts i sobretot a l'estiu és necessària. Per agafar aigua ho podem fer a les fonts dels pobles o bé a la majoria d'ermites del Montsant. Hi ha una àmplia oferta d'allotjaments rurals, més informació al Patronat de Turisme de Cornudella, tel. 977 821 000 i a l'Oficina Comarcal de Turisme del Priorat, tel. 977 831 023."
+      },
+      "reading": {
+        "en": "Costa Daurada by Rockfax has a brief summary of the Montsant climbs. You can also find updated descriptions in the Serra de Prades refuges.",
+        "ca": "Costa Daurada de Rockfax conté un apartat amb ressenyes del Montsant. Es poden trobar ressenyes actualitzades als refugis de la Serra de Prades."
+      },
+      "sectors": ["El Racó de Missa", "El Totxo del Montsant", "Barrots", "L'Escletxa", "Sant Joan del Codolar", "Albarca"],
+      "climbs": [{ "name": "El Racó de Missa", "grade": "7b+", "sector": "El Racó de Missa" }]
+    },
+    {
+      "id": "vilanova-de-prades",
+      "number": 5,
+      "name": "Vilanova de Prades",
+      "lat": 41.34787,
+      "lon": 0.95715,
+      "km": 4,
+      "tagline": {
+        "en": "...the way past pockets and dripping water...",
+        "ca": "...on l'escalada passa per forats i gotes d'aigua..."
+      },
+      "intro": {
+        "en": "Located at the foot of the crags of the Serra de la Llena and with a rugged relief that appears to be drained by the Prades or Montsant river. The Serra de la Llena offers us conglomerate where the climber makes his way past pockets and dripping water and balance becomes the most important skill. The easy routes available here are ideal for initiating the beginner into the sport in a beautiful setting.",
+        "ca": "Situat a sota dels cingles de la Serra de La Llena i amb una orografia accidentada que apareix drenada pel riu de Prades o de Montsant. Aquesta Serra de La Llena ens ofereix una roca conglomerada on l'escalada passa per forats i gotes d'aigua i l'equilibri pren protagonisme. Les seves rutes fàcils donen la possibilitat de iniciar-se en aquest esport en un indret acollidor."
+      },
+      "access": {
+        "en": "The walls can be seen above the campsite. The approach on foot takes five minutes, the same time it takes to go by car along the track that leads off from the roundabout at the entrance to the village.",
+        "ca": "Les parets són evidents damunt del càmping. L'aproximació a peu és de cinc minuts i el mateix temps si es fa amb cotxe, per la pista que s'agafa a la rotonda de l'entrada al poble."
+      },
+      "climbing": {
+        "en": "Eminently climbable with pockets and some sharp holds. This is a sustained climb with some hard movements requiring strength.",
+        "ca": "Eminentment escalada en forats amb alguna \"regleta\". És una escalada de continuïtat amb alguns passos de bloc i de potència."
+      },
+      "rock": { "en": "Conglomerate and limestone.", "ca": "Conglomerada amb calcària." },
+      "routes": {
+        "en": "300 routes divided into 11 sectors in which you can find a large number of easy routes ideal for beginners, although the predominant grade is from 6a to 6c+. The height of the routes ranges from 10 to 20 metres.",
+        "ca": "300 vies repartides en 11 sectors, amb moltes vies molt fàcils, ideal per a la iniciació, per bé que el grau predominant és de 6a a 6c+. L'alçada de les vies oscil·la entre els 10 i 20 m."
+      },
+      "season": {
+        "en": "All year. In summer the walls are in the shade after 5 pm.",
+        "ca": "Tot l'any. A l'estiu a partir de les 5 de la tarda les parets tenen ombra."
+      },
+      "tips": {
+        "en": "You can stock up on provisions in the village and in the campsite, where you can also get water. Further information on accommodation is available from the County Tourism Office, tel. 977 871 247.",
+        "ca": "Es pot comprar al poble i al càmping, on també s'hi pot agafar aigua. Per a més informació sobre allotjament, Oficina Comarcal de Turisme, tel. 977 871 247."
+      },
+      "reading": {
+        "en": "Guia d'escalada Vilanova de Prades. Route descriptions at the campsite.",
+        "ca": "Guia d'escalada Vilanova de Prades. Ressenyes al càmping."
+      },
+      "sectors": [],
+      "climbs": [{ "name": "Al Lorut", "grade": "7c+" }]
+    },
+    {
+      "id": "ulldemolins",
+      "number": 6,
+      "name": "Ulldemolins",
+      "lat": 41.32229,
+      "lon": 0.87614,
+      "km": 6,
+      "tagline": {
+        "en": "The bewitching atmosphere of the area makes climbing here a special experience...",
+        "ca": "Practicar l'escalada en aquest lloc està reservat a gent privilegiada, per l'encant del medi..."
+      },
+      "intro": {
+        "en": "In the Montsant river valley, in a ravine between the slopes of the Serra de la Llena and the Montsant massif, we find this village, famous for its extra-virgin olive oil and other agricultural products. This is the starting point for excursions into the Serra de Montsant, in the area of Fraguerau, where the conglomerates have been eroded into fantastic shapes and the gorge has a wild beauty.\n\nThe bewitching atmosphere of the area and the coolness of the Montsant River as it passes through the Codolles Fondes make climbing here a special experience.",
+        "ca": "A la vall del riu Montsant, en un congost entre les vessants de la Serra de la Llena i del massís del Montsant s'ubica aquest poble productor d'un fabulós oli d'oliva verge extra i altres productes agrícoles. És el punt de partida per endinsar-se a la Serra del Montsant, a la zona de Fraguerau, un indret on els conglomerats afecten formes d'erosió extraordinàries i el conjunt de l'engorjat té una ferotge bellesa.\n\nPracticar l'escalada en aquest lloc està reservat a gent privilegiada, per l'encant del medi i la frescor del riu Montsant al seu pas per les Codolles Fondes."
+      },
+      "access": {
+        "en": "By car along the track as far as the hermitages of Sant Antoni and Santa Magdalena and from there on foot to Fraguerau.",
+        "ca": "Pel camí de les ermites de Sant Antoni i Santa Magdalena, on es deixa el cotxe i se segueix caminant per la pista fins a Fraguerau."
+      },
+      "climbing": {
+        "en": "A climb requiring strength, with hard moves on inclining subsidences.",
+        "ca": "És una escalada de força i potència sobre enfonsaments \"desploms\"."
+      },
+      "rock": { "en": "Conglomerate.", "ca": "Conglomerada." },
+      "routes": {
+        "en": "There are 40 well-equipped routes of all grades. The pitches range from between 10 and 20 metres.",
+        "ca": "Hi ha 40 vies de totes les dificultats, amb bons equipaments. Les llargàries oscil·len entre els 10 i 20 metres."
+      },
+      "season": {
+        "en": "All year. In summer, the river is an added attraction.",
+        "ca": "Tot l'any, a l'estiu el riu és un al·licient més."
+      },
+      "tips": {
+        "en": "In the village you can buy provisions and fill up with water at the springs, and there is a campsite and a boarding house. For further information on accommodation, contact the Ulldemolins Culture and Tourism Board, tel. 977 561 578 or the County Tourism Board, tel. 977 831 023. Every May the village celebrates its \"omelette in juice\" festival.",
+        "ca": "Al poble es pot comprar i agafar aigua de les fonts. També hi ha un càmping i una fonda. Més informació sobre allotjament al Patronat de Cultura i Turisme d'Ulldemolins, tel. 977 561 578, o bé al Patronat Comarcal de Turisme: 977 831 023. A més, cada any, el mes de maig s'hi celebra la festa de la truita amb suc."
+      },
+      "reading": {
+        "en": "You can request a sketch map of the area at the Ulldemolins Tourist Office.",
+        "ca": "Es poden demanar croquis de la zona a l'Oficina de Turisme d'Ulldemolins."
+      },
+      "sectors": ["Fraguerau", "Codolles Fondes"],
+      "climbs": [{ "name": "Fraguerau", "grade": "7b", "sector": "Fraguerau" }]
+    },
+    {
+      "id": "margalef",
+      "accessMap": "assets/guides/costa-daurada/margalef.jpg",
+      "number": 7,
+      "name": "Margalef",
+      "lat": 41.28544,
+      "lon": 0.7538,
+      "km": 6,
+      "tagline": {
+        "en": "Climbing in Margalef is typical of the Montsant: sustained with pockets.",
+        "ca": "L'escalada a Margalef és la típica del Montsant, forats i resistència."
+      },
+      "intro": {
+        "en": "\"Margalef is a hole\", as the saying goes, referring to its geographical location at the junction of the valleys formed by the Serra de la Llena and the Serra del Montsant. This, plus the fact that there is a reservoir, means there is plenty of water.\n\nIf, when we are on our way to a climb, we take a diversion from the walls and walk into the mountains, it is not difficult to find an interesting overhang or a cave just crying out to be explored. Climbing in Margalef is typical of the Montsant: sustained with pockets.",
+        "ca": "Margalef en un forat, explica la dita fent referència al seu enclavament geogràfic, ja que el poble es troba on la vall que formen la Serra de la Llena i la del Montsant s'eixampla. Aquest fet i l'existència d'un pantà, permet que es pugui gaudir de l'abundor de l'aigua.\n\nSi quan anem a escalar ens desviem dels peus de via i ens endinsem a la serra no serà difícil trobar una balma o alguna cova que incitin a ser visitades. L'escalada a Margalef és la típica del Montsant: forats i resistència."
+      },
+      "access": {
+        "en": "Most of the sectors are along the sides of the reservoir, where you will find a car park just after the dam. Another interesting area can be found on the way up the track that goes to the hermitage of Margalef.",
+        "ca": "La majoria de sectors es disposen a dues bandes del pantà on hi ha un aparcament just passada la presa. Una altra zona amb força projecció es troba pujant per la pista que ens porta a l'ermita de Margalef."
+      },
+      "climbing": {
+        "en": "A sustained climb with pockets and some hard movements.",
+        "ca": "És una escalada de continuïtat en forats, resistència i algun pas de bloc."
+      },
+      "rock": { "en": "Conglomerate and limestone.", "ca": "Conglomerada amb calcària." },
+      "routes": {
+        "en": "There are currently 400 routes divided into 23 sectors. Grades vary according to the sectors, with the majority between 6a and 7c. However, there are also easy routes, as well as some of grade 8 or higher. The equipment is excellent.",
+        "ca": "Actualment hi ha 400 vies repartides en 23 sectors. Les dificultats de les vies varien segons els sectors, la majoria van del 6a al 7c, però també hi trobem vies fàcils i vies de 8a o més. L'equipament amb químics és immillorable."
+      },
+      "season": {
+        "en": "All year. Orientations vary and some walls have areas of sun and shade all day.",
+        "ca": "Tot l'any ja que les orientacions són variades, hi ha parets amb sol i ombra tot el dia."
+      },
+      "tips": {
+        "en": "There is a small shop in the village and accommodation is available in the refuge or at the boarding house. For further information, please contact the County Tourist Office, tel. 977 831 023.",
+        "ca": "Hi ha una petita botiga al poble per comprar i, per allotjar-nos hi ha un refugi i una fonda i es pot demanar més informació a l'Oficina Comarcal de Turisme: 977 831 023."
+      },
+      "reading": {
+        "en": "An updated sketch map of the new sectors is available at the refuge. Rockfax has a brief description of the area.",
+        "ca": "Al refugi disposen de croquis actualitzats amb els nous sectors. Rockfax ha fet una petita ressenya de la zona."
+      },
+      "sectors": ["El Totxo d'en Fredi", "Can Llepafils", "Can Si Fa No Not", "Can Torxa", "El Laboratori", "Can Verdures", "Can Boix", "Can Pesafigues", "Ruïnes Molí d'en Vilar"],
+      "climbs": [{ "name": "Tomàtic", "grade": "7a+" }]
+    },
+    {
+      "id": "la-riba",
+      "number": 8,
+      "name": "La Riba",
+      "lat": 41.317,
+      "lon": 1.17713,
+      "km": 5,
+      "tagline": {
+        "en": "This is a dynamic area in which sectors are still being opened up...",
+        "ca": "És una escola viva on encara s'estan obrint sectors nous..."
+      },
+      "intro": {
+        "en": "The \"All-year Nativity scene\" is the nickname given to this town because of its location on a 110-metre sloping bank of the River Francolí. There are sectors on both sides of the River Brugent where local enthusiasts made the first climbs in our region and still have not tired of returning to such attractive routes as the Via de Brian.\n\nThis is a dynamic area in which sectors are still being opened up in the Serra de Miramar, where there are many walls waiting to be explored by climbing enthusiasts.",
+        "ca": "El \"Pessebre de tot l'any\" és el renom que té aquest poble per la seva ubicació en una vessant del riu Francolí, amb un desnivell de 110 metres. A banda i banda del riu Brugent, es reparteixen els sectors on els escaladors autòctons assoliren les primeres escalades de les nostres comarques i encara no s'han cansat d'anar a repetir vies com la Via de Brian per la seva bellesa.\n\nÉs una escola viva on encara s'estan obrint sectors nous a la serra de Miramar, on hi ha parets susceptibles de ser investigades pels amants d'aquest esport."
+      },
+      "access": {
+        "en": "There are sectors before entering the village on the road from Alcover to the Serra de Miramar, but most of the sectors are alongside the La Farena road.",
+        "ca": "Hi ha sectors nous abans d'entrar al poble venint d'Alcover a la serra de Miramar, però la majoria de sectors es troben d'un costat a l'altre de la carretera que va a Farena."
+      },
+      "climbing": {
+        "en": "Sustained climbing on vertical or steep walls.",
+        "ca": "És una escalada de continuïtat o resistència en plaques verticals o desplomades."
+      },
+      "rock": { "en": "Limestone.", "ca": "Calcària." },
+      "routes": {
+        "en": "180 routes averaging 30 metres and going up to 80 metres (three pitches).",
+        "ca": "180 vies de 30 metres de mitjana i fins a 80 metres (tres llargs)."
+      },
+      "season": { "en": "All year.", "ca": "Tot l'any." },
+      "tips": {
+        "en": "This is an ideal area for beginners. On the road to Farena there is a refuge and, a few metres farther on, a spring where you can fill up with water. Provisions can be bought in the town. For more information on accommodation, please contact the County Tourist Office, tel. 977 606 287.",
+        "ca": "És una escola ideal per a la iniciació. A la carretera de Farena hi ha un refugi i a pocs metres una font per proveir-nos d'aigua. Per comprar es pot anar al poble. Més informació sobre allotjament: Oficina Comarcal de Turisme, tel. 977 606 287."
+      },
+      "reading": { "en": "Costa Daurada, by Rockfax.", "ca": "Costa Daurada, de Rockfax." },
+      "sectors": ["Riu Brugent", "Serra de Miramar"],
+      "climbs": [{ "name": "Via de Brian", "grade": "6b+" }]
+    },
+    {
+      "id": "mont-ral",
+      "number": 9,
+      "name": "Mont-ral",
+      "lat": 41.28674,
+      "lon": 1.09832,
+      "km": 5,
+      "tagline": {
+        "en": "...the river offers a pleasant way to cool off after a hard day's climbing.",
+        "ca": "...el riu convida a refrescar-se després de l'esforç d'un dia d'escalada."
+      },
+      "intro": {
+        "en": "To the east of the Prades Mountains is Mont-ral, a small village with an old quarter of some forty houses, one of which is the Musté-Recasens refuge, and a meeting place for climbers from all over the world. The Brugent and Canaletes rivers flow through Mont-ral and it is there that we find the climbing sectors.\n\nThe walls rise up out of the woods and offer pleasurable, fun climbs and high quality routes.\n\nThe ambience is welcoming and the river offers a pleasant way to cool off after a hard day's climbing.",
+        "ca": "Al llevant de les Muntanyes de Prades hi ha Mont-ral, una petita població amb un nucli antic de quaranta cases una de les quals és el refugi Musté-Recasens, lloc de trobada d'escaladors d'arreu. Per Mont-ral hi passen el riu Brugent i el Glorieta, a la vessant del qual hi trobem els sectors d'escalada.\n\nSón parets que sorgeixen del bosc oferint una escalada agraïda, divertida i amb rutes de gran qualitat.\n\nL'ambient és acollidor i el riu convida a refrescar-se després de l'esforç d'un dia d'escalada."
+      },
+      "access": {
+        "en": "Two footpaths begin at the football field, one that leads to the upper sectors and another that goes down to the river sectors. Access to the La Lloera boulder sector is from Km 7 on the Mont-ral to Alcover road, and the other boulder sector is on both sides of the footpath that goes to L'Aixàviga, near the Totxo Grafitti sector.",
+        "ca": "Des del camp de futbol surten els dos senders, un a l'esquerra que ens porta als sectors de dalt i per la dreta surt el sender que va als sectors del riu. L'accés al sector de \"boulder\" la Lloera al km 7 de la carretera de Mont-ral a Alcover i l'altre a banda i banda del sender que va a l'Aixàviga, prop del sector Totxo Grafitti."
+      },
+      "climbing": {
+        "en": "Technical climb on vertical walls and slabs.",
+        "ca": "Escalada tècnica en plaques verticals i \"slabs\"."
+      },
+      "rock": { "en": "Limestone.", "ca": "Calcària." },
+      "routes": {
+        "en": "280 routes, 80% of them from 5 to 6c+. There are two boulder sectors, La Lloera with 150 problems and 40 problems more on the track to L'Aixàviga.",
+        "ca": "280 vies, el 80% són vies de 5è fins a 6c+. Hi ha dos sectors de \"boulder\", la Lloera amb 150 problemes i 40 problemes més al camí de l'Aixàviga."
+      },
+      "season": {
+        "en": "All year. In summer there are plenty of sectors with shade.",
+        "ca": "Tot l'any, a l'estiu hi trobem força sectors amb ombra."
+      },
+      "tips": {
+        "en": "There is a refuge in the village and shopping can be done in Alcover. Further information on accommodation can be obtained from the Alt Camp County Tourist Office, tel. 977 606 287.",
+        "ca": "Hi ha un refugi al poble i per comprar es pot anar a Alcover. Per a més informació sobre allotjament: Oficina Comarcal de Turisme de l'Alt Camp, tel. 977 606 287."
+      },
+      "reading": {
+        "en": "Escaladas en Mont-ral y La Mussara. Costa Daurada, by Rockfax.",
+        "ca": "Escalades a Mont-ral i la Mussara. Costa Daurada, de Rockfax."
+      },
+      "sectors": ["La Lloera", "Totxo Grafitti", "L'Aixàviga"],
+      "climbs": [{ "name": "Ta", "grade": "6b+" }]
+    },
+    {
+      "id": "els-cogullons",
+      "accessMap": "assets/guides/costa-daurada/els-cogullons.jpg",
+      "number": 10,
+      "name": "Els Cogullons",
+      "lat": 41.3293,
+      "lon": 1.089,
+      "km": 5,
+      "tagline": {
+        "en": "One of the most attractive climbing areas on the Costa Daurada...",
+        "ca": "Una de les escoles més boniques de la Costa Daurada..."
+      },
+      "intro": {
+        "en": "Climbing the eastern slope of the Serra de Prades from the town of Montblanc we come to Rojals, the highest village in our region.\n\nThere are many farmhouses dotted around the village, Mas d'en Carles, Mas d'en Llort, Mas Cogullons, etc., and it is the latter which gives the climbing area its name. This is possibly one of the most attractive climbing areas on the Costa Daurada, with mythical routes that motivate you to take on greater challenges and reach new goals and accomplishments.",
+        "ca": "Des del municipi de Montblanc, enfilant-nos per la vessant est de la Serra de Prades hi trobem el petit nucli de població de Rojals, el que està situat a més alçada de les nostres comarques.\n\nDisperses al voltant del poble hi ha nombroses masies: Mas d'en Carles, Mas d'en Llort, Mas Cogullons... d'aquest últim en pren el nom l'escola. Possiblement una de les més boniques de la Costa Daurada, amb vies mítiques que motivaran el teu esperit de superació, l'afany de provar nous reptes i assolir triomfs."
+      },
+      "access": {
+        "en": "Take the track that goes from Rojals to Coll de la Mola, turning to the left until you reach the refuge. The sectors are spread around the area of the refuge.",
+        "ca": "Per la pista que surt de Rojals i va al coll de la Mola, desviar-se a l'esquerra fins arribar al refugi. Els sectors es troben dispersos al voltant del refugi."
+      },
+      "climbing": {
+        "en": "Sustained climbs on steep walls and overhanging drops.",
+        "ca": "Escalada de continuïtat en plaques esfondrades i \"desploms\"."
+      },
+      "rock": { "en": "Granite, sandstone and limestone.", "ca": "Granit, arenisca i calcària." },
+      "routes": {
+        "en": "150 routes with an average height of 25 metres. The equipment is of good quality.",
+        "ca": "150 vies amb una alçada mitjana de 25 metres. Els equipaments són de qualitat."
+      },
+      "season": { "en": "Spring and autumn.", "ca": "Primavera i tardor." },
+      "tips": {
+        "en": "You cannot climb on the Mola Roquerola during the bird nesting season, from January 1 to June 30. Rural accommodation is available in Rojals and in other establishments in Conca de Barberà county. Information is available from the County Tourist Office, tel. 977 871 247, and the Montblanc Municipal Tourist Office, tel. 977 861 733.",
+        "ca": "De l'u de gener al trenta de juny no es pot escalar a la mola Roquerola per ser època de cria d'aus. Podem allotjar-nos a cases rurals de Rojals o en altres establiments de la comarca de la Conca de Barberà. Més informació a l'Oficina Comarcal de Turisme, tel. 977 871 247 i l'Oficina Municipal de Turisme de Montblanc, tel. 977 861 733."
+      },
+      "reading": {
+        "en": "Costa Daurada, by Rockfax. Updated descriptions in the La Socarrimada Restaurant in Rojals.",
+        "ca": "Costa Daurada, de Rockfax. Ressenyes actualitzades al restaurant La Socarrimada, de Rojals."
+      },
+      "closures": [
+        { "sector": "Mola Roquerola", "from": "01-01", "to": "06-30", "reason": { "en": "Bird nesting season", "ca": "Època de cria d'aus" } }
+      ],
+      "sectors": ["Mola Pastoral", "Mola Roquerola", "Les Gralles", "Mas de Carles"],
+      "climbs": [
+        { "name": "La Paella Mixta", "grade": "7b+" },
+        { "name": "Kavernícola", "grade": "6b", "sector": "Mola Roquerola" }
+      ]
+    },
+    {
+      "id": "l-hospitalet",
+      "number": 11,
+      "name": "L'Hospitalet",
+      "subtitle": "Via Ferrada",
+      "lat": 40.99965,
+      "lon": 0.9124,
+      "km": 8,
+      "tagline": {
+        "en": "...a few metres from the sea, we find a via ferrata. It runs up an arête that reminds us of the sharp, aesthetic, aerial arêtes of the Pyrenees.",
+        "ca": "...a pocs metres del mar hi trobem una aresta que ens podria recordar les esmolades, aèries i estètiques arestes dels Pirineus."
+      },
+      "intro": {
+        "en": "Part of the municipality of Vandellòs, L'Hospitalet has beautiful beaches, an impressive seafront promenade and, surprisingly, a few metres from the sea, we find a via ferrata. It runs up an arête that reminds us of the sharp, aesthetic, aerial arêtes of the Pyrenees.",
+        "ca": "Un dels cinc nuclis de població del municipi de Vandellòs, amb platges de gran qualitat, un impressionant passeig marítim i on sorprenentment, a pocs metres del mar hi trobem la via ferrada de L'Hospitalet, que transcorre per una aresta que ens podria recordar les esmolades, aèries i estètiques arestes dels Pirineus."
+      },
+      "access": {
+        "en": "Take the paved track that starts at the service station on the N-340 main road one kilometre from Hospitalet in the direction of Valencia and from there continue as far as the hermitage, where there is a car park. Then follow the track to the right until you see an ill-defined footpath that takes you to the foot of the mountain.",
+        "ca": "Per la pista asfaltada que surt de l'estació de servei que es troba a la N-340, a un km de l'Hospitalet en direcció València i des d'allà continuarem fins a l'ermita, on tot seguit hi trobarem un pàrquing. Seguirem la pista de la dreta fins trobar un sender poc definit que porta a peu de la carena."
+      },
+      "climbing": {
+        "en": "Via ferrata. The approach takes about 30 minutes and the itinerary 3 hours and 45 minutes.",
+        "ca": "Via ferrada. L'aproximació és de 30 minuts i l'itinerari de 3 hores 45 minuts."
+      },
+      "rock": { "en": "Conglomerate.", "ca": "Conglomerada." },
+      "season": {
+        "en": "All year. The best season is between autumn and spring.",
+        "ca": "Tot l'any, la millor època és la de tardor a primavera."
+      },
+      "tips": {
+        "en": "This is a difficult climb and the equipment is good. You should take a helmet, a safety lanyard, a descender and a 50-metre rope. There are springs in the village to fill up with water, and a wide variety of accommodation and restaurants in and around Hospitalet. More information is available from the Municipal Tourism Board in Hospitalet, tel. 977 823 328.",
+        "ca": "La dificultat és alta i l'equipament és bo. Pel que fa al material, cal portar casc, baga de seguretat, \"rapelador\" i corda de 50 metres. Per agafar aigua, al poble hi ha fonts. A més a l'Hospitalet i rodalies hi ha un ampli ventall d'oferta d'allotjament i gastronomia. Més informació, al Patronat Municipal de Turisme de l'Hospitalet, tel. 977 823 328."
+      },
+      "reading": {
+        "en": "Vies ferrades i camins equipats. There is also a sketch map in the Hospitalet Tourist Office.",
+        "ca": "Vies ferrades i camins equipats. També hi ha croquis a l'Oficina de Turisme de l'Hospitalet."
+      },
+      "sectors": ["Via Ferrada de l'Hospitalet"],
+      "climbs": []
+    }
+  ],
+  "advice": {
+    "en": "Climbing is allowed in most of the areas prepared for this sport. However, you should check in advance if there are any temporary restrictions due to bird nesting or other exceptional circumstances.\n\nThe route equippers take no responsibility for the condition of the bolts and anchors, which may deteriorate over time. It is the responsibility of all climbers to maintain the equipment in good condition and, if necessary, advise those most closely connected to the area of any damage or deficiencies.\n\nClimbers are recommended to take out personal insurance to cover any risk of accident.\n\nCare of the environment is the responsibility of all of us. Please dispose of your waste correctly and take great care with the flora and fauna. Any damage we do takes a long time to repair itself. For this reason we ask you to follow the established footpaths when making your way to the climbing areas, and not to open up new ones.\n\nHappy climbing on the Costa Daurada!",
+    "ca": "La pràctica de l'escalada està permesa a la majoria de zones habilitades per a aquest esport. Ara bé, cal consultar prèviament si hi ha algun tipus de restricció temporal degut a l'època de reproducció d'aus o per alguna altra causa excepcional.\n\nEls equipadors de les vies no es fan responsables de l'estat dels ancoratges o reunions, que amb el pas del temps poden sofrir deterioraments. És responsabilitat de tots els escaladors mantenir en bones condicions la infraestructura i, si cal, s'ha d'avisar a qui estigui més relacionat amb la zona de les mancances o desperfectes.\n\nEs recomana que els escaladors disposin d'assegurances personals per tal de cobrir qualsevol risc d'accident.\n\nEl manteniment del medi ambient és responsabilitat de tothom. Cal tenir cura amb les deixalles i respectar al màxim la flora i la fauna; qualsevol mal que es produeixi necessita massa temps per ser reparat. En aquest sentit, és convenient parar molta atenció en seguir els senders existents a l'hora d'aproximar-se als sectors d'escalada, evitant obrir-ne de nous.\n\nBones escalades a la Costa Daurada!"
+  },
+  "services": [
+    { "name": "A.A.E.E.T. Secció d'Espeleologia", "activities": "Climbing", "address": "Muralla St. Antoni, 35 · 43800 Valls", "phone": "977 613 443" },
+    { "name": "Canoa & Kaiak Siurana", "activities": "Flat-water and sea canoeing, kayaking, mountain bike routes, climbing, archery", "address": "Ctra. del Pantà de Siurana · 43360 Cornudella de Montsant", "phone": "977 817 193 · 606 414 223" },
+    { "name": "Centre d'Esports de Muntanya la Barrancada", "activities": "Horse riding, archery, climbing, via ferrata, caving, canyoning, hiking, paintball", "address": "Partida de Comanrell, s/n · 43891 Masboquera (Vandellòs - Hospitalet de l'Infant)", "phone": "605 423 027", "web": "www.labarrancada.com", "email": "info@labarrancada.com" },
+    { "name": "Col·lectiu Natrix", "activities": "Outdoor sports and leisure", "address": "Ctra. de Tarragona, c/ La Pica s/n · 43800 Valls", "phone": "669 289 953" },
+    { "name": "Goma II", "activities": "Climbing, climbing gear", "address": "Carrer de les Vinyes, 40 · 43360 Cornudella de Montsant", "phone": "630 802 144 · 609 900 195", "web": "www.goma2.net" },
+    { "name": "K2", "activities": "Technical mountain gear, climbing courses", "address": "C/ Cós del Bou, 12 · 43003 Tarragona", "phone": "977 238 630" },
+    { "name": "Josep Pascual i Roca", "activities": "Mountain guiding, Prades Mountains", "address": "C/ Església, 6 · 43205 Mont-ral", "phone": "977 846 100" },
+    { "name": "Climbing Planet", "activities": "Archery, paragliding, climbing, 4x4, sports gear, ecotourism, paintball, abseiling and canyoning, mountain biking", "address": "C/ Compte de Rius, s/n · 43360 Cornudella de Montsant", "phone": "977 812 313", "web": "www.climbing-planet.com", "email": "info@climbing-planet.com" },
+    { "name": "Nil Travel", "activities": "Climbing, zip lines, bridge and crane jumping, canyoning", "address": "C/ Lleida, 9 · 43001 Tarragona", "phone": "977 216 421", "web": "www.niltravel.com" },
+    { "name": "Prades Aventura", "activities": "Quad hire, hiking, climbing, caving, canyoning, nature routes, paintball, archery", "address": "C/ Sant Llorenç, 8 bis · 43364 Prades", "phone": "626 133 606", "web": "www.pradesaventura.com", "email": "info@pradesaventura.com" },
+    { "name": "Club Centre Excursionista Serres del Mestral", "activities": "Hiking, climbing, via ferrata, abseiling", "address": "C/ Tivissa, 3 · 43890 Hospitalet de l'Infant", "phone": "977 820 523", "web": "www.serresdelmestral.cat", "email": "esports@vandellos-hospitalet.org" },
+    { "name": "Drac Actiu", "activities": "Caving in the Font Major cave, hiking, quads, mountain biking, archery", "address": "Ctra. de les Masies, s/n · 43440 L'Espluga de Francolí", "phone": "629 213 263", "web": "www.dracactiu.com", "email": "info@dracactiu.com" },
+    { "name": "Llop Aventura", "activities": "Climbing, hiking, trekking, quads, cycle touring, mountain biking, caving, multi-adventure, canyoning", "address": "C/ Pintor Potau, 22 · 43400 Montblanc", "phone": "977 875 126", "web": "www.llopaventura.com", "email": "info@llopaventura.com" },
+    { "name": "Naturetime Events", "activities": "Hiking, mountain biking, adventure raids, outdoor training, sports advice", "address": "C/ Marcos Redondo, 3 baixos · 43481 La Pineda", "phone": "977 372 080", "web": "www.cefores.net" }
+  ],
+  "links": [
+    { "label": { "en": "Tourist information", "ca": "Informació turística" }, "url": "www.costadaurada.info" },
+    { "label": { "en": "Climbing federation", "ca": "Federació" }, "url": "www.feec.org" },
+    { "label": { "en": "Guides", "ca": "Guies" }, "url": "www.escuelasdeescalada.com" },
+    { "label": { "en": "Guides", "ca": "Guies" }, "url": "www.rockfax.com" },
+    { "label": { "en": "Weather", "ca": "Meteorologia" }, "url": "www.meteo.cat" }
+  ],
+  "bibliography": [
+    { "title": "Costa Daurada. A Rock Climbing Guidebook", "authors": "Mark Glaister, Emma Medara", "publisher": "Rockfax", "languages": "English" },
+    { "title": "Escalades a les Muntanyes d'Or", "authors": "Josep E. Castellnou Ribau", "publisher": "Self-published", "languages": "Catalan, English" },
+    { "title": "Escalades a l'Arbolí", "authors": "Luis Alfonso, Xavier Buxó", "publisher": "Self-published", "languages": "Catalan, Spanish" },
+    { "title": "Escaladas en Mont-ral y La Mussara", "authors": "Luis Alfonso, Xavier Buxó", "publisher": "Self-published", "languages": "Spanish" },
+    { "title": "Guia d'Escalades a Siurana", "authors": "Toni Arbonès, Míriam Richart", "publisher": "Self-published", "languages": "Catalan" },
+    { "title": "Les 100 millors escalades de Catalunya", "authors": "Pep Soldevilla Rossell", "publisher": "Editorial Barrabes", "languages": "Catalan" },
+    { "title": "Ports. Guía de escaladas", "authors": "Luis Alfonso, Xavier Buxó", "publisher": "Self-published", "languages": "Spanish" },
+    { "title": "Vies ferrades i camins equipats", "authors": "Daniel Sánchez, Xavier Sánchez, Beatriz Forés", "publisher": "Cossetània Edicions, col·lecció Azimut 31", "languages": "Catalan" },
+    { "title": "Guia d'escalada. Vilanova de Prades", "authors": "Xavier Guiu", "publisher": "Self-published", "languages": "Catalan, Spanish, English, French" }
+  ]
+}
