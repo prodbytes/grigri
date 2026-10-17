@@ -990,6 +990,31 @@ class AppLocalizationsPt extends AppLocalizations {
   String get premiumCheckRefresh => 'Já paguei: verificar';
 
   @override
+  String get premiumRestore => 'Restaurar compras';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'O Grigri Premium é uma assinatura com renovação automática: $prices. O pagamento é cobrado no seu ID Apple ao confirmar. Ela se renova automaticamente, a menos que você cancele pelo menos 24 horas antes do fim do período. Gerencie ou cancele nos ajustes da sua conta da App Store.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Política de privacidade';
+
+  @override
+  String get premiumTermsOfUse => 'Termos de uso (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'Não foi possível acessar a App Store agora.';
+
+  @override
+  String get premiumNothingToRestore =>
+      'Nenhuma assinatura da App Store para restaurar.';
+
+  @override
+  String get premiumPurchaseFailed => 'A compra não foi concluída.';
+
+  @override
   String get errorOpenLink => 'Não foi possível abrir o link.';
 
   @override

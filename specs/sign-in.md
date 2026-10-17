@@ -128,7 +128,9 @@ climber and its sessions go last, so a retry still gets in.
    `premium` role is revoked. If Stripe or rbacr fails, nothing is
    deleted. Stripe's later events about that subscription are ignored.
    Grigri can't cancel a subscription bought through Apple: the
-   confirmation says to cancel it in Settings.
+   confirmation says to cancel it in Settings, and the subscription is
+   untied from the account (Stripe isn't asked), so a new account can
+   restore it.
 2. **The sign-in provider's grants**, before any data is deleted: Sign
    in with Apple's tokens are revoked at Apple, which Apple requires on
    deletion (`revokeAppleTokens`, [below](#apple-token-revocation); it never

@@ -1,24 +1,38 @@
-// Premium (specs/premium.md): a subscription, paid through Stripe. Who is
-// Premium is rbacr's: its `premium` role, which the Stripe webhook grants
-// while the subscription is paid (and admins hold through rbacr's
-// implication). The subscription's billing state is Stripe's; the API
-// keeps a copy, refreshed from Stripe on every webhook event about it
-// (stripe.ts), for the plan, the renewal date and the billing portal.
+// Premium (specs/premium.md): a subscription, paid through Stripe (Android
+// and the web) or Apple's in-app purchase (iOS). Who is Premium is rbacr's:
+// its `premium` role, which the Stripe webhook and the App Store's signed
+// transactions and notifications grant while the subscription is paid (and
+// admins hold through rbacr's implication). The billing state is Stripe's
+// or Apple's; the API keeps a copy, refreshed on every webhook event or
+// notification about it (stripe.ts, app-store.ts), for the plan, the renewal
+// date and where it's managed.
 
 export type PremiumPlan = 'monthly' | 'yearly';
 
-/** What each plan costs, in cents (US dollars). */
+/** What each plan costs through Stripe, in cents (US dollars). The App Store's prices are set in App Store Connect. */
 export const PREMIUM_PRICES: Record<PremiumPlan, { amount: number; currency: 'usd' }> = {
   monthly: { amount: 2000, currency: 'usd' },
   yearly: { amount: 20000, currency: 'usd' },
 };
 
-/** A climber's subscription, as last read from Stripe. */
+/** Who sells it: Stripe (Android and the web) or the App Store (iOS). */
+export type PremiumSource = 'stripe' | 'apple';
+
+/** A climber's subscription, as last read from Stripe or signed by Apple. */
 export interface Subscription {
   climberId: string;
+  /** Stripe's customer; empty for the App Store's. */
   customerId: string;
+  /** Stripe's subscription id, or the App Store's original transaction id. */
   subscriptionId: string;
-  /** Stripe's status: active, trialing, past_due, canceled, unpaid, incomplete… */
+  /** Absent: Stripe (saved before the App Store sold it). */
+  source?: PremiumSource;
+  /**
+   * Stripe's status: active, trialing, past_due, canceled, unpaid,
+   * incomplete…; the App Store's are mapped onto them (app-store.ts): active,
+   * past_due (billing retry or grace period), expired, canceled (refunded
+   * or revoked).
+   */
   status: string;
   plan: PremiumPlan;
   /** When the paid period ends (ISO 8601). */
@@ -26,8 +40,12 @@ export interface Subscription {
   /** Cancelled: it ends at periodEnd and won't renew. */
   cancelAtPeriodEnd: boolean;
   updatedAt: string;
-  /** Whose it is in rbacr: the subscriber's verified email, from checkout (the subscription's metadata). */
+  /** Whose it is in rbacr: the subscriber's verified email (Stripe: from checkout, in the subscription's metadata; the App Store: the buyer's session). */
   email?: string;
+  /** The App Store's: Production, or Sandbox (App Review, TestFlight, sandbox testers). */
+  environment?: 'Production' | 'Sandbox';
+  /** The App Store's: when Apple signed the copy saved (ISO 8601); an older one never overwrites it. */
+  appleSignedAt?: string;
 }
 
 /** Premium as the app sees it. */
@@ -38,6 +56,8 @@ export interface Premium {
   until?: string;
   /** Won't renew: ends at `until`. */
   ending?: boolean;
+  /** Who sells it, so the app knows where it's managed. */
+  source?: PremiumSource;
 }
 
 /**
@@ -74,6 +94,12 @@ export function premiumOf(sub: Subscription | undefined, now: Date): Premium {
   if (!sub) return { active: false };
   const active = PAID.has(sub.status) && Date.parse(sub.periodEnd) + GRACE_MS > now.getTime();
   return active
-    ? { active, plan: sub.plan, until: sub.periodEnd, ...(sub.cancelAtPeriodEnd ? { ending: true } : {}) }
+    ? {
+        active,
+        plan: sub.plan,
+        until: sub.periodEnd,
+        ...(sub.cancelAtPeriodEnd ? { ending: true } : {}),
+        source: sub.source ?? 'stripe',
+      }
     : { active: false };
 }

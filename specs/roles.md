@@ -28,7 +28,7 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
   | Role | Who holds it | Set by |
   |---|---|---|
   | `admin` | the Admin tab's people ([admin.md](admin.md)); implies `premium` and `premium-rc` | a root, in rbacr |
-  | `premium` | Premium subscribers ([premium.md](premium.md)), until their paid period's end plus two days | the Stripe webhook (grant and revoke); a root, for a comp |
+  | `premium` | Premium subscribers ([premium.md](premium.md)), until their paid period's end plus two days | the Stripe webhook, and the App Store's signed transactions and notifications (grant and revoke); a root, for a comp |
   | `blocked` | people an admin blocked ([admin.md](admin.md#blocking)) | the Admin tab's Block/Unblock; a root |
   | `premium-rc`, `blocked-rc` | the same, on the RC, which asks production's rbacr too: its test payments and blocks never reach production | the RC's API |
 

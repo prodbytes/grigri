@@ -61,7 +61,8 @@ themselves, and the API filters objectionable words
   profile save). Emails are never returned to anyone; the API keeps each
   climber's verified email privately, to ask rbacr about their roles.
 - **Every role is rbacr's** ([roles.md](roles.md)): `admin`, `premium`
-  (granted by the Stripe webhook while paid; admins hold it through
+  (granted while paid by the Stripe webhook, or the App Store's signed
+  transactions and notifications; admins hold it through
   rbacr's implication) and `blocked` (`premium-rc` and `blocked-rc` on
   the RC).
 - **Admin**: decided by [rbacr](roles.md) on every request: the
@@ -220,7 +221,7 @@ unknown or expired session token; or a bad Google or Apple ID token at
 the site's CloudFront, [origin check](origin-check.md)), 404 (no such thing or route), 409 (conflict: already
 asked, already a member, changed meanwhile), 413 (body over 64 KB), 415
 (a body that isn't `application/json`), 429 (too soon: a nudge within 12
-hours of the last), 503 (Premium without Stripe keys), 500 (`{"error": "internal error"}`;
+hours of the last), 503 (Premium through Stripe without Stripe keys), 500 (`{"error": "internal error"}`;
 details only in the function's log). A signed-in caller without a profile
 yet (before their first `GET /api/me`) gets 409 `{"error": "no profile"}`
 from every route except `GET/PUT /api/me`, `POST /api/photos`, the
@@ -228,8 +229,9 @@ session routes and `GET /api/health`.
 
 ## Routes
 
-All need a session token except `GET /api/health`, `POST /api/session`
-and `POST /api/stripe/webhook` (signed by Stripe instead).
+All need a session token except `GET /api/health`, `POST /api/session`,
+`POST /api/stripe/webhook` (signed by Stripe instead) and
+`POST /api/apple/notifications` (signed by Apple instead).
 
 | Route | Does |
 |---|---|
@@ -237,7 +239,7 @@ and `POST /api/stripe/webhook` (signed by Stripe instead).
 | `POST /api/session` | body `{"idToken"}`, or `{"appleIdToken", "nonce", "authorizationCode"?, "name"?}` (dev mode: or `{"devUser"}`) → `{"token", "expiresAt"}` (no auth; see [Sessions](#sessions)) |
 | `DELETE /api/session` | sign out: this session ends. → `{}` |
 | `DELETE /api/sessions` | sign out everywhere: all my sessions end. → `{}` |
-| `GET /api/me` | `{"climber": Climber, "admin": bool, "roles": [string] \| null, "premium": {"active", "plan"?, "until"?, "ending"?}}` (`premium`: my [Premium](premium.md)). `roles`: my roles in Grigri from rbacr (see **Roles** above), or null when it can't say. The first time, it creates my profile from my account: the session's name (Google's, or the one Apple gave the app at the first sign-in; `Climber` when the session has none), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
+| `GET /api/me` | `{"climber": Climber, "admin": bool, "roles": [string] \| null, "premium": {"active", "plan"?, "until"?, "ending"?, "source"?}}` (`premium`: my [Premium](premium.md); `source`, `stripe` or `apple`, says where it's managed). `roles`: my roles in Grigri from rbacr (see **Roles** above), or null when it can't say. The first time, it creates my profile from my account: the session's name (Google's, or the one Apple gave the app at the first sign-in; `Climber` when the session has none), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
 | `GET /api/realtime` | where [live updates](#live-updates) come from: `{"url": "wss://<IoT endpoint>/mqtt", "authorizer": "<prefix>-api-realtime" (empty locally), "topic": "grigri/<stage>/climbers/<my climber id>/#", "clientIdPrefix": "<my climber id>-"}`, or `{"url": null}` when they're off |
 | `DELETE /api/me` | body `{"confirm": true}` (400 without it): deletes my account for good ([sign-in.md](sign-in.md#deleting-my-account)): Premium cancelled at Stripe at once and its rbacr role revoked, then `Deps.onDeleteAccount` (Sign in with Apple's token revocation), then my messages, their media, my request notes and my Your Pics photos in every plan I'm in, left or asked to join; I leave every plan (handed over, or ended with me as its last member; the note says "A climber left the plan"); my requests withdrawn; my ads, profile and gear photos and every item keyed to me deleted; then the sign-in link and every session (later calls: 401). A session route: blocked climbers may call it. Each step can run again: a retry after a failure (Stripe, rbacr, S3) finishes the job. → `{}` |
 | `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars (name and bio through the [filter](moderation.md#the-filter)), age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
@@ -272,10 +274,12 @@ and `POST /api/stripe/webhook` (signed by Stripe instead).
 | `POST /api/walls/{id}/views` | premium; the app learns the wall: body `{"key" (mine, uploaded), "width", "height", "h": [9 numbers]}` (this view's pixels → the first view's) → `{"wall"}`. Past 12 views the oldest learned one goes (its photo deleted) |
 | `GET /api/pics?lat=&lon=&sector=&place=&area=` | GriGri Pics for a place (any of them; `lat` and `lon` both or neither, 400 otherwise) → `{"pics": [GrigriPic]}` |
 | `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 15 minutes (room for a chat video on a slow line). The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
-| `GET /api/premium` | my [Premium](premium.md) and its prices: `{"premium", "prices": {"monthly": {"amount": 2000, "currency": "usd"}, "yearly": {"amount": 20000, …}} \| null}` (null: the stage has no Stripe keys) |
+| `GET /api/premium` | my [Premium](premium.md), Stripe's prices and the App Store's appAccountToken for me: `{"premium", "prices": {"monthly": {"amount": 2000, "currency": "usd"}, "yearly": {"amount": 20000, …}} \| null, "appleAccountToken": "<uuid>"}` (`prices` null: the stage has no Stripe keys) |
 | `POST /api/premium/checkout` | body `{"plan": "monthly"\|"yearly"}` → `{"url"}`, Stripe Checkout's page for it (409 when I'm already Premium; 503 without Stripe keys) |
-| `POST /api/premium/portal` | → `{"url"}`, Stripe's billing portal (404 before I ever subscribed; 503 without Stripe keys) |
-| `POST /api/stripe/webhook` | Stripe's events (no session: Stripe signs them; the raw body, up to 512 KB, any content type it sends). 400 for a bad or old signature; events about a deleted account's subscription are ignored. → `{"received": true}` ([premium.md](premium.md#paying-stripe)) |
+| `POST /api/premium/portal` | → `{"url"}`, Stripe's billing portal (404 before I ever subscribed, or when my subscription is the App Store's; 503 without Stripe keys) |
+| `POST /api/premium/apple` | the iOS app's App Store purchase: body `{"transaction": "<StoreKit 2 signed transaction, a JWS>"}`, verified offline against Apple's root ([premium.md](premium.md#verifying-apples-signatures)). 400 for a bad signature or a transaction that isn't Grigri Premium (another bundle or product); 409 when it was bought with another account's appAccountToken (or none), or its subscription is already another account's. Saved as my subscription (unless an older copy than the one kept), and rbacr's role follows. → as `GET /api/premium` |
+| `POST /api/stripe/webhook` | Stripe's events (no session: Stripe signs them; the raw body, up to 512 KB, any content type it sends). 400 for a bad or old signature; events about a deleted account's subscription are ignored. → `{"received": true}` ([premium.md](premium.md#paying-on-android-and-the-web-stripe)) |
+| `POST /api/apple/notifications` | App Store Server Notifications V2 (no session: Apple signs them): body `{"signedPayload"}`. 400 for a bad signature (outer or inner). Notifications about another app, a product that isn't Premium, `TEST`, or a subscription no account has sent yet are acknowledged and ignored. → `{"received": true}` ([premium.md](premium.md#keeping-it-in-step)) |
 | `GET /api/ads`, `POST /api/ads/media`, `POST /api/ads`, `DELETE /api/ads/{id}` | my [ads](ads.md#api) (adding needs Premium) |
 | `GET /api/admin/ads`, `POST /api/admin/ads/{id}/approve` / `reject`, `PUT /api/admin/ads/settings` | admins: [reviewing ads](ads.md#api), and how often the deck shows them |
 | `GET /api/admin/climbers` | admin only: every profile, by name, without location or areas, each with `"blocked": bool` → `{"climbers"}` ([admin.md](admin.md)) |
