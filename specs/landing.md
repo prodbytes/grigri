@@ -2,7 +2,9 @@
 
 The site root (`/`, [grigri_index/site](../grigri_index/site)) is a
 landing page that gets visitors to sign in. The app stays at `/app/`,
-where the Google sign-in actually happens. The page takes its look from
+where the Google sign-in actually happens. The app's sign-in screen has
+the same look, on the web, Android and iOS ([sign-in](sign-in.md)), so
+the **Sign in** buttons lead to a matching page. The page takes its look from
 popular apps: Tinder's full-bleed photo and swiping card, Airbnb's row of
 photo cards, and Strava's "join for free".
 
@@ -25,11 +27,15 @@ From top to bottom:
 1. **The bar**: the logo and a **Sign in** button.
 2. **The hero**: a GriGri Pics photo edge to edge (the nearest crag's,
    when the visitor's location is known), a "100% free" badge, the
-   headline ("Find your next climbing partner."), the app's tagline, a
+   headline ("Find a climbing plan."), the tagline, a
    **Sign in with Google** button and "Free for every climber: no card, no
    subscription." Beside it (below it on phones) is a demo plan card that
-   swipes right on a loop with a JOIN stamp, showing a crag photo and
-   made-up climbers (Mara, Jonas). The loop doesn't play when the browser
+   swipes right on a loop with a JOIN stamp. Each loop brings in the next
+   of three made-up plans (Saturday sport with Mara and Jonas, Sunday
+   multi-pitch with Iker and Lea, next weekend's bouldering with Noor
+   and Tomás), each at another crag with its photo: up to three crags
+   from the strip, the hero's crag last (without the catalog: Siurana,
+   Margalef, Montserrat). The loop doesn't play when the browser
    asks for reduced motion.
 3. **Crags near you**: a horizontal, snapping row of up to 12 GriGri Pics
    photo cards, at most 3 per crag. Each card shows the crag's name, its
@@ -53,7 +59,8 @@ From top to bottom:
 5. **Free. Really.**: plans and swiping, matches and group chats, crag
    photos, no card to sign up. Premium is described as optional, only for
    advertising and the route finder ([premium.md](premium.md)).
-6. **A last call** with **Join free with Google**, and a footer crediting
+6. **A last call** ("This weekend's climbing plan is one swipe away.")
+   with **Join free with Google**, and a footer crediting
    the photos' authors and OpenStreetMap for the crags' locations, with
    links to the **Privacy policy** and **Support** pages.
 

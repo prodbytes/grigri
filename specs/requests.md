@@ -1091,7 +1091,32 @@ spec.
       decides").
     - [Backend](backend.md): the seed's Montserrat plan is guided and
       the after-work gym plan is open.
-75. **Verify the app is ready for the Apple App Store, and help ship it.**
+
+75. **Still seeing the old login page locally, though it was replaced by
+    a more modern one: rebuild, restart, and make sure the new page is on
+    every platform, the web included.**
+    - [Sign-in](sign-in.md): the app's sign-in screen (at `/app/`, and on
+      Android and iOS, where the landing page never showed) now has the
+      landing page's look: a GriGri Pics photo edge to edge, "100% free",
+      **Find a climbing plan.**, Google's sign-in, the swiping demo card,
+      how it works, what's free and a last call, in the six languages.
+      The app reads GriGri Pics' catalog (`/pics/catalog.json`, no
+      token) for the photos.
+    - [Landing page](landing.md): the headline and the last call follow
+      "Find a climbing plan" (they said "partner"), in every language, as
+      do the page's title and description.
+    - Cost: none added. The catalog and photos are files CloudFront
+      already serves from its cache.
+
+76. **The swiping animation shows a single plan (Margalef): add two
+    more, at other crags.**
+    - [Landing page](landing.md) and [sign-in](sign-in.md): the demo card
+      cycles through three made-up plans (different days, styles and
+      climbers), each at a different crag from GriGri Pics' catalog, in
+      the six languages. On the landing page the next plan comes in
+      while the card is off screen, at the end of each animation loop.
+
+77. **Verify the app is ready for the Apple App Store, and help ship it.**
     - [App Store](app-store.md), new: the submission's spec and
       checklist: what the repo does, what other pull requests are adding
       (Sign in with Apple, account deletion, report and block, Apple

@@ -44,7 +44,18 @@ CanvasKit and Google Identity Services) is what guards it.
 1. **Start**: with a kept session the app goes straight to step 2, with
    no Google round-trip. Without one, the **sign-in screen**
    ([sign_in_screen.dart](../grigri_app/lib/ui/sign_in_screen.dart)):
-   the app's name and tagline, and the sign-in button. (Without a kept
+   the [landing page](landing.md)'s look on every platform. A GriGri
+   Pics photo edge to edge (the first photo in the catalog, credited
+   under it), the logo, "100% free", the headline **Find a climbing
+   plan.**, the tagline and the sign-in button, with a demo plan card
+   that swipes right on a loop, bringing in the landing page's three
+   made-up plans in turn, each at another crag (still, on the first,
+   when the device asks for less motion). Below: how it works, what's free, and a last call, **Join free
+   with Google**, which signs in (on the web it scrolls back up to
+   Google's button, the only one that can). The photos come from GriGri
+   Pics' catalog, `<site>/pics/catalog.json`, a static file read without
+   a token. When it can't be read, the screen shows no photos and works
+   the same. (Without a kept
    session, the app also tries google_sign_in's lightweight
    authentication at start, and starts a session if Google answers.)
 2. `GET /api/me`: my profile, and whether I'm an admin. The first time,

@@ -358,10 +358,10 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your profile'**
   String get loadFailedTitle;
 
-  /// Sign-in screen, under the app name.
+  /// Sign-in screen: under the headline.
   ///
   /// In en, this message translates to:
-  /// **'Find a climbing plan: make one, or swipe right on one, and climb together.'**
+  /// **'Make a plan, or swipe right on one, and climb together.'**
   String get signInTagline;
 
   /// Button: sign in with a Google account.
@@ -2198,6 +2198,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open: join at once'**
   String get openJoinAtOnce;
+
+  /// Sign-in screen: badge over the headline.
+  ///
+  /// In en, this message translates to:
+  /// **'100% free'**
+  String get signInBadge;
+
+  /// Sign-in screen: the headline, Grigri's line.
+  ///
+  /// In en, this message translates to:
+  /// **'Find a climbing plan.'**
+  String get signInHeadline;
+
+  /// Sign-in screen: under the sign-in button.
+  ///
+  /// In en, this message translates to:
+  /// **'Free for every climber: no card, no subscription.'**
+  String get signInFreeLine;
+
+  /// Sign-in screen: the stamp on the demo card as it's swiped right.
+  ///
+  /// In en, this message translates to:
+  /// **'JOIN'**
+  String get signInStampJoin;
+
+  /// Sign-in screen: the demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'This Saturday · Sport · 6b–7a'**
+  String get signInDeckWhen;
+
+  /// Sign-in screen: the demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Mara, Jonas and 1 more'**
+  String get signInDeckWho;
+
+  /// Sign-in screen: heading of the three steps.
+  ///
+  /// In en, this message translates to:
+  /// **'How it works'**
+  String get signInHowTitle;
+
+  /// Sign-in screen: step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a plan'**
+  String get signInStep1Title;
+
+  /// Sign-in screen: step 1, explained.
+  ///
+  /// In en, this message translates to:
+  /// **'Where, when and which grades: a crag, a Saturday, 6a to 7a.'**
+  String get signInStep1Body;
+
+  /// Sign-in screen: step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe right'**
+  String get signInStep2Title;
+
+  /// Sign-in screen: step 2, explained.
+  ///
+  /// In en, this message translates to:
+  /// **'Like someone\'s plan? Swipe right. The group lets newcomers in one at a time, when everyone says yes.'**
+  String get signInStep2Body;
+
+  /// Sign-in screen: step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Climb together'**
+  String get signInStep3Title;
+
+  /// Sign-in screen: step 3, explained.
+  ///
+  /// In en, this message translates to:
+  /// **'Every match opens the plan\'s group chat: sort out the rope, the ride and the coffee.'**
+  String get signInStep3Body;
+
+  /// Sign-in screen: heading of what's free.
+  ///
+  /// In en, this message translates to:
+  /// **'Free. Really.'**
+  String get signInFreeTitle;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans and swiping'**
+  String get signInFree1;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches and group chats'**
+  String get signInFree2;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'Crag photos'**
+  String get signInFree3;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'No card to sign up'**
+  String get signInFree4;
+
+  /// Sign-in screen: what Premium is for.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium is optional: it\'s only for advertising on Grigri and for the route finder. Climbing with Grigri costs nothing.'**
+  String get signInFreePremium;
+
+  /// Sign-in screen: the last call, at the bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'This weekend\'s climbing plan is one swipe away.'**
+  String get signInFinalTitle;
+
+  /// Sign-in screen: the last button.
+  ///
+  /// In en, this message translates to:
+  /// **'Join free with Google'**
+  String get signInJoinFree;
+
+  /// Sign-in screen: the hero photo's credit.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo: {author}, {license}'**
+  String signInPhotoBy(String author, String license);
+
+  /// Sign-in screen: the second demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday · Multi-pitch · 6a–6b'**
+  String get signInDeckWhen2;
+
+  /// Sign-in screen: the second demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Iker and Lea'**
+  String get signInDeckWho2;
+
+  /// Sign-in screen: the third demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Next weekend · Bouldering · 6C–7A'**
+  String get signInDeckWhen3;
+
+  /// Sign-in screen: the third demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Noor, Tomás and 2 more'**
+  String get signInDeckWho3;
 
   /// Link at the end of Profile: opens the privacy policy on the site in the browser.
   ///

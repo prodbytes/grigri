@@ -154,7 +154,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Find a climbing plan: make one, or swipe right on one, and climb together.';
+      'Make a plan, or swipe right on one, and climb together.';
 
   @override
   String get signInWithGoogle => 'Sign in with Google';
@@ -1232,6 +1232,92 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Open: join at once';
+
+  @override
+  String get signInBadge => '100% free';
+
+  @override
+  String get signInHeadline => 'Find a climbing plan.';
+
+  @override
+  String get signInFreeLine =>
+      'Free for every climber: no card, no subscription.';
+
+  @override
+  String get signInStampJoin => 'JOIN';
+
+  @override
+  String get signInDeckWhen => 'This Saturday · Sport · 6b–7a';
+
+  @override
+  String get signInDeckWho => 'Mara, Jonas and 1 more';
+
+  @override
+  String get signInHowTitle => 'How it works';
+
+  @override
+  String get signInStep1Title => 'Make a plan';
+
+  @override
+  String get signInStep1Body =>
+      'Where, when and which grades: a crag, a Saturday, 6a to 7a.';
+
+  @override
+  String get signInStep2Title => 'Swipe right';
+
+  @override
+  String get signInStep2Body =>
+      'Like someone\'s plan? Swipe right. The group lets newcomers in one at a time, when everyone says yes.';
+
+  @override
+  String get signInStep3Title => 'Climb together';
+
+  @override
+  String get signInStep3Body =>
+      'Every match opens the plan\'s group chat: sort out the rope, the ride and the coffee.';
+
+  @override
+  String get signInFreeTitle => 'Free. Really.';
+
+  @override
+  String get signInFree1 => 'Plans and swiping';
+
+  @override
+  String get signInFree2 => 'Matches and group chats';
+
+  @override
+  String get signInFree3 => 'Crag photos';
+
+  @override
+  String get signInFree4 => 'No card to sign up';
+
+  @override
+  String get signInFreePremium =>
+      'Premium is optional: it\'s only for advertising on Grigri and for the route finder. Climbing with Grigri costs nothing.';
+
+  @override
+  String get signInFinalTitle =>
+      'This weekend\'s climbing plan is one swipe away.';
+
+  @override
+  String get signInJoinFree => 'Join free with Google';
+
+  @override
+  String signInPhotoBy(String author, String license) {
+    return 'Photo: $author, $license';
+  }
+
+  @override
+  String get signInDeckWhen2 => 'Sunday · Multi-pitch · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker and Lea';
+
+  @override
+  String get signInDeckWhen3 => 'Next weekend · Bouldering · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás and 2 more';
 
   @override
   String get privacyPolicy => 'Privacy policy';
