@@ -83,7 +83,7 @@ always in the plural, "partners" (a plan's group), in every language.
   also sets how often they show: about one every 10 plans by default,
   a little at random); between plans on Discover, where ✓ opens the link
   in the browser and ✕ skips it for good; sample ads from Climbing
-  Siurana on RC and local.
+  Siurana on every stage.
 - [Theme](theme.md): dark, in mountain colors.
 - [Logging](logging.md): the app's developer log on every platform
   (browser console, device log, a file on phones), scrubbed of account

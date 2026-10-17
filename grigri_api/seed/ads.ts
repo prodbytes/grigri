@@ -1,4 +1,4 @@
-// Sample ads for RC and local (never prod): a made-up advertiser account,
+// Sample ads, on every stage (with the demo showcase): a made-up advertiser account,
 // "Climbing Siurana", with a few approved ads for the school's courses,
 // camps and guided days (from https://www.climbingsiurana.com/en/), so
 // the deck shows ads between plans. Each ad's photo is the school's own,

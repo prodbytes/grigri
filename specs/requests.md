@@ -1436,7 +1436,23 @@ spec.
     - Cost: about 17 more DynamoDB writes twice a day per stage, a
       fraction of a cent a month. No new resource.
 
-93. **At the top of the plan card, beside "sport", show a pill with the
+93. **Flipping through all the plans showed no ad: make sure the sample
+    ads are up on local, RC and GA.**
+    - Why none showed: the sample ads were merged after the last release
+      (0.1.202610171131), so RC and GA ran without them; and they were
+      written only by the test seed, which production never gets.
+    - [Ads](ads.md#sample-ads), [backend](backend.md#the-demo-showcase):
+      the sample ads (and their advertiser, Climbing Siurana) move from
+      the test seed to the demo showcase, so every stage has them,
+      production included. `SHOWCASE_VERSION` goes to 5, so each stage
+      writes them on its first deck after the deploy. Rewriting keeps an
+      ad's status and dates (a rejected one stays rejected; they never
+      jump ahead of real ads), and a photo is copied only once.
+    - Cost: none to speak of. Four more writes and reads twice a day with
+      the showcase; about 1 MB of photos in production's photos bucket (a
+      fraction of a cent a month).
+
+94. **At the top of the plan card, beside "sport", show a pill with the
     plan's type.**
     - [Screens](screens.md) and [matching](matching.md#plan-types-who-decides): the
       Discover card's type pill moves from the bottom row (beside the
