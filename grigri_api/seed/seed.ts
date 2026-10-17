@@ -1,4 +1,5 @@
-// Loads the made-up test data (seed/data.ts) into an RC or local table.
+// Loads the made-up test data (seed/data.ts) into an RC or local table,
+// plus the demo showcase and sample ads that every stage has.
 // Idempotent: re-running refreshes the seed's own records and dates. Real
 // people's data is never touched: their profiles, requests, notices and
 // messages stay, and a real member of a seed plan stays a member.
@@ -7,6 +8,7 @@ import { DeleteCommand, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { isOpen } from '../src/domain/model.js';
 import { key, prefix } from '../src/store/keys.js';
 import { Conflict, type Store, messageItem, planItem, requestItem, toPlan, toRequest } from '../src/store/store.js';
+import type { Ad } from '../src/domain/ads.js';
 import type { Climber, Plan } from '../src/domain/model.js';
 import { type SeedAd, seedAdvertiser, seedAds } from './ads.js';
 import { seedData } from './data.js';
@@ -35,11 +37,10 @@ export type PutPhoto = (key: string, body: Uint8Array, contentType: string) => P
 export async function seed(store: Store, now: Date, putPhoto?: PutPhoto): Promise<SeedCounts> {
   const data = seedData(now);
   const { doc, table } = store;
-  await writeClimbers(store, [...data.climbers, seedAdvertiser], now);
+  await writeClimbers(store, data.climbers, now);
   await writePlans(store, data.plans, now);
-  const ads = await writeAds(store, seedAds(now), putPhoto);
-  // RC and local show the demo showcase too.
-  await seedShowcase(store, now);
+  // RC and local show the demo showcase too, with its sample ads.
+  const { ads } = await seedShowcase(store, now, putPhoto);
 
   for (const r of data.requests) {
     const { Item } = await doc.send(new GetCommand({ TableName: table, Key: key.request(r.planId, r.climberId) }));
@@ -63,12 +64,16 @@ export async function seed(store: Store, now: Date, putPhoto?: PutPhoto): Promis
 
 /**
  * The sample ads, approved, with their photos copied into the photos
- * bucket. An ad whose photo can't be copied is saved with its text alone.
+ * bucket. An ad already saved keeps its status (an admin may have
+ * rejected it) and its dates (so it never moves ahead of real
+ * advertisers' ads), and its photo isn't copied again. An ad whose photo
+ * can't be copied is saved with its text alone, and tried again next time.
  */
-async function writeAds(store: Store, ads: SeedAd[], putPhoto?: PutPhoto): Promise<number> {
-  for (const { ad, photoSource } of ads) {
-    let saved = ad;
-    if (ad.media) {
+export async function writeAds(store: Store, ads: SeedAd[], putPhoto?: PutPhoto): Promise<number> {
+  await Promise.all(ads.map(async ({ ad, photoSource }) => {
+    const existing = await store.getAd(ad.id);
+    let saved: Ad = existing ? { ...ad, status: existing.status, createdAt: existing.createdAt, reviewedAt: existing.reviewedAt } : ad;
+    if (ad.media && existing?.media?.key !== ad.media.key) {
       try {
         if (!putPhoto || !photoSource) throw new Error('no photo store');
         const res = await fetch(photoSource, { signal: AbortSignal.timeout(10_000) });
@@ -77,12 +82,12 @@ async function writeAds(store: Store, ads: SeedAd[], putPhoto?: PutPhoto): Promi
         await putPhoto(ad.media.key, new Uint8Array(await res.arrayBuffer()), type);
       } catch (e) {
         console.error(JSON.stringify({ level: 'warn', msg: 'seed ad photo not copied', ad: ad.id, error: String(e) }));
-        const { media: _media, ...rest } = ad;
+        const { media: _media, ...rest } = saved;
         saved = rest;
       }
     }
     await store.putAd(saved);
-  }
+  }));
   return ads.length;
 }
 
@@ -136,19 +141,21 @@ async function writePlans(store: Store, plans: Plan[], now: Date): Promise<void>
 
 const SHOWCASE_EVERY_MS = 12 * 3_600_000;
 /** Bumped when showcase.ts changes, so stages rewrite it at once, not up to 12 hours later. */
-export const SHOWCASE_VERSION = 3;
+export const SHOWCASE_VERSION = 4;
 
 /**
  * The demo showcase (seed/showcase.ts), on every stage: its climbers and
- * plans, re-dated. It writes only `seed-` records, so it's safe in
+ * plans, re-dated, and the sample ads (seed/ads.ts) with their photos. It
+ * writes only `seed-` records (and the ads' photos), so it's safe in
  * production. Records when, so [showcaseIsStale] can tell.
  */
-export async function seedShowcase(store: Store, now: Date): Promise<{ climbers: number; plans: number }> {
+export async function seedShowcase(store: Store, now: Date, putPhoto?: PutPhoto): Promise<{ climbers: number; plans: number; ads: number }> {
   const data = showcaseData(now);
-  await writeClimbers(store, data.climbers, now);
+  await writeClimbers(store, [...data.climbers, seedAdvertiser], now);
   await writePlans(store, data.plans, now);
+  const ads = await writeAds(store, seedAds(now), putPhoto);
   await store.doc.send(new PutCommand({ TableName: store.table, Item: { ...key.showcase(), type: 'showcase', time: now.toISOString(), version: SHOWCASE_VERSION } }));
-  return { climbers: data.climbers.length, plans: data.plans.length };
+  return { climbers: data.climbers.length, plans: data.plans.length, ads };
 }
 
 /** Whether the showcase was last written over 12 hours ago, by an older showcase.ts, or never. */

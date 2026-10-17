@@ -144,10 +144,6 @@ API can't send that event) by [scripts/seed.sh](../scripts/seed.sh):
   `grigri-rc-api` or `grigri-local-api`, and the production deploy role
   may only invoke the RC function.
 
-The seed also writes the [sample ads](ads.md#sample-ads): Climbing
-Siurana's (a made-up advertiser account), approved, with their photos
-copied from the school's site into the photos bucket.
-
 Two seed plans show the [plan types](matching.md#plan-types-who-decides):
 Montserrat is guided (€60 a climber) and the after-work gym leads are
 open; the rest are private. A plan's type is stored as `planType` (the
@@ -170,15 +166,18 @@ portrayed, and their bios are made up. Six plans are at well-known crags
 around the world (Frankenjura, Buoux, Kalymnos, Yosemite, Rio de Janeiro,
 Fontainebleau); **seven are in Siurana and seven in Margalef**, at their
 sectors' points (sport over a spread of grades, and Margalef's boulders),
-so there's plenty to explore there. On **every stage,
-production included**; all marked `demo`, with `seed-` ids.
+so there's plenty to explore there. With them, the [sample
+ads](ads.md#sample-ads): Climbing Siurana's (a made-up advertiser
+account), approved, with their photos copied from the school's site into
+the photos bucket. On **every stage, production included**; all marked
+`demo`, with `seed-` ids.
 
 The API keeps it upcoming itself: before building a deck
 (`GET /api/discover`), it reads one marker item (`META#SHOWCASE`) and, when
 it's over 12 hours old or was written by an older showcase
 (`SHOWCASE_VERSION` in [seed.ts](../grigri_api/seed/seed.ts), bumped with
 every change to the showcase, so a deploy shows it at once), rewrites the
-showcase's climbers and plans with fresh dates (as the seed does: real members stay). A failure is logged and
+showcase's climbers and plans with fresh dates (as the seed does: real members stay), and its sample ads (their photos copied only once). A failure is logged and
 never fails the deck. No scheduler or new resource: one extra read per
 deck and about 35 writes twice a day, well under a cent a month.
 
