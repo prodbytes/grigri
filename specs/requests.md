@@ -1228,7 +1228,17 @@ spec.
       the key, calls Apple's free token endpoint); one small item per
       Apple account.
 
-83. **Say "Join a climbing plan" instead of "Find a climbing plan".**
+83. **In the profile view, let the discipline selection be a separate item
+    from the grading system; show examples on the grading system.**
+    - [Screens](screens.md): the profile editor has a **Grade system**
+      section of its own (heading and hint in all six languages) before
+      **What you climb**, which now holds only the disciplines and their
+      grade ranges. Each option of the switch shows the same route and
+      boulder grade written its way: 🧗 6a 🪨 7A (European), 🧗 5.10b 🪨 V6
+      (American). The plan editor's switch is unchanged.
+    - Cost: none.
+
+84. **Say "Join a climbing plan" instead of "Find a climbing plan".**
     - [README](README.md), [screens](screens.md), [landing](landing.md),
       [App Store](app-store.md): Grigri's line is now "Join a climbing
       plan", in all six languages: the sign-in headline, the landing

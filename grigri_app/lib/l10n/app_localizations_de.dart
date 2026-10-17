@@ -280,6 +280,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get bioLabel => 'Über dich';
 
   @override
+  String get gradeSystem => 'Bewertungssystem';
+
+  @override
+  String get gradeSystemHint =>
+      'Wie Grade in der App geschrieben werden, hier für eine Route und einen Boulder.';
+
+  @override
   String get whatYouClimb => 'Was du kletterst';
 
   @override
