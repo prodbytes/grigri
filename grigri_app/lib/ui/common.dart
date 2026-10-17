@@ -4,8 +4,10 @@ import '../data/grigri_store.dart';
 import '../model/climber.dart';
 import '../model/climbing.dart';
 import '../model/plan.dart';
+import '../model/report.dart';
 import '../theme.dart';
 import 'l10n.dart';
+import 'moderation.dart';
 
 export 'l10n.dart';
 
@@ -539,7 +541,16 @@ Future<void> showProfileSheet(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (climber.demo) ...[const DemoNotice(), const SizedBox(height: 14)],
-          ClimberHeader(climber, radius: 30),
+          Row(
+            children: [
+              Expanded(child: ClimberHeader(climber, radius: 30)),
+              // ⋮: report the profile, or block them (not on mine).
+              ModerationMenu(
+                report: ReportTarget(ReportKind.profile, climber.id),
+                person: climber,
+              ),
+            ],
+          ),
           const SizedBox(height: 14),
           ProfileDetails(climber),
         ],

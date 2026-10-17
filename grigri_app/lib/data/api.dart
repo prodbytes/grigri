@@ -8,6 +8,7 @@ import '../model/pics.dart';
 import '../model/plan.dart';
 import '../model/walls.dart';
 import '../model/premium.dart';
+import '../model/report.dart';
 import 'realtime.dart';
 
 /// The Grigri backend, one method per route of its contract
@@ -187,6 +188,10 @@ abstract interface class GrigriApi {
   /// invoices), to open in the browser.
   Future<Uri> premiumPortal();
 
+  /// `POST /api/premium/apple`: a StoreKit 2 transaction (its signed JWS)
+  /// the iOS app bought or restored; my Premium after it.
+  Future<PremiumOffer> premiumApple(String signedTransaction);
+
   /// `GET /api/ads`: my ads, newest first, and whether I'm Premium (ads
   /// need it).
   Future<MyAds> myAds();
@@ -225,6 +230,30 @@ abstract interface class GrigriApi {
 
   /// `POST /api/admin/climbers/{id}/block` or `/unblock` (admins only).
   Future<void> setBlocked(String climberId, bool blocked);
+
+  /// `POST /api/reports`: I report something objectionable (specs/moderation.md).
+  Future<void> sendReport({
+    required ReportKind kind,
+    required String targetId,
+    String? planId,
+    required ReportReason reason,
+    String text = '',
+  });
+
+  /// `GET /api/admin/reports`: the open reports, oldest first (admins
+  /// only).
+  Future<AdminReports> adminReports();
+
+  /// `POST /api/admin/reports/{id}/dismiss`, `/remove` or `/block` (admins
+  /// only).
+  Future<void> resolveReport(String reportId, ReportAction action);
+
+  /// `GET /api/blocks`: the people I blocked.
+  Future<BlockList> blocks();
+
+  /// `POST /api/blocks/{id}` (block) or `DELETE /api/blocks/{id}`
+  /// (unblock): my own block, not an admin's.
+  Future<void> setPersonBlocked(String climberId, bool blocked);
 }
 
 /// A failure the app itself describes (no server message to show): the
@@ -284,6 +313,11 @@ class ApiException implements Exception {
 
   /// 403 `{"error": "blocked"}`: an admin blocked me.
   bool get blocked => status == 403 && message == 'blocked';
+
+  /// 400 `{"error": "objectionable: …"}`: the filter refused the text
+  /// (specs/moderation.md#the-filter); the app says so in its own words.
+  bool get objectionable =>
+      status == 400 && message.startsWith('objectionable');
 
   @override
   String toString() => 'ApiException($status): $message';
@@ -358,6 +392,25 @@ class AdminAds {
 
   /// One ad after every [every] plans on the deck; 0: none.
   final int every;
+}
+
+/// `GET /api/admin/reports`.
+class AdminReports {
+  const AdminReports(this.reports, this.climbers);
+
+  final List<Report> reports;
+
+  /// Who's reported, and who reported.
+  final Climbers climbers;
+}
+
+/// `GET /api/blocks`.
+class BlockList {
+  const BlockList(this.blocked, this.climbers);
+
+  /// Who I blocked.
+  final List<String> blocked;
+  final Climbers climbers;
 }
 
 /// Someone in the admin's list, and whether they're blocked.
@@ -524,11 +577,16 @@ abstract final class ApiJson {
   static Wall wall(Map<String, Object?> json) =>
       Wall.fromJson(_map(json['wall']));
 
-  static PremiumOffer premiumOffer(Map<String, Object?> json) =>
-      PremiumOffer(Premium.fromJson(json['premium']), {
-        for (final plan in PremiumPlan.values)
-          plan: ?PremiumPrice.fromJson((json['prices'] as Map?)?[plan.name]),
-      });
+  static PremiumOffer premiumOffer(Map<String, Object?> json) => PremiumOffer(
+    Premium.fromJson(json['premium']),
+    {
+      for (final plan in PremiumPlan.values)
+        plan: ?PremiumPrice.fromJson((json['prices'] as Map?)?[plan.name]),
+    },
+    appleAccountToken: json['appleAccountToken'] is String
+        ? json['appleAccountToken']! as String
+        : null,
+  );
 
   static Uri url(Map<String, Object?> json) =>
       Uri.parse(json['url']! as String);
@@ -577,6 +635,14 @@ abstract final class ApiJson {
     for (final c in _list(json['climbers']))
       AdminClimber(Climber.fromJson(c), blocked: c['blocked'] == true),
   ];
+
+  static AdminReports adminReports(Map<String, Object?> json) => AdminReports([
+    for (final r in _list(json['reports'])) ?Report.fromJson(r),
+  ], climbers(json));
+
+  static BlockList blockList(Map<String, Object?> json) => BlockList([
+    for (final id in (json['blocked'] as List?) ?? const []) id as String,
+  ], climbers(json));
 
   static MyPlans myPlans(Map<String, Object?> json) => MyPlans(
     plans: _list(json['plans']).map(Plan.fromJson).toList(),

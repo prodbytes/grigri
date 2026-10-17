@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 
 import '../config.dart';
 import '../l10n/app_localizations.dart';
+import '../log.dart';
 import '../model/ad.dart';
 import '../model/premium.dart';
 import '../model/climber.dart';
@@ -14,8 +15,10 @@ import '../model/location.dart';
 import '../model/match_score.dart';
 import '../model/pics.dart';
 import '../model/plan.dart';
+import '../model/report.dart';
 import '../model/sector.dart';
 import 'api.dart';
+import 'app_store.dart';
 import 'auth.dart';
 import 'device_location.dart';
 import 'links.dart';
@@ -54,7 +57,17 @@ enum Phase {
 }
 
 /// The parts of the app's data that load separately.
-enum Section { discover, plans, requests, notices, admin, ads, adminAds }
+enum Section {
+  discover,
+  plans,
+  requests,
+  notices,
+  admin,
+  ads,
+  adminAds,
+  adminReports,
+  blocks,
+}
 
 /// A card on the Discover deck: a plan, or an ad between plans
 /// (specs/ads.md).
@@ -116,6 +129,7 @@ class GrigriStore extends ChangeNotifier {
     this.deviceLocation = const DeviceLocation.none(),
     Future<SectorIndex> Function()? places,
     this.openLink = openInBrowser,
+    this.appStore,
     math.Random? random,
   }) : _random = random ?? math.Random(),
        _image = image ?? ((url) => NetworkImage(url.toString())),
@@ -137,6 +151,9 @@ class GrigriStore extends ChangeNotifier {
         onReconnected: () => unawaited(_catchUp()),
       )..addListener(notifyListeners);
     }
+    // From the start: StoreKit hands over purchases left unfinished last
+    // time as soon as someone listens.
+    _storePurchases = appStore?.purchases.listen(_onStorePurchases);
   }
 
   /// Live updates (none without a transport: polling only).
@@ -152,6 +169,10 @@ class GrigriStore extends ChangeNotifier {
 
   /// Opens Stripe's pages, and ads' links, in the browser.
   final OpenLink openLink;
+
+  /// The App Store, which sells Premium on iOS (specs/premium.md); null
+  /// elsewhere (Android and the web pay through Stripe).
+  final AppStore? appStore;
 
   /// The sector index, to name a place the device found.
   final Future<SectorIndex> Function() _places;
@@ -188,6 +209,7 @@ class GrigriStore extends ChangeNotifier {
   /// What failed, in the server's words, or in the app's for the failures
   /// it describes itself.
   String _describe(ApiException e) => switch (e.client) {
+    null when e.objectionable => l10n.errorObjectionable,
     null => e.message,
     ClientError.timeout => l10n.errorTimeout,
     ClientError.unreachable => l10n.errorUnreachable,
@@ -243,6 +265,10 @@ class GrigriStore extends ChangeNotifier {
   List<JoinRequest> _asked = [];
   List<JoinRequest> _toReview = [];
   List<AdminClimber> _adminClimbers = [];
+  List<Report> _adminReports = [];
+
+  /// The people I blocked (specs/moderation.md#blocking-someone).
+  Set<String> _blockedPeople = {};
   final _open = <String, List<JoinRequest>>{};
   final _declinedHere = <String>{};
   List<Notice> _notices = [];
@@ -304,6 +330,8 @@ class GrigriStore extends ChangeNotifier {
     _admin = false;
     _premium = const Premium.none();
     _premiumPrices = const {};
+    _appleAccountToken = null;
+    _buying = false;
     _deckAds = [];
     _adEvery = 0;
     _seenAds.clear();
@@ -325,6 +353,8 @@ class GrigriStore extends ChangeNotifier {
     _asked = [];
     _toReview = [];
     _adminClimbers = [];
+    _adminReports = [];
+    _blockedPeople = {};
     _open.clear();
     _declinedHere.clear();
     _notices = [];
@@ -353,6 +383,7 @@ class GrigriStore extends ChangeNotifier {
       _climbers[climber.id] = climber;
       _phase = Phase.ready;
       notifyListeners();
+      _deliverWaiting();
       unawaited(fillLocation());
       await refreshAll();
     } on ApiException catch (e) {
@@ -555,12 +586,31 @@ class GrigriStore extends ChangeNotifier {
   List<AdminClimber> get adminClimbers => _adminClimbers;
 
   /// My notifications, newest first.
-  List<Notice> get notices => _notices;
+  /// (Not about someone I blocked.)
+  List<Notice> get notices => [
+    for (final n in _notices)
+      if (!_blockedPeople.contains(n.climberId)) n,
+  ];
 
-  int get unreadNotices => _notices.where((n) => !n.read).length;
+  int get unreadNotices => notices.where((n) => !n.read).length;
 
   /// A plan's group chat, oldest first.
-  List<Message> messages(String planId) => _messages[planId] ?? const [];
+  /// (Without the messages of people I blocked: hidden on my side only.)
+  List<Message> messages(String planId) => [
+    for (final m in _messages[planId] ?? const <Message>[])
+      if (!_blockedPeople.contains(m.authorId)) m,
+  ];
+
+  /// The people I blocked, by name.
+  List<Climber> get blockedPeople =>
+      [for (final id in _blockedPeople) climber(id)]
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+  /// Whether I blocked them.
+  bool hasBlocked(String climberId) => _blockedPeople.contains(climberId);
+
+  /// The open reports, oldest first (admins).
+  List<Report> get adminReports => _adminReports;
 
   /// Why a plan suits me.
   Fit fit(Plan plan) {
@@ -734,7 +784,9 @@ class GrigriStore extends ChangeNotifier {
       refreshPlans(),
       refreshRequests(),
       refreshDiscover(),
+      refreshBlocks(),
       if (_admin) refreshAdmin(),
+      if (_admin) refreshAdminReports(),
       if (_premium.active) refreshMyAds(),
     ]);
     await refreshNotices();
@@ -1338,27 +1390,203 @@ class GrigriStore extends ChangeNotifier {
   /// My Premium and its prices again (the profile, and coming back from
   /// Stripe's pages in the browser).
   Future<void> refreshPremium() async {
-    await _refresh(api.premium, (offer) {
-      _premium = offer.premium;
-      _premiumPrices = offer.prices;
-    });
-    // Just subscribed: the Ads tab appears, with my ads.
+    await _refresh(api.premium, _applyOffer);
+    await _premiumChanged();
+  }
+
+  void _applyOffer(PremiumOffer offer) {
+    _premium = offer.premium;
+    _premiumPrices = offer.prices;
+    _appleAccountToken = offer.appleAccountToken;
+  }
+
+  /// Just subscribed: the Ads tab appears, with my ads.
+  Future<void> _premiumChanged() async {
     if (_premium.active && !_loaded.contains(Section.ads)) {
       await refreshMyAds();
     }
   }
 
   /// Opens Stripe Checkout for [plan] in the browser; true when it opened.
-  /// Premium shows once Stripe tells the API (a refresh).
+  /// Premium shows once Stripe tells the API (a refresh). Not on iOS: the
+  /// App Store sells it there ([buyInAppStore]).
   Future<bool> subscribe(PremiumPlan plan) async {
     final url = await _act(() => api.premiumCheckout(plan));
     return url != null && await _openOrSay(url);
   }
 
-  /// Opens Stripe's billing portal (cancel, card, invoices).
+  /// Where my subscription is managed: the App Store's subscriptions for
+  /// one bought there, Stripe's billing portal (cancel, card, invoices)
+  /// for one bought through Stripe.
   Future<bool> managePremium() async {
+    if (_premium.source == PremiumSource.apple) {
+      return _openOrSay(appStoreSubscriptionsUrl);
+    }
     final url = await _act(api.premiumPortal);
     return url != null && await _openOrSay(url);
+  }
+
+  // --- Premium through the App Store (iOS) ---------------------------------
+
+  /// Whether Premium is sold here through the App Store (iOS).
+  bool get sellsInAppStore => appStore != null;
+
+  StreamSubscription<List<StorePurchase>>? _storePurchases;
+  Map<PremiumPlan, StoreProduct> _storeProducts = const {};
+  bool _storeProductsLoaded = false;
+  Future<void>? _loadingStoreProducts;
+  String? _appleAccountToken;
+  bool _buying = false;
+  bool _restoring = false;
+
+  /// Purchases StoreKit reported before I was signed in and loaded.
+  final _waitingPurchases = <StorePurchase>[];
+
+  /// Purchases on their way to the API.
+  final _deliveries = <Future<void>>{};
+
+  /// The App Store's products with their localized prices; empty until
+  /// loaded, or when the App Store can't sell them.
+  Map<PremiumPlan, StoreProduct> get storeProducts => _storeProducts;
+
+  /// Whether the App Store's products have been asked for.
+  bool get storeProductsLoaded => _storeProductsLoaded;
+
+  /// A purchase is under way (the App Store's sheet, then the API).
+  bool get buying => _buying;
+
+  /// Restoring purchases.
+  bool get restoring => _restoring;
+
+  /// Asks the App Store for its products (once; again after a failure).
+  Future<void> loadStoreProducts() {
+    final store = appStore;
+    if (store == null || (_storeProductsLoaded && _storeProducts.isNotEmpty)) {
+      return Future.value();
+    }
+    return _loadingStoreProducts ??= () async {
+      try {
+        _storeProducts = await store.products();
+      } finally {
+        _storeProductsLoaded = true;
+        _loadingStoreProducts = null;
+        notifyListeners();
+      }
+    }();
+  }
+
+  /// Buys [plan] through the App Store, for my account (the API's
+  /// appAccountToken). Premium shows once the API has the transaction.
+  Future<void> buyInAppStore(PremiumPlan plan) async {
+    final store = appStore;
+    final product = _storeProducts[plan];
+    if (store == null || product == null || _buying) return;
+    if (_appleAccountToken == null) await refreshPremium();
+    final token = _appleAccountToken;
+    if (token == null) {
+      _errors.add(l10n.premiumUnavailable);
+      return;
+    }
+    _buying = true;
+    notifyListeners();
+    try {
+      if (!await store.buy(product, accountToken: token)) _buying = false;
+    } on Object catch (e) {
+      log.warn('premium', 'App Store purchase failed: $e');
+      _buying = false;
+      _errors.add(l10n.premiumPurchaseFailed);
+    }
+    notifyListeners();
+  }
+
+  /// Restore purchases (Apple requires it): my App Store subscription,
+  /// sent to the API again, say on a new phone.
+  Future<void> restoreAppStorePurchases() async {
+    final store = appStore;
+    if (store == null || _restoring) return;
+    _restoring = true;
+    notifyListeners();
+    try {
+      await store.restore();
+      await Future.wait([..._deliveries]);
+      if (!_premium.active) _errors.add(l10n.premiumNothingToRestore);
+    } on Object catch (e) {
+      log.warn('premium', 'App Store restore failed: $e');
+      _errors.add(l10n.premiumStoreUnavailable);
+    } finally {
+      _restoring = false;
+      notifyListeners();
+    }
+  }
+
+  void _onStorePurchases(List<StorePurchase> purchases) {
+    for (final p in purchases) {
+      switch (p.status) {
+        case StorePurchaseStatus.pending:
+          // Waiting (Ask to Buy, a card to confirm): it comes back later.
+          _buying = false;
+        case StorePurchaseStatus.canceled:
+          _buying = false;
+          unawaited(_complete(p));
+        case StorePurchaseStatus.error:
+          _buying = false;
+          _errors.add(l10n.premiumPurchaseFailed);
+          unawaited(_complete(p));
+        case StorePurchaseStatus.purchased || StorePurchaseStatus.restored:
+          if (_phase == Phase.ready) {
+            _deliver(p);
+          } else {
+            _waitingPurchases.add(p);
+          }
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Sends the purchases StoreKit reported before I was loaded.
+  void _deliverWaiting() {
+    final waiting = [..._waitingPurchases];
+    _waitingPurchases.clear();
+    waiting.forEach(_deliver);
+  }
+
+  /// Sends a purchase's signed transaction to the API, then finishes it.
+  /// A purchase the API can never take (another account's, not Grigri's)
+  /// is finished too; one that failed on the way (offline, the server) is
+  /// left for StoreKit to hand over again.
+  void _deliver(StorePurchase p) {
+    late final Future<void> delivery;
+    delivery = () async {
+      try {
+        final offer = await _call(() => api.premiumApple(p.signedTransaction));
+        _applyOffer(offer);
+        await _complete(p);
+        await _premiumChanged();
+      } on ApiException catch (e) {
+        final retry =
+            e.status == 0 ||
+            e.status == 401 ||
+            e.status == _stale ||
+            e.status >= 500 ||
+            e.client != null;
+        if (e.status != _stale && e.status != 401) _errors.add(_describe(e));
+        if (!retry) await _complete(p);
+      } finally {
+        _buying = false;
+        _deliveries.remove(delivery);
+        notifyListeners();
+      }
+    }();
+    _deliveries.add(delivery);
+  }
+
+  Future<void> _complete(StorePurchase p) async {
+    if (!p.needsCompleting) return;
+    try {
+      await appStore?.complete(p);
+    } on Object catch (e) {
+      log.warn('premium', 'App Store completePurchase failed: $e');
+    }
   }
 
   /// Opens one of the site's own pages in the browser, e.g.
@@ -1370,6 +1598,81 @@ class GrigriStore extends ChangeNotifier {
     if (await openLink(url)) return true;
     _errors.add(l10n.errorOpenLink);
     return false;
+  }
+
+  // --- Moderation: reports and blocks (specs/moderation.md) ---------------
+
+  /// I report something objectionable; true when it was sent (the caller
+  /// thanks me: it's reviewed within 24 hours).
+  Future<bool> sendReport({
+    required ReportKind kind,
+    required String targetId,
+    String? planId,
+    required ReportReason reason,
+    String text = '',
+  }) => _ok(
+    () => api.sendReport(
+      kind: kind,
+      targetId: targetId,
+      planId: planId,
+      reason: reason,
+      text: text,
+    ),
+  );
+
+  /// The people I blocked.
+  Future<void> refreshBlocks() => _refresh(api.blocks, (list) {
+    _learn(list.climbers);
+    _blockedPeople = list.blocked.toSet();
+    _loaded.add(Section.blocks);
+  });
+
+  /// I block someone, or unblock them. Blocking takes their plans off my
+  /// deck and their requests off my list at once (the server declines
+  /// them), and hides their messages from me. True when it worked.
+  Future<bool> setPersonBlocked(String climberId, bool blocked) async {
+    if (!await _ok(() => api.setPersonBlocked(climberId, blocked))) {
+      return false;
+    }
+    if (blocked) {
+      _blockedPeople = {..._blockedPeople, climberId};
+      _discover = [
+        for (final id in _discover)
+          if (!(_plans[id]?.memberIds.contains(climberId) ?? false)) id,
+      ];
+      _toReview = [
+        for (final r in _toReview)
+          if (r.climberId != climberId) r,
+      ];
+    } else {
+      _blockedPeople = {..._blockedPeople}..remove(climberId);
+    }
+    notifyListeners();
+    await Future.wait([_refreshDeck(), refreshRequests()]);
+    return true;
+  }
+
+  /// The open reports (admins).
+  Future<void> refreshAdminReports() async {
+    if (!_admin) return;
+    await _refresh(api.adminReports, (list) {
+      _learn(list.climbers);
+      _adminReports = list.reports;
+      _loaded.add(Section.adminReports);
+    });
+  }
+
+  /// An admin handles a report: dismisses it, removes the content, or
+  /// blocks its climber. It leaves the list; true when it worked.
+  Future<bool> resolveReport(Report report, ReportAction action) async {
+    if (!await _ok(() => api.resolveReport(report.id, action))) return false;
+    _adminReports = [
+      for (final r in _adminReports)
+        if (r.id != report.id) r,
+    ];
+    notifyListeners();
+    if (action == ReportAction.block) await refreshAdmin();
+    return true;
   }
 
   // --- Admin -------------------------------------------------------------
@@ -1392,6 +1695,7 @@ class GrigriStore extends ChangeNotifier {
 
   @override
   void dispose() {
+    _storePurchases?.cancel();
     _live?.dispose();
     auth.removeListener(_authChanged);
     _errors.close();

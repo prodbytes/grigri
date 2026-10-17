@@ -985,6 +985,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get premiumCheckRefresh => 'I\'ve paid: check again';
 
   @override
+  String get premiumRestore => 'Restore purchases';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'Grigri Premium is an auto-renewing subscription: $prices. Payment is charged to your Apple ID when you confirm. It renews automatically unless you cancel at least 24 hours before the end of the period. Manage or cancel it in your App Store account settings.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get premiumTermsOfUse => 'Terms of use (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'The App Store can\'t be reached right now.';
+
+  @override
+  String get premiumNothingToRestore => 'No App Store subscription to restore.';
+
+  @override
+  String get premiumPurchaseFailed => 'The purchase didn\'t go through.';
+
+  @override
   String get errorOpenLink => 'Couldn\'t open the link.';
 
   @override
@@ -1356,4 +1380,102 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorDeleteAccount => 'Couldn\'t delete your account. Try again.';
+
+  @override
+  String get moreActions => 'More';
+
+  @override
+  String get report => 'Report';
+
+  @override
+  String blockPerson(String name) {
+    return 'Block $name';
+  }
+
+  @override
+  String get reportTitle => 'Why are you reporting this?';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonHarassment => 'Harassment';
+
+  @override
+  String get reportReasonInappropriate => 'Inappropriate content';
+
+  @override
+  String get reportReasonFake => 'Fake profile';
+
+  @override
+  String get reportReasonOther => 'Other';
+
+  @override
+  String get reportDetailsHint => 'Anything else we should know? (optional)';
+
+  @override
+  String get reportSend => 'Send report';
+
+  @override
+  String get reportThanks => 'Thanks, we\'ll review it within 24 hours.';
+
+  @override
+  String get blockPersonMessage =>
+      'You won\'t see each other\'s plans, neither of you can ask to join a plan the other is in, their requests to your plans are declined, and you won\'t see their messages. They aren\'t told.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return '$name is blocked.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Blocked people';
+
+  @override
+  String get blockedPeopleEmpty => 'You haven\'t blocked anyone.';
+
+  @override
+  String get adminReportsTab => 'Reports';
+
+  @override
+  String get adminReportsEmpty => 'No reports to review.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Reported by $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Profile';
+
+  @override
+  String get reportKindPlan => 'Plan';
+
+  @override
+  String get reportKindMessage => 'Chat message';
+
+  @override
+  String get reportKindPic => 'Plan photo';
+
+  @override
+  String get reportKindAd => 'Ad';
+
+  @override
+  String get reportDismiss => 'Dismiss';
+
+  @override
+  String get reportRemove => 'Remove content';
+
+  @override
+  String get reportBlock => 'Block climber';
+
+  @override
+  String get noticeReportsTitle => 'New reports to review';
+
+  @override
+  String get noticeReportsBody => 'Admin → Reports · answer within 24 hours';
+
+  @override
+  String get errorObjectionable =>
+      'Please keep it friendly: that has words Grigri doesn\'t allow.';
 }

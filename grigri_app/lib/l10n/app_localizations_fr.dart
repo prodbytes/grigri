@@ -994,6 +994,31 @@ class AppLocalizationsFr extends AppLocalizations {
   String get premiumCheckRefresh => 'J\'ai payé : vérifier';
 
   @override
+  String get premiumRestore => 'Restaurer les achats';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'Grigri Premium est un abonnement à renouvellement automatique : $prices. Le paiement est débité de ton identifiant Apple à la confirmation. Il se renouvelle automatiquement sauf si tu l\'annules au moins 24 heures avant la fin de la période. Gère-le ou annule-le dans les réglages de ton compte App Store.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get premiumTermsOfUse => 'Conditions d\'utilisation (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'L\'App Store est injoignable pour le moment.';
+
+  @override
+  String get premiumNothingToRestore =>
+      'Aucun abonnement App Store à restaurer.';
+
+  @override
+  String get premiumPurchaseFailed => 'L\'achat n\'a pas abouti.';
+
+  @override
   String get errorOpenLink => 'Impossible d\'ouvrir le lien.';
 
   @override
@@ -1368,4 +1393,103 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get errorDeleteAccount =>
       'Impossible de supprimer ton compte. Réessaie.';
+
+  @override
+  String get moreActions => 'Plus';
+
+  @override
+  String get report => 'Signaler';
+
+  @override
+  String blockPerson(String name) {
+    return 'Bloquer $name';
+  }
+
+  @override
+  String get reportTitle => 'Pourquoi le signales-tu ?';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonHarassment => 'Harcèlement';
+
+  @override
+  String get reportReasonInappropriate => 'Contenu inapproprié';
+
+  @override
+  String get reportReasonFake => 'Faux profil';
+
+  @override
+  String get reportReasonOther => 'Autre';
+
+  @override
+  String get reportDetailsHint => 'Autre chose à nous dire ? (facultatif)';
+
+  @override
+  String get reportSend => 'Envoyer le signalement';
+
+  @override
+  String get reportThanks => 'Merci, nous l’examinerons sous 24 heures.';
+
+  @override
+  String get blockPersonMessage =>
+      'Vous ne verrez plus les plans l’un de l’autre, aucun ne pourra demander à rejoindre un plan où est l’autre, ses demandes pour tes plans sont refusées et tu ne verras plus ses messages. La personne n’est pas prévenue.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return '$name est bloqué·e.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Personnes bloquées';
+
+  @override
+  String get blockedPeopleEmpty => 'Tu n’as bloqué personne.';
+
+  @override
+  String get adminReportsTab => 'Signalements';
+
+  @override
+  String get adminReportsEmpty => 'Aucun signalement à examiner.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Signalé par $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Profil';
+
+  @override
+  String get reportKindPlan => 'Plan';
+
+  @override
+  String get reportKindMessage => 'Message du chat';
+
+  @override
+  String get reportKindPic => 'Photo du plan';
+
+  @override
+  String get reportKindAd => 'Annonce';
+
+  @override
+  String get reportDismiss => 'Ignorer';
+
+  @override
+  String get reportRemove => 'Retirer le contenu';
+
+  @override
+  String get reportBlock => 'Bloquer le grimpeur';
+
+  @override
+  String get noticeReportsTitle => 'Nouveaux signalements à examiner';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Signalements · réponds sous 24 heures';
+
+  @override
+  String get errorObjectionable =>
+      'Reste cordial : ce texte contient des mots que Grigri n’autorise pas.';
 }

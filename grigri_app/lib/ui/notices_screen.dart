@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/grigri_store.dart';
 import '../model/plan.dart';
 import '../theme.dart';
+import 'admin_screen.dart';
 import 'chat_screen.dart';
 import 'common.dart';
 import 'plan_screen.dart';
@@ -81,12 +82,19 @@ class _NoticeTile extends StatelessWidget {
         l.noticeNotThisTime(notice.planTitle),
         l.noticeDeclinedBody,
       ),
+      NoticeKind.report => (
+        Icons.flag,
+        Mountain.tan,
+        l.noticeReportsTitle,
+        l.noticeReportsBody,
+      ),
     };
     final Widget open = switch (notice.kind) {
       NoticeKind.request ||
       NoticeKind.nudge ||
       NoticeKind.accepted => ChatScreen(planId: notice.planId),
       NoticeKind.declined => PlanScreen(planId: notice.planId),
+      NoticeKind.report => const AdminScreen(initialTab: 2),
     };
     return Card(
       margin: const EdgeInsets.only(bottom: 10),

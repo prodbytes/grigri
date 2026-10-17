@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:grigri_app/data/api.dart';
+import 'package:grigri_app/data/app_store.dart';
 import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/device_location.dart';
 import 'package:grigri_app/data/grigri_store.dart';
@@ -20,6 +21,7 @@ import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/walls.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/model/premium.dart';
+import 'package:grigri_app/model/report.dart';
 import 'package:grigri_app/model/sector.dart';
 
 /// A tiny valid PNG, standing in for photos.
@@ -127,6 +129,16 @@ class FakeApi implements GrigriApi, SessionApi {
 
   /// Who an admin blocked: they get 403 "blocked" from every route.
   final blocked = <String>{};
+
+  /// Who I blocked myself (specs/moderation.md): their plans leave my deck.
+  final personBlocks = <String>{};
+
+  /// The open reports, oldest first, as admins see them.
+  final reports = <Report>[];
+
+  /// What admins did with reports: "report-1 dismiss", say.
+  final resolved = <String>[];
+  int _reportIds = 0;
 
   /// Every call, as "METHOD /api/route".
   final calls = <String>[];
@@ -581,8 +593,51 @@ class FakeApi implements GrigriApi, SessionApi {
   });
 
   @override
-  Future<PremiumOffer> premium() =>
-      _route('GET /api/premium', () => PremiumOffer(myPremium, premiumPrices));
+  Future<PremiumOffer> premium() => _route(
+    'GET /api/premium',
+    () => PremiumOffer(
+      myPremium,
+      premiumPrices,
+      appleAccountToken: appleAccountToken,
+    ),
+  );
+
+  /// The appAccountToken `GET /api/premium` gives; null: no App Store
+  /// purchases on this stage.
+  String? appleAccountToken = '0c1e5f3a-9d2b-8c4e-a1f0-5b6d7e8f9a0b';
+
+  /// The signed transactions the app sent, as [FakeAppStore] makes them:
+  /// `jws|<product id>|<account token>`.
+  final appleTransactions = <String>[];
+
+  @override
+  Future<PremiumOffer> premiumApple(String signedTransaction) =>
+      _route('POST /api/premium/apple', () {
+        appleTransactions.add(signedTransaction);
+        final parts = signedTransaction.split('|');
+        if (parts.length != 3 || parts[0] != 'jws') {
+          throw const ApiException(400, 'bad signature');
+        }
+        if (parts[2] != appleAccountToken) {
+          throw const ApiException(
+            409,
+            'this App Store purchase was made from another Grigri account',
+          );
+        }
+        myPremium = Premium(
+          active: true,
+          plan: parts[1].endsWith('.yearly')
+              ? PremiumPlan.yearly
+              : PremiumPlan.monthly,
+          until: DateTime(2031, 5, 1),
+          source: PremiumSource.apple,
+        );
+        return PremiumOffer(
+          myPremium,
+          premiumPrices,
+          appleAccountToken: appleAccountToken,
+        );
+      });
 
   @override
   Future<Uri> premiumCheckout(PremiumPlan plan) =>
@@ -669,7 +724,8 @@ class FakeApi implements GrigriApi, SessionApi {
                   !p.memberIds.contains(meId) &&
                   !passed.contains(p.id) &&
                   !requestsById.containsKey('${p.id}/$meId') &&
-                  !dismissed.contains(p.id),
+                  !dismissed.contains(p.id) &&
+                  !p.memberIds.any(personBlocks.contains),
             )
             .toList()
           ..sort((a, b) {
@@ -1210,6 +1266,94 @@ class FakeApi implements GrigriApi, SessionApi {
       block ? blocked.add(climberId) : blocked.remove(climberId);
     },
   );
+
+  @override
+  Future<void> sendReport({
+    required ReportKind kind,
+    required String targetId,
+    String? planId,
+    required ReportReason reason,
+    String text = '',
+  }) => _route('POST /api/reports', () {
+    final subjectId = switch (kind) {
+      ReportKind.profile => targetId,
+      ReportKind.plan => plans[targetId]?.organizerId,
+      ReportKind.message =>
+        allMessages.where((m) => m.id == targetId).firstOrNull?.authorId,
+      ReportKind.pic =>
+        allPics.where((p) => p.id == targetId).firstOrNull?.uploaderId,
+      ReportKind.ad => ads[targetId]?.ownerId,
+    };
+    if (subjectId == null) throw const ApiException(404, 'not found');
+    if (subjectId == meId) {
+      throw const ApiException(400, "you can't report your own");
+    }
+    reports.add(
+      Report(
+        id: 'report-${++_reportIds}',
+        kind: kind,
+        targetId: targetId,
+        planId: planId,
+        subjectId: subjectId,
+        reporterId: meId!,
+        reason: reason,
+        text: text,
+        time: _now(),
+      ),
+    );
+  });
+
+  @override
+  Future<AdminReports> adminReports() => _route('GET /api/admin/reports', () {
+    _admin();
+    return AdminReports(
+      [...reports],
+      _mention([
+        for (final r in reports) ...[r.subjectId, r.reporterId],
+      ]),
+    );
+  });
+
+  @override
+  Future<void> resolveReport(String reportId, ReportAction action) =>
+      _route('POST /api/admin/reports/$reportId/${action.name}', () {
+        _admin();
+        final report = reports.where((r) => r.id == reportId).firstOrNull;
+        if (report == null) throw const ApiException(404, 'no such report');
+        reports.remove(report);
+        resolved.add('$reportId ${action.name}');
+        if (action == ReportAction.block) blocked.add(report.subjectId);
+      });
+
+  @override
+  Future<BlockList> blocks() => _route(
+    'GET /api/blocks',
+    () => BlockList([...personBlocks], _mention(personBlocks)),
+  );
+
+  @override
+  Future<void> setPersonBlocked(String climberId, bool block) =>
+      _route('${block ? 'POST' : 'DELETE'} /api/blocks/$climberId', () {
+        if (block && climberId == meId) {
+          throw const ApiException(400, "you can't block yourself");
+        }
+        if (!climbers.containsKey(climberId)) {
+          throw const ApiException(404, 'no such climber');
+        }
+        if (!block) {
+          personBlocks.remove(climberId);
+          return;
+        }
+        personBlocks.add(climberId);
+        // As the server: their open requests on plans I decide on are declined.
+        for (final r in requestsById.values.toList()) {
+          if (r.climberId == climberId &&
+              !r.rejected &&
+              (plans[r.planId]?.deciders.contains(meId) ?? false)) {
+            _reject(r.id);
+          }
+        }
+      });
 }
 
 /// Google, made up: its button signs Pat in with a made-up ID token that
@@ -1382,6 +1526,7 @@ GrigriStore storeFor(
   RealtimeTransport? realtime,
   DeviceLocation deviceLocation = const DeviceLocation.none(),
   math.Random? random,
+  AppStore? appStore,
 }) {
   final auth = SessionAuth(
     method: FakeGoogle(mode: mode),
@@ -1407,7 +1552,78 @@ GrigriStore storeFor(
     deviceLocation: deviceLocation,
     places: () async => fakePlaces,
     random: random,
+    appStore: appStore,
   );
+}
+
+/// The App Store, faked (no StoreKit): its products at made-up localized
+/// prices, and purchases reported at once (a synchronous stream), as
+/// signed transactions `jws|<product id>|<account token>`.
+class FakeAppStore implements AppStore {
+  FakeAppStore({
+    this.prices = const {
+      PremiumPlan.monthly: '\$19.99',
+      PremiumPlan.yearly: '\$199.99',
+    },
+  });
+
+  /// The products' prices; empty: the App Store can't sell them.
+  Map<PremiumPlan, String> prices;
+
+  /// What buying ends in, as StoreKit reports it.
+  StorePurchaseStatus outcome = StorePurchaseStatus.purchased;
+
+  /// What was bought, as "`product id` for `account token`".
+  final bought = <String>[];
+
+  /// The purchases finished.
+  final completed = <StorePurchase>[];
+
+  /// My current subscriptions, which Restore purchases reports.
+  List<StorePurchase> owned = [];
+
+  final _purchases = StreamController<List<StorePurchase>>.broadcast(
+    sync: true,
+  );
+
+  /// Reports purchases, as StoreKit does at launch or on a renewal.
+  void report(List<StorePurchase> purchases) => _purchases.add(purchases);
+
+  @override
+  Stream<List<StorePurchase>> get purchases => _purchases.stream;
+
+  @override
+  Future<Map<PremiumPlan, StoreProduct>> products() async => {
+    for (final MapEntry(key: plan, value: price) in prices.entries)
+      plan: StoreProduct(
+        id: appStoreProductIds[plan]!,
+        plan: plan,
+        price: price,
+      ),
+  };
+
+  @override
+  Future<bool> buy(StoreProduct product, {required String accountToken}) async {
+    bought.add('${product.id} for $accountToken');
+    report([
+      StorePurchase(
+        productId: product.id,
+        status: outcome,
+        signedTransaction: 'jws|${product.id}|$accountToken',
+        needsCompleting: outcome == StorePurchaseStatus.purchased,
+      ),
+    ]);
+    return true;
+  }
+
+  @override
+  Future<void> restore() async {
+    if (owned.isNotEmpty) report(owned);
+  }
+
+  @override
+  Future<void> complete(StorePurchase purchase) async =>
+      completed.add(purchase);
 }
 
 /// The sector index the store names a device's location from: made-up

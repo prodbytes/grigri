@@ -990,6 +990,31 @@ class AppLocalizationsCa extends AppLocalizations {
   String get premiumCheckRefresh => 'Ja he pagat: comprova-ho';
 
   @override
+  String get premiumRestore => 'Restaura les compres';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'Grigri Premium és una subscripció amb renovació automàtica: $prices. El pagament es carrega al teu ID d\'Apple quan confirmes. Es renova automàticament tret que la cancel·lis com a mínim 24 hores abans del final del període. Gestiona-la o cancel·la-la als ajustos del teu compte de l\'App Store.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Política de privadesa';
+
+  @override
+  String get premiumTermsOfUse => 'Condicions d\'ús (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'Ara no es pot connectar amb l\'App Store.';
+
+  @override
+  String get premiumNothingToRestore =>
+      'No hi ha cap subscripció de l\'App Store per restaurar.';
+
+  @override
+  String get premiumPurchaseFailed => 'La compra no s\'ha completat.';
+
+  @override
   String get errorOpenLink => 'No s\'ha pogut obrir l\'enllaç.';
 
   @override
@@ -1363,4 +1388,103 @@ class AppLocalizationsCa extends AppLocalizations {
   @override
   String get errorDeleteAccount =>
       'No s\'ha pogut eliminar el teu compte. Torna-ho a provar.';
+
+  @override
+  String get moreActions => 'Més';
+
+  @override
+  String get report => 'Denuncia';
+
+  @override
+  String blockPerson(String name) {
+    return 'Bloqueja $name';
+  }
+
+  @override
+  String get reportTitle => 'Per què ho denuncies?';
+
+  @override
+  String get reportReasonSpam => 'Correu brossa';
+
+  @override
+  String get reportReasonHarassment => 'Assetjament';
+
+  @override
+  String get reportReasonInappropriate => 'Contingut inadequat';
+
+  @override
+  String get reportReasonFake => 'Perfil fals';
+
+  @override
+  String get reportReasonOther => 'Un altre motiu';
+
+  @override
+  String get reportDetailsHint => 'Res més que hàgim de saber? (opcional)';
+
+  @override
+  String get reportSend => 'Envia la denúncia';
+
+  @override
+  String get reportThanks => 'Gràcies, ho revisarem en menys de 24 hores.';
+
+  @override
+  String get blockPersonMessage =>
+      'No veureu els plans de l’altre, cap dels dos podrà demanar unir-se a un pla on sigui l’altre, les seves sol·licituds als teus plans es rebutgen i no veuràs els seus missatges. No se li diu.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return 'Has bloquejat $name.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Persones bloquejades';
+
+  @override
+  String get blockedPeopleEmpty => 'No has bloquejat ningú.';
+
+  @override
+  String get adminReportsTab => 'Denúncies';
+
+  @override
+  String get adminReportsEmpty => 'No hi ha denúncies per revisar.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Denunciat per $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Perfil';
+
+  @override
+  String get reportKindPlan => 'Pla';
+
+  @override
+  String get reportKindMessage => 'Missatge del xat';
+
+  @override
+  String get reportKindPic => 'Foto del pla';
+
+  @override
+  String get reportKindAd => 'Anunci';
+
+  @override
+  String get reportDismiss => 'Descarta';
+
+  @override
+  String get reportRemove => 'Treu el contingut';
+
+  @override
+  String get reportBlock => 'Bloqueja l’escalador';
+
+  @override
+  String get noticeReportsTitle => 'Noves denúncies per revisar';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Denúncies · respon en menys de 24 hores';
+
+  @override
+  String get errorObjectionable =>
+      'Mantén un to amable: hi ha paraules que Grigri no permet.';
 }

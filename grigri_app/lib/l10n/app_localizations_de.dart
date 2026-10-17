@@ -997,6 +997,31 @@ class AppLocalizationsDe extends AppLocalizations {
   String get premiumCheckRefresh => 'Bezahlt: erneut prüfen';
 
   @override
+  String get premiumRestore => 'Käufe wiederherstellen';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'Grigri Premium ist ein automatisch verlängertes Abo: $prices. Die Zahlung wird bei der Bestätigung über deine Apple-ID abgerechnet. Es verlängert sich automatisch, wenn du es nicht mindestens 24 Stunden vor Ende des Zeitraums kündigst. Verwalten oder kündigen kannst du es in den Einstellungen deines App-Store-Accounts.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get premiumTermsOfUse => 'Nutzungsbedingungen (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'Der App Store ist gerade nicht erreichbar.';
+
+  @override
+  String get premiumNothingToRestore =>
+      'Kein App-Store-Abo zum Wiederherstellen.';
+
+  @override
+  String get premiumPurchaseFailed => 'Der Kauf ist nicht zustande gekommen.';
+
+  @override
   String get errorOpenLink => 'Der Link ließ sich nicht öffnen.';
 
   @override
@@ -1372,4 +1397,104 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get errorDeleteAccount =>
       'Dein Konto konnte nicht gelöscht werden. Versuch es noch einmal.';
+
+  @override
+  String get moreActions => 'Mehr';
+
+  @override
+  String get report => 'Melden';
+
+  @override
+  String blockPerson(String name) {
+    return '$name blockieren';
+  }
+
+  @override
+  String get reportTitle => 'Warum meldest du das?';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonHarassment => 'Belästigung';
+
+  @override
+  String get reportReasonInappropriate => 'Unangemessene Inhalte';
+
+  @override
+  String get reportReasonFake => 'Falsches Profil';
+
+  @override
+  String get reportReasonOther => 'Sonstiges';
+
+  @override
+  String get reportDetailsHint =>
+      'Sonst noch etwas, das wir wissen sollten? (optional)';
+
+  @override
+  String get reportSend => 'Meldung senden';
+
+  @override
+  String get reportThanks => 'Danke, wir prüfen es innerhalb von 24 Stunden.';
+
+  @override
+  String get blockPersonMessage =>
+      'Ihr seht eure Pläne gegenseitig nicht mehr, keiner kann bei einem Plan des anderen anfragen, seine Anfragen zu deinen Plänen werden abgelehnt und du siehst seine Nachrichten nicht. Die Person erfährt es nicht.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return '$name ist blockiert.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Blockierte Personen';
+
+  @override
+  String get blockedPeopleEmpty => 'Du hast niemanden blockiert.';
+
+  @override
+  String get adminReportsTab => 'Meldungen';
+
+  @override
+  String get adminReportsEmpty => 'Keine Meldungen zu prüfen.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Gemeldet von $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Profil';
+
+  @override
+  String get reportKindPlan => 'Plan';
+
+  @override
+  String get reportKindMessage => 'Chatnachricht';
+
+  @override
+  String get reportKindPic => 'Planfoto';
+
+  @override
+  String get reportKindAd => 'Anzeige';
+
+  @override
+  String get reportDismiss => 'Verwerfen';
+
+  @override
+  String get reportRemove => 'Inhalt entfernen';
+
+  @override
+  String get reportBlock => 'Kletterer sperren';
+
+  @override
+  String get noticeReportsTitle => 'Neue Meldungen zu prüfen';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Meldungen · innerhalb von 24 Stunden beantworten';
+
+  @override
+  String get errorObjectionable =>
+      'Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt.';
 }

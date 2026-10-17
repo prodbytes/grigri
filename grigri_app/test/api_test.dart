@@ -11,6 +11,7 @@ import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/plan.dart';
+import 'package:grigri_app/model/report.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -715,5 +716,97 @@ void main() {
       expect(store.myPlans, isEmpty);
       expect(store.notices, isEmpty);
     });
+  });
+
+  test('moderation: reports, the admin\'s list and actions, and my blocks '
+      '(specs/moderation.md)', () async {
+    final seen = <http.Request>[];
+    final api = apiWith((request) async {
+      final path = request.url.path;
+      if (path == '/api/admin/reports') {
+        return json({
+          'reports': [
+            {
+              'id': 'r1',
+              'kind': 'message',
+              'targetId': 'm1',
+              'planId': 'p1',
+              'subjectId': 'robin',
+              'reporterId': 'me',
+              'reason': 'harassment',
+              'text': 'Rude',
+              'content': {
+                'text': 'Something rude',
+                'media': [
+                  {'key': 'chat/p1/abc.mp4', 'kind': 'video'},
+                ],
+              },
+              'status': 'open',
+              'time': '2026-10-17T07:00:00.000Z',
+            },
+            // A kind this version doesn't know: left out.
+            {'id': 'r2', 'kind': 'wall', 'reason': 'spam'},
+          ],
+          'climbers': {'robin': robinJson},
+        });
+      }
+      if (path == '/api/blocks' && request.method == 'GET') {
+        return json({
+          'blocked': ['robin'],
+          'climbers': {'robin': robinJson},
+        });
+      }
+      return json({});
+    }, seen: seen);
+
+    await api.sendReport(
+      kind: ReportKind.message,
+      targetId: 'm1',
+      planId: 'p1',
+      reason: ReportReason.harassment,
+      text: '  Rude  ',
+    );
+    expect(seen.last.method, 'POST');
+    expect(seen.last.url.path, '/api/reports');
+    expect(jsonDecode(seen.last.body), {
+      'kind': 'message',
+      'targetId': 'm1',
+      'planId': 'p1',
+      'reason': 'harassment',
+      'text': 'Rude',
+    });
+
+    final reports = await api.adminReports();
+    expect(reports.reports, hasLength(1));
+    final r = reports.reports.single;
+    expect(r.kind, ReportKind.message);
+    expect(r.planId, 'p1');
+    expect(r.content.text, 'Something rude');
+    expect(r.content.media.single.video, isTrue);
+    expect(reports.climbers['robin']!.name, 'Robin Vale');
+
+    await api.resolveReport('r1', ReportAction.remove);
+    expect(seen.last.url.path, '/api/admin/reports/r1/remove');
+
+    final blocks = await api.blocks();
+    expect(blocks.blocked, ['robin']);
+    await api.setPersonBlocked('robin', true);
+    expect(
+      '${seen.last.method} ${seen.last.url.path}',
+      'POST /api/blocks/robin',
+    );
+    await api.setPersonBlocked('robin', false);
+    expect(
+      '${seen.last.method} ${seen.last.url.path}',
+      'DELETE /api/blocks/robin',
+    );
+  });
+
+  test('the filter\'s 400 is told apart', () {
+    expect(
+      const ApiException(400, 'objectionable: bio has words').objectionable,
+      isTrue,
+    );
+    expect(const ApiException(400, 'bio is too long').objectionable, isFalse);
   });
 }

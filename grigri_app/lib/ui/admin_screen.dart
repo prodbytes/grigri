@@ -7,20 +7,27 @@ import '../theme.dart';
 import 'ad_card.dart';
 import 'ads_screen.dart' show AdStatusTag;
 import 'common.dart';
+import 'moderation.dart';
 
 /// The Admin tab (admins only), with a sub-navigation: **Users**,
 /// everyone by name, to block (they can't use Grigri, and their plans
 /// leave the deck) or unblock; and **Ads** (specs/ads.md), to approve or
-/// reject Premium climbers' ads and set how often the deck shows them.
+/// reject Premium climbers' ads and set how often the deck shows them;
+/// and **Reports** (specs/moderation.md), what people reported, to
+/// dismiss, remove or block.
 class AdminScreen extends StatelessWidget {
-  const AdminScreen({super.key});
+  const AdminScreen({super.key, this.initialTab = 0});
+
+  /// The sub-tab it opens on: 0 Users, 1 Ads, 2 Reports.
+  final int initialTab;
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = context.l10n;
     return DefaultTabController(
-      length: 2,
+      length: 3,
+      initialIndex: initialTab,
       child: Builder(
         builder: (context) => Scaffold(
           appBar: AppBar(
@@ -30,12 +37,15 @@ class AdminScreen extends StatelessWidget {
                 tooltip: l.refresh,
                 icon: const Icon(Icons.refresh),
                 onPressed: () {
-                  if (DefaultTabController.of(context).index == 0) {
-                    store.refreshAdmin();
-                  } else {
-                    for (final status in AdStatus.values) {
-                      store.refreshAdminAds(status);
-                    }
+                  switch (DefaultTabController.of(context).index) {
+                    case 0:
+                      store.refreshAdmin();
+                    case 1:
+                      for (final status in AdStatus.values) {
+                        store.refreshAdminAds(status);
+                      }
+                    default:
+                      store.refreshAdminReports();
                   }
                 },
               ),
@@ -50,10 +60,16 @@ class AdminScreen extends StatelessWidget {
                   icon: const Icon(Icons.campaign_outlined),
                   text: l.adminAdsTab,
                 ),
+                Tab(
+                  icon: const Icon(Icons.flag_outlined),
+                  text: l.adminReportsTab,
+                ),
               ],
             ),
           ),
-          body: const TabBarView(children: [_Users(), AdminAdsView()]),
+          body: const TabBarView(
+            children: [_Users(), AdminAdsView(), AdminReportsView()],
+          ),
         ),
       ),
     );

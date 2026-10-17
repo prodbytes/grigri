@@ -1255,9 +1255,78 @@ spec.
       keep their logo, which links home.
     - Cost: none.
 
-## 2026-10-17
+86. **Let people report content, block abusive users, and filter objectionable posts (App Store guideline 1.2).**
+    - [Moderation](moderation.md), new: the API refuses slurs and
+      explicit sexual terms (a word list in English, Spanish, German,
+      French, Portuguese and Catalan; whole words, ignoring case, accents,
+      repeated letters, leetspeak and spaced-out letters) in profile names
+      and bios, plan notes and hand-typed places, chat messages and ad
+      text, with a 400 the app words as "Please keep it friendly";
+      photos aren't machine-filtered (Rekognition proposed, not built).
+      Anyone can **Report** a profile, plan, chat message, plan photo or
+      ad (spam, harassment, inappropriate content, fake profile, other,
+      and optional words): "Thanks, we'll review it within 24 hours."
+      Admins get a "New reports to review" notification and a live hint,
+      and answer in **Admin → Reports** (dismiss, remove the content, or
+      block the climber app-wide). Anyone can **Block** someone: plans
+      with them leave my deck and mine theirs, neither can ask to join a
+      plan the other is in (a neutral 409), their open requests on plans
+      I decide on are declined, the app hides their messages and
+      notifications from me, and they aren't told; **Profile → Blocked
+      people** unblocks.
+    - [API](api.md): `POST /api/reports`, `GET /api/admin/reports`,
+      `POST /api/admin/reports/{id}/dismiss|remove|block`,
+      `GET /api/blocks`, `POST`/`DELETE /api/blocks/{id}`; the Report
+      shape and the `report` notice; the filter's 400; the deck and join
+      follow blocks.
+    - [Admin](admin.md): the Reports sub-tab. [Screens](screens.md): ⋮
+      with Report and Block on profile sheets, the plan screen, Discover
+      cards, ads and request cards; a long press on chat messages;
+      Blocked people in Profile. [Matching](matching.md): what a block
+      does. [Ads](ads.md), [Live updates](live-updates.md): reports.
+    - [Backend](backend.md): report, block and admins-list items in the
+      table. Cost: no new resources; a report is a few reads and writes,
+      a block two writes, and the deck and joins one small query more.
+    - [Sign-in](sign-in.md#deleting-my-account): deleting an account also
+      removes its blocks both ways, so nobody's Blocked people keeps a
+      deleted climber, and it's no longer a known admin.
 
-86. **Create a few sample ads for "Climbing Siurana" (images and info from
+87. **Sell Premium on iOS through Apple's in-app purchase (App Store
+    guideline 3.1.1).** Stripe Checkout isn't allowed in the iOS app
+    outside the US; the owner chose the App Store's auto-renewable
+    subscriptions on iOS, keeping Stripe on Android and the web.
+    - [Premium](premium.md): two ways to pay, per platform. On iOS, two
+      auto-renewable subscriptions in the group "Grigri Premium"
+      (`com.nu01.grigri.premium.monthly`, `.yearly`; $19.99 and $199.99),
+      bought through StoreKit 2 with an appAccountToken the API derives
+      from the climber; the app sends the signed transaction to
+      `POST /api/premium/apple`, then finishes it; Restore purchases;
+      Manage subscription opens the App Store's subscriptions. The API
+      verifies Apple's JWS offline (ES256, the x5c chain to Apple Root
+      CA - G3 only, Apple's OIDs, validity when signed), checks the bundle,
+      product and token, ties each subscription to one account, and saves
+      it in the same subscription item as Stripe's (`source: "apple"`), so
+      rbacr's `premium` role works unchanged; App Store Server
+      Notifications V2 keep it in step (renewals, lapses, grace periods,
+      refunds; out of order and repeated ones are safe). Sandbox is
+      accepted and recorded. Apple's 15% (Small Business Program) or 30%
+      commission, and the owner's App Store Connect setup.
+    - [API](api.md): `POST /api/premium/apple`, `POST /api/apple/notifications`
+      (public, Apple's signature is the gate), `appleAccountToken` in
+      `GET /api/premium`, `source` in Premium.
+    - [Screens](screens.md): on iOS, the Premium card shows the App
+      Store's localized prices, Apple's subscription terms, the privacy
+      policy and EULA links and Restore purchases, and no Stripe.
+    - [Platforms](platforms.md): the in_app_purchase plugin; the iOS app
+      never mentions Stripe.
+    - [Backend](backend.md): the App Store's cost; no new AWS resource.
+    - [Roles](roles.md): the App Store grants and revokes `premium` too.
+    - [Sign-in](sign-in.md#deleting-my-account): deleting an account with
+      an App Store subscription doesn't ask Stripe; it unties the
+      subscription from the account instead. The App Store's verifier is
+      `grigri_api/src/app-store.ts` (Sign in with Apple keeps `apple.ts`).
+
+88. **Create a few sample ads for "Climbing Siurana" (images and info from
     https://www.climbingsiurana.com/en/); show ads infrequently, about one
     every 10 plans, a little randomized; when a user rejects an ad, don't
     show it again.**

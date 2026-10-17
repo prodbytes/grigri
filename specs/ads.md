@@ -120,6 +120,14 @@ skipped is `CLIMBER#<me>` / `ADSKIP#<ad id>`, deleted with my account. Media is
 in the photos bucket under `photos/ads/`, served at `/photos/ads/…`, and
 expires a day after upload unless an ad uses it.
 
+## Reports
+
+Anyone can report an ad on the deck (its ⋮), or block its owner; admins
+can remove a reported ad from Admin → Reports
+([moderation.md](moderation.md)). Ads' text goes through the
+[filter](moderation.md#the-filter). Ads of people with a block between
+us don't show on my deck.
+
 ## Cost
 
 Nothing while idle. Each deck adds three reads (the setting, one query of

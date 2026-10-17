@@ -14,6 +14,8 @@ import {
   type Plan,
   type PlanPic,
   type PublicClimber,
+  type Message,
+  deciders,
   isOpen,
   planType,
   publicClimber,
@@ -21,6 +23,8 @@ import {
   requestJson,
 } from './domain/model.js';
 import { type Ad, AD_STATUSES, type AdStatus, MAX_ADS_PER_OWNER, adInput, adSettingsInput, deckAds } from './domain/ads.js';
+import { assertClean } from './domain/filter.js';
+import { type Report, type ReportContent, reportId, reportInput } from './domain/moderation.js';
 import { type PicWithCrag, type Where, picsFor } from './domain/pics.js';
 import * as rules from './domain/rules.js';
 import {
@@ -38,12 +42,30 @@ import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileIn
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { PREMIUM_PRICES, type PremiumPlan, type Subscription, isPaid, premiumOf, premiumUntil, premiumView } from './premium.js';
 import { BadSignature, type Billing, subscriptionIdOf } from './stripe.js';
+import {
+  type AppleStatus,
+  type AppleTransaction,
+  type AppStoreVerify,
+  APPLE_BUNDLE_ID,
+  BadAppleSignature,
+  NotGrigriPremium,
+  appleAccountToken,
+  appleRenewal,
+  appleSubscription,
+  appleTransaction,
+} from './app-store.js';
 import { matchFacts } from './match/facts.js';
 import { openByPlan, othersWaiting } from './match/run.js';
-import { BLOCKED_ROLE, PREMIUM_ROLE, type RoleGrants, type RolesLookup } from './rbacr.js';
+import { ADMIN_ROLE, BLOCKED_ROLE, PREMIUM_ROLE, type RoleGrants, type RolesLookup } from './rbacr.js';
 import { type Params, Router } from './router.js';
 import { type Delivery, type Realtime, hintsFor } from './realtime.js';
 import { Conflict, type LoadedPlan, type Store } from './store/store.js';
+
+/** Why someone can't ask to join a plan with a block between them and its group: says nothing of the block. */
+export const CANT_ASK = "you can't ask to join this plan";
+
+/** The one notice each admin gets about reports (replaced by each new one, unread again). */
+export const REPORTS_NOTICE_ID = 'reports';
 
 /** Most requests a plan keeps waiting: bounds its transactions (DynamoDB takes 100 items; each join writes 3). */
 export const MAX_OPEN_REQUESTS = 30;
@@ -135,8 +157,10 @@ export interface Deps {
   grants?: RoleGrants;
   /** Match scores from aityx (match/aityx.ts), on admins' decks; none: off. */
   matchScorer?: MatchScorer;
-  /** Stripe, for Premium (stripe.ts); none: no Premium (no keys). */
+  /** Stripe, for Premium (stripe.ts); none: no Premium through Stripe (no keys). */
   billing?: Billing;
+  /** The App Store's JWS verifier, for Premium on iOS (app-store.ts); none: no App Store purchases. */
+  appStore?: AppStoreVerify;
   /** Revokes Sign in with Apple's tokens (apple.ts); none: nothing to revoke. */
   appleTokens?: Pick<AppleTokens, 'revoke'>;
   /**
@@ -244,6 +268,8 @@ export class Api {
       // roles: my roles in Grigri from rbacr, or null when it can't say;
       // Premium is one of them (and its billing details are my subscription's).
       const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
+      // Admins are told of new reports: remembered here (best effort).
+      if (s.caller.admin) await this.rememberAdmin(climber.id);
       return { climber, admin: s.caller.admin, roles, premium };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
@@ -255,6 +281,9 @@ export class Api {
     r('GET /api/premium', 'profile', (_req, s) => this.premium(s));
     r('POST /api/premium/checkout', 'profile', (req, s) => this.checkout(req, s));
     r('POST /api/premium/portal', 'profile', (_req, s) => this.portal(s));
+    r('POST /api/premium/apple', 'profile', (req, s) => this.appleTransaction(req, s));
+    // The App Store's notifications: public, Apple's signature is the gate.
+    r('POST /api/apple/notifications', 'public', (req) => this.appleNotification(req));
 
     r('GET /api/ads', 'profile', (_req, s) => this.myAds(s));
     r('POST /api/ads/media', 'profile', (req, s) => this.presignAdMedia(req, s));
@@ -286,6 +315,11 @@ export class Api {
     r('POST /api/requests/{planId}/{climberId}/reject', 'profile', (req, s) => this.answer(req, s, 'reject'));
     r('POST /api/requests/{planId}/{climberId}/dismiss', 'profile', (req, s) => this.dismiss(req, s));
 
+    r('POST /api/reports', 'profile', (req, s) => this.report(req, s));
+    r('GET /api/blocks', 'profile', (_req, s) => this.myBlocks(s));
+    r('POST /api/blocks/{id}', 'profile', (req, s) => this.blockSomeone(req, s));
+    r('DELETE /api/blocks/{id}', 'profile', (req, s) => this.unblockSomeone(req, s));
+
     r('GET /api/notices', 'profile', (_req, s) => this.notices(s));
     r('POST /api/notices/read', 'profile', async (_req, s) => {
       await this.store.markNoticesRead(s.me.id);
@@ -308,8 +342,12 @@ export class Api {
       await this.store.putAdSettings(settings);
       return settings;
     });
-    r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(req, s, true));
-    r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(req, s, false));
+    r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(id(req.params.id, 'climber id'), s, true));
+    r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(id(req.params.id, 'climber id'), s, false));
+    r('GET /api/admin/reports', 'admin', () => this.adminReports());
+    r('POST /api/admin/reports/{id}/dismiss', 'admin', (req, s) => this.resolveReport(req, s, 'dismissed'));
+    r('POST /api/admin/reports/{id}/remove', 'admin', (req, s) => this.resolveReport(req, s, 'removed'));
+    r('POST /api/admin/reports/{id}/block', 'admin', (req, s) => this.resolveReport(req, s, 'blocked'));
   }
 
   /** Who may call a route (404 for no such route). */
@@ -391,6 +429,7 @@ export class Api {
   private async saveProfile(req: Request, s: Session) {
     const owners = [subjectHash(s.caller.subject), ...(s.me ? [s.me.id] : [])];
     const input = profileInput(req.body, owners);
+    assertClean({ name: input.name, bio: input.bio });
     // Photos: new ones lose their pending tag before the profile points at
     // them (else the bucket would expire them); ones it no longer uses are
     // deleted after it's saved.
@@ -696,7 +735,12 @@ export class Api {
     // 1. Premium: Stripe stops charging at once (no refund of the period
     // paid), then rbacr's role goes. Either failing stops here: nothing is
     // deleted while I could still be charged.
-    if (sub && sub.status !== 'canceled' && sub.status !== 'incomplete_expired') {
+    // An App Store subscription can't be cancelled by Grigri (the person
+    // does, in iOS Settings, as the confirmation says): it's untied from
+    // this account, so a new one can restore it.
+    if (sub?.source === 'apple') {
+      await this.store.releaseAppleSubscription(sub.subscriptionId, climberId);
+    } else if (sub && sub.status !== 'canceled' && sub.status !== 'incomplete_expired') {
       if (!this.deps.billing) throw unavailable("your Premium subscription can't be cancelled right now; try again later");
       await this.deps.billing.cancel(sub.subscriptionId);
       // So a retry doesn't ask Stripe again.
@@ -731,7 +775,14 @@ export class Api {
       if (ad.media) await this.deps.photos.remove([ad.media.key]);
       await this.store.deleteAd(ad.id);
     }
-    // 7. My profile's photos (only ever my own folder's), then everything
+    // 7. Blocks, both ways (specs/moderation.md): the mirror items live in
+    // the other climbers' partitions, so nobody's list keeps me. I'm no
+    // longer a known admin either.
+    const blocks = await this.store.blocksOf(climberId);
+    for (const other of blocks.blocked) await this.store.removeBlock(climberId, other);
+    for (const other of blocks.blockedBy) await this.store.removeBlock(other, climberId);
+    await this.store.removeAdmins([climberId]);
+    // 8. My profile's photos (only ever my own folder's), then everything
     // keyed to me: profile, memberships, passes, notices, email, Premium.
     if (me) {
       const owners = [subjectHash(subject), climberId];
@@ -785,12 +836,20 @@ export class Api {
 
   // --- Premium (specs/premium.md) --------------------------------------------
 
-  /** GET /api/premium: mine, and the prices (null when Premium can't be bought here: no Stripe keys). */
+  /**
+   * GET /api/premium: mine, Stripe's prices (null when Premium can't be
+   * bought through Stripe here: no keys), and the appAccountToken the iOS
+   * app buys with (null without App Store purchases).
+   */
   private async premium(s: Session) {
     // Fresh from rbacr: the app asks right after paying.
     const [roles, sub] = await Promise.all([this.rolesOf(s.caller.email, true), this.store.getSubscription(s.me.id)]);
     const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
-    return { premium, prices: this.deps.billing ? PREMIUM_PRICES : null };
+    return {
+      premium,
+      prices: this.deps.billing ? PREMIUM_PRICES : null,
+      appleAccountToken: this.deps.appStore ? appleAccountToken(s.me.id) : null,
+    };
   }
 
   /** POST /api/premium/checkout {plan}: Stripe Checkout's page for it, to open in a browser. */
@@ -812,8 +871,123 @@ export class Api {
     const billing = this.deps.billing;
     if (!billing) throw unavailable("Premium isn't available yet");
     const current = await this.store.getSubscription(s.me.id);
+    if (current?.source === 'apple') throw notFound('no Stripe subscription: manage it in the App Store');
     if (!current?.customerId) throw notFound('no subscription');
     return { url: await billing.portal(current.customerId) };
+  }
+
+  /**
+   * POST /api/premium/apple {transaction}: a StoreKit 2 transaction the
+   * iOS app bought or restored (its signed JWS). Verified offline
+   * (app-store.ts); it must be Grigri's, one of the two products, bought with
+   * my appAccountToken, and its subscription not tied to another account.
+   * Saved as my subscription, and rbacr's role follows. → GET /api/premium.
+   */
+  private async appleTransaction(req: Request, s: Session) {
+    const verify = this.deps.appStore;
+    if (!verify) throw unavailable("Premium isn't available yet");
+    let tx: AppleTransaction;
+    try {
+      tx = appleTransaction(verify(asObject(req.body).transaction));
+    } catch (e) {
+      if (e instanceof BadAppleSignature) throw badRequest('bad signature');
+      if (e instanceof NotGrigriPremium) throw badRequest(e.message);
+      throw e;
+    }
+    if (tx.appAccountToken !== appleAccountToken(s.me.id)) {
+      throw conflict('this App Store purchase was made from another Grigri account');
+    }
+    const owner = await this.store.claimAppleSubscription(tx.originalTransactionId, s.me.id, s.now);
+    if (owner !== s.me.id) throw conflict('this App Store subscription belongs to another Grigri account');
+    const current = await this.store.getSubscription(s.me.id);
+    const same = current?.source === 'apple' && current.subscriptionId === tx.originalTransactionId;
+    const sub = appleSubscription(s.me.id, tx, {
+      now: s.now,
+      signedDate: tx.signedDate,
+      // A transaction doesn't say whether it renews; the last notification did.
+      cancelAtPeriodEnd: same ? current.cancelAtPeriodEnd : false,
+      email: s.caller.email ?? (same ? current.email : undefined),
+    });
+    await this.saveApple(sub, current, s.now);
+    return this.premium(s);
+  }
+
+  /**
+   * POST /api/apple/notifications {signedPayload}: App Store Server
+   * Notifications V2. Public: Apple's signature, checked offline, is the
+   * only gate. The subscription's state comes from the signed transaction
+   * and renewal info inside; an older notification never overwrites a
+   * newer one (Apple's signedDate), and the same one twice changes
+   * nothing. One about a subscription Grigri doesn't know yet is
+   * acknowledged and left: the app sends the transaction itself.
+   */
+  private async appleNotification(req: Request) {
+    const verify = this.deps.appStore;
+    if (!verify) throw unavailable('no App Store purchases');
+    const now = this.clock();
+    let type = '';
+    let subtype = '';
+    const ignore = (reason: string) => {
+      console.error(JSON.stringify({ level: 'info', msg: 'apple notification ignored', type, subtype, reason }));
+      return { received: true };
+    };
+    let notification: Record<string, unknown>;
+    let tx: AppleTransaction;
+    let renewal;
+    try {
+      notification = verify(asObject(req.body).signedPayload);
+      type = String(notification.notificationType ?? '');
+      subtype = String(notification.subtype ?? '');
+      const data = (notification.data ?? {}) as Record<string, unknown>;
+      if (data.bundleId !== APPLE_BUNDLE_ID) return ignore('another app');
+      // TEST, and notifications about no transaction.
+      if (typeof data.signedTransactionInfo !== 'string') return ignore('no transaction');
+      tx = appleTransaction(verify(data.signedTransactionInfo));
+      renewal = typeof data.signedRenewalInfo === 'string' ? appleRenewal(verify(data.signedRenewalInfo)) : undefined;
+    } catch (e) {
+      if (e instanceof BadAppleSignature) throw badRequest('bad signature');
+      if (e instanceof NotGrigriPremium) return ignore(e.message);
+      throw e;
+    }
+    if (renewal && renewal.originalTransactionId !== tx.originalTransactionId) throw badRequest('renewal info for another subscription');
+    const climberId = await this.store.appleOwner(tx.originalTransactionId);
+    if (!climberId) return ignore('unknown subscription');
+    // Bought for another account than the one it's tied to: never theirs.
+    if (tx.appAccountToken && tx.appAccountToken !== appleAccountToken(climberId)) return ignore('account token mismatch');
+    const data = notification.data as Record<string, unknown>;
+    const status = [1, 2, 3, 4, 5].includes(Number(data.status)) ? (Number(data.status) as AppleStatus) : undefined;
+    const forced =
+      type === 'REFUND' || type === 'REVOKE' ? 'canceled' : type === 'EXPIRED' || type === 'GRACE_PERIOD_EXPIRED' ? 'expired' : undefined;
+    const signedDate = typeof notification.signedDate === 'number' ? notification.signedDate : tx.signedDate;
+    const current = await this.store.getSubscription(climberId);
+    const same = current?.source === 'apple' && current.subscriptionId === tx.originalTransactionId;
+    const sub = appleSubscription(climberId, tx, {
+      now,
+      signedDate,
+      status,
+      renewal,
+      forced,
+      cancelAtPeriodEnd: same ? current.cancelAtPeriodEnd : false,
+      email: same ? current.email : undefined,
+    });
+    await this.saveApple(sub, current, now);
+    return { received: true };
+  }
+
+  /**
+   * Saves an App Store subscription unless what's saved is newer: the same
+   * subscription signed later by Apple, or another one still paid while
+   * this one isn't. Then rbacr's role follows (an error answers 500, so
+   * Apple sends the notification again).
+   */
+  private async saveApple(sub: Subscription, current: Subscription | undefined, now: Date): Promise<void> {
+    const same = current?.source === 'apple' && current.subscriptionId === sub.subscriptionId;
+    if (same && current.appleSignedAt && Date.parse(current.appleSignedAt) > Date.parse(sub.appleSignedAt!)) return;
+    // Paid now, not merely a paying status: an old grace period long over
+    // never displaces a live subscription.
+    if (current && !same && premiumOf(current, now).active && !premiumOf(sub, now).active) return;
+    await this.store.putSubscription(sub);
+    await this.syncPremium(sub, now);
   }
 
   /**
@@ -909,6 +1083,7 @@ export class Api {
   /** POST /api/ads {text, link, media?}: a Premium climber's new ad, waiting for an admin. */
   private async createAd(req: Request, s: Session) {
     const input = adInput(req.body, s.me.id);
+    assertClean({ text: input.text });
     if (!(await this.isPremium(s.caller.email))) throw forbidden('ads are for Premium');
     if ((await this.store.adsBy(s.me.id)).length >= MAX_ADS_PER_OWNER) {
       throw conflict(`you can keep at most ${MAX_ADS_PER_OWNER} ads; delete one first`);
@@ -968,7 +1143,7 @@ export class Api {
    * Premium (or the seed's made-up advertiser) and not blocked; and how
    * often to show one. Never fails the deck.
    */
-  private async deckAds(s: Session): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
+  private async deckAds(s: Session, apart: Set<string>): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
     try {
       const settings = await this.store.getAdSettings();
       if (settings.every === 0) return { ads: [], adEvery: 0, adOwners: {} };
@@ -982,7 +1157,7 @@ export class Api {
       }));
       // Demo owners (the seed's, RC and local only) advertise without Premium.
       const ok = (ownerId: string) =>
-        (premium.has(ownerId) || climbers[ownerId]?.demo === true) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '');
+        (premium.has(ownerId) || climbers[ownerId]?.demo === true) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '') && !apart.has(ownerId);
       const ads = deckAds(approved, s.me.id, ok, new Set(skipped));
       const adOwners = Object.fromEntries(ads.map((a) => [a.ownerId, publicClimber(climbers[a.ownerId]!)]));
       return { ads, adEvery: settings.every, adOwners };
@@ -1000,10 +1175,11 @@ export class Api {
     await this.deps.showcase?.(s.now).catch((e: unknown) => {
       console.error(JSON.stringify({ level: 'warn', msg: 'showcase refresh failed', error: String(e) }));
     });
-    const [upcoming, passed, asked] = await Promise.all([
+    const [upcoming, passed, asked, apart] = await Promise.all([
       this.store.upcomingPlans(s.now.toISOString()),
       this.store.passedPlanIds(s.me.id),
       this.store.askedRequests(s.me.id),
+      this.apart(s.me.id),
     ]);
     const deck = rules.discover(upcoming, s.me, new Set(passed), new Set(asked.map((r) => r.planId)), s.now);
     // Blocked organizers' plans leave the deck.
@@ -1011,7 +1187,8 @@ export class Api {
       this.store.getClimbers(deck.plans.flatMap((p) => [p.organizerId, ...p.memberIds])),
       this.blockedIds(deck.plans.map((p) => p.organizerId)),
     ]);
-    const plans = deck.plans.filter((p) => !blocked.has(p.organizerId));
+    // So do plans with someone I blocked, or who blocked me, in the group.
+    const plans = deck.plans.filter((p) => !blocked.has(p.organizerId) && !p.memberIds.some((m) => apart.has(m)));
     const distanceKm = Object.fromEntries(Object.entries(deck.distanceKm).filter(([pid]) => plans.some((p) => p.id === pid)));
     const climbers = Object.fromEntries(
       plans.flatMap((p) => [p.organizerId, ...p.memberIds]).flatMap((cid) => (everyone[cid] ? [[cid, publicClimber(everyone[cid])]] : [])),
@@ -1019,7 +1196,7 @@ export class Api {
     const [covers, scores, ads] = await Promise.all([
       this.deckCovers(plans),
       s.caller.admin ? this.deckScores(plans, s) : Promise.resolve(undefined),
-      this.deckAds(s),
+      this.deckAds(s, apart),
     ]);
     return {
       plans,
@@ -1081,7 +1258,7 @@ export class Api {
   }
 
   private async createPlan(req: Request, s: Session) {
-    const input = planInput(req.body, s.now);
+    const input = cleanPlan(planInput(req.body, s.now));
     const effects = rules.createPlan(newId(), s.me.id, input, s.ctx);
     await this.store.apply(null, effects, s.now);
     return { plan: effects.plan };
@@ -1124,7 +1301,7 @@ export class Api {
     const planId = id(req.params.id, 'plan id');
     return this.retry(async () => {
       const current = await this.loadPlan(planId);
-      const input = planInput(req.body, s.now);
+      const input = cleanPlan(planInput(req.body, s.now));
       const changed = rules.updatePlan(current.plan, s.me.id, input);
       // A new type may need fewer yeses (open: none): who now has them joins.
       await this.loadNames(s, changed.memberIds, current.requests.map((r) => r.climberId));
@@ -1173,8 +1350,12 @@ export class Api {
 
   /** My join request, saved; whether the plan is a demo, or open. */
   private async ask(planId: string, s: Session): Promise<{ request: JoinRequest; demo: boolean; open: boolean }> {
+    const apart = await this.apart(s.me.id);
     return this.retry(async () => {
       const loaded = await this.loadPlan(planId);
+      // Someone in the group blocked me, or I blocked them: no request, and
+      // nothing says which (the plan is off my deck anyway).
+      if (loaded.plan.memberIds.some((m) => apart.has(m))) throw conflict(CANT_ASK);
       if (loaded.requests.filter(isOpen).length >= MAX_OPEN_REQUESTS) {
         throw conflict('the plan has too many requests waiting; try again later');
       }
@@ -1297,8 +1478,7 @@ export class Api {
    * role, granted or revoked by their verified email. Never myself: I'd
    * lock myself out.
    */
-  private async block(req: Request, s: Session, blocked: boolean) {
-    const climberId = id(req.params.id, 'climber id');
+  private async block(climberId: string, s: Session, blocked: boolean) {
     if (blocked && climberId === s.me.id) throw badRequest("you can't block yourself");
     if (!(await this.store.getClimber(climberId))) throw notFound('no such climber');
     const grants = this.deps.grants;
@@ -1342,6 +1522,255 @@ export class Api {
     return fromSession;
   }
 
+  // --- Moderation: reports and blocks (specs/moderation.md) ---------------------
+
+  /**
+   * POST /api/reports: I report something objectionable I can see. Kept
+   * with a copy of the content (for the admin), and the admins are told
+   * (a notice and a hint). Reporting it again replaces the report.
+   */
+  private async report(req: Request, s: Session) {
+    const input = reportInput(req.body);
+    const { subjectId, content } = await this.reported(input.kind, input.targetId, input.planId, s);
+    if (subjectId === s.me.id) throw badRequest("you can't report your own");
+    const report: Report = {
+      id: reportId(s.me.id, input.kind, input.targetId),
+      kind: input.kind,
+      targetId: input.targetId,
+      ...(input.planId ? { planId: input.planId } : {}),
+      subjectId,
+      reporterId: s.me.id,
+      reason: input.reason,
+      text: input.text,
+      content,
+      status: 'open',
+      time: s.now.toISOString(),
+    };
+    await this.store.putReport(report);
+    await this.tellAdmins(s);
+    return {};
+  }
+
+  /** What a report is about (as I can see it: 404 when there's no such thing, 403 when it isn't mine to see), and whose it is. */
+  private async reported(
+    kind: Report['kind'],
+    targetId: string,
+    planId: string | undefined,
+    s: Session,
+  ): Promise<{ subjectId: string; content: ReportContent }> {
+    switch (kind) {
+      case 'profile': {
+        const c = await this.store.getClimber(targetId);
+        if (!c) throw notFound('no such climber');
+        const media = photosOf(c).map((key) => ({ key, kind: 'image' as const }));
+        return { subjectId: c.id, content: { title: c.name, text: c.bio, ...(media.length ? { media } : {}) } };
+      }
+      case 'plan': {
+        const current = await this.store.getPlan(targetId);
+        if (!current) throw notFound('no such plan');
+        const { plan } = current;
+        return { subjectId: plan.organizerId, content: { title: plan.area ? `${plan.place}, ${plan.area}` : plan.place, text: plan.notes } };
+      }
+      case 'message': {
+        await this.memberPlan(planId!, s);
+        const message = (await this.store.messages(planId!)).find((m) => m.id === targetId);
+        if (!message) throw notFound('no such message');
+        if (!message.authorId) throw badRequest("the chat's own notes can't be reported");
+        return {
+          subjectId: message.authorId,
+          content: { text: message.text, ...(message.attachment ? { media: [message.attachment] } : {}) },
+        };
+      }
+      case 'pic': {
+        await this.memberPlan(planId!, s);
+        const pic = (await this.store.planPics(planId!)).find((p) => p.id === targetId);
+        if (!pic) throw notFound('no such photo');
+        return { subjectId: pic.uploaderId, content: { media: [{ key: pic.key, kind: 'image' }] } };
+      }
+      case 'ad': {
+        const ad = await this.store.getAd(targetId);
+        if (!ad) throw notFound('no such ad');
+        return {
+          subjectId: ad.ownerId,
+          content: { text: ad.text, link: ad.link, ...(ad.media ? { media: [{ key: ad.media.key, kind: ad.media.kind }] } : {}) },
+        };
+      }
+    }
+  }
+
+  /**
+   * Tells the admins there are reports to review: one notice each
+   * (replaced, unread again) and a hint. Only climbers rbacr still says
+   * are admins (others are forgotten). Best effort: the report is saved.
+   */
+  private async tellAdmins(s: Session): Promise<void> {
+    try {
+      const known = await this.store.adminIds();
+      if (known.length === 0) return;
+      const emails = await this.store.getEmails(known);
+      const admins: string[] = [];
+      const former: string[] = [];
+      await Promise.all(known.map(async (cid) => {
+        const roles = await this.rolesOf(emails[cid]);
+        if (roles === null) return;
+        if (roles.includes(ADMIN_ROLE) || roles.includes('root')) admins.push(cid);
+        else former.push(cid);
+      }));
+      await this.store.removeAdmins(former);
+      const notice = { id: REPORTS_NOTICE_ID, kind: 'report' as const, planId: '', planTitle: '', time: s.now.toISOString(), read: false };
+      await this.store.deliver(admins.map((to) => ({ to, notice })));
+      await this.hint(hintsFor(admins, { kind: 'notice' }, s.me.id));
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'telling admins of a report failed', error: String(e) }));
+    }
+  }
+
+  /** Remembers that this climber is an admin, to tell them of reports (once). */
+  private async rememberAdmin(climberId: string): Promise<void> {
+    try {
+      if (!(await this.store.adminIds()).includes(climberId)) await this.store.addAdmin(climberId);
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'remembering an admin failed', error: String(e) }));
+    }
+  }
+
+  /** GET /api/admin/reports: the open reports, oldest first, with everyone they mention. */
+  private async adminReports() {
+    const reports = await this.store.openReports();
+    const ids = reports.flatMap((r) => [r.subjectId, r.reporterId]);
+    return { reports, climbers: await this.publicClimbers(ids) };
+  }
+
+  /**
+   * POST /api/admin/reports/{id}/dismiss, /remove (the content: a message,
+   * photo or ad is deleted; a plan's notes, or a profile's bio and photos,
+   * cleared) or /block (its climber, as Admin → Users does).
+   */
+  private async resolveReport(req: Request, s: Session, status: 'dismissed' | 'removed' | 'blocked') {
+    const report = await this.store.getReport(id(req.params.id, 'report id'));
+    if (!report) throw notFound('no such report');
+    if (report.status !== 'open') throw conflict('that report was already handled');
+    if (status === 'removed') await this.removeReported(report, s);
+    if (status === 'blocked') await this.block(report.subjectId, s, true);
+    const resolved: Report = { ...report, status, resolvedAt: s.now.toISOString(), resolvedBy: s.me.id };
+    await this.store.putReport(resolved);
+    return { report: resolved };
+  }
+
+  /** Takes reported content down (what's already gone is fine). */
+  private async removeReported(report: Report, s: Session): Promise<void> {
+    const cleanup = (keys: string[]) =>
+      keys.length === 0
+        ? Promise.resolve()
+        : this.deps.photos.remove(keys).catch((e: unknown) => {
+            console.error(JSON.stringify({ level: 'warn', msg: 'removed content cleanup failed', error: String(e) }));
+          });
+    switch (report.kind) {
+      case 'profile': {
+        const c = await this.store.getClimber(report.targetId);
+        if (!c) return;
+        await this.store.clearProfileContent(c.id);
+        await cleanup(photosOf(c));
+        return;
+      }
+      case 'plan': {
+        const current = await this.store.getPlan(report.targetId);
+        if (!current) return;
+        await this.store.clearPlanNotes(report.targetId);
+        await this.hint(hintsFor(current.plan.memberIds, { kind: 'plan', planId: report.targetId }, s.me.id));
+        return;
+      }
+      case 'message': {
+        const planId = report.planId!;
+        const message = (await this.store.messages(planId)).find((m) => m.id === report.targetId);
+        if (!message) return;
+        await this.removeMessages([message], planId, cleanup);
+        await this.hint(await this.membersHint(planId, 'message', s));
+        return;
+      }
+      case 'pic': {
+        const planId = report.planId!;
+        const pic = (await this.store.planPics(planId)).find((p) => p.id === report.targetId);
+        if (!pic) return;
+        await this.store.deletePlanPic(planId, pic.id);
+        // A chat photo goes from the chat too.
+        const sent = pic.fromChat ? (await this.store.messages(planId)).filter((m) => m.attachment?.key === pic.key) : [];
+        if (sent.length) await this.removeMessages(sent, planId, cleanup);
+        else await cleanup([pic.key]);
+        await this.hint(await this.membersHint(planId, 'pics', s));
+        return;
+      }
+      case 'ad': {
+        const ad = await this.store.getAd(report.targetId);
+        if (!ad) return;
+        await this.store.deleteAd(ad.id);
+        await cleanup(ad.media ? [ad.media.key] : []);
+        return;
+      }
+    }
+  }
+
+  /** Deletes chat messages, their media and the plan photos they made. */
+  private async removeMessages(messages: Message[], planId: string, cleanup: (keys: string[]) => Promise<void>): Promise<void> {
+    const keys = messages.flatMap((m) => (m.attachment ? [m.attachment.key] : []));
+    for (const m of messages) await this.store.deleteMessage(m);
+    for (const pic of await this.store.planPics(planId)) {
+      if (pic.fromChat && keys.includes(pic.key)) await this.store.deletePlanPic(planId, pic.id);
+    }
+    await cleanup(keys);
+  }
+
+  private async membersHint(planId: string, kind: 'pics' | 'message', s: Session) {
+    const current = await this.store.getPlan(planId);
+    return current ? hintsFor(current.plan.memberIds, { kind, planId }, s.me.id) : [];
+  }
+
+  /** Everyone with a block between them and me, either way (one query of my partition). */
+  private async apart(climberId: string): Promise<Set<string>> {
+    const { blocked, blockedBy } = await this.store.blocksOf(climberId);
+    return new Set([...blocked, ...blockedBy]);
+  }
+
+  /** GET /api/blocks: the people I blocked (never who blocked me). */
+  private async myBlocks(s: Session) {
+    const { blocked } = await this.store.blocksOf(s.me.id);
+    return { blocked, climbers: await this.publicClimbers(blocked) };
+  }
+
+  /**
+   * POST /api/blocks/{id}: I block someone. Their plans leave my deck and
+   * mine theirs, neither can ask to join a plan the other is in, and their
+   * open requests on plans I decide on are declined (as my no). Nothing
+   * tells them.
+   */
+  private async blockSomeone(req: Request, s: Session) {
+    const them = id(req.params.id, 'climber id');
+    if (them === s.me.id) throw badRequest("you can't block yourself");
+    if (!(await this.store.getClimber(them))) throw notFound('no such climber');
+    await this.store.addBlock(s.me.id, them, s.now);
+    const open = (await this.store.askedRequests(them)).filter(isOpen);
+    for (const r of open) {
+      await this.retry(async () => {
+        const loaded = await this.store.loadPlan(r.planId);
+        if (!loaded || !deciders(loaded.plan).includes(s.me.id)) return;
+        const still = loaded.requests.find((x) => x.climberId === them);
+        if (!still || !isOpen(still)) return;
+        await this.loadNames(s, loaded.plan.memberIds, [them]);
+        const effects = rules.reject(loaded, { id: s.me.id }, them, s.ctx);
+        await this.store.apply(loaded, effects, s.now);
+        await this.hint(answerHints(loaded, effects, 'reject', them, s.me.id));
+      });
+    }
+    return { blocked: true };
+  }
+
+  /** DELETE /api/blocks/{id}: I unblock them (declined requests stay declined). */
+  private async unblockSomeone(req: Request, s: Session) {
+    const them = id(req.params.id, 'climber id');
+    await this.store.removeBlock(s.me.id, them);
+    return { blocked: false };
+  }
+
   // --- Notices and chat -------------------------------------------------------
 
   private async notices(s: Session) {
@@ -1368,6 +1797,7 @@ export class Api {
   private async send(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
     const input = messageInput(req.body, planId);
+    assertClean({ text: input.text });
     const current = await this.store.getPlan(planId);
     if (!current) throw notFound('no such plan');
     const message = rules.chatMessage(current.plan, s.me.id, input.text, s.ctx, input.attachment);
@@ -1475,6 +1905,12 @@ export function answerHints(
     ...hintsFor(newcomers, { kind: 'match', planId }, actorId),
     ...hintsFor(members.filter((m) => !newcomers.has(m)), { kind: 'plan', planId }, actorId),
   ];
+}
+
+/** A plan's text, through the filter: its notes, and its place and area when typed by hand (the sector index's are fine). */
+function cleanPlan<T extends { notes: string; place: string; area: string; sectorId?: string }>(input: T): T {
+  assertClean({ notes: input.notes, ...(input.sectorId ? {} : { place: input.place, area: input.area }) });
+  return input;
 }
 
 /** GET /api/pics's query: `sector`, `lat` and `lon` (both or neither), `place`, `area`. */

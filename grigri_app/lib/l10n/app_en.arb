@@ -1402,7 +1402,7 @@
   },
   "premiumManage": "Manage subscription",
   "@premiumManage": {
-    "description": "Button: open Stripe's billing portal."
+    "description": "Button: where my subscription is managed (Stripe's billing portal, or the App Store's subscriptions)."
   },
   "premiumUnavailable": "Premium isn't available yet.",
   "@premiumUnavailable": {
@@ -1411,6 +1411,39 @@
   "premiumCheckRefresh": "I've paid: check again",
   "@premiumCheckRefresh": {
     "description": "Button: check again whether Premium is active (after paying)."
+  },
+  "premiumRestore": "Restore purchases",
+  "@premiumRestore": {
+    "description": "Button on iOS: restore my App Store purchases (Apple requires it)."
+  },
+  "premiumAppStoreTerms": "Grigri Premium is an auto-renewing subscription: {prices}. Payment is charged to your Apple ID when you confirm. It renews automatically unless you cancel at least 24 hours before the end of the period. Manage or cancel it in your App Store account settings.",
+  "@premiumAppStoreTerms": {
+    "description": "Under the iOS subscribe buttons: Apple's required subscription terms. {prices} is the plans and their App Store prices, like \"$19.99 a month, $199.99 a year\".",
+    "placeholders": {
+      "prices": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumPrivacyPolicy": "Privacy policy",
+  "@premiumPrivacyPolicy": {
+    "description": "Link under the iOS subscribe buttons: Grigri's privacy policy."
+  },
+  "premiumTermsOfUse": "Terms of use (EULA)",
+  "@premiumTermsOfUse": {
+    "description": "Link under the iOS subscribe buttons: Apple's standard end user license agreement, the subscription's terms of use."
+  },
+  "premiumStoreUnavailable": "The App Store can't be reached right now.",
+  "@premiumStoreUnavailable": {
+    "description": "Profile card on iOS when the App Store's products can't be loaded, or restoring failed."
+  },
+  "premiumNothingToRestore": "No App Store subscription to restore.",
+  "@premiumNothingToRestore": {
+    "description": "Message after Restore purchases found no App Store subscription."
+  },
+  "premiumPurchaseFailed": "The purchase didn't go through.",
+  "@premiumPurchaseFailed": {
+    "description": "Message: the App Store purchase failed (not cancelled)."
   },
   "errorOpenLink": "Couldn't open the link.",
   "@errorOpenLink": {
@@ -1892,5 +1925,140 @@
   "errorDeleteAccount": "Couldn't delete your account. Try again.",
   "@errorDeleteAccount": {
     "description": "Snackbar: deleting the account failed (trying again finishes the job)."
+  },
+  "moreActions": "More",
+  "@moreActions": {
+    "description": "Tooltip of the ⋮ menu with Report and Block."
+  },
+  "report": "Report",
+  "@report": {
+    "description": "Menu item: report objectionable content to the admins."
+  },
+  "blockPerson": "Block {name}",
+  "@blockPerson": {
+    "description": "Menu item: block this person (my own block, not an admin's).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportTitle": "Why are you reporting this?",
+  "@reportTitle": {
+    "description": "Report dialog title: asks for the reason."
+  },
+  "reportReasonSpam": "Spam",
+  "@reportReasonSpam": {
+    "description": "A reason to report: spam."
+  },
+  "reportReasonHarassment": "Harassment",
+  "@reportReasonHarassment": {
+    "description": "A reason to report: harassment."
+  },
+  "reportReasonInappropriate": "Inappropriate content",
+  "@reportReasonInappropriate": {
+    "description": "A reason to report: inappropriate content."
+  },
+  "reportReasonFake": "Fake profile",
+  "@reportReasonFake": {
+    "description": "A reason to report: a fake profile."
+  },
+  "reportReasonOther": "Other",
+  "@reportReasonOther": {
+    "description": "A reason to report: something else."
+  },
+  "reportDetailsHint": "Anything else we should know? (optional)",
+  "@reportDetailsHint": {
+    "description": "Report dialog: the optional text field's hint."
+  },
+  "reportSend": "Send report",
+  "@reportSend": {
+    "description": "Report dialog: sends the report."
+  },
+  "reportThanks": "Thanks, we'll review it within 24 hours.",
+  "@reportThanks": {
+    "description": "Snackbar after a report was sent."
+  },
+  "blockPersonMessage": "You won't see each other's plans, neither of you can ask to join a plan the other is in, their requests to your plans are declined, and you won't see their messages. They aren't told.",
+  "@blockPersonMessage": {
+    "description": "What blocking someone (my own block) does."
+  },
+  "blockedPersonDone": "{name} is blocked.",
+  "@blockedPersonDone": {
+    "description": "Snackbar after blocking someone.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedPeopleTitle": "Blocked people",
+  "@blockedPeopleTitle": {
+    "description": "Profile: the list of people I blocked, and its screen title."
+  },
+  "blockedPeopleEmpty": "You haven't blocked anyone.",
+  "@blockedPeopleEmpty": {
+    "description": "Blocked people: when I haven't blocked anyone."
+  },
+  "adminReportsTab": "Reports",
+  "@adminReportsTab": {
+    "description": "Admin tab's sub-navigation: reports to review."
+  },
+  "adminReportsEmpty": "No reports to review.",
+  "@adminReportsEmpty": {
+    "description": "Admin → Reports: nothing to review."
+  },
+  "reportedBy": "Reported by {name}",
+  "@reportedBy": {
+    "description": "Admin → Reports: who reported it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportKindProfile": "Profile",
+  "@reportKindProfile": {
+    "description": "Admin → Reports: what was reported, a profile."
+  },
+  "reportKindPlan": "Plan",
+  "@reportKindPlan": {
+    "description": "Admin → Reports: what was reported, a plan."
+  },
+  "reportKindMessage": "Chat message",
+  "@reportKindMessage": {
+    "description": "Admin → Reports: what was reported, a chat message."
+  },
+  "reportKindPic": "Plan photo",
+  "@reportKindPic": {
+    "description": "Admin → Reports: what was reported, a plan photo."
+  },
+  "reportKindAd": "Ad",
+  "@reportKindAd": {
+    "description": "Admin → Reports: what was reported, an ad."
+  },
+  "reportDismiss": "Dismiss",
+  "@reportDismiss": {
+    "description": "Admin → Reports: nothing wrong, close the report."
+  },
+  "reportRemove": "Remove content",
+  "@reportRemove": {
+    "description": "Admin → Reports: take the reported content down."
+  },
+  "reportBlock": "Block climber",
+  "@reportBlock": {
+    "description": "Admin → Reports: block the climber whose content it is (app-wide)."
+  },
+  "noticeReportsTitle": "New reports to review",
+  "@noticeReportsTitle": {
+    "description": "Notification (admins): new reports wait for review."
+  },
+  "noticeReportsBody": "Admin → Reports · answer within 24 hours",
+  "@noticeReportsBody": {
+    "description": "Notification (admins): where to review reports, and within how long."
+  },
+  "errorObjectionable": "Please keep it friendly: that has words Grigri doesn't allow.",
+  "@errorObjectionable": {
+    "description": "Error: the server refused text with words Grigri does not allow."
   }
 }

@@ -24,10 +24,11 @@ are in [specs/backend.md](../specs/backend.md).
 | [src/publishers.ts](src/publishers.ts) | How hints leave: `iot-data:Publish` in AWS; locally a minimal MQTT 3.1.1 client over WebSocket to Floci's broker |
 | [src/realtime-auth.ts](src/realtime-auth.ts), [src/authorizer.ts](src/authorizer.ts) | The IoT custom authorizer: the session token (from the WebSocket URL's query or the MQTT password) to a policy allowing only `<climberId>-*` client ids and that climber's own topics; denies on anything else |
 | [src/google.ts](src/google.ts) | Google ID token verification (jose: Google's JWKS, cached; RS256, issuer, audience, expiry) |
+| [src/premium.ts](src/premium.ts), [src/stripe.ts](src/stripe.ts), [src/app-store.ts](src/app-store.ts), [src/apple-root.ts](src/apple-root.ts) | Premium: the subscription and who is paid; Stripe (Checkout, portal, webhook); the App Store (StoreKit 2 transactions and Server Notifications V2, verified offline against Apple Root CA - G3) |
 | [src/domain/](src/domain) | Pure, unit-tested rules: the shapes (`model.ts`), input validation (`validate.ts`), and matchmaking (`rules.ts`: deck sorting, unanimous yes, one no, leave and organizer handover, notices, chat notes, admin accept/reject, nudges) |
 | [src/store/](src/store) | DynamoDB access (`store.ts`) and the table's keys (`keys.ts`) |
 | [seed/](seed) | The made-up test data for RC and local (`data.ts`) and its idempotent loader (`seed.ts`), which refuses prod |
-| [test/](test) | vitest: rules, validation, token verification (locally made keys, never real tokens), sessions and routing, the seed, every route against an in-memory store (`fake-store.ts`), and live updates (authorizer policies, hint fan-out, publish failures, MQTT packets) |
+| [test/](test) | vitest: rules, validation, token verification (locally made keys, never real tokens), App Store JWS verification (certificate chains made with openssl at test time), sessions and routing, the seed, every route against an in-memory store (`fake-store.ts`), and live updates (authorizer policies, hint fan-out, publish failures, MQTT packets) |
 | [build.mjs](build.mjs) | esbuild: `src/handler.ts` to `dist/index.mjs` and `src/authorizer.ts` to `dist/authorizer.mjs`, with the AWS SDK bundled (pinned by `package-lock.json`) |
 
 ## Commands
@@ -50,7 +51,7 @@ deploys it to AWS.
 One table, `<stack name>` (`grigri-api`, `grigri-rc-api`,
 `grigri-local-api`), keys `pk` and `sk`, three sparse global secondary
 indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
-`ttl` (only sessions have it). The match scores live in their own table,
+`ttl` (sessions, plan photos and handled reports). The match scores live in their own table,
 `<stack name>-scores` ([specs/match-scores.md](../specs/match-scores.md)):
 
 | Item | pk | sk | Index keys | Holds |
@@ -66,6 +67,12 @@ indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
 | Join request | `PLAN#<id>` | `REQ#<climberId>` | gsi2: `ASKED#<climberId>`, `<time>#<planId>`; gsi1 while open: `OPENREQ`, `<time>#<planId>#<climberId>` | the JoinRequest (with `nudgedAt` once nudged), plus `joined` and `dismissed` |
 | Message | `PLAN#<id>` | `MSG#<time>#<messageId>` | | the Message |
 | Plan photo (Your Pics) | `PLAN#<id>` | `PIC#<picId>` | | the PlanPic, plus `ttl` (400 days after it's added) |
+| Premium subscription | `CLIMBER#<id>` | `PREMIUM` | | the Subscription (`src/premium.ts`): Stripe's, or the App Store's (`source: "apple"`, its environment and Apple's `appleSignedAt`) |
+| App Store subscription | `APPLE#<originalTransactionId>` | `APPLE` | | `climberId`: the account it's tied to, written once (conditional put) |
+| Report | `REPORT#<id>` | `REPORT` | gsi1 while open: `REPORTS#open`, `<time>#<id>` | the Report (a copy of the content, whose, who reported, why), plus `ttl` once handled (a year later) |
+| Block | `CLIMBER#<blocker>` | `BLOCK#<blocked>` | | I blocked them ([specs/moderation.md](../specs/moderation.md)) |
+| Blocked by | `CLIMBER#<blocked>` | `BLOCKEDBY#<blocker>` | | the mirror, never returned: one `begins_with(sk, 'BLOCK')` query gives a climber's blocks either way |
+| Admins | `META#ADMINS` | `META` | | `ids`, a string set: whom to tell of new reports (checked with rbacr first) |
 
 Access patterns: every authenticated request gets its session (an
 eventually consistent read, retried consistently on a miss, so a session
@@ -75,7 +82,8 @@ requests" queries gsi2; the match scoring run lists every profile from gsi1
 `CLIMBERS`; the admin's open requests query gsi1 `OPENREQ`
 (only open requests carry those keys); a plan's requests and chat are one
 partition (`begins_with` on `REQ#` / `MSG#`, `after` as a key range). A
-climber's memberships, passes and notices are one partition.
+climber's memberships, passes, notices and blocks are one partition; open
+reports are gsi1 `REPORTS#open`.
 
 Races: accept, reject, leave, admin answers and plan edits write the plan
 (version check), its changed requests, memberships and notes in one

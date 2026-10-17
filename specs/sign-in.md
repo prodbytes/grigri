@@ -128,7 +128,9 @@ climber and its sessions go last, so a retry still gets in.
    `premium` role is revoked. If Stripe or rbacr fails, nothing is
    deleted. Stripe's later events about that subscription are ignored.
    Grigri can't cancel a subscription bought through Apple: the
-   confirmation says to cancel it in Settings.
+   confirmation says to cancel it in Settings, and the subscription is
+   untied from the account (Stripe isn't asked), so a new account can
+   restore it.
 2. **The sign-in provider's grants**, before any data is deleted: Sign
    in with Apple's tokens are revoked at Apple, which Apple requires on
    deletion (`revokeAppleTokens`, [below](#apple-token-revocation); it never
@@ -153,7 +155,10 @@ climber and its sessions go last, so a retry still gets in.
 5. **My join requests withdrawn**, whatever became of them (the plan's
    version moves on, so an answer racing it reloads without it).
 6. **My ads**, with their photos or videos.
-7. **My profile and gear photos** in S3, then **every item keyed to me**
+7. **My blocks, both ways** ([moderation](moderation.md)): whom I blocked
+   and who blocked me, so nobody's Blocked people keeps me; and I'm no
+   longer a known admin.
+8. **My profile and gear photos** in S3, then **every item keyed to me**
    (`CLIMBER#<id>`: the profile, memberships, passes, notices, the kept
    email, the Premium copy, and anything added there later), then the
    sign-in subject's link to my climber (`SUB#<subject>`), then **every
