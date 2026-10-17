@@ -24,7 +24,8 @@ photo cards, and Strava's "join for free".
 
 From top to bottom:
 
-1. **The bar**: the logo and a **Sign in** button.
+1. **The bar**: just a **Sign in** button, on the right (no logo or
+   name; the hero says what Grigri is).
 2. **The hero**: a GriGri Pics photo edge to edge (the nearest crag's,
    when the visitor's location is known), a "100% free" badge, the
    headline ("Join a climbing plan."), the tagline, a

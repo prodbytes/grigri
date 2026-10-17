@@ -1247,3 +1247,10 @@ spec.
       Kletterplan an", fr "Rejoins un plan de grimpe", pt "Entre em um
       plano de escalada", ca "Uneix-te a un pla d’escalada").
     - Cost: none.
+
+85. **Remove the "Grigri" icon and title at the top left of the landing
+    page.**
+    - [landing](landing.md): the landing page's bar holds only the
+      **Sign in** button, on the right. The support and privacy pages
+      keep their logo, which links home.
+    - Cost: none.
