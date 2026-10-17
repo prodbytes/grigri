@@ -291,6 +291,7 @@ All need a session token except `GET /api/health`, `POST /api/session`,
 | `POST /api/stripe/webhook` | Stripe's events (no session: Stripe signs them; the raw body, up to 512 KB, any content type it sends). 400 for a bad or old signature; events about a deleted account's subscription are ignored. → `{"received": true}` ([premium.md](premium.md#paying-on-android-and-the-web-stripe)) |
 | `POST /api/apple/notifications` | App Store Server Notifications V2 (no session: Apple signs them): body `{"signedPayload"}`. 400 for a bad signature (outer or inner). Notifications about another app, a product that isn't Premium, `TEST`, or a subscription no account has sent yet are acknowledged and ignored. → `{"received": true}` ([premium.md](premium.md#keeping-it-in-step)) |
 | `GET /api/ads`, `POST /api/ads/media`, `POST /api/ads`, `DELETE /api/ads/{id}` | my [ads](ads.md#api) (adding needs Premium) |
+| `GET /api/places?q=&lang=` | places for an [ad's regions](ads.md#regions) (Premium) |
 | `POST /api/ads/{id}/skip` | I skipped an [ad](ads.md#on-the-deck) on the deck: it never shows to me again |
 | `GET /api/admin/ads`, `POST /api/admin/ads/{id}/approve` / `reject`, `PUT /api/admin/ads/settings` | admins: [reviewing ads](ads.md#api), and how often the deck shows them |
 | `GET /api/admin/climbers` | admin only: every profile, by name, without location or areas, each with `"blocked": bool` → `{"climbers"}` ([admin.md](admin.md)) |

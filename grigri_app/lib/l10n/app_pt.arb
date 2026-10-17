@@ -461,5 +461,14 @@
   "guideSource": "De “{title}”, {publisher}, {year}.",
   "guideCredits": "Texto: {text} · Fotos: {photos}",
   "guideClosure": "{sector}: fechado {from} – {to} ({reason})",
-  "guideAccessMap": "Mapa de acessos"
+  "guideAccessMap": "Mapa de acessos",
+  "adRegionsTitle": "Onde aparece",
+  "adRegionsEverywhere": "Em todo lugar. Adicione um país, uma região ou uma cidade para mostrá-lo só a quem escala lá.",
+  "adRegionsHelp": "Para quem está nesses lugares ou escala perto deles.",
+  "adAddRegion": "Adicionar uma região",
+  "adRemoveRegion": "Remover {name}",
+  "adRegionSearchLabel": "País, região ou cidade",
+  "adRegionSearchHelp": "Por exemplo Espanha, Catalunha ou Siurana. O anúncio também chega um pouco além.",
+  "adShowsIn": "Aparece em {places}",
+  "adShowsEverywhere": "Aparece em todo lugar"
 }

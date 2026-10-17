@@ -205,7 +205,13 @@ abstract interface class GrigriApi {
     required String text,
     required String link,
     String? mediaKey,
+    List<AdRegion> regions = const [],
   });
+
+  /// `GET /api/places`: places named like [query] (a country, a region,
+  /// a town…), for an ad's regions, named in [language] where they can
+  /// be (Premium only).
+  Future<List<AdRegion>> searchPlaces(String query, String language);
 
   /// `DELETE /api/ads/{id}`: takes my ad down for good.
   Future<void> deleteAd(String adId);
@@ -621,6 +627,11 @@ abstract final class ApiJson {
   ];
 
   static Ad ad(Map<String, Object?> json) => Ad.fromJson(_map(json['ad']))!;
+
+  static List<AdRegion> places(Map<String, Object?> json) => [
+    if (json['places'] case final List<Object?> places)
+      for (final p in places) ?AdRegion.fromJson(p),
+  ];
 
   static MyAds myAds(Map<String, Object?> json) =>
       MyAds(_ads(json['ads']), premium: json['premium'] == true);

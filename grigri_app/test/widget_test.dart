@@ -1837,6 +1837,7 @@ void main() {
         find.byKey(const ValueKey('ad link')),
         'not a link',
       );
+      await tester.ensureVisible(find.text('Send for review'));
       await tester.tap(find.text('Send for review'));
       await tester.pumpAndSettle();
       expect(
@@ -1850,14 +1851,48 @@ void main() {
       await tester.pumpAndSettle();
       // The preview shows the card as the deck will.
       expect(find.text('guides.example.com'), findsOneWidget);
+
+      // Where it shows: everywhere, until a region is added.
+      expect(find.textContaining('Everywhere.'), findsOneWidget);
+      const gorge = AdRegion(
+        name: 'Gorge Valley, Spain',
+        label: 'Gorge Valley, Somewhere County, Spain',
+        south: 41.2,
+        west: 0.9,
+        north: 41.3,
+        east: 1.0,
+      );
+      api.places['Gorge Valley'] = [gorge];
+      await tester.ensureVisible(find.text('Add a region'));
+      await tester.tap(find.text('Add a region'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('region search')),
+        'Gorge Valley',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Gorge Valley, Somewhere County, Spain'),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Gorge Valley, Spain'));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const ValueKey('ad region Gorge Valley, Spain')),
+        findsOneWidget,
+      );
+
       await tester.ensureVisible(find.text('Send for review'));
       await tester.tap(find.text('Send for review'));
       await tester.pumpAndSettle();
       expect(find.text('Sent: an admin will review it.'), findsOneWidget);
       expect(find.text('Waiting for review'), findsOneWidget);
+      expect(find.text('Shows in Gorge Valley, Spain'), findsOneWidget);
       final saved = api.ads.values.single;
       expect(saved.text, 'Guided days in the gorge');
       expect(saved.link, Uri.parse('https://guides.example.com'));
+      expect(saved.regions, [gorge]);
 
       await tester.tap(find.byTooltip('Delete'));
       await tester.pumpAndSettle();

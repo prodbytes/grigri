@@ -461,5 +461,14 @@
   "guideSource": "De «{title}», {publisher}, {year}.",
   "guideCredits": "Texto: {text} · Fotos: {photos}",
   "guideClosure": "{sector}: cerrado {from} – {to} ({reason})",
-  "guideAccessMap": "Mapa de accesos"
+  "guideAccessMap": "Mapa de accesos",
+  "adRegionsTitle": "Dónde se muestra",
+  "adRegionsEverywhere": "En todas partes. Añade un país, una región o un pueblo para mostrarlo solo a quienes escalan allí.",
+  "adRegionsHelp": "A quienes están en estos lugares o escalan cerca.",
+  "adAddRegion": "Añadir una región",
+  "adRemoveRegion": "Quitar {name}",
+  "adRegionSearchLabel": "País, región o pueblo",
+  "adRegionSearchHelp": "Por ejemplo España, Cataluña o Siurana. El anuncio también llega un poco más allá.",
+  "adShowsIn": "Se muestra en {places}",
+  "adShowsEverywhere": "Se muestra en todas partes"
 }

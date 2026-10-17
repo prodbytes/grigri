@@ -1467,7 +1467,60 @@ spec.
       top pill.
     - Cost: none (app only).
 
-95. **Add the information in the Costa Daurada rock climbing guide (a
+95. **Increment the Y version, merge all changes, and submit for review
+    on the App Store.**
+    - [Release](release.md): `version.Y.txt` is now 2, so releases are
+      `0.2.<Z>`; the App Store's first version is 0.2. The example
+      versions in [release](release.md) and [app store](app-store.md)
+      follow. Released as `0.2.202610171217-RC` and `-GA`.
+    - [App Store](app-store.md): the GA build 0.2.202610171217 (build
+      `1792239420`) is uploaded (through `xcodebuild -exportArchive` with
+      `destination` `upload`, using Xcode's signed-in account) and
+      processed, and the version's page is renamed 0.2.202610171217.
+      Not yet submitted: the page still picks the 0.1 build, and swapping
+      it and submitting are left to the owner.
+    - Not merged: the draft DNS change (#51), which waits on the zone
+      migration, and the stale `sector-build-ci` branch (no PR; it
+      conflicts with main's newer sector build).
+    - Cost: none.
+
+96. **On the new ad screen, let advertisers add the regions where the ad
+    shows: a whole country (Spain) or just a town (Siurana). Make the ad
+    cover that region and a bit further, to be sure: Siurana's ads should
+    show where I am.**
+    - [Ads](ads.md#regions): an ad keeps up to 10 regions (a name and a
+      bounding box); none: everywhere. The editor's **Where it shows**
+      adds them through a place search (OpenStreetMap's Nominatim,
+      through the new `GET /api/places`, Premium only; it searches when
+      asked, never as you type, and credits OpenStreetMap). The deck
+      shows a region-limited ad to climbers whose location or areas fall
+      in a region's box widened by 50 km, or a tenth of its size when
+      that's more. My ads and Admin → Ads show where each ad shows.
+    - The sample ads show around Siurana, Margalef and La Morera de
+      Montsant (`SHOWCASE_VERSION` 6), reaching the Priorat and the Costa
+      Daurada.
+    - The ad editor is no longer a lazy list: with the longer form, a
+      link scrolled away wasn't checked before sending.
+    - [API](api.md): the new route.
+    - Cost: none to speak of. Nominatim is free; a search is one Lambda
+      call, only when an advertiser asks; the deck's check is arithmetic
+      on ads it already reads.
+
+97. **App Store Connect shows a grid instead of Grigri Climbing's app
+    icon: check why and fix it.**
+    - The icon was fine (`AppIcon` complete, the 1024 px one opaque RGB,
+      in the archive too). App Store Connect takes the icon from a
+      processed build, and the 0.1.202610171131 archive had only been
+      exported by `make ipa`, not yet processed there. It shows now.
+    - Uploaded that archive again with `xcodebuild -exportArchive`
+      (`destination` `upload`); Xcode bumped the build number, so it's
+      build `1792236693`, a duplicate of `1792236692`. Submit the 0.2
+      build `1792239420` as planned; leave the duplicate unused.
+    - [App Store](app-store.md): `make ipa` only exports, and the icon
+      placeholder lasts until a build is uploaded.
+    - Cost: none.
+
+98. **Add the information in the Costa Daurada rock climbing guide (a
     PDF) to the app: crag names, descriptions, images, everything
     (the user holds the rights). Keep the guide in a git-ignored `.local`
     folder.**

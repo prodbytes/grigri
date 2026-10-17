@@ -461,5 +461,14 @@
   "guideSource": "Extrait de « {title} », {publisher}, {year}.",
   "guideCredits": "Texte : {text} · Photos : {photos}",
   "guideClosure": "{sector} : fermé {from} – {to} ({reason})",
-  "guideAccessMap": "Plan d'accès"
+  "guideAccessMap": "Plan d'accès",
+  "adRegionsTitle": "Où elle s'affiche",
+  "adRegionsEverywhere": "Partout. Ajoute un pays, une région ou un village pour ne la montrer qu'aux grimpeurs de là-bas.",
+  "adRegionsHelp": "Aux grimpeurs qui sont dans ces lieux ou grimpent à proximité.",
+  "adAddRegion": "Ajouter une région",
+  "adRemoveRegion": "Retirer {name}",
+  "adRegionSearchLabel": "Pays, région ou village",
+  "adRegionSearchHelp": "Par exemple Espagne, Catalogne ou Siurana. La pub porte aussi un peu au-delà.",
+  "adShowsIn": "S'affiche à {places}",
+  "adShowsEverywhere": "S'affiche partout"
 }

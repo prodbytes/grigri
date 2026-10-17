@@ -121,6 +121,52 @@ void main() {
       },
     );
 
+    test('searches places and sends an ad\'s regions', () async {
+      final seen = <http.Request>[];
+      const box = {'south': 41.2, 'west': 0.9, 'north': 41.3, 'east': 1};
+      final api = apiWith(
+        (req) async => req.url.path.endsWith('/places')
+            ? json({
+                'places': [
+                  {
+                    'name': 'Gorge Valley, Spain',
+                    'label': 'Gorge Valley, Somewhere, Spain',
+                    ...box,
+                  },
+                  {'name': 'Broken'},
+                ],
+              })
+            : json({
+                'ad': {
+                  'id': 'a1',
+                  'ownerId': 'me',
+                  'text': 'Guided days',
+                  'link': 'https://guides.example.com/',
+                  'status': 'pending',
+                  'regions': [
+                    {'name': 'Gorge Valley, Spain', ...box},
+                  ],
+                },
+              }),
+        seen: seen,
+      );
+      final places = await api.searchPlaces('Gorge Valley', 'es');
+      expect(
+        seen.first.url.toString(),
+        'https://grigri.test/api/places?q=Gorge+Valley&lang=es',
+      );
+      expect(places.map((p) => p.label), ['Gorge Valley, Somewhere, Spain']);
+      final ad = await api.createAd(
+        text: 'Guided days',
+        link: 'https://guides.example.com/',
+        regions: places,
+      );
+      expect(jsonDecode(seen.last.body)['regions'], [
+        {'name': 'Gorge Valley, Spain', ...box},
+      ]);
+      expect(ad.regions, [places.single]);
+    });
+
     test('reads match scores, skipping ones this version can\'t', () async {
       final api = apiWith(
         (_) async => json({

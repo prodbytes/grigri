@@ -461,5 +461,14 @@
   "guideSource": "De «{title}», {publisher}, {year}.",
   "guideCredits": "Text: {text} · Fotos: {photos}",
   "guideClosure": "{sector}: tancat {from} – {to} ({reason})",
-  "guideAccessMap": "Mapa d'accessos"
+  "guideAccessMap": "Mapa d'accessos",
+  "adRegionsTitle": "On es mostra",
+  "adRegionsEverywhere": "A tot arreu. Afegeix un país, una regió o un poble per mostrar-lo només a qui escala allà.",
+  "adRegionsHelp": "A qui és en aquests llocs o hi escala a prop.",
+  "adAddRegion": "Afegeix una regió",
+  "adRemoveRegion": "Treu {name}",
+  "adRegionSearchLabel": "País, regió o poble",
+  "adRegionSearchHelp": "Per exemple Espanya, Catalunya o Siurana. L'anunci també arriba una mica més enllà.",
+  "adShowsIn": "Es mostra a {places}",
+  "adShowsEverywhere": "Es mostra a tot arreu"
 }

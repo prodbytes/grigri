@@ -2255,5 +2255,51 @@
   "guideAccessMap": "Access map",
   "@guideAccessMap": {
     "description": "Climbing guide: heading over the guide's map of how to reach an area's sectors."
+  },
+  "adRegionsTitle": "Where it shows",
+  "@adRegionsTitle": {
+    "description": "Heading of the ad editor's regions."
+  },
+  "adRegionsEverywhere": "Everywhere. Add a country, region or town to show it only to climbers there.",
+  "@adRegionsEverywhere": {
+    "description": "The ad editor, with no regions."
+  },
+  "adRegionsHelp": "To climbers who are in these places, or climb near them.",
+  "@adRegionsHelp": {
+    "description": "The ad editor, with regions."
+  },
+  "adAddRegion": "Add a region",
+  "@adAddRegion": {
+    "description": "Button and page title: adds a place where the ad shows."
+  },
+  "adRemoveRegion": "Remove {name}",
+  "@adRemoveRegion": {
+    "description": "Tooltip: removes a region from the ad.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "adRegionSearchLabel": "Country, region or town",
+  "@adRegionSearchLabel": {
+    "description": "Label of the region search field."
+  },
+  "adRegionSearchHelp": "For example Spain, Catalonia or Siurana. The ad also reaches a little around it.",
+  "@adRegionSearchHelp": {
+    "description": "Help under the region search field."
+  },
+  "adShowsIn": "Shows in {places}",
+  "@adShowsIn": {
+    "description": "An ad's tile: where it shows.",
+    "placeholders": {
+      "places": {
+        "type": "String"
+      }
+    }
+  },
+  "adShowsEverywhere": "Shows everywhere",
+  "@adShowsEverywhere": {
+    "description": "An ad's tile: it has no regions."
   }
 }
