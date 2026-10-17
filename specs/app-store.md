@@ -201,7 +201,7 @@ Machado Faerman". Keep to the "plans, not partners" wording
   > opens the plan's group chat: sort out the rope, the ride and the
   > coffee.
   >
-  > • Private plans: the group lets newcomers in one at a time, when
+  > • Shared plans: the group lets newcomers in one at a time, when
   > everyone says yes.
   > • Open plans: anyone can join at once.
   > • Guided plans: a guide decides who joins and sets a price.

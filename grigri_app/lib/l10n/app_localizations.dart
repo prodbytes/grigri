@@ -2283,10 +2283,10 @@ abstract class AppLocalizations {
   /// **'Who can join'**
   String get sectionWhoCanJoin;
 
-  /// Plan type: every member says yes to each newcomer (the default).
+  /// Plan type: shared, every member says yes to each newcomer (the default).
   ///
   /// In en, this message translates to:
-  /// **'Private'**
+  /// **'Shared'**
   String get planTypePrivate;
 
   /// Plan type: anyone joins at once.

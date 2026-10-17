@@ -93,7 +93,7 @@ String dayAndTime(BuildContext context, DateTime t) =>
     context.l10n.dayAndTime(dayLabel(context, t), clock(t));
 
 extension PlanTypeL10n on PlanType {
-  /// "Private", "Open", "Guided", in the user's language.
+  /// "Shared", "Open", "Guided", in the user's language.
   String label(AppLocalizations l) => switch (this) {
     PlanType.private => l.planTypePrivate,
     PlanType.open => l.planTypeOpen,

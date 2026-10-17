@@ -362,7 +362,7 @@
   "routeGrade": "Grau",
   "kmAway": "{km} km",
   "sectionWhoCanJoin": "Qui s'hi pot unir",
-  "planTypePrivate": "Privat",
+  "planTypePrivate": "Compartit",
   "planTypeOpen": "Obert",
   "planTypeGuided": "Guiat",
   "planTypePrivateHint": "Tot el grup diu que sí a cada nou.",

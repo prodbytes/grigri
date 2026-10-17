@@ -1788,9 +1788,9 @@
   "@sectionWhoCanJoin": {
     "description": "Plan editor section (shown uppercased): the plan's type."
   },
-  "planTypePrivate": "Private",
+  "planTypePrivate": "Shared",
   "@planTypePrivate": {
-    "description": "Plan type: every member says yes to each newcomer (the default)."
+    "description": "Plan type: shared, every member says yes to each newcomer (the default)."
   },
   "planTypeOpen": "Open",
   "@planTypeOpen": {

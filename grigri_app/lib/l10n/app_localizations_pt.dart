@@ -1278,7 +1278,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get sectionWhoCanJoin => 'Quem pode entrar';
 
   @override
-  String get planTypePrivate => 'Privado';
+  String get planTypePrivate => 'Compartilhado';
 
   @override
   String get planTypeOpen => 'Aberto';

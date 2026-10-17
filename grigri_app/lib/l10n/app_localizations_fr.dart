@@ -1284,7 +1284,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get sectionWhoCanJoin => 'Qui peut venir';
 
   @override
-  String get planTypePrivate => 'Privé';
+  String get planTypePrivate => 'Partagé';
 
   @override
   String get planTypeOpen => 'Ouvert';

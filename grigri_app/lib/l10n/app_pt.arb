@@ -362,7 +362,7 @@
   "routeGrade": "Grau",
   "kmAway": "{km} km",
   "sectionWhoCanJoin": "Quem pode entrar",
-  "planTypePrivate": "Privado",
+  "planTypePrivate": "Compartilhado",
   "planTypeOpen": "Aberto",
   "planTypeGuided": "Guiado",
   "planTypePrivateHint": "Todo o grupo diz sim para cada novato.",
