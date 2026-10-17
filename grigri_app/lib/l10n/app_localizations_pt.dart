@@ -1364,4 +1364,103 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get errorDeleteAccount =>
       'Não foi possível excluir sua conta. Tente de novo.';
+
+  @override
+  String get moreActions => 'Mais';
+
+  @override
+  String get report => 'Denunciar';
+
+  @override
+  String blockPerson(String name) {
+    return 'Bloquear $name';
+  }
+
+  @override
+  String get reportTitle => 'Por que você está denunciando isto?';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonHarassment => 'Assédio';
+
+  @override
+  String get reportReasonInappropriate => 'Conteúdo impróprio';
+
+  @override
+  String get reportReasonFake => 'Perfil falso';
+
+  @override
+  String get reportReasonOther => 'Outro motivo';
+
+  @override
+  String get reportDetailsHint => 'Algo mais que devemos saber? (opcional)';
+
+  @override
+  String get reportSend => 'Enviar denúncia';
+
+  @override
+  String get reportThanks => 'Obrigado, vamos analisar em até 24 horas.';
+
+  @override
+  String get blockPersonMessage =>
+      'Vocês não verão os planos um do outro, nenhum poderá pedir para entrar num plano em que o outro esteja, os pedidos dessa pessoa aos seus planos são recusados e você não verá as mensagens dela. Ela não é avisada.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return '$name foi bloqueado.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Pessoas bloqueadas';
+
+  @override
+  String get blockedPeopleEmpty => 'Você não bloqueou ninguém.';
+
+  @override
+  String get adminReportsTab => 'Denúncias';
+
+  @override
+  String get adminReportsEmpty => 'Nenhuma denúncia para analisar.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Denunciado por $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Perfil';
+
+  @override
+  String get reportKindPlan => 'Plano';
+
+  @override
+  String get reportKindMessage => 'Mensagem do chat';
+
+  @override
+  String get reportKindPic => 'Foto do plano';
+
+  @override
+  String get reportKindAd => 'Anúncio';
+
+  @override
+  String get reportDismiss => 'Descartar';
+
+  @override
+  String get reportRemove => 'Remover conteúdo';
+
+  @override
+  String get reportBlock => 'Bloquear escalador';
+
+  @override
+  String get noticeReportsTitle => 'Novas denúncias para analisar';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Denúncias · responda em até 24 horas';
+
+  @override
+  String get errorObjectionable =>
+      'Mantenha a gentileza: o texto tem palavras que o Grigri não permite.';
 }

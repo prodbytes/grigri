@@ -153,7 +153,10 @@ climber and its sessions go last, so a retry still gets in.
 5. **My join requests withdrawn**, whatever became of them (the plan's
    version moves on, so an answer racing it reloads without it).
 6. **My ads**, with their photos or videos.
-7. **My profile and gear photos** in S3, then **every item keyed to me**
+7. **My blocks, both ways** ([moderation](moderation.md)): whom I blocked
+   and who blocked me, so nobody's Blocked people keeps me; and I'm no
+   longer a known admin.
+8. **My profile and gear photos** in S3, then **every item keyed to me**
    (`CLIMBER#<id>`: the profile, memberships, passes, notices, the kept
    email, the Premium copy, and anything added there later), then the
    sign-in subject's link to my climber (`SUB#<subject>`), then **every

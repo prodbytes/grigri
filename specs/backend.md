@@ -92,9 +92,17 @@ who are members, or by an admin.
 - **Admin**: a signed-in caller whose session's verified email holds
   rbacr's `grigri` `admin` role ([roles](roles.md)), checked on every
   request (rbacr's answer is kept 60 s). Admins list everyone and block
-  or unblock them ([admin.md](admin.md)): a profile item's `blocked`
-  attribute, which shuts its climber out of every route but signing
-  out.
+  or unblock them ([admin.md](admin.md)): rbacr's `blocked` role, which
+  shuts its climber out of every route but signing out; and they answer
+  reports ([moderation.md](moderation.md)).
+- **Moderation** ([moderation.md](moderation.md)): the API filters
+  objectionable words in what people post (a word list in the function);
+  reports are `REPORT#<id>` items, in the `REPORTS#open` partition of
+  `gsi1` while open and expiring (TTL) a year after they're handled;
+  someone's own blocks are two items, `CLIMBER#<me>` / `BLOCK#<them>` and
+  the mirror `CLIMBER#<them>` / `BLOCKEDBY#<me>`, so one query of a
+  climber's partition gives their blocks either way; the admins to tell
+  of new reports are one `META#ADMINS` item.
 - **Live updates** ([live-updates.md](live-updates.md)): after a change,
   the function publishes a tiny hint (`{"kind", "planId"}`, never data)
   to each affected climber's MQTT topic on **AWS IoT Core**
@@ -189,6 +197,7 @@ and use is billed per request. Prices are us-east-1's.
 | IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
 | Premium payments ([premium.md](premium.md#cost)) | Stripe: 2.9% + $0.30 per charge, plus 0.7% Billing; no monthly fee | $0 | Pay per payment; merchants of record take 5% + $0.50, the app stores 15–30%. One subscription item per subscriber in the table. |
 | Ads ([ads.md](ads.md#cost)) | Two reads and a small batch read per deck; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
+| Moderation ([moderation.md](moderation.md#data-and-cost)) | A report: a write, a read or two, a notice write per admin; a block: two writes; one small query more per deck and per join request | $0 | No new resources: items in the table, in-app notices (no email or push service), the word filter in the function (no moderation service), and blocked people's messages hidden in the app (no extra read per chat poll). |
 | Match scores ([match-scores.md](match-scores.md#cost)) | aityx System One: $0.042 per million input tokens (about $0.00007 a call, ~1,600 tokens); the scores table on demand; the scoring function only when run by hand | $0 | A decision API keeps the score's weights as data, each rule with its reason; it's called only for admins' decks and on-demand runs. |
 | Authorizer Lambda, arm64, 128 MB | $0.20 per million invocations + GB-seconds: one at each connect and one an hour per open connection (`refreshAfterInSeconds` 3600), ~30 ms each | $0 | A separate tiny function: the API's 256 MB bundle and role would be more than it needs. Hourly refresh, not every few minutes: sign-out reaches open connections within the hour at a twelfth of the invocations of a 5-minute refresh. |
 

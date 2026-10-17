@@ -19,6 +19,7 @@ import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/walls.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/model/premium.dart';
+import 'package:grigri_app/model/report.dart';
 import 'package:grigri_app/model/sector.dart';
 
 /// A tiny valid PNG, standing in for photos.
@@ -126,6 +127,16 @@ class FakeApi implements GrigriApi, SessionApi {
 
   /// Who an admin blocked: they get 403 "blocked" from every route.
   final blocked = <String>{};
+
+  /// Who I blocked myself (specs/moderation.md): their plans leave my deck.
+  final personBlocks = <String>{};
+
+  /// The open reports, oldest first, as admins see them.
+  final reports = <Report>[];
+
+  /// What admins did with reports: "report-1 dismiss", say.
+  final resolved = <String>[];
+  int _reportIds = 0;
 
   /// Every call, as "METHOD /api/route".
   final calls = <String>[];
@@ -668,7 +679,8 @@ class FakeApi implements GrigriApi, SessionApi {
                   !p.memberIds.contains(meId) &&
                   !passed.contains(p.id) &&
                   !requestsById.containsKey('${p.id}/$meId') &&
-                  !dismissed.contains(p.id),
+                  !dismissed.contains(p.id) &&
+                  !p.memberIds.any(personBlocks.contains),
             )
             .toList()
           ..sort((a, b) {
@@ -1198,6 +1210,94 @@ class FakeApi implements GrigriApi, SessionApi {
       block ? blocked.add(climberId) : blocked.remove(climberId);
     },
   );
+
+  @override
+  Future<void> sendReport({
+    required ReportKind kind,
+    required String targetId,
+    String? planId,
+    required ReportReason reason,
+    String text = '',
+  }) => _route('POST /api/reports', () {
+    final subjectId = switch (kind) {
+      ReportKind.profile => targetId,
+      ReportKind.plan => plans[targetId]?.organizerId,
+      ReportKind.message =>
+        allMessages.where((m) => m.id == targetId).firstOrNull?.authorId,
+      ReportKind.pic =>
+        allPics.where((p) => p.id == targetId).firstOrNull?.uploaderId,
+      ReportKind.ad => ads[targetId]?.ownerId,
+    };
+    if (subjectId == null) throw const ApiException(404, 'not found');
+    if (subjectId == meId) {
+      throw const ApiException(400, "you can't report your own");
+    }
+    reports.add(
+      Report(
+        id: 'report-${++_reportIds}',
+        kind: kind,
+        targetId: targetId,
+        planId: planId,
+        subjectId: subjectId,
+        reporterId: meId!,
+        reason: reason,
+        text: text,
+        time: _now(),
+      ),
+    );
+  });
+
+  @override
+  Future<AdminReports> adminReports() => _route('GET /api/admin/reports', () {
+    _admin();
+    return AdminReports(
+      [...reports],
+      _mention([
+        for (final r in reports) ...[r.subjectId, r.reporterId],
+      ]),
+    );
+  });
+
+  @override
+  Future<void> resolveReport(String reportId, ReportAction action) =>
+      _route('POST /api/admin/reports/$reportId/${action.name}', () {
+        _admin();
+        final report = reports.where((r) => r.id == reportId).firstOrNull;
+        if (report == null) throw const ApiException(404, 'no such report');
+        reports.remove(report);
+        resolved.add('$reportId ${action.name}');
+        if (action == ReportAction.block) blocked.add(report.subjectId);
+      });
+
+  @override
+  Future<BlockList> blocks() => _route(
+    'GET /api/blocks',
+    () => BlockList([...personBlocks], _mention(personBlocks)),
+  );
+
+  @override
+  Future<void> setPersonBlocked(String climberId, bool block) =>
+      _route('${block ? 'POST' : 'DELETE'} /api/blocks/$climberId', () {
+        if (block && climberId == meId) {
+          throw const ApiException(400, "you can't block yourself");
+        }
+        if (!climbers.containsKey(climberId)) {
+          throw const ApiException(404, 'no such climber');
+        }
+        if (!block) {
+          personBlocks.remove(climberId);
+          return;
+        }
+        personBlocks.add(climberId);
+        // As the server: their open requests on plans I decide on are declined.
+        for (final r in requestsById.values.toList()) {
+          if (r.climberId == climberId &&
+              !r.rejected &&
+              (plans[r.planId]?.deciders.contains(meId) ?? false)) {
+            _reject(r.id);
+          }
+        }
+      });
 }
 
 /// Google, made up: its button signs Pat in with a made-up ID token that

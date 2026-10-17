@@ -245,6 +245,15 @@ describe('DELETE /api/me', () => {
     expect(Object.keys((await call(w.ben.caller, 'GET', `/api/plans/${w.shared}`)).climbers)).toEqual([w.benMe.id]);
   });
 
+  it('takes my blocks with me, both ways', async () => {
+    const w = await world();
+    await call(w.ada.caller, 'POST', `/api/blocks/${w.benMe.id}`);
+    await call(w.cy.caller, 'POST', `/api/blocks/${w.me.id}`);
+    await call(w.ada.caller, 'DELETE', '/api/me', { confirm: true });
+    expect(store.blocks.size).toBe(0);
+    expect((await call(w.cy.caller, 'GET', '/api/blocks')).blocked).toEqual([]);
+  });
+
   it('needs an explicit confirmation', async () => {
     const w = await world();
     expect(await status(call(w.ada.caller, 'DELETE', '/api/me'))).toBe(400);
