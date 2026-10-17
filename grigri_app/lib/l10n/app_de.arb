@@ -78,6 +78,8 @@
   "ageLabel": "Alter (optional)",
   "ageRange": "{min} bis {max}",
   "bioLabel": "Über dich",
+  "gradeSystem": "Bewertungssystem",
+  "gradeSystemHint": "Wie Grade in der App geschrieben werden, hier für eine Route und einen Boulder.",
   "whatYouClimb": "Was du kletterst",
   "whatYouClimbHint": "Wähl deine Disziplinen und die Grade, die du kletterst.",
   "gearYouCanBring": "Ausrüstung, die du mitbringen kannst",

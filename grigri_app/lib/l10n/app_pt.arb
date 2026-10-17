@@ -78,6 +78,8 @@
   "ageLabel": "Idade (opcional)",
   "ageRange": "De {min} a {max}",
   "bioLabel": "Sobre você",
+  "gradeSystem": "Sistema de graduação",
+  "gradeSystemHint": "Como os graus aparecem no app, aqui para uma via e um boulder.",
   "whatYouClimb": "O que você escala",
   "whatYouClimbHint": "Escolha suas modalidades e os graus que você escala.",
   "gearYouCanBring": "Equipamento que você pode levar",

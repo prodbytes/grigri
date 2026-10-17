@@ -1196,3 +1196,13 @@ spec.
       card no longer shows the reason pill when the reason is that I
       don't climb the plan's discipline; other reasons still show.
     - Cost: none.
+
+82. **In the profile view, let the discipline selection be a separate item
+    from the grading system; show examples on the grading system.**
+    - [Screens](screens.md): the profile editor has a **Grade system**
+      section of its own (heading and hint in all six languages) before
+      **What you climb**, which now holds only the disciplines and their
+      grade ranges. Each option of the switch shows the same route and
+      boulder grade written its way: 🧗 6a 🪨 7A (European), 🧗 5.10b 🪨 V6
+      (American). The plan editor's switch is unchanged.
+    - Cost: none.

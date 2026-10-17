@@ -30,9 +30,10 @@ Future<Uint8List?> pickPhoto(ImageSource source, double maxSide) async {
   return file?.readAsBytes();
 }
 
-/// Edits my profile: my photo, about me, the grades I climb per
-/// discipline, my gear with its photos, and where I climb (my location and
-/// other areas, private, which rank the Discover deck). When is for plans.
+/// Edits my profile: my photo, about me, how grades are written, the
+/// grades I climb per discipline, my gear with its photos, and where I
+/// climb (my location and other areas, private, which rank the Discover
+/// deck). When is for plans.
 /// My profile is made from my Google account at the first sign-in; this is
 /// where I fill in the rest.
 class ProfileEditor extends StatefulWidget {
@@ -308,8 +309,9 @@ class _ProfileEditorState extends State<ProfileEditor> {
                   ),
               ],
             ),
+            label(l.gradeSystem, l.gradeSystemHint),
+            const GradeSystemToggle(examples: true),
             label(l.whatYouClimb, l.whatYouClimbHint),
-            const GradeSystemToggle(),
             for (final d in Discipline.values) _levelEditor(d),
             label(l.gearYouCanBring, l.gearHint),
             Wrap(

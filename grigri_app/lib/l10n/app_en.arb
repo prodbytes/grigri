@@ -370,6 +370,14 @@
   "@bioLabel": {
     "description": "Label of the free-text field about the user."
   },
+  "gradeSystem": "Grade system",
+  "@gradeSystem": {
+    "description": "Profile editor section heading (shown uppercased) above the European/American grade toggle."
+  },
+  "gradeSystemHint": "How grades are written across the app, here for a route and a boulder.",
+  "@gradeSystemHint": {
+    "description": "Hint under the \"Grade system\" heading; each option shows a route grade and a boulder grade as examples."
+  },
   "whatYouClimb": "What you climb",
   "@whatYouClimb": {
     "description": "Profile editor section heading (shown uppercased)."
