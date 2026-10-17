@@ -28,6 +28,8 @@ let failCancel: boolean;
 let stripeSubs: Map<string, Subscription>;
 let hints: Delivery[];
 let deleting: DeletingAccount[];
+/** Climbers whose Sign in with Apple tokens were revoked, and whether their profile still existed then. */
+let appleRevoked: { climberId: string; profileThere: boolean }[];
 
 const billing: Billing = {
   checkout: async () => 'https://checkout.example.com/',
@@ -81,6 +83,7 @@ beforeEach(() => {
   stripeSubs = new Map();
   hints = [];
   deleting = [];
+  appleRevoked = [];
   const photos = {
     presign: async () => ({ url: 'https://upload.example.com/', fields: {} }),
     keep: async (key: string) => {
@@ -114,6 +117,12 @@ beforeEach(() => {
     roles: rbacr.lookup,
     grants: rbacr.api,
     onDeleteAccount: async (account) => void deleting.push(account),
+    appleTokens: {
+      revoke: async (climberId: string) => {
+        appleRevoked.push({ climberId, profileThere: (await store.asStore().getClimber(climberId)) !== undefined });
+        return 'none' as const;
+      },
+    },
     config: { stage: 'local', version: 'test' },
     clock: () => now,
     random: () => 0,
@@ -185,7 +194,8 @@ describe('DELETE /api/me', () => {
     expect(cancelled).toEqual(['sub_made_up']);
     expect(rbacr.calls).toContain('revoke premium ada@example.com');
     expect(rbacr.rolesOf('ada@example.com')).toEqual([]);
-    // The hook (Sign in with Apple's revocation) heard about it.
+    // Apple's tokens revoked while the profile (its subject) was still there, then the hook.
+    expect(appleRevoked).toEqual([{ climberId: w.me.id, profileThere: true }]);
     expect(deleting).toEqual([{ subject: 'https://accounts.google.com#ada', climberId: w.me.id, email: 'ada@example.com' }]);
 
     // Shared: handed over to Ben, with a note that doesn't name me; my

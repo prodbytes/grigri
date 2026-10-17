@@ -56,7 +56,8 @@ indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
 | Item | pk | sk | Index keys | Holds |
 |---|---|---|---|---|
 | Session | `SESSION#<sha256 of the token>` | `SESSION` | gsi3: `SESSIONS#<subject>`, `<createdAt>` | `subject`, `email` (only if verified), `emailVerified`, `createdAt`, `lastUsedAt`, `ttl` (epoch seconds, lastUsedAt + 365 days) |
-| Sign-in link | `SUB#<iss>#<sub>` | `SUB` | | `climberId` |
+| Sign-in link | `SUB#<subject>` (`https://accounts.google.com#<sub>`, `apple#<sub>`) | `SUB` | | `climberId` |
+| Apple refresh token | `SUB#apple#<sub>` | `APPLE` | | `refreshToken` (private: to revoke at account deletion, [specs/sign-in.md](../specs/sign-in.md#apple-token-revocation)), `updatedAt` |
 | Profile | `CLIMBER#<id>` | `PROFILE` | gsi1: `CLIMBERS`, `<id>` | the Climber, plus `subject` (never returned; none for the seed's) |
 | Membership | `CLIMBER#<id>` | `MEMBER#<planId>` | | "plans I'm in" |
 | Pass | `CLIMBER#<id>` | `PASS#<planId>` | | out of my deck (swiped left, left, or dismissed) |

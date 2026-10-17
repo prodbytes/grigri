@@ -10,11 +10,13 @@ import 'session_storage.dart';
 /// Who signed in, as far as the app needs to know. Only known right after
 /// signing in (a session resumed from storage doesn't say).
 class AuthUser {
-  const AuthUser({required this.email, this.name});
+  const AuthUser({this.email, this.name});
 
-  final String email;
+  /// Unknown for Apple after the first sign-in.
+  final String? email;
 
-  /// Their Google display name, to start the profile with.
+  /// Their Google display name (or the name Apple gave), to start the
+  /// profile with.
   final String? name;
 }
 
@@ -51,6 +53,12 @@ abstract class Auth extends ChangeNotifier {
   /// Signs in with Google ([SignInMode.google]).
   Future<void> signIn();
 
+  /// Whether Sign in with Apple is offered (iOS only).
+  bool get appleAvailable => false;
+
+  /// Signs in with Apple; a cancel is quiet.
+  Future<void> signInWithApple() async {}
+
   /// Who's calling, for every API request. Empty when signed out.
   Future<Map<String, String>> headers();
 
@@ -84,13 +92,17 @@ enum SignInError {
 
   /// Google's sign-in failed.
   google,
+
+  /// Sign in with Apple failed (not cancelled).
+  apple,
 }
 
 /// The API's session routes: the only calls made without a session, or
 /// with one given explicitly.
 abstract interface class SessionApi {
-  /// `POST /api/session` with a Google ID token: the new session's token.
-  Future<String> createSession({required String idToken});
+  /// `POST /api/session` with [credential]'s [Credential.sessionBody]:
+  /// the new session's token.
+  Future<String> createSession(Credential credential);
 
   /// `DELETE /api/session`: ends the session [token].
   Future<void> deleteSession(String token);
@@ -100,12 +112,57 @@ abstract interface class SessionApi {
 }
 
 /// What proves who someone is, traded once for a session: a Google ID
-/// token.
+/// token (or, [AppleCredential], Apple's identity token).
 class Credential {
   const Credential({required this.user, required this.idToken});
 
   final AuthUser user;
   final String idToken;
+
+  /// Who issued it, for the log.
+  String get issuer => 'Google';
+
+  /// `POST /api/session`'s body. Never log it.
+  Map<String, String> get sessionBody => {'idToken': idToken};
+}
+
+/// Sign in with Apple's credential: the identity token, issued with the
+/// SHA-256 of [nonce], which the API checks; the authorization code, for
+/// the API to keep a refresh token to revoke when the account is deleted;
+/// and the name Apple gives only at the first sign-in.
+class AppleCredential extends Credential {
+  const AppleCredential({
+    required super.user,
+    required super.idToken,
+    required this.nonce,
+    this.authorizationCode,
+  });
+
+  /// The raw nonce (Apple got its SHA-256).
+  final String nonce;
+  final String? authorizationCode;
+
+  @override
+  String get issuer => 'Apple';
+
+  @override
+  Map<String, String> get sessionBody => {
+    'appleIdToken': idToken,
+    'nonce': nonce,
+    if (authorizationCode case final code? when code.isNotEmpty)
+      'authorizationCode': code,
+    if (user.name case final name? when name.isNotEmpty) 'name': name,
+  };
+}
+
+/// Sign in with Apple, offered next to Google (App Store guideline 4.8).
+abstract interface class AppleSignIn {
+  /// Whether this platform offers it (iOS).
+  bool get available;
+
+  /// Apple's sheet: the credential, or null when the person cancelled.
+  /// Throws when it failed.
+  Future<AppleCredential?> signIn();
 }
 
 typedef OnCredential = Future<void> Function(Credential credential);
@@ -139,9 +196,13 @@ class SessionAuth extends Auth {
     required this.method,
     required this.sessions,
     required this.storage,
+    this.apple,
   });
 
   final SignInMethod method;
+
+  /// Sign in with Apple, where offered.
+  final AppleSignIn? apple;
   final SessionApi sessions;
   final SessionStorage storage;
 
@@ -177,7 +238,7 @@ class SessionAuth extends Auth {
     );
     final starting = method.start(
       onCredential: _onCredential,
-      onError: _fail,
+      onError: (error) => _fail(error, SignInError.google),
       quietly: _token == null,
     );
     // With a kept session there's no need to wait for Google.
@@ -197,13 +258,39 @@ class SessionAuth extends Auth {
     await method.signIn();
   }
 
+  @override
+  bool get appleAvailable => apple?.available ?? false;
+
+  @override
+  Future<void> signInWithApple() async {
+    final apple = this.apple;
+    if (apple == null || !apple.available) return;
+    _error = null;
+    notifyListeners();
+    final AppleCredential? credential;
+    try {
+      credential = await apple.signIn();
+    } on Object catch (e) {
+      _fail(e, SignInError.apple);
+      return;
+    }
+    if (credential == null) {
+      log.info('auth', 'Sign in with Apple cancelled');
+      return;
+    }
+    await _onCredential(credential);
+  }
+
   Future<void> _onCredential(Credential credential) async {
     // Google's event and the button's answer both bring the same one.
     if (_token != null || _signingIn) return;
     _signingIn = true;
-    log.info('auth', 'got a Google ID token; asking the API for a session');
+    log.info(
+      'auth',
+      'got a ${credential.issuer} ID token; asking the API for a session',
+    );
     try {
-      final token = await sessions.createSession(idToken: credential.idToken);
+      final token = await sessions.createSession(credential);
       try {
         await storage.write(token);
       } on Object {
@@ -224,9 +311,14 @@ class SessionAuth extends Auth {
     notifyListeners();
   }
 
-  void _fail(Object error) {
-    log.error('auth', 'Google sign-in failed', error);
-    _error = SignInError.google;
+  void _fail(Object error, SignInError kind) {
+    // The log scrubs account data (emails, tokens) from the details.
+    log.error(
+      'auth',
+      '${kind == SignInError.apple ? 'Apple' : 'Google'} sign-in failed',
+      error,
+    );
+    _error = kind;
     notifyListeners();
   }
 
