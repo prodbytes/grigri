@@ -156,17 +156,23 @@ plan. It writes the demo showcase too.
 
 ## The demo showcase
 
-[grigri_api/seed/showcase.ts](../grigri_api/seed/showcase.ts): eleven
-fictional climbers organizing twenty plans, one to seven days ahead, so
+[grigri_api/seed/showcase.ts](../grigri_api/seed/showcase.ts): thirteen
+fictional climbers organizing thirty-seven plans, one to seven days ahead, so
 the app has plans to show while there are few real ones. Six names nod to
 late climbing legends without being them (Wolf Gullick, Patrice Edlin,
-Kurt Alberts, Roy Robbin, Uli Stack, Dean Potts), five are made up (Nora
-Vilaró, Teo Marlin, Anouk Veld, Lars Brekkum, Mei Tanabe); nobody real is
-portrayed, and their bios are made up. Six plans are at well-known crags
-around the world (Frankenjura, Buoux, Kalymnos, Yosemite, Rio de Janeiro,
-Fontainebleau); **seven are in Siurana and seven in Margalef**, at their
+Kurt Alberts, Roy Robbin, Uli Stack, Dean Potts), seven are made up (Nora
+Vilaró, Teo Marlin, Anouk Veld, Lars Brekkum, Mei Tanabe, and two guides,
+Ferran Roig and Ailsa Moray); nobody real is portrayed, and their bios
+are made up. **Nine plans are in Siurana and eight in Margalef**, at their
 sectors' points (sport over a spread of grades, and Margalef's boulders),
-so there's plenty to explore there. With them, the [sample
+so there's plenty to explore there; the rest are around Catalonia and
+Spain (Montserrat, Montsant, Montgai, Barcelona's gym, Rodellar,
+Albarracín, Chulilla, El Chorro) and at well-known crags abroad
+(Frankenjura, Buoux, Kalymnos, Yosemite, Rio de Janeiro, Fontainebleau,
+Arco, Céüse, Gorges du Tarn, Stanage, Red River Gorge). Every
+[plan type](matching.md) shows up: **mostly private** (thirty), **four
+open** and **three guided** (the guides' Montserrat, Margalef and El
+Chorro days, each priced in euros, the guide alone in the group). With them, the [sample
 ads](ads.md#sample-ads): Climbing Siurana's (a made-up advertiser
 account), approved, with their photos copied from the school's site into
 the photos bucket. On **every stage, production included**; all marked
@@ -179,7 +185,7 @@ it's over 12 hours old or was written by an older showcase
 every change to the showcase, so a deploy shows it at once), rewrites the
 showcase's climbers and plans with fresh dates (as the seed does: real members stay), and its sample ads (their photos copied only once). A failure is logged and
 never fails the deck. No scheduler or new resource: one extra read per
-deck and about 35 writes twice a day, well under a cent a month.
+deck and about 50 writes twice a day, well under a cent a month.
 
 ## Cost
 

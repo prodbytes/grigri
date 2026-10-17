@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { planType } from '../src/domain/model.js';
 import { planInput, profileInput } from '../src/domain/validate.js';
 import { seedData } from '../seed/data.js';
 import { SEED_ADVERTISER, seedAds, seedAdvertiser } from '../seed/ads.js';
@@ -123,6 +124,18 @@ describe('demo showcase', () => {
       const there = data.plans.filter((p) => `${p.place} ${p.area}`.includes(place));
       expect(there.length).toBeGreaterThanOrEqual(6);
       for (const p of there) expect(p.lat !== undefined && p.lon !== undefined).toBe(true);
+    }
+  });
+
+  it('is mostly private plans, some open, a few guided ones led by their guide alone', () => {
+    const count = (t: string) => data.plans.filter((p) => planType(p) === t).length;
+    expect(count('private')).toBeGreaterThan(count('open') + count('guided'));
+    expect(count('open')).toBeGreaterThanOrEqual(3);
+    expect(count('guided')).toBeGreaterThanOrEqual(2);
+    expect(count('guided')).toBeLessThan(count('open'));
+    for (const p of data.plans.filter((p) => planType(p) === 'guided')) {
+      expect(p.price).toBeDefined();
+      expect(p.memberIds).toEqual([p.organizerId]);
     }
   });
 

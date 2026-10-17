@@ -1420,7 +1420,23 @@ spec.
     - Cost: none beyond the Apple Developer Program ($99 a year). App
       Store Connect, TestFlight and the notifications are free.
 
-92. **Flipping through all the plans showed no ad: make sure the sample
+92. **Generate more demo plans, mostly private, some open, a few guided.**
+    - [Backend](backend.md#the-demo-showcase): the demo showcase grows
+      from twenty plans to thirty-seven: ten more private ones (Siurana's
+      Esperó Primavera, Montsant, Arco, Céüse over two days, Rodellar,
+      Albarracín's boulders, Chulilla, Stanage, Gorges du Tarn, Red River
+      Gorge), four open ones (Barcelona's climbing gym, Montgai, an
+      afternoon at Siurana's L'Olla, Fontainebleau circuits) and three
+      guided ones (Montserrat multipitch, a Margalef gym-to-crag day, El
+      Chorro), led by two new made-up guides, Ferran Roig and Ailsa Moray.
+      Before, every showcase plan was private. `SHOWCASE_VERSION` is 4,
+      so every stage rewrites the showcase on its next deck.
+    - A test checks the mix: mostly private, at least three open, fewer
+      guided than open, and each guided plan priced with its guide alone.
+    - Cost: about 17 more DynamoDB writes twice a day per stage, a
+      fraction of a cent a month. No new resource.
+
+93. **Flipping through all the plans showed no ad: make sure the sample
     ads are up on local, RC and GA.**
     - Why none showed: the sample ads were merged after the last release
       (0.1.202610171131), so RC and GA ran without them; and they were
@@ -1428,7 +1444,7 @@ spec.
     - [Ads](ads.md#sample-ads), [backend](backend.md#the-demo-showcase):
       the sample ads (and their advertiser, Climbing Siurana) move from
       the test seed to the demo showcase, so every stage has them,
-      production included. `SHOWCASE_VERSION` goes to 4, so each stage
+      production included. `SHOWCASE_VERSION` goes to 5, so each stage
       writes them on its first deck after the deploy. Rewriting keeps an
       ad's status and dates (a rejected one stays rejected; they never
       jump ahead of real ads), and a photo is copied only once.
