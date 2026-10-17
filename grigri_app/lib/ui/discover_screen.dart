@@ -558,6 +558,28 @@ class _PlanCover extends StatelessWidget {
                   ),
                 ),
               ),
+              // The plan's type, private included: who lets people in.
+              _Glass(
+                key: ValueKey('type ${plan.id}'),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      planTypeIcon(plan.type),
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      planTypeTagLabel(context, plan) ?? plan.type.label(l),
+                      style: text.labelLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               if (match != null) ...[
                 MatchScoreTag(
                   match,
@@ -627,28 +649,6 @@ class _PlanCover extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (planTypeTagLabel(context, plan) case final type?)
-                    _Glass(
-                      key: ValueKey('type ${plan.id}'),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            planTypeIcon(plan.type),
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            type,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   if (mine)
                     _Glass(
                       color: Mountain.olive,

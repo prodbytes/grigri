@@ -1451,3 +1451,15 @@ spec.
     - Cost: none to speak of. Four more writes and reads twice a day with
       the showcase; about 1 MB of photos in production's photos bucket (a
       fraction of a cent a month).
+
+94. **At the top of the plan card, beside "sport", show a pill with the
+    plan's type.**
+    - [Screens](screens.md) and [matching](matching.md#plan-types-who-decides): the
+      Discover card's type pill moves from the bottom row (beside the
+      grades) to the top, beside the discipline, and private plans get
+      one too: **Private** with a lock, **Open: join at once** with an
+      open door, **Guided · €60** with a flag. The bottom row keeps the
+      grades and **Your grades**.
+    - A widget test checks a private plan's card shows **Private** in the
+      top pill.
+    - Cost: none (app only).
