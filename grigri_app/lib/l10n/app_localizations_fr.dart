@@ -1340,9 +1340,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get openJoinAtOnce => 'Ouvert : viens tout de suite';
 
   @override
-  String get signInBadge => '100 % gratuit';
-
-  @override
   String get signInHeadline => 'Rejoins un plan de grimpe.';
 
   @override

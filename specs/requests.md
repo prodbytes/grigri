@@ -1556,3 +1556,18 @@ spec.
       its maps, fetched on the web only when a plan screen opens) and
       0.5 MB more in the pics bucket ($0.00001 a month), served by the
       site's CloudFront, already there.
+
+99. **The Sign in with Apple button's font is too big: make it smaller so
+    it doesn't break, put Google first, and remove the "100% free" pill
+    from the first page.**
+    - [Sign-in](sign-in.md#the-sign-in-screen): Google's button comes
+      first, then Apple's. Apple's is the app's own, in Apple's white
+      style, 50 tall, its label 16 px on one line (sign_in_with_apple's
+      button sized its text to 43% of its height, 22 px, and broke
+      "Iniciar sessão com a Apple" onto two lines). A widget test checks
+      the order and the single line.
+    - The "100% free" pill is gone from the sign-in screen and the
+      [landing page](landing.md) (its `signInBadge` and `freeBadge`
+      strings and the `.badge` style too). "Free for every climber" under
+      the button stays.
+    - Cost: none.

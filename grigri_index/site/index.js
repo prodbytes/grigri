@@ -8,7 +8,6 @@
 const STRINGS = {
   en: {
     signIn: 'Sign in',
-    freeBadge: '100% free',
     heroTitle: 'Join a climbing plan.',
     heroLead: 'Make a plan, or swipe right on one, and climb together.',
     signInWithGoogle: 'Sign in with Google',
@@ -52,7 +51,6 @@ const STRINGS = {
   },
   es: {
     signIn: 'Entrar',
-    freeBadge: '100% gratis',
     heroTitle: 'Únete a un plan de escalada.',
     heroLead: 'Crea un plan o desliza a la derecha en uno, y a escalar juntos.',
     signInWithGoogle: 'Iniciar sesión con Google',
@@ -96,7 +94,6 @@ const STRINGS = {
   },
   de: {
     signIn: 'Anmelden',
-    freeBadge: '100 % kostenlos',
     heroTitle: 'Schließ dich einem Kletterplan an.',
     heroLead: 'Mach einen Plan oder wisch bei einem nach rechts, und klettert zusammen.',
     signInWithGoogle: 'Mit Google anmelden',
@@ -140,7 +137,6 @@ const STRINGS = {
   },
   fr: {
     signIn: 'Connexion',
-    freeBadge: '100 % gratuit',
     heroTitle: 'Rejoins un plan de grimpe.',
     heroLead: 'Crée un plan ou swipe à droite sur un plan, et grimpez ensemble.',
     signInWithGoogle: 'Se connecter avec Google',
@@ -184,7 +180,6 @@ const STRINGS = {
   },
   pt: {
     signIn: 'Entrar',
-    freeBadge: '100% grátis',
     heroTitle: 'Entre em um plano de escalada.',
     heroLead: 'Crie um plano ou deslize para a direita em um, e escalem juntos.',
     signInWithGoogle: 'Entrar com o Google',
@@ -228,7 +223,6 @@ const STRINGS = {
   },
   ca: {
     signIn: 'Entra',
-    freeBadge: '100% gratuït',
     heroTitle: 'Uneix-te a un pla d’escalada.',
     heroLead: 'Fes un pla o llisca a la dreta en un, i escaleu junts.',
     signInWithGoogle: 'Inicia la sessió amb Google',

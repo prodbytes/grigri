@@ -2367,12 +2367,6 @@ abstract class AppLocalizations {
   /// **'Open: join at once'**
   String get openJoinAtOnce;
 
-  /// Sign-in screen: badge over the headline.
-  ///
-  /// In en, this message translates to:
-  /// **'100% free'**
-  String get signInBadge;
-
   /// Sign-in screen: the headline, Grigri's line.
   ///
   /// In en, this message translates to:

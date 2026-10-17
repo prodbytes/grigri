@@ -1856,10 +1856,6 @@
   "@openJoinAtOnce": {
     "description": "Tag on an open plan's card: swiping right joins at once."
   },
-  "signInBadge": "100% free",
-  "@signInBadge": {
-    "description": "Sign-in screen: badge over the headline."
-  },
   "signInHeadline": "Join a climbing plan.",
   "@signInHeadline": {
     "description": "Sign-in screen: the headline, Grigri's line."

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../app_version.dart';
 import '../data/auth.dart';
@@ -12,10 +11,10 @@ import 'common.dart';
 import 'google_button/google_button.dart';
 
 /// The sign-in screen, in the landing page's look (specs/sign-in.md,
-/// specs/landing.md): a GriGri Pics photo edge to edge, "100% free", the
-/// headline and the sign-in buttons (Sign in with Apple first, as
-/// prominent as Google's, in Apple's own white style; Google's own button
-/// on the web), a demo plan card swiping right, how it works, what's free,
+/// specs/landing.md): a GriGri Pics photo edge to edge, the headline and
+/// the sign-in buttons (Google's first, its own on the web; then Sign in
+/// with Apple, as prominent, in Apple's white style), a demo plan card
+/// swiping right, how it works, what's free,
 /// and a last call.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -150,9 +149,6 @@ class _SignInScreenState extends State<SignInScreen> {
     ];
   }
 
-  /// Sign in with Apple's height: no smaller than Google's button.
-  static const _appleHeight = 52.0;
-
   Widget _signInButton(Auth auth) {
     final google = switch (auth.mode) {
       SignInMode.google => _GoogleButton(
@@ -168,17 +164,12 @@ class _SignInScreenState extends State<SignInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SignInWithAppleButton(
-          text: context.l10n.signInWithApple,
-          height: _appleHeight,
-          style: SignInWithAppleButtonStyle.white,
-          borderRadius: const BorderRadius.all(
-            Radius.circular(_appleHeight / 2),
-          ),
+        google,
+        const SizedBox(height: 12),
+        _AppleButton(
+          label: context.l10n.signInWithApple,
           onPressed: _busy ? null : () => _signIn(auth.signInWithApple),
         ),
-        const SizedBox(height: 12),
-        google,
       ],
     );
   }
@@ -313,7 +304,7 @@ class _Bar extends StatelessWidget {
   );
 }
 
-/// "100% free", the headline, the tagline and the sign-in button.
+/// The headline, the tagline and the sign-in buttons.
 class _HeroCopy extends StatelessWidget {
   const _HeroCopy({required this.button, required this.error});
 
@@ -328,25 +319,6 @@ class _HeroCopy extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: Mountain.pine,
-            borderRadius: BorderRadius.circular(99),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Text(
-              l.signInBadge,
-              style: const TextStyle(
-                color: Mountain.sand,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
         Text(
           l.signInHeadline,
           style: (wide ? text.displayMedium : text.displaySmall)?.copyWith(
@@ -409,6 +381,43 @@ class _GoogleButton extends StatelessWidget {
         shape: const StadiumBorder(),
       ),
       onPressed: onPressed,
+    ),
+  );
+}
+
+/// Sign in with Apple in Apple's white style: the Apple logo and Apple's
+/// wording on a white pill, as tall as Google's button. The label is 16
+/// px and stays on one line, shrinking to fit a narrow screen.
+class _AppleButton extends StatelessWidget {
+  const _AppleButton({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 50,
+    child: FilledButton(
+      style: FilledButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        disabledBackgroundColor: Mountain.granite,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        shape: const StadiumBorder(),
+      ),
+      onPressed: onPressed,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.apple, size: 20),
+            const SizedBox(width: 6),
+            Text(label, maxLines: 1, softWrap: false),
+          ],
+        ),
+      ),
     ),
   );
 }

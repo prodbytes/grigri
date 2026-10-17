@@ -27,7 +27,7 @@ From top to bottom:
 1. **The bar**: just a **Sign in** button, on the right (no logo or
    name; the hero says what Grigri is).
 2. **The hero**: a GriGri Pics photo edge to edge (the nearest crag's,
-   when the visitor's location is known), a "100% free" badge, the
+   when the visitor's location is known), the
    headline ("Join a climbing plan."), the tagline, a
    **Sign in with Google** button and "Free for every climber: no card, no
    subscription." Beside it (below it on phones) is a demo plan card that

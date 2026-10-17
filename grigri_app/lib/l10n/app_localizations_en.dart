@@ -1326,9 +1326,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openJoinAtOnce => 'Open: join at once';
 
   @override
-  String get signInBadge => '100% free';
-
-  @override
   String get signInHeadline => 'Join a climbing plan.';
 
   @override

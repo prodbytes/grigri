@@ -1334,9 +1334,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get openJoinAtOnce => 'Aberto: entre na hora';
 
   @override
-  String get signInBadge => '100% grátis';
-
-  @override
   String get signInHeadline => 'Entre em um plano de escalada.';
 
   @override
