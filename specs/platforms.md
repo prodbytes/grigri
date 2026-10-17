@@ -51,15 +51,19 @@ are unsigned (CI's are). `bash scripts/flutter-run.sh -d <iPhone id>
 The Android release APK is signed with the debug key until a release key
 is set up.
 
-**Sign in with Apple** ([sign-in](sign-in.md#apple)), iOS only: the
+**Sign in with Apple** ([sign-in](sign-in.md#apple)), on every platform.
+On iOS, the
 Runner target's `CODE_SIGN_ENTITLEMENTS` is
 [Runner.entitlements](../grigri_app/ios/Runner/Runner.entitlements), with
 `com.apple.developer.applesignin` = `[Default]`, in every configuration.
 Automatic signing adds the capability to the App ID `com.nu01.grigri`
 (or enable it in the Apple Developer portal); a free Personal Team can't
 sign an app with it, so a developer without the paid program builds
-unsigned or removes the entitlement locally (never committed). Android and
-the web don't offer it.
+unsigned or removes the entitlement locally (never committed). On
+Android, `AndroidManifest.xml` declares sign_in_with_apple's
+`SignInWithAppleCallback` activity (scheme `signinwithapple`, path
+`callback`), where Apple's web flow returns; on the web, `index.html`
+loads Apple's JS, which the site's CSP allows.
 
 **Google sign-in** ([sign-in](sign-in.md#per-platform)): Android needs no
 app setting (the Google Cloud project's Android OAuth client for
@@ -84,6 +88,18 @@ AVFoundation on iOS, with `NSCameraUsageDescription`; `getUserMedia` on
 the web, allowed by the site's `Permissions-Policy: camera=(self)`).
 Phones stream frames (YUV on Android, BGRA on iOS) to the recognizer; the
 web, which gives none, takes photos.
+
+**Premium** ([premium.md](premium.md)) is sold differently per platform:
+through Stripe in the browser on Android and the web, and on iOS through
+the App Store's in-app purchase (auto-renewable subscriptions
+`com.nu01.grigri.premium.monthly` and `.yearly`, App Store guideline
+3.1.1) with Flutter's [in_app_purchase](https://pub.dev/packages/in_app_purchase)
+plugin (StoreKit 2, iOS 15 and later; no entitlement needed, In-App
+Purchase is on for every App ID). The iOS app never links to or mentions
+Stripe. The plugin also brings Google Play Billing's library into the
+Android build (with its `com.android.vending.BILLING` permission), unused
+for now. App Store Connect's setup is in
+[premium.md](premium.md#the-app-store).
 
 **Chat videos** play with [video_player](https://pub.dev/packages/video_player)
 (Flutter's own plugin: ExoPlayer on Android, AVPlayer on iOS, a `<video>`

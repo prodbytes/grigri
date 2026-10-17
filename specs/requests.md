@@ -1291,7 +1291,69 @@ spec.
       removes its blocks both ways, so nobody's Blocked people keeps a
       deleted climber, and it's no longer a known admin.
 
-87. **In the profile view add a "gear" section where users can add what
+87. **Sell Premium on iOS through Apple's in-app purchase (App Store
+    guideline 3.1.1).** Stripe Checkout isn't allowed in the iOS app
+    outside the US; the owner chose the App Store's auto-renewable
+    subscriptions on iOS, keeping Stripe on Android and the web.
+    - [Premium](premium.md): two ways to pay, per platform. On iOS, two
+      auto-renewable subscriptions in the group "Grigri Premium"
+      (`com.nu01.grigri.premium.monthly`, `.yearly`; $19.99 and $199.99),
+      bought through StoreKit 2 with an appAccountToken the API derives
+      from the climber; the app sends the signed transaction to
+      `POST /api/premium/apple`, then finishes it; Restore purchases;
+      Manage subscription opens the App Store's subscriptions. The API
+      verifies Apple's JWS offline (ES256, the x5c chain to Apple Root
+      CA - G3 only, Apple's OIDs, validity when signed), checks the bundle,
+      product and token, ties each subscription to one account, and saves
+      it in the same subscription item as Stripe's (`source: "apple"`), so
+      rbacr's `premium` role works unchanged; App Store Server
+      Notifications V2 keep it in step (renewals, lapses, grace periods,
+      refunds; out of order and repeated ones are safe). Sandbox is
+      accepted and recorded. Apple's 15% (Small Business Program) or 30%
+      commission, and the owner's App Store Connect setup.
+    - [API](api.md): `POST /api/premium/apple`, `POST /api/apple/notifications`
+      (public, Apple's signature is the gate), `appleAccountToken` in
+      `GET /api/premium`, `source` in Premium.
+    - [Screens](screens.md): on iOS, the Premium card shows the App
+      Store's localized prices, Apple's subscription terms, the privacy
+      policy and EULA links and Restore purchases, and no Stripe.
+    - [Platforms](platforms.md): the in_app_purchase plugin; the iOS app
+      never mentions Stripe.
+    - [Backend](backend.md): the App Store's cost; no new AWS resource.
+    - [Roles](roles.md): the App Store grants and revokes `premium` too.
+    - [Sign-in](sign-in.md#deleting-my-account): deleting an account with
+      an App Store subscription doesn't ask Stripe; it unties the
+      subscription from the account instead. The App Store's verifier is
+      `grigri_api/src/app-store.ts` (Sign in with Apple keeps `apple.ts`).
+88. **Make sure Sign in with Apple is also available and working, besides
+    Google, in every stage (local, RC, GA) and on every platform (web,
+    iOS, Android).**
+    - Found: Sign in with Apple (request 82) was iOS only, and the
+      Apple-side setup (Services ID, key) wasn't done.
+    - [Sign-in](sign-in.md#apple): the web and Android now offer it too,
+      first and as prominent as Google's. They use Apple's web flow for
+      the Services ID `com.nu01.grigri.signin` (`APPLE_SERVICE_ID`, the
+      same on every stage), returning to `<site>/api/apple/callback`. On
+      the web, Apple's JS opens a popup (`index.html` loads it, and the
+      CSP allows it); a closed popup is a quiet cancel. On Android, a
+      Custom Tab: Apple posts to the return URL, and the API sends the
+      answer back to the app with a 307 to an `intent://` link (only
+      Apple's fields, always to `com.nu01.grigri`), which
+      sign_in_with_apple's callback activity, now in the manifest,
+      catches.
+    - [API](api.md#sign-in-with-apple): Apple identity tokens for the
+      Services ID (`AppleServiceId`) are taken as well as the bundle
+      ID's. A refresh token is now kept with the client it was issued to,
+      and exchanged and revoked as that client. New public route
+      `POST /api/apple/callback`.
+    - [Deploy](deploy.md): the smoke test checks the return URL on each
+      stage. The owner's Apple setup (Services ID with the three domains
+      and return URLs, and the key for revocation) is listed in
+      [sign-in](sign-in.md#configuration-the-owner-does).
+    - Cost: no new resource. Android's return URL is one more request to
+      the existing API per sign-in, and Apple's endpoints are free.
+
+89. **In the profile view add a "gear" section where users can add what
     they own, including pictures, and in the plan view a "gear" section
     with everybody's equipment, so people can check they have all that's
     needed: a simple but smart check (no ropes for bouldering), with a

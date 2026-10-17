@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'app_version.dart';
 import 'config.dart';
+import 'data/app_store.dart';
 import 'data/apple_sign_in.dart';
 import 'data/auth.dart';
 import 'data/device_location.dart';
@@ -56,7 +57,7 @@ Future<void> main() async {
     ),
     sessions: api,
     storage: SessionStorage.device(),
-    // Sign in with Apple next to Google, on iOS.
+    // Sign in with Apple next to Google, on every platform.
     apple: const NativeAppleSignIn(),
   );
   final store = GrigriStore(
@@ -65,6 +66,11 @@ Future<void> main() async {
     preferences: await Preferences.open(),
     realtime: const MqttRealtimeTransport(),
     deviceLocation: const GeolocatorDeviceLocation(),
+    // Premium on iOS is the App Store's in-app purchase (guideline
+    // 3.1.1); Android and the web pay through Stripe.
+    appStore: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+        ? InAppPurchaseAppStore()
+        : null,
   );
   runApp(GrigriApp(store: store));
   unawaited(store.start());

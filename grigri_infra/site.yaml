@@ -319,6 +319,8 @@ Resources:
   #   (lh3.googleusercontent.com, the sign-in button's too).
   # - Google Identity Services (sign-in): its script, style, frame and
   #   calls under https://accounts.google.com/gsi/.
+  # - Sign in with Apple: Apple's JS (appleid.cdn-apple.com); it opens
+  #   Apple's page in a popup, which answers with postMessage.
   # frame-ancestors 'none' (and X-Frame-Options DENY): nothing may frame it.
   AppHeadersPolicy:
     Type: AWS::CloudFront::ResponseHeadersPolicy
@@ -332,7 +334,7 @@ Resources:
             ContentSecurityPolicy: !Sub
               - >-
                 default-src 'self';
-                script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com/flutter-canvaskit/ https://accounts.google.com/gsi/client;
+                script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com/flutter-canvaskit/ https://accounts.google.com/gsi/client https://appleid.cdn-apple.com/appleauth/static/jsapi/;
                 style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style;
                 img-src 'self' data: blob: https://lh3.googleusercontent.com;
                 font-src 'self' data: https://fonts.gstatic.com;

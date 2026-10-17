@@ -7,7 +7,7 @@
 # be listed here. Add public identifiers only: the API's URL and the Google
 # OAuth client IDs are public (they're in every app that uses them). The app
 # gets its roles from the API (specs/roles.md), so no rbacr token is here.
-_allowed=(GRIGRI_STAGE GRIGRI_API_URL GOOGLE_WEB_CLIENT_ID GOOGLE_IOS_CLIENT_ID)
+_allowed=(GRIGRI_STAGE GRIGRI_API_URL GOOGLE_WEB_CLIENT_ID GOOGLE_IOS_CLIENT_ID APPLE_SERVICE_ID)
 _env="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env"
 DART_DEFINES=()
 # _setting <name>: its value from the environment, else from .env.

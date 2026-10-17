@@ -1,7 +1,7 @@
 import { generateKeyPairSync, type webcrypto } from 'node:crypto';
 import { createLocalJWKSet, decodeJwt, decodeProtectedHeader, exportJWK, generateKeyPair, type JWK, jwtVerify, SignJWT } from 'jose';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { APPLE_REVOKE_URL, APPLE_TOKEN_URL, AppleTokens, appleVerifier, pkcs8Pem, sha256Hex } from '../src/apple.js';
+import { APPLE_REVOKE_URL, APPLE_TOKEN_URL, AppleTokens, appleCallbackIntent, appleVerifier, pkcs8Pem, sha256Hex } from '../src/apple.js';
 import { Auth } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import { InvalidIdToken } from '../src/google.js';
@@ -9,6 +9,8 @@ import { FakeStore } from './fake-store.js';
 
 // Keys made here, and a JWKS standing in for Apple's: never real tokens.
 const BUNDLE = 'com.nu01.grigri';
+const SERVICE = 'com.nu01.grigri.signin';
+const CLIENTS = [BUNDLE, SERVICE];
 const NONCE = 'r4nd0m-n0nce-made-up-for-tests';
 let appleKey: webcrypto.CryptoKey;
 let otherKey: webcrypto.CryptoKey;
@@ -44,6 +46,7 @@ describe('appleVerifier', () => {
       subject: 'apple#000123.abcdef.0456',
       email: 'quill@privaterelay.appleid.com',
       emailVerified: true,
+      clientId: BUNDLE,
     });
     // email_verified as a boolean too.
     expect((await verify(await appleToken({ email_verified: true }), NONCE)).emailVerified).toBe(true);
@@ -54,10 +57,12 @@ describe('appleVerifier', () => {
     expect(await verify(await appleToken({ email_verified: 'false' }), NONCE)).toEqual({
       subject: 'apple#000123.abcdef.0456',
       emailVerified: false,
+      clientId: BUNDLE,
     });
     expect(await verify(await appleToken({ email: undefined, email_verified: undefined }), NONCE)).toEqual({
       subject: 'apple#000123.abcdef.0456',
       emailVerified: false,
+      clientId: BUNDLE,
     });
   });
 
@@ -94,9 +99,35 @@ describe('appleVerifier', () => {
   });
 });
 
+describe('appleVerifier with the Services ID', () => {
+  it('accepts the web flow\'s tokens (the Services ID\'s) and says which client they\'re for', async () => {
+    const verify = appleVerifier(CLIENTS, jwks);
+    expect((await verify(await appleToken({}, { aud: SERVICE }), NONCE)).clientId).toBe(SERVICE);
+    expect((await verify(await appleToken(), NONCE)).clientId).toBe(BUNDLE);
+    await expect(verify(await appleToken({}, { aud: 'com.example.other' }), NONCE)).rejects.toBeInstanceOf(InvalidIdToken);
+    // Only the bundle ID: the Services ID's tokens are refused.
+    await expect(appleVerifier(BUNDLE, jwks)(await appleToken({}, { aud: SERVICE }), NONCE)).rejects.toBeInstanceOf(InvalidIdToken);
+  });
+});
+
+describe('appleCallbackIntent', () => {
+  it('sends Apple\'s fields, and only those, back to the Android app', () => {
+    const intent = appleCallbackIntent('code=c0de&id_token=a.b.c&state=s&user=%7B%22name%22%3A%7B%22firstName%22%3A%22Pat%22%7D%7D&extra=nope');
+    expect(intent).toMatch(/^intent:\/\/callback\?/);
+    expect(intent).toMatch(/#Intent;package=com\.nu01\.grigri;scheme=signinwithapple;end$/);
+    const query = new URLSearchParams(intent.slice('intent://callback?'.length, intent.indexOf('#')));
+    expect(Object.fromEntries(query)).toEqual({ code: 'c0de', id_token: 'a.b.c', state: 's', user: '{"name":{"firstName":"Pat"}}' });
+  });
+
+  it('passes a cancel on, and no field can pick the app', () => {
+    const intent = appleCallbackIntent('error=user_cancelled_authorize&package=com.evil%23Intent');
+    expect(intent).toBe('intent://callback?error=user_cancelled_authorize#Intent;package=com.nu01.grigri;scheme=signinwithapple;end');
+  });
+});
+
 describe('POST /api/session with Apple', () => {
   let store: FakeStore;
-  let kept: Array<[string, string]>;
+  let kept: Array<[string, string, string]>;
   const make = (apple = true) =>
     new Auth({
       store: store.asStore(),
@@ -106,9 +137,9 @@ describe('POST /api/session with Apple', () => {
       ...(apple
         ? {
             apple: {
-              verify: appleVerifier(BUNDLE, jwks),
-              keepRefreshToken: async (subject: string, code: string) => {
-                kept.push([subject, code]);
+              verify: appleVerifier(CLIENTS, jwks),
+              keepRefreshToken: async (subject: string, code: string, clientId: string) => {
+                kept.push([subject, code, clientId]);
               },
             },
           }
@@ -129,7 +160,13 @@ describe('POST /api/session with Apple', () => {
     expect(caller.subject).toBe('apple#000123.abcdef.0456');
     expect(caller.name).toBe('Pat Quill');
     expect(caller.email).toBe('quill@privaterelay.appleid.com');
-    expect(kept).toEqual([['apple#000123.abcdef.0456', 'c0de.made-up']]);
+    expect(kept).toEqual([['apple#000123.abcdef.0456', 'c0de.made-up', BUNDLE]]);
+  });
+
+  it('takes the web flow\'s token too (web and Android), its code for the Services ID', async () => {
+    const { token } = await make().signIn({ appleIdToken: await appleToken({}, { aud: SERVICE }), nonce: NONCE, authorizationCode: 'c0de.made-up' });
+    expect((await make().caller({ authorization: `Bearer ${token}` })).subject).toBe('apple#000123.abcdef.0456');
+    expect(kept).toEqual([['apple#000123.abcdef.0456', 'c0de.made-up', SERVICE]]);
   });
 
   it('needs no name or code (later sign-ins)', async () => {
@@ -156,7 +193,7 @@ describe('POST /api/session with Apple', () => {
 
 describe('AppleTokens', () => {
   const pem = generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
-  const config = { clientId: BUNDLE, teamId: 'TEAM123456', keyId: 'KEY1234567', privateKey: pem };
+  const config = { clientIds: CLIENTS, teamId: 'TEAM123456', keyId: 'KEY1234567', privateKey: pem };
   let store: FakeStore;
   let calls: Array<{ url: string; form: URLSearchParams }>;
   let answer: (url: string) => Response;
@@ -180,7 +217,7 @@ describe('AppleTokens', () => {
   it('signs a short-lived ES256 client secret for the app', async () => {
     const tokens = new AppleTokens(config, store.asStore(), http);
     expect(tokens.configured).toBe(true);
-    const secret = await tokens.clientSecret();
+    const secret = await tokens.clientSecret(BUNDLE);
     expect(decodeProtectedHeader(secret)).toEqual({ alg: 'ES256', kid: 'KEY1234567' });
     const { createPublicKey } = await import('node:crypto');
     const { payload } = await jwtVerify(secret, createPublicKey(pem), { issuer: 'TEAM123456', audience: 'https://appleid.apple.com', subject: BUNDLE });
@@ -195,22 +232,40 @@ describe('AppleTokens', () => {
   });
 
   it('trades the code for a refresh token and keeps it with the account', async () => {
-    await new AppleTokens(config, store.asStore(), http).keepRefreshToken(SUBJECT, 'c0de');
+    await new AppleTokens(config, store.asStore(), http).keepRefreshToken(SUBJECT, 'c0de', BUNDLE);
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(APPLE_TOKEN_URL);
     expect(calls[0]!.form.get('client_id')).toBe(BUNDLE);
     expect(calls[0]!.form.get('code')).toBe('c0de');
     expect(calls[0]!.form.get('grant_type')).toBe('authorization_code');
     expect(calls[0]!.form.get('client_secret')).toMatch(/^ey/);
-    expect(store.appleTokens.get(SUBJECT)).toBe('r3fresh-made-up');
+    expect(store.appleTokens.get(SUBJECT)).toEqual({ refreshToken: 'r3fresh-made-up', clientId: BUNDLE });
+  });
+
+  it('trades a web flow code as the Services ID, and revokes its token as the Services ID', async () => {
+    const tokens = new AppleTokens(config, store.asStore(), http);
+    await tokens.keepRefreshToken(SUBJECT, 'c0de', SERVICE);
+    expect(calls[0]!.form.get('client_id')).toBe(SERVICE);
+    expect(decodeJwt(calls[0]!.form.get('client_secret')!).sub).toBe(SERVICE);
+    expect(store.appleTokens.get(SUBJECT)).toEqual({ refreshToken: 'r3fresh-made-up', clientId: SERVICE });
+    store.subjects.set(SUBJECT, 'climber-1');
+    answer = () => new Response('', { status: 200 });
+    expect(await tokens.revoke('climber-1')).toBe('revoked');
+    expect(calls[1]!.form.get('client_id')).toBe(SERVICE);
+  });
+
+  it('keeps no token for a code of a client it doesn\'t know', async () => {
+    await new AppleTokens(config, store.asStore(), http).keepRefreshToken(SUBJECT, 'c0de', 'com.example.other');
+    expect(calls).toEqual([]);
+    expect(store.appleTokens.size).toBe(0);
   });
 
   it('keeps no token for a code of another account, or a refused code, and never logs one', async () => {
     const log = vi.mocked(console.error);
     answer = () => json({ refresh_token: 'r3fresh-made-up', id_token: appleIdTokenFor('someone-else') });
-    await new AppleTokens(config, store.asStore(), http).keepRefreshToken(SUBJECT, 'c0de');
+    await new AppleTokens(config, store.asStore(), http).keepRefreshToken(SUBJECT, 'c0de', BUNDLE);
     answer = () => json({ error: 'invalid_grant' }, 400);
-    await new AppleTokens(config, store.asStore(), http).keepRefreshToken(SUBJECT, 'c0de');
+    await new AppleTokens(config, store.asStore(), http).keepRefreshToken(SUBJECT, 'c0de', BUNDLE);
     expect(store.appleTokens.size).toBe(0);
     const logged = log.mock.calls.flat().join('\n');
     expect(logged).toContain('invalid_grant');
@@ -221,7 +276,7 @@ describe('AppleTokens', () => {
   it('without a key: keeps nothing, calls no one, and warns', async () => {
     const tokens = new AppleTokens({ ...config, privateKey: '' }, store.asStore(), http);
     expect(tokens.configured).toBe(false);
-    await tokens.keepRefreshToken(SUBJECT, 'c0de');
+    await tokens.keepRefreshToken(SUBJECT, 'c0de', BUNDLE);
     store.subjects.set(SUBJECT, 'climber-1');
     expect(await tokens.revoke('climber-1')).toBe('skipped');
     expect(calls).toEqual([]);
@@ -230,7 +285,7 @@ describe('AppleTokens', () => {
 
   it('revokes an Apple account\'s refresh token, then forgets it', async () => {
     store.subjects.set(SUBJECT, 'climber-1');
-    store.appleTokens.set(SUBJECT, 'r3fresh-made-up');
+    store.appleTokens.set(SUBJECT, { refreshToken: 'r3fresh-made-up' });
     answer = () => new Response('', { status: 200 });
     const tokens = new AppleTokens(config, store.asStore(), http);
     expect(await tokens.revoke('climber-1')).toBe('revoked');
@@ -248,7 +303,7 @@ describe('AppleTokens', () => {
     expect(await tokens.revoke('nobody')).toBe('none');
     expect(calls).toEqual([]);
     store.subjects.set(SUBJECT, 'climber-1');
-    store.appleTokens.set(SUBJECT, 'r3fresh-made-up');
+    store.appleTokens.set(SUBJECT, { refreshToken: 'r3fresh-made-up' });
     answer = () => json({ error: 'invalid_client' }, 400);
     expect(await tokens.revoke('climber-1')).toBe('failed');
     expect(store.appleTokens.size).toBe(0);

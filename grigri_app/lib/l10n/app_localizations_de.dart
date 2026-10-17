@@ -1054,6 +1054,31 @@ class AppLocalizationsDe extends AppLocalizations {
   String get premiumCheckRefresh => 'Bezahlt: erneut prüfen';
 
   @override
+  String get premiumRestore => 'Käufe wiederherstellen';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'Grigri Premium ist ein automatisch verlängertes Abo: $prices. Die Zahlung wird bei der Bestätigung über deine Apple-ID abgerechnet. Es verlängert sich automatisch, wenn du es nicht mindestens 24 Stunden vor Ende des Zeitraums kündigst. Verwalten oder kündigen kannst du es in den Einstellungen deines App-Store-Accounts.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get premiumTermsOfUse => 'Nutzungsbedingungen (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'Der App Store ist gerade nicht erreichbar.';
+
+  @override
+  String get premiumNothingToRestore =>
+      'Kein App-Store-Abo zum Wiederherstellen.';
+
+  @override
+  String get premiumPurchaseFailed => 'Der Kauf ist nicht zustande gekommen.';
+
+  @override
   String get errorOpenLink => 'Der Link ließ sich nicht öffnen.';
 
   @override

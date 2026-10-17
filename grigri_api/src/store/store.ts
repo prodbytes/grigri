@@ -15,7 +15,7 @@ import {
   type TransactWriteCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import type { AppleTokenStore } from '../apple.js';
+import type { AppleTokenStore, KeptAppleToken } from '../apple.js';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
@@ -192,16 +192,17 @@ export class Store implements SessionStore, AppleTokenStore {
 
   // --- Apple refresh tokens (src/apple.ts) ------------------------------------
 
-  async putAppleToken(subject: string, refreshToken: string, now: Date): Promise<void> {
+  async putAppleToken(subject: string, token: KeptAppleToken, now: Date): Promise<void> {
     await this.doc.send(new PutCommand({
       TableName: this.table,
-      Item: { ...key.appleToken(subject), type: 'appleToken', refreshToken, updatedAt: now.toISOString() },
+      Item: { ...key.appleToken(subject), type: 'appleToken', ...token, updatedAt: now.toISOString() },
     }));
   }
 
-  async getAppleToken(subject: string): Promise<string | undefined> {
+  async getAppleToken(subject: string): Promise<KeptAppleToken | undefined> {
     const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.appleToken(subject), ConsistentRead: true }));
-    return typeof Item?.refreshToken === 'string' ? Item.refreshToken : undefined;
+    if (typeof Item?.refreshToken !== 'string') return undefined;
+    return { refreshToken: Item.refreshToken, ...(typeof Item.clientId === 'string' ? { clientId: Item.clientId } : {}) };
   }
 
   async deleteAppleToken(subject: string): Promise<void> {
@@ -254,9 +255,53 @@ export class Store implements SessionStore, AppleTokenStore {
     return Object.fromEntries(items.map((i) => [i.climberId as string, i as unknown as Subscription]));
   }
 
-  /** Saves Stripe's latest copy of a subscription (a climber has one at a time: the newest wins). */
+  /** Saves Stripe's or Apple's latest copy of a subscription (a climber has one at a time: the newest wins). */
   async putSubscription(sub: Subscription): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.premium(sub.climberId), type: 'premium', ...sub } }));
+  }
+
+  /**
+   * Ties an App Store subscription (its original transaction id) to a
+   * climber, the first time it's seen; answers whose it is (the climber
+   * it was first tied to: one subscription, one account).
+   */
+  async claimAppleSubscription(originalTransactionId: string, climberId: string, now: Date): Promise<string> {
+    try {
+      await this.doc.send(new PutCommand({
+        TableName: this.table,
+        Item: { ...key.apple(originalTransactionId), type: 'apple', climberId, createdAt: now.toISOString() },
+        ConditionExpression: 'attribute_not_exists(pk)',
+      }));
+      return climberId;
+    } catch (e) {
+      if ((e as { name?: string }).name !== 'ConditionalCheckFailedException') throw e;
+      const owner = await this.appleOwner(originalTransactionId);
+      if (!owner) throw new Conflict('apple claim vanished');
+      return owner;
+    }
+  }
+
+  /**
+   * Unties an App Store subscription from a deleted account (only if it's
+   * still that account's), so a new account can restore it.
+   */
+  async releaseAppleSubscription(originalTransactionId: string, climberId: string): Promise<void> {
+    try {
+      await this.doc.send(new DeleteCommand({
+        TableName: this.table,
+        Key: key.apple(originalTransactionId),
+        ConditionExpression: 'climberId = :c',
+        ExpressionAttributeValues: { ':c': climberId },
+      }));
+    } catch (e) {
+      if ((e as { name?: string }).name !== 'ConditionalCheckFailedException') throw e;
+    }
+  }
+
+  /** The climber an App Store subscription is tied to, if any. */
+  async appleOwner(originalTransactionId: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.apple(originalTransactionId), ConsistentRead: true }));
+    return typeof Item?.climberId === 'string' ? Item.climberId : undefined;
   }
 
   // --- Ads --------------------------------------------------------------------

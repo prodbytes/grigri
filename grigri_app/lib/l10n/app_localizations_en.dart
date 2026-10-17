@@ -1040,6 +1040,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get premiumCheckRefresh => 'I\'ve paid: check again';
 
   @override
+  String get premiumRestore => 'Restore purchases';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'Grigri Premium is an auto-renewing subscription: $prices. Payment is charged to your Apple ID when you confirm. It renews automatically unless you cancel at least 24 hours before the end of the period. Manage or cancel it in your App Store account settings.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Privacy policy';
+
+  @override
+  String get premiumTermsOfUse => 'Terms of use (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'The App Store can\'t be reached right now.';
+
+  @override
+  String get premiumNothingToRestore => 'No App Store subscription to restore.';
+
+  @override
+  String get premiumPurchaseFailed => 'The purchase didn\'t go through.';
+
+  @override
   String get errorOpenLink => 'Couldn\'t open the link.';
 
   @override

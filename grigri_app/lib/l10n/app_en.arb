@@ -1476,7 +1476,7 @@
   },
   "premiumManage": "Manage subscription",
   "@premiumManage": {
-    "description": "Button: open Stripe's billing portal."
+    "description": "Button: where my subscription is managed (Stripe's billing portal, or the App Store's subscriptions)."
   },
   "premiumUnavailable": "Premium isn't available yet.",
   "@premiumUnavailable": {
@@ -1485,6 +1485,39 @@
   "premiumCheckRefresh": "I've paid: check again",
   "@premiumCheckRefresh": {
     "description": "Button: check again whether Premium is active (after paying)."
+  },
+  "premiumRestore": "Restore purchases",
+  "@premiumRestore": {
+    "description": "Button on iOS: restore my App Store purchases (Apple requires it)."
+  },
+  "premiumAppStoreTerms": "Grigri Premium is an auto-renewing subscription: {prices}. Payment is charged to your Apple ID when you confirm. It renews automatically unless you cancel at least 24 hours before the end of the period. Manage or cancel it in your App Store account settings.",
+  "@premiumAppStoreTerms": {
+    "description": "Under the iOS subscribe buttons: Apple's required subscription terms. {prices} is the plans and their App Store prices, like \"$19.99 a month, $199.99 a year\".",
+    "placeholders": {
+      "prices": {
+        "type": "String"
+      }
+    }
+  },
+  "premiumPrivacyPolicy": "Privacy policy",
+  "@premiumPrivacyPolicy": {
+    "description": "Link under the iOS subscribe buttons: Grigri's privacy policy."
+  },
+  "premiumTermsOfUse": "Terms of use (EULA)",
+  "@premiumTermsOfUse": {
+    "description": "Link under the iOS subscribe buttons: Apple's standard end user license agreement, the subscription's terms of use."
+  },
+  "premiumStoreUnavailable": "The App Store can't be reached right now.",
+  "@premiumStoreUnavailable": {
+    "description": "Profile card on iOS when the App Store's products can't be loaded, or restoring failed."
+  },
+  "premiumNothingToRestore": "No App Store subscription to restore.",
+  "@premiumNothingToRestore": {
+    "description": "Message after Restore purchases found no App Store subscription."
+  },
+  "premiumPurchaseFailed": "The purchase didn't go through.",
+  "@premiumPurchaseFailed": {
+    "description": "Message: the App Store purchase failed (not cancelled)."
   },
   "errorOpenLink": "Couldn't open the link.",
   "@errorOpenLink": {

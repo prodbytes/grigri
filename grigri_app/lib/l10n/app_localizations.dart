@@ -1845,7 +1845,7 @@ abstract class AppLocalizations {
   /// **'Premium: ends on {date}'**
   String premiumEndsOn(String date);
 
-  /// Button: open Stripe's billing portal.
+  /// Button: where my subscription is managed (Stripe's billing portal, or the App Store's subscriptions).
   ///
   /// In en, this message translates to:
   /// **'Manage subscription'**
@@ -1862,6 +1862,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I\'ve paid: check again'**
   String get premiumCheckRefresh;
+
+  /// Button on iOS: restore my App Store purchases (Apple requires it).
+  ///
+  /// In en, this message translates to:
+  /// **'Restore purchases'**
+  String get premiumRestore;
+
+  /// Under the iOS subscribe buttons: Apple's required subscription terms. {prices} is the plans and their App Store prices, like "$19.99 a month, $199.99 a year".
+  ///
+  /// In en, this message translates to:
+  /// **'Grigri Premium is an auto-renewing subscription: {prices}. Payment is charged to your Apple ID when you confirm. It renews automatically unless you cancel at least 24 hours before the end of the period. Manage or cancel it in your App Store account settings.'**
+  String premiumAppStoreTerms(String prices);
+
+  /// Link under the iOS subscribe buttons: Grigri's privacy policy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get premiumPrivacyPolicy;
+
+  /// Link under the iOS subscribe buttons: Apple's standard end user license agreement, the subscription's terms of use.
+  ///
+  /// In en, this message translates to:
+  /// **'Terms of use (EULA)'**
+  String get premiumTermsOfUse;
+
+  /// Profile card on iOS when the App Store's products can't be loaded, or restoring failed.
+  ///
+  /// In en, this message translates to:
+  /// **'The App Store can\'t be reached right now.'**
+  String get premiumStoreUnavailable;
+
+  /// Message after Restore purchases found no App Store subscription.
+  ///
+  /// In en, this message translates to:
+  /// **'No App Store subscription to restore.'**
+  String get premiumNothingToRestore;
+
+  /// Message: the App Store purchase failed (not cancelled).
+  ///
+  /// In en, this message translates to:
+  /// **'The purchase didn\'t go through.'**
+  String get premiumPurchaseFailed;
 
   /// Error: the browser couldn't be opened for a link.
   ///

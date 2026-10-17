@@ -113,7 +113,7 @@ describe('premiumOf', () => {
   });
   it('is active while paid and within its period (plus two days\' grace)', () => {
     expect(premiumOf(undefined, now)).toEqual({ active: false });
-    expect(premiumOf(sub(), now)).toEqual({ active: true, plan: 'monthly', until: '2030-05-20T00:00:00.000Z' });
+    expect(premiumOf(sub(), now)).toEqual({ active: true, plan: 'monthly', until: '2030-05-20T00:00:00.000Z', source: 'stripe' });
     expect(premiumOf(sub({ status: 'past_due' }), now).active).toBe(true);
     expect(premiumOf(sub({ status: 'canceled' }), now).active).toBe(false);
     expect(premiumOf(sub({ periodEnd: '2030-04-30T00:00:00.000Z' }), now).active).toBe(true);
@@ -173,7 +173,7 @@ describe('Premium routes', () => {
     await deliver(api, 'checkout.session.completed', { subscription: 'sub_1', client_reference_id: climber.id });
     // Paid: rbacr's premium role, until the period's end plus two days' grace.
     expect(rbacr.calls).toEqual(['grant premium ada@example.com until 2030-06-03T10:00:00.000Z']);
-    expect((await call(api, 'GET', '/api/me')).premium).toEqual({ active: true, plan: 'monthly', until: '2030-06-01T10:00:00.000Z' });
+    expect((await call(api, 'GET', '/api/me')).premium).toEqual({ active: true, plan: 'monthly', until: '2030-06-01T10:00:00.000Z', source: 'stripe' });
     expect(await status(call(api, 'POST', '/api/premium/checkout', { plan: 'yearly' }))).toBe(409);
     expect((await call(api, 'POST', '/api/premium/portal')).url).toMatch(/^https:\/\/billing\.stripe\.com\//);
 
