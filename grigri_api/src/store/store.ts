@@ -19,7 +19,7 @@ import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
 import type { Delivery, Effects } from '../domain/rules.js';
-import { type Attachment, type Climber, type DayWindow, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, isOpen } from '../domain/model.js';
+import { type Attachment, type Climber, type DayWindow, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, type Price, isOpen } from '../domain/model.js';
 import type { Wall } from '../domain/walls.js';
 import { index, key, prefix } from './keys.js';
 
@@ -746,6 +746,9 @@ export function planItem(p: Plan, version: number): Item {
     ...(p.lat !== undefined && p.lon !== undefined ? { lat: p.lat, lon: p.lon } : {}),
     ...(p.start && p.end ? { start: p.start, end: p.end } : {}),
     ...(p.moreDays?.length ? { moreDays: p.moreDays } : {}),
+    // `type` is the item's kind, so the plan's type is `planType` (absent: private).
+    ...(p.type && p.type !== 'private' ? { planType: p.type } : {}),
+    ...(p.price ? { price: p.price } : {}),
     grades: p.grades,
     memberIds: p.memberIds,
     notes: p.notes,
@@ -765,6 +768,8 @@ export function toPlan(i: Item): Plan {
     ...(typeof i.start === 'string' && typeof i.end === 'string' ? { start: i.start, end: i.end } : {}),
     ...(Array.isArray(i.moreDays) && i.moreDays.length ? { moreDays: i.moreDays as DayWindow[] } : {}),
     grades: i.grades as Plan['grades'],
+    ...(i.planType === 'open' || i.planType === 'guided' ? { type: i.planType } : {}),
+    ...(i.planType === 'guided' && i.price ? { price: i.price as Price } : {}),
     memberIds: (i.memberIds as string[]) ?? [],
     notes: (i.notes as string) ?? '',
     ...(i.demo === true ? { demo: true as const } : {}),

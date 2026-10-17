@@ -1190,4 +1190,51 @@ class AppLocalizationsCa extends AppLocalizations {
   String kmAway(String km) {
     return '$km km';
   }
+
+  @override
+  String get sectionWhoCanJoin => 'Qui s\'hi pot unir';
+
+  @override
+  String get planTypePrivate => 'Privat';
+
+  @override
+  String get planTypeOpen => 'Obert';
+
+  @override
+  String get planTypeGuided => 'Guiat';
+
+  @override
+  String get planTypePrivateHint => 'Tot el grup diu que sí a cada nou.';
+
+  @override
+  String get planTypeOpenHint =>
+      'Qualsevol s\'hi pot unir al moment, sense esperar un sí.';
+
+  @override
+  String get planTypeGuidedHint =>
+      'Tu guies i els escaladors et paguen. Només tu respons les sol·licituds.';
+
+  @override
+  String get pricePerClimber => 'Preu per escalador';
+
+  @override
+  String get priceInvalid =>
+      'Posa un preu més gran que 0, amb dos decimals com a màxim';
+
+  @override
+  String get currency => 'Moneda';
+
+  @override
+  String guidedPrice(String price) {
+    return 'Guiat · $price';
+  }
+
+  @override
+  String get paidToGuide => 'Es paga al guia, no a través de Grigri.';
+
+  @override
+  String get theGuideDecides => 'Decideix el guia';
+
+  @override
+  String get openJoinAtOnce => 'Obert: uneix-te al moment';
 }

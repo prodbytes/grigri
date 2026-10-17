@@ -333,5 +333,19 @@
   "routeScale": "Via",
   "boulderScale": "Bloc",
   "routeGrade": "Grau",
-  "kmAway": "{km} km"
+  "kmAway": "{km} km",
+  "sectionWhoCanJoin": "Qui s'hi pot unir",
+  "planTypePrivate": "Privat",
+  "planTypeOpen": "Obert",
+  "planTypeGuided": "Guiat",
+  "planTypePrivateHint": "Tot el grup diu que sí a cada nou.",
+  "planTypeOpenHint": "Qualsevol s'hi pot unir al moment, sense esperar un sí.",
+  "planTypeGuidedHint": "Tu guies i els escaladors et paguen. Només tu respons les sol·licituds.",
+  "pricePerClimber": "Preu per escalador",
+  "priceInvalid": "Posa un preu més gran que 0, amb dos decimals com a màxim",
+  "currency": "Moneda",
+  "guidedPrice": "Guiat · {price}",
+  "paidToGuide": "Es paga al guia, no a través de Grigri.",
+  "theGuideDecides": "Decideix el guia",
+  "openJoinAtOnce": "Obert: uneix-te al moment"
 }

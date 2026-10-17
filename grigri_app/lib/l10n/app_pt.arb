@@ -333,5 +333,19 @@
   "routeScale": "Via",
   "boulderScale": "Boulder",
   "routeGrade": "Grau",
-  "kmAway": "{km} km"
+  "kmAway": "{km} km",
+  "sectionWhoCanJoin": "Quem pode entrar",
+  "planTypePrivate": "Privado",
+  "planTypeOpen": "Aberto",
+  "planTypeGuided": "Guiado",
+  "planTypePrivateHint": "Todo o grupo diz sim para cada novato.",
+  "planTypeOpenHint": "Qualquer um pode entrar na hora, sem esperar um sim.",
+  "planTypeGuidedHint": "Você guia e os escaladores pagam você. Só você responde aos pedidos.",
+  "pricePerClimber": "Preço por escalador",
+  "priceInvalid": "Informe um preço acima de 0, com no máximo duas casas decimais",
+  "currency": "Moeda",
+  "guidedPrice": "Guiado · {price}",
+  "paidToGuide": "Pago ao guia, não pelo Grigri.",
+  "theGuideDecides": "O guia decide",
+  "openJoinAtOnce": "Aberto: entre na hora"
 }

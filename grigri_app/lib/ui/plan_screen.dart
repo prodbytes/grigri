@@ -96,8 +96,8 @@ class _PlanScreenState extends State<PlanScreen> {
                     )
                   : Tag(
                       l.pendingSaidYes(
-                        mine.acceptedBy.length,
-                        plan.memberIds.length,
+                        plan.deciders.where(mine.acceptedBy.contains).length,
+                        plan.deciders.length,
                       ),
                       icon: Icons.hourglass_top,
                       color: Mountain.sky,
@@ -140,10 +140,15 @@ class _PlanScreenState extends State<PlanScreen> {
                 leading: Avatar(store.climber(r.climberId)),
                 title: Text(store.climber(r.climberId).name),
                 subtitle: Text(
-                  l.saidYesCount(r.acceptedBy.length, plan.memberIds.length),
+                  l.saidYesCount(
+                    plan.deciders.where(r.acceptedBy.contains).length,
+                    plan.deciders.length,
+                  ),
                   style: const TextStyle(color: Mountain.sky),
                 ),
-                trailing: r.acceptedBy.contains(store.me.id)
+                trailing: !plan.deciders.contains(store.me.id)
+                    ? Tag(l.theGuideDecides, color: Mountain.granite)
+                    : r.acceptedBy.contains(store.me.id)
                     ? Tag(l.youSaidYes, color: Mountain.olive)
                     : Tag(l.answerInChat, color: Mountain.sky),
                 onTap: () =>

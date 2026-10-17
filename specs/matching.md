@@ -117,7 +117,9 @@ I've answered it has **Decline** and **Accept**; then it shows "You said
 yes" and who it's still waiting for, **Joined**, **Declined** (when I said
 no), or **Closed** (turned down by someone else). The
 organizer and **every member** are notified ("<name> wants to join"), and
-a newcomer is notified of the requests still open when they join. Chats
+a newcomer is notified of the requests still open when they join. On a
+guided plan only the guide is notified and has Decline and Accept; an
+open plan has no requests (see [plan types](#plan-types-who-decides)). Chats
 marks each chat with how many requests wait for my answer, and the Chats
 tab's badge counts them all. The plan's screen lists them too, with
 "Answer in the chat".
@@ -128,12 +130,44 @@ plan: their avatar and name, how many have said yes, and ✕ / ✓ (the same
 answer as the card's). Once I've answered, the request leaves the
 callout; its card in the messages stays as the record.
 
+## Plan types: who decides
+
+Every plan has a **type**, picked in the plan editor under **Who can
+join**, which says who lets newcomers in (the plan's **deciders**):
+
+| Type | Who decides | Swiping right |
+|---|---|---|
+| **Private** (the default) | **every current member** | asks; the group answers |
+| **Open** | nobody | **joins at once**: the match screen opens, as on a demo plan |
+| **Guided** | **the organizer alone**, the guide | asks; only the guide answers |
+
+- **Private** is what every plan was before types, and a plan without a
+  type (stored before them) is private. It isn't marked anywhere.
+- **Open**: there's no request to answer, no "asked to join" note and no
+  notices to the group; the chat just says "<name> joined the plan 🎉".
+  The deck's card says **Open: join at once**.
+- **Guided**: the plan is a guide's outing, **expected to be paid**. It
+  has a **price per climber** (an amount above 0, at most 10,000 with two
+  decimals, in EUR, USD, GBP, CHF or BRL), shown as **Guided · €60** on
+  the card and the plan, with "Paid to the guide, not through Grigri":
+  Grigri takes no payment (Premium's Stripe isn't involved). Only the
+  guide is notified of requests, sees them to answer (in the chat and the
+  callout), can accept or decline, and is nudged; the other members see
+  the requests with "The guide decides". If the guide leaves, the member
+  picked to organize becomes the one who decides.
+- **Changing the type** (the organizer, in the editor) takes effect at
+  once: a plan made open lets in everyone waiting, and one made guided
+  lets in whoever the guide has already accepted. Leaving the price out,
+  or making the plan private or open, clears the price.
+
 ## The group decides
 
-- A newcomer joins a plan when **every current member** has accepted
-  them. **One "no" turns them down.**
-- When someone joins, the members who are still to decide on other open
-  requests now include them: the group as it is then decides.
+- A newcomer joins a plan when **every decider** has accepted them
+  (every current member on a private plan, the guide on a guided one).
+  **One decider's "no" turns them down.**
+- When someone joins a private plan, the members who are still to decide
+  on other open requests now include them: the group as it is then
+  decides.
 - Cancelling a plan I'm in (from Plans or the plan screen) is leaving it:
   it's out of my plans and chats at once, and the others keep it. When a
   member leaves, the requests stop waiting for them. The organizer leaving

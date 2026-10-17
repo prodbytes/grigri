@@ -14,7 +14,9 @@ import {
   type Notice,
   type NoticeKind,
   type Plan,
+  deciders,
   isOpen,
+  planType,
   requestId,
 } from './model.js';
 
@@ -149,7 +151,11 @@ export function toReview(states: PlanState[], meId: string): JoinRequest[] {
   return states.flatMap(({ plan, requests }) =>
     plan.memberIds.includes(meId)
       ? requests.filter(
-          (r) => isOpen(r) && !r.acceptedBy.includes(meId) && !plan.memberIds.includes(r.climberId),
+          (r) =>
+            isOpen(r) &&
+            deciders(plan).includes(meId) &&
+            !r.acceptedBy.includes(meId) &&
+            !plan.memberIds.includes(r.climberId),
         )
       : [],
   );
@@ -188,9 +194,22 @@ export function createPlan(id: string, organizerId: string, input: PlanInput, ct
 /** The organizer changes a plan; its members stay. */
 export function updatePlan(plan: Plan, actorId: string, input: PlanInput): Plan {
   if (plan.organizerId !== actorId) throw forbidden('only the organizer can change the plan');
-  // Written whole: a sectorId or days left out are cleared.
-  const { sectorId: _sector, start: _start, end: _end, moreDays: _more, ...rest } = plan;
+  // Written whole: a sectorId, days, type or price left out are cleared.
+  const { sectorId: _sector, start: _start, end: _end, moreDays: _more, type: _type, price: _price, ...rest } = plan;
   return { ...rest, ...input, id: plan.id, organizerId: plan.organizerId, memberIds: plan.memberIds };
+}
+
+/**
+ * Lets in every open request the plan's deciders have all said yes to: on
+ * an open plan (nobody decides) that's every one, e.g. after it became
+ * open, or right after a swipe right.
+ */
+export function settle(state: PlanState, ctx: Context): Effects {
+  const effects: Effects = { plan: state.plan, requests: [], notices: [], messages: [], matches: [] };
+  const changed = new Map<string, JoinRequest>();
+  settleInto(effects, state.requests, changed, ctx);
+  effects.requests = [...changed.values()];
+  return effects;
 }
 
 /**
@@ -242,8 +261,10 @@ export function leave(state: PlanState, actorId: string, ctx: Context): Effects 
 // --- Requests --------------------------------------------------------------
 
 /**
- * I swipe right: a join request. Every member is notified and the chat
- * gets a request note. `existing` is my earlier request for it, if any.
+ * I swipe right: a join request. Whoever decides (every member, or a
+ * guided plan's organizer) is notified, and the chat gets a request note.
+ * On an open plan nobody decides: no notices or note, and settle() then
+ * lets me in. `existing` is my earlier request for it, if any.
  */
 export function ask(plan: Plan, climberId: string, existing: JoinRequest | undefined, ctx: Context): Effects {
   if (plan.memberIds.includes(climberId)) throw conflict("you're already in this plan");
@@ -258,19 +279,20 @@ export function ask(plan: Plan, climberId: string, existing: JoinRequest | undef
     rejected: false,
     time,
   };
+  const open = planType(plan) === 'open';
   return {
     plan,
     requests: [request],
-    notices: plan.memberIds.map((to) => ({ to, notice: requestNotice(plan, climberId, ctx) })),
-    messages: [{ ...note(plan.id, `${ctx.name(climberId)} asked to join`, ctx), requestId: request.id }],
+    notices: deciders(plan).map((to) => ({ to, notice: requestNotice(plan, climberId, ctx) })),
+    messages: open ? [] : [{ ...note(plan.id, `${ctx.name(climberId)} asked to join`, ctx), requestId: request.id }],
     matches: [],
   };
 }
 
 /**
- * Accepts a request. A member's yes counts as theirs; when every current
- * member has said yes, they join. An admin's yes lets them in at once, as
- * if every member had accepted.
+ * Accepts a request. A decider's yes counts as theirs; when every decider
+ * (every member, or a guided plan's organizer) has said yes, they join. An
+ * admin's yes lets them in at once, as if every member had accepted.
  */
 export function accept(
   state: PlanState,
@@ -279,7 +301,7 @@ export function accept(
   ctx: Context,
 ): Effects {
   const { plan } = state;
-  if (!actor.admin && !plan.memberIds.includes(actor.id)) throw forbidden("you're not in this plan");
+  mayAnswer(plan, actor);
   const request = openRequest(state, climberId);
   const acceptedBy = actor.admin
     ? [...new Set([...request.acceptedBy, ...plan.memberIds])]
@@ -295,10 +317,10 @@ export function accept(
   return effects;
 }
 
-/** One no is enough: a member (or an admin) turns a request down. */
+/** One no is enough: a decider (or an admin) turns a request down. */
 export function reject(state: PlanState, actor: { id: string; admin?: boolean }, climberId: string, ctx: Context): Effects {
   const { plan } = state;
-  if (!actor.admin && !plan.memberIds.includes(actor.id)) throw forbidden("you're not in this plan");
+  mayAnswer(plan, actor);
   const request = openRequest(state, climberId);
   return {
     plan,
@@ -335,7 +357,7 @@ export function nudge(state: PlanState, climberId: string, ctx: Context): Effect
   if (request.nudgedAt && ctx.now.getTime() < Date.parse(request.nudgedAt) + NUDGE_COOLDOWN_MS) {
     throw tooMany('you nudged the group less than 12 hours ago; try again later');
   }
-  const waitingFor = plan.memberIds.filter((m) => !request.acceptedBy.includes(m));
+  const waitingFor = deciders(plan).filter((m) => !request.acceptedBy.includes(m));
   if (waitingFor.length === 0) throw conflict('nobody left to answer');
   const time = ctx.now.toISOString();
   const notice: Notice = {
@@ -356,6 +378,19 @@ export function nudge(state: PlanState, climberId: string, ctx: Context): Effect
   };
 }
 
+/** Members answer a private plan's requests; only the organizer a guided one's; nobody an open one's. Admins always may. */
+function mayAnswer(plan: Plan, actor: { id: string; admin?: boolean }): void {
+  if (actor.admin) return;
+  if (!plan.memberIds.includes(actor.id)) throw forbidden("you're not in this plan");
+  if (!deciders(plan).includes(actor.id)) {
+    throw forbidden(
+      planType(plan) === 'guided'
+        ? "only the guide answers a guided plan's requests"
+        : 'nobody answers requests on an open plan',
+    );
+  }
+}
+
 function openRequest(state: PlanState, climberId: string): JoinRequest {
   const request = state.requests.find((r) => r.climberId === climberId);
   if (!request) throw notFound('no such request');
@@ -365,9 +400,10 @@ function openRequest(state: PlanState, climberId: string): JoinRequest {
 }
 
 /**
- * Lets in everyone every current member has accepted, until nothing
- * changes: each newcomer becomes a member, and the
- * requests still open now wait for them too (they're notified).
+ * Lets in everyone every current decider has accepted (on an open plan,
+ * everyone), until nothing changes: each newcomer becomes a member, and on
+ * a private plan the requests still open now wait for them too (they're
+ * notified).
  */
 function settleInto(effects: Effects, requests: JoinRequest[], changed: Map<string, JoinRequest>, ctx: Context): void {
   let plan = effects.plan!;
@@ -377,7 +413,7 @@ function settleInto(effects: Effects, requests: JoinRequest[], changed: Map<stri
       (r) =>
         isOpen(r) &&
         !plan.memberIds.includes(r.climberId) &&
-        plan.memberIds.every((m) => r.acceptedBy.includes(m)),
+        deciders(plan).every((m) => r.acceptedBy.includes(m)),
     );
     if (!next) break;
     const joined: JoinRequest = { ...next, joined: true };
@@ -388,7 +424,7 @@ function settleInto(effects: Effects, requests: JoinRequest[], changed: Map<stri
     effects.notices.push({ to: joined.climberId, notice: answerNotice('accepted', plan, ctx) });
     effects.matches.push({ plan, newcomerId: joined.climberId });
     for (const open of current) {
-      if (isOpen(open) && !plan.memberIds.includes(open.climberId)) {
+      if (isOpen(open) && !plan.memberIds.includes(open.climberId) && deciders(plan).includes(joined.climberId)) {
         effects.notices.push({ to: joined.climberId, notice: requestNotice(plan, open.climberId, ctx, open.time) });
       }
     }

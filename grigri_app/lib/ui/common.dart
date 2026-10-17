@@ -116,6 +116,29 @@ class AvatarRow extends StatelessWidget {
 }
 
 /// A small rounded label with an optional icon.
+/// A plan type's icon: a lock (private), an open door (open), a guide's
+/// flag (guided).
+IconData planTypeIcon(PlanType type) => switch (type) {
+  PlanType.private => Icons.lock_outline,
+  PlanType.open => Icons.door_front_door_outlined,
+  PlanType.guided => Icons.flag_outlined,
+};
+
+/// What an open or guided plan says about joining ("Open: join at once",
+/// "Guided · €45"); null for a private plan, the default, which shows
+/// nothing.
+String? planTypeTagLabel(BuildContext context, Plan plan) {
+  final l = context.l10n;
+  return switch (plan.type) {
+    PlanType.private => null,
+    PlanType.open => l.openJoinAtOnce,
+    PlanType.guided =>
+      plan.price == null
+          ? l.planTypeGuided
+          : l.guidedPrice(priceLabel(context, plan.price!)),
+  };
+}
+
 class Tag extends StatelessWidget {
   const Tag(this.label, {super.key, this.icon, this.color});
 
@@ -270,6 +293,17 @@ class PlanHighlight extends StatelessWidget {
               maxLines: compact ? 3 : null,
               overflow: compact ? TextOverflow.ellipsis : null,
             ),
+          ],
+          if (planTypeTagLabel(context, plan) case final type?) ...[
+            const SizedBox(height: 12),
+            Tag(type, icon: planTypeIcon(plan.type), color: Mountain.sand),
+            if (plan.type == PlanType.guided && !compact) ...[
+              const SizedBox(height: 4),
+              Text(
+                l.paidToGuide,
+                style: text.bodySmall?.copyWith(color: Mountain.granite),
+              ),
+            ],
           ],
           if (fit?.grades ?? false) ...[
             const SizedBox(height: 12),

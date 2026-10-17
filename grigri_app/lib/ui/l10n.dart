@@ -87,3 +87,27 @@ String timeRangeLabel(Plan plan) => plan.start == null || plan.end == null
 /// "Sat 17 Oct, 18:30".
 String dayAndTime(BuildContext context, DateTime t) =>
     context.l10n.dayAndTime(dayLabel(context, t), clock(t));
+
+extension PlanTypeL10n on PlanType {
+  /// "Private", "Open", "Guided", in the user's language.
+  String label(AppLocalizations l) => switch (this) {
+    PlanType.private => l.planTypePrivate,
+    PlanType.open => l.planTypeOpen,
+    PlanType.guided => l.planTypeGuided,
+  };
+
+  /// What the type means for joining, for the plan editor.
+  String hint(AppLocalizations l) => switch (this) {
+    PlanType.private => l.planTypePrivateHint,
+    PlanType.open => l.planTypeOpenHint,
+    PlanType.guided => l.planTypeGuidedHint,
+  };
+}
+
+/// A guided plan's price in the user's language: "€45", "45,50 €".
+String priceLabel(BuildContext context, Price price) =>
+    NumberFormat.simpleCurrency(
+      locale: Localizations.localeOf(context).toString(),
+      name: price.currency,
+      decimalDigits: price.amount % 1 == 0 ? 0 : 2,
+    ).format(price.amount);

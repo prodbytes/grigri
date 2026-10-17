@@ -304,7 +304,7 @@ class FakeApi implements GrigriApi, SessionApi {
     final r = requestsById[requestId]!;
     final plan = plans[r.planId]!;
     if (r.rejected) return null;
-    if (!force && !plan.memberIds.every(r.acceptedBy.contains)) return null;
+    if (!force && !plan.deciders.every(r.acceptedBy.contains)) return null;
     final grown = plan.copyWith(memberIds: [...plan.memberIds, r.climberId]);
     plans[plan.id] = grown;
     requestsById.remove(requestId);
@@ -679,6 +679,8 @@ class FakeApi implements GrigriApi, SessionApi {
       grades: plan.grades,
       memberIds: [meId!],
       notes: plan.notes,
+      type: plan.type,
+      price: plan.type == PlanType.guided ? plan.price : null,
     );
     plans[created.id] = created;
     return created;
@@ -765,13 +767,18 @@ class FakeApi implements GrigriApi, SessionApi {
         }
         ask(planId, meId!);
         final request = requestsById['$planId/$meId']!;
-        // A demo plan's group says yes at once (specs/matching.md).
+        // A demo plan's group says yes at once, and an open plan lets me
+        // in (specs/matching.md).
         if (plans[planId]!.demo) {
           final accepted = request.copyWith(
             acceptedBy: plans[planId]!.memberIds.toSet(),
           );
           _settle(request.id, force: true);
           return accepted;
+        }
+        if (plans[planId]!.type == PlanType.open) {
+          _settle(request.id);
+          return request;
         }
         return request;
       });

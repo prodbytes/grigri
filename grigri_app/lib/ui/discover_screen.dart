@@ -58,8 +58,8 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final l = context.l10n;
     if (!await store.like(plan.id)) return;
-    // A demo plan matches at once, and the match screen says so.
-    if (plan.demo) return;
+    // A demo or open plan matches at once, and the match screen says so.
+    if (plan.demo || plan.type == PlanType.open) return;
     messenger.showSnackBar(SnackBar(content: Text(l.askedToJoinSent)));
   }
 
@@ -601,6 +601,28 @@ class _PlanCover extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (planTypeTagLabel(context, plan) case final type?)
+                    _Glass(
+                      key: ValueKey('type ${plan.id}'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            planTypeIcon(plan.type),
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            type,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (mine)
                     _Glass(
                       color: Mountain.olive,
@@ -681,7 +703,7 @@ class _OverLine extends StatelessWidget {
 
 /// A pill over the photo: dark and see-through, or in [color].
 class _Glass extends StatelessWidget {
-  const _Glass({required this.child, this.color});
+  const _Glass({super.key, required this.child, this.color});
 
   final Widget child;
   final Color? color;

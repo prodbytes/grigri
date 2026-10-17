@@ -338,7 +338,7 @@ class _CalloutRow extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final l = context.l10n;
     final person = store.climber(request.climberId);
-    final yes = plan.memberIds.where(request.acceptedBy.contains).length;
+    final yes = plan.deciders.where(request.acceptedBy.contains).length;
     return Container(
       key: ValueKey('callout ${request.id}'),
       padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
@@ -377,7 +377,7 @@ class _CalloutRow extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          l.saidYesCount(yes, plan.memberIds.length),
+                          l.saidYesCount(yes, plan.deciders.length),
                           style: text.bodySmall?.copyWith(color: Mountain.sky),
                         ),
                       ],
@@ -445,12 +445,14 @@ class _RequestCard extends StatelessWidget {
     final closed = open.isEmpty && !joined;
     String first(String id) =>
         id == store.me.id ? l.you : store.climber(id).firstName;
+    // Only the deciders' answers count: every member, or a guided plan's
+    // guide.
     final yes = [
-      for (final id in plan.memberIds)
+      for (final id in plan.deciders)
         if (request.acceptedBy.contains(id)) first(id),
     ];
     final waiting = [
-      for (final id in plan.memberIds)
+      for (final id in plan.deciders)
         if (!request.acceptedBy.contains(id) && id != person.id) first(id),
     ];
     final level = person.levels[plan.discipline];
@@ -459,6 +461,7 @@ class _RequestCard extends StatelessWidget {
         !joined &&
         !closed &&
         !request.rejected &&
+        plan.deciders.contains(store.me.id) &&
         !request.acceptedBy.contains(store.me.id);
     return Center(
       child: Container(

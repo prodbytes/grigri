@@ -9,6 +9,50 @@ String apiTime(DateTime t) => t.toUtc().toIso8601String();
 /// One day of a plan: from [start] to [end] (at most 24 hours later).
 typedef DayWindow = ({DateTime start, DateTime end});
 
+/// Who lets people into a plan.
+enum PlanType {
+  /// Every member says yes (the default).
+  private,
+
+  /// Nobody: a swipe right joins at once.
+  open,
+
+  /// The organizer, a guide, alone; the plan has a [Price].
+  guided,
+}
+
+/// The currencies a guided plan's price may be in (the server's list).
+const currencies = ['EUR', 'USD', 'GBP', 'CHF', 'BRL'];
+
+/// What a guided plan costs each climber, paid to the guide (not through
+/// Grigri).
+class Price {
+  const Price({required this.amount, required this.currency});
+
+  /// In [currency]'s units, at most two decimals.
+  final num amount;
+
+  /// One of [currencies].
+  final String currency;
+
+  Map<String, Object> toJson() => {'amount': amount, 'currency': currency};
+
+  static Price? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final amount = json['amount'];
+    final currency = json['currency'];
+    if (amount is! num || currency is! String) return null;
+    return Price(amount: amount, currency: currency);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is Price && other.amount == amount && other.currency == currency;
+
+  @override
+  int get hashCode => Object.hash(amount, currency);
+}
+
 /// A plan to climb: a specific outing (what, where, when, which grades),
 /// separate from the people's profiles. Its members are its group, and
 /// share its chat; the organizer is its first member. The group has no
@@ -29,6 +73,8 @@ class Plan {
     this.lon,
     this.area = '',
     this.notes = '',
+    this.type = PlanType.private,
+    this.price,
     this.demo = false,
   });
 
@@ -67,6 +113,20 @@ class Plan {
   final List<String> memberIds;
   final String notes;
 
+  /// Who lets people in.
+  final PlanType type;
+
+  /// A guided plan's price per climber; null on the others.
+  final Price? price;
+
+  /// Whose yes a request needs: every member (private), the organizer
+  /// (guided) or nobody (open).
+  List<String> get deciders => switch (type) {
+    PlanType.private => memberIds,
+    PlanType.open => const [],
+    PlanType.guided => [organizerId],
+  };
+
   /// Made up, to show how Grigri works (RC's and local's seed data): the
   /// app says so wherever it shows it. Only the server sets it.
   final bool demo;
@@ -97,6 +157,8 @@ class Plan {
     String? organizerId,
     List<String>? memberIds,
     String? notes,
+    PlanType? type,
+    Price? Function()? price,
   }) => Plan(
     id: id,
     organizerId: organizerId ?? this.organizerId,
@@ -112,6 +174,8 @@ class Plan {
     grades: grades ?? this.grades,
     memberIds: memberIds ?? this.memberIds,
     notes: notes ?? this.notes,
+    type: type ?? this.type,
+    price: price != null ? price() : this.price,
     demo: demo,
   );
 
@@ -132,6 +196,8 @@ class Plan {
         {'start': apiTime(d.start), 'end': apiTime(d.end)},
     ],
     'grades': grades.toJson(),
+    'type': type.name,
+    if (type == PlanType.guided && price != null) 'price': price!.toJson(),
     'notes': notes,
   };
 
@@ -153,13 +219,16 @@ class Plan {
     grades: GradeRange.fromJson((json['grades']! as Map).cast()),
     memberIds: [for (final m in json['memberIds']! as List) m as String],
     notes: json['notes'] as String? ?? '',
+    // Absent (plans made before types) or unknown to this app: private.
+    type: PlanType.values.asNameMap()[json['type']] ?? PlanType.private,
+    price: Price.fromJson(json['price']),
     demo: json['demo'] == true,
   );
 }
 
 /// Someone asking to join a plan: they swiped right on it. They join when
-/// every current member has accepted them (or an admin approves them); one
-/// rejection turns them down.
+/// every one of the plan's [Plan.deciders] has accepted them (or an admin
+/// approves them); one rejection turns them down.
 class JoinRequest {
   const JoinRequest({
     required this.planId,
