@@ -565,13 +565,13 @@ void main() {
       expect(store.waiting, isEmpty);
     });
 
-    testWidgets("a private plan's card says so at the top", (tester) async {
+    testWidgets("a private plan's card says Shared at the top", (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);
       final pill = find.byKey(const ValueKey('type boulder-night'));
       expect(pill, findsOneWidget);
       expect(
-        find.descendant(of: pill, matching: find.text('Private')),
+        find.descendant(of: pill, matching: find.text('Shared')),
         findsOneWidget,
       );
     });

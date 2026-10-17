@@ -1279,7 +1279,7 @@ class AppLocalizationsCa extends AppLocalizations {
   String get sectionWhoCanJoin => 'Qui s\'hi pot unir';
 
   @override
-  String get planTypePrivate => 'Privat';
+  String get planTypePrivate => 'Compartit';
 
   @override
   String get planTypeOpen => 'Obert';

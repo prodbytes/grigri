@@ -121,7 +121,7 @@ class AvatarRow extends StatelessWidget {
 /// A plan type's icon: a lock (private), an open door (open), a guide's
 /// flag (guided).
 IconData planTypeIcon(PlanType type) => switch (type) {
-  PlanType.private => Icons.lock_outline,
+  PlanType.private => Icons.group_outlined,
   PlanType.open => Icons.door_front_door_outlined,
   PlanType.guided => Icons.flag_outlined,
 };

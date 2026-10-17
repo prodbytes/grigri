@@ -1591,3 +1591,15 @@ spec.
        have one; without, no tag. The `noGradesYet` string is gone from
        every language.
      - Cost: none (app only).
+
+102. **Rename "Private" to "Shared" on the plan editor and plan screen.**
+     - [Matching](matching.md#plan-types-who-decides) and
+       [screens](screens.md): the default plan type is called **Shared**
+       wherever the app names it (the editor's **Who can join**, the
+       plan screen, the Discover card's pill), in every language
+       (Compartit, Gemeinsam, Compartido, Partagé, Compartilhado), with a
+       group icon instead of the lock. The API and the data keep
+       `private`.
+     - [App Store](app-store.md): the description's bullet says "Shared
+       plans"; App Store Connect's copy still needs the same change.
+     - Cost: none (app only).
