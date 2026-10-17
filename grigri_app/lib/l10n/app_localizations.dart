@@ -586,6 +586,18 @@ abstract class AppLocalizations {
   /// **'About you'**
   String get bioLabel;
 
+  /// Profile editor section heading (shown uppercased) above the European/American grade toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Grade system'**
+  String get gradeSystem;
+
+  /// Hint under the "Grade system" heading; each option shows a route grade and a boulder grade as examples.
+  ///
+  /// In en, this message translates to:
+  /// **'How grades are written across the app, here for a route and a boulder.'**
+  String get gradeSystemHint;
+
   /// Profile editor section heading (shown uppercased).
   ///
   /// In en, this message translates to:
@@ -2220,7 +2232,7 @@ abstract class AppLocalizations {
   /// Sign-in screen: the headline, Grigri's line.
   ///
   /// In en, this message translates to:
-  /// **'Find a climbing plan.'**
+  /// **'Join a climbing plan.'**
   String get signInHeadline;
 
   /// Sign-in screen: under the sign-in button.
@@ -2414,6 +2426,186 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t delete your account. Try again.'**
   String get errorDeleteAccount;
+
+  /// Tooltip of the ⋮ menu with Report and Block.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get moreActions;
+
+  /// Menu item: report objectionable content to the admins.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get report;
+
+  /// Menu item: block this person (my own block, not an admin's).
+  ///
+  /// In en, this message translates to:
+  /// **'Block {name}'**
+  String blockPerson(String name);
+
+  /// Report dialog title: asks for the reason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting this?'**
+  String get reportTitle;
+
+  /// A reason to report: spam.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam'**
+  String get reportReasonSpam;
+
+  /// A reason to report: harassment.
+  ///
+  /// In en, this message translates to:
+  /// **'Harassment'**
+  String get reportReasonHarassment;
+
+  /// A reason to report: inappropriate content.
+  ///
+  /// In en, this message translates to:
+  /// **'Inappropriate content'**
+  String get reportReasonInappropriate;
+
+  /// A reason to report: a fake profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Fake profile'**
+  String get reportReasonFake;
+
+  /// A reason to report: something else.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get reportReasonOther;
+
+  /// Report dialog: the optional text field's hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything else we should know? (optional)'**
+  String get reportDetailsHint;
+
+  /// Report dialog: sends the report.
+  ///
+  /// In en, this message translates to:
+  /// **'Send report'**
+  String get reportSend;
+
+  /// Snackbar after a report was sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks, we\'ll review it within 24 hours.'**
+  String get reportThanks;
+
+  /// What blocking someone (my own block) does.
+  ///
+  /// In en, this message translates to:
+  /// **'You won\'t see each other\'s plans, neither of you can ask to join a plan the other is in, their requests to your plans are declined, and you won\'t see their messages. They aren\'t told.'**
+  String get blockPersonMessage;
+
+  /// Snackbar after blocking someone.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is blocked.'**
+  String blockedPersonDone(String name);
+
+  /// Profile: the list of people I blocked, and its screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked people'**
+  String get blockedPeopleTitle;
+
+  /// Blocked people: when I haven't blocked anyone.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t blocked anyone.'**
+  String get blockedPeopleEmpty;
+
+  /// Admin tab's sub-navigation: reports to review.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get adminReportsTab;
+
+  /// Admin → Reports: nothing to review.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports to review.'**
+  String get adminReportsEmpty;
+
+  /// Admin → Reports: who reported it.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported by {name}'**
+  String reportedBy(String name);
+
+  /// Admin → Reports: what was reported, a profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get reportKindProfile;
+
+  /// Admin → Reports: what was reported, a plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get reportKindPlan;
+
+  /// Admin → Reports: what was reported, a chat message.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat message'**
+  String get reportKindMessage;
+
+  /// Admin → Reports: what was reported, a plan photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan photo'**
+  String get reportKindPic;
+
+  /// Admin → Reports: what was reported, an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad'**
+  String get reportKindAd;
+
+  /// Admin → Reports: nothing wrong, close the report.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get reportDismiss;
+
+  /// Admin → Reports: take the reported content down.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove content'**
+  String get reportRemove;
+
+  /// Admin → Reports: block the climber whose content it is (app-wide).
+  ///
+  /// In en, this message translates to:
+  /// **'Block climber'**
+  String get reportBlock;
+
+  /// Notification (admins): new reports wait for review.
+  ///
+  /// In en, this message translates to:
+  /// **'New reports to review'**
+  String get noticeReportsTitle;
+
+  /// Notification (admins): where to review reports, and within how long.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin → Reports · answer within 24 hours'**
+  String get noticeReportsBody;
+
+  /// Error: the server refused text with words Grigri does not allow.
+  ///
+  /// In en, this message translates to:
+  /// **'Please keep it friendly: that has words Grigri doesn\'t allow.'**
+  String get errorObjectionable;
 }
 
 class _AppLocalizationsDelegate

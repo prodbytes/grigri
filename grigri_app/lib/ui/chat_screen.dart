@@ -6,10 +6,12 @@ import 'package:flutter/material.dart';
 import '../data/grigri_store.dart';
 import '../data/realtime.dart';
 import '../model/plan.dart';
+import '../model/report.dart';
 import '../theme.dart';
 import 'chat_media.dart';
 import 'common.dart';
 import 'match_screen.dart';
+import 'moderation.dart';
 import 'plan_screen.dart';
 
 /// A plan's group chat: everyone in the plan, with the plan pinned on top.
@@ -519,6 +521,11 @@ class _RequestCard extends StatelessWidget {
                     ),
                   ),
                   const Icon(Icons.chevron_right, color: Mountain.granite),
+                  // ⋮: report their profile, or block them.
+                  ModerationMenu(
+                    report: ReportTarget(ReportKind.profile, person.id),
+                    person: person,
+                  ),
                 ],
               ),
             ),
@@ -613,41 +620,61 @@ class _Bubble extends StatelessWidget {
             const SizedBox(width: 8),
           ],
           Flexible(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 420),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(
-                color: mine ? Mountain.pine : Mountain.surfaceHigh,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(18),
-                  topRight: const Radius.circular(18),
-                  bottomLeft: Radius.circular(mine ? 18 : 4),
-                  bottomRight: Radius.circular(mine ? 4 : 18),
+            // A long press on someone else's message: Report or Block.
+            child: GestureDetector(
+              key: ValueKey('message ${message.id}'),
+              onLongPress: mine
+                  ? null
+                  : () => showMessageActions(
+                      context,
+                      report: ReportTarget(
+                        ReportKind.message,
+                        message.id,
+                        planId: message.planId,
+                      ),
+                      author: author,
+                    ),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 420),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!mine && showAuthor)
-                    Text(
-                      author.firstName,
-                      style: text.labelMedium?.copyWith(color: Mountain.tan),
-                    ),
-                  if (message.attachment case final attachment?)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: ChatAttachment(attachment),
-                    ),
-                  if (message.text.isNotEmpty)
-                    Text(message.text, style: text.bodyMedium),
-                  Align(
-                    alignment: Alignment.bottomRight,
-                    child: Text(
-                      clock(message.time),
-                      style: text.labelSmall?.copyWith(color: Mountain.granite),
-                    ),
+                decoration: BoxDecoration(
+                  color: mine ? Mountain.pine : Mountain.surfaceHigh,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: Radius.circular(mine ? 18 : 4),
+                    bottomRight: Radius.circular(mine ? 4 : 18),
                   ),
-                ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!mine && showAuthor)
+                      Text(
+                        author.firstName,
+                        style: text.labelMedium?.copyWith(color: Mountain.tan),
+                      ),
+                    if (message.attachment case final attachment?)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: ChatAttachment(attachment),
+                      ),
+                    if (message.text.isNotEmpty)
+                      Text(message.text, style: text.bodyMedium),
+                    Align(
+                      alignment: Alignment.bottomRight,
+                      child: Text(
+                        clock(message.time),
+                        style: text.labelSmall?.copyWith(
+                          color: Mountain.granite,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

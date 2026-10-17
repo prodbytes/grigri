@@ -19,6 +19,7 @@ import type { AppleTokenStore, KeptAppleToken } from '../apple.js';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
+import type { Report } from '../domain/moderation.js';
 import type { Delivery, Effects } from '../domain/rules.js';
 import { type Attachment, type Climber, type DayWindow, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, type Price, isOpen } from '../domain/model.js';
 import type { Wall } from '../domain/walls.js';
@@ -303,6 +304,126 @@ export class Store implements SessionStore, AppleTokenStore {
 
   async putAdSettings(settings: AdSettings): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.adSettings(), type: 'adSettings', ...settings } }));
+  }
+
+  // --- Moderation: reports, blocks (specs/moderation.md) ----------------------
+
+  async getReport(reportId: string): Promise<Report | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.report(reportId) }));
+    return Item ? toReport(Item) : undefined;
+  }
+
+  /** Saves a report whole: open ones are in the open-reports index; handled ones expire a year later. */
+  async putReport(report: Report): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: reportItem(report) }));
+  }
+
+  /** Open reports, oldest first (the first to answer). */
+  async openReports(): Promise<Report[]> {
+    const items = await this.query({
+      IndexName: index.openReports.name,
+      KeyConditionExpression: 'gsi1pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.openReports.pk },
+    });
+    return items.map(toReport);
+  }
+
+  /**
+   * A climber's blocks, either way, in one query of their partition: who
+   * they blocked, and who blocked them (never returned to anyone).
+   */
+  async blocksOf(climberId: string): Promise<{ blocked: string[]; blockedBy: string[] }> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+      ExpressionAttributeValues: { ':pk': prefix.climber(climberId), ':sk': prefix.blocks },
+      ProjectionExpression: 'sk',
+    });
+    const blocked: string[] = [];
+    const blockedBy: string[] = [];
+    for (const i of items) {
+      const sk = i.sk as string;
+      if (sk.startsWith(prefix.blockedBy)) blockedBy.push(sk.slice(prefix.blockedBy.length));
+      else if (sk.startsWith(prefix.block)) blocked.push(sk.slice(prefix.block.length));
+    }
+    return { blocked, blockedBy };
+  }
+
+  /** I block them: my item and its mirror on their side, together. */
+  async addBlock(blockerId: string, blockedId: string, now: Date): Promise<void> {
+    const time = now.toISOString();
+    await this.transact([
+      { Put: { TableName: this.table, Item: { ...key.block(blockerId, blockedId), type: 'block', climberId: blockedId, time } } },
+      { Put: { TableName: this.table, Item: { ...key.blockedBy(blockedId, blockerId), type: 'blockedBy', climberId: blockerId, time } } },
+    ]);
+  }
+
+  async removeBlock(blockerId: string, blockedId: string): Promise<void> {
+    await this.transact([
+      { Delete: { TableName: this.table, Key: key.block(blockerId, blockedId) } },
+      { Delete: { TableName: this.table, Key: key.blockedBy(blockedId, blockerId) } },
+    ]);
+  }
+
+  /** The climbers known to be admins (each checked with rbacr before it's told anything). */
+  async adminIds(): Promise<string[]> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.admins() }));
+    return Item?.ids instanceof Set ? [...(Item.ids as Set<string>)] : Array.isArray(Item?.ids) ? (Item!.ids as string[]) : [];
+  }
+
+  /** Remembers an admin (a string set: adding one already there changes nothing). */
+  async addAdmin(climberId: string): Promise<void> {
+    await this.doc.send(new UpdateCommand({
+      TableName: this.table,
+      Key: key.admins(),
+      UpdateExpression: 'ADD ids :id SET #type = :type',
+      ExpressionAttributeNames: { '#type': 'type' },
+      ExpressionAttributeValues: { ':id': new Set([climberId]), ':type': 'admins' },
+    }));
+  }
+
+  /** Forgets climbers who aren't admins any more. */
+  async removeAdmins(climberIds: string[]): Promise<void> {
+    if (climberIds.length === 0) return;
+    await this.doc.send(new UpdateCommand({
+      TableName: this.table,
+      Key: key.admins(),
+      UpdateExpression: 'DELETE ids :ids',
+      ExpressionAttributeValues: { ':ids': new Set(climberIds) },
+    }));
+  }
+
+  /** An admin removes a profile's content: its bio, photo and gear photos (the name stays: the filter checks it). */
+  async clearProfileContent(climberId: string): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.climber(climberId),
+        UpdateExpression: 'SET bio = :empty, gearPhotos = :none REMOVE photo',
+        ConditionExpression: 'attribute_exists(pk)',
+        ExpressionAttributeValues: { ':empty': '', ':none': [] },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  /** An admin clears a plan's notes (a new version, so a concurrent change reloads). */
+  async clearPlanNotes(planId: string): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.plan(planId),
+        UpdateExpression: 'SET notes = :empty, version = version + :one',
+        ConditionExpression: 'attribute_exists(pk)',
+        ExpressionAttributeValues: { ':empty': '', ':one': 1 },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  async deleteMessage(message: Message): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.message(message.planId, message.time, message.id) }));
   }
 
   // --- Plans ----------------------------------------------------------------
@@ -989,6 +1110,38 @@ function toWall(i: Item): Wall {
     routes: (i.routes as Wall['routes']) ?? [],
     createdBy: i.createdBy as string,
     createdAt: i.createdAt as string,
+  };
+}
+
+/** How long a handled report is kept (TTL): a year after it was handled. */
+export const REPORT_DAYS = 365;
+
+export function reportItem(r: Report): Item {
+  return {
+    ...key.report(r.id),
+    type: 'report',
+    ...r,
+    ...(r.status === 'open'
+      ? { gsi1pk: index.openReports.pk, gsi1sk: `${r.time}#${r.id}` }
+      : { ttl: Math.floor(new Date(r.resolvedAt ?? r.time).getTime() / 1000) + REPORT_DAYS * 86400 }),
+  };
+}
+
+export function toReport(i: Item): Report {
+  return {
+    id: i.id as string,
+    kind: i.kind as Report['kind'],
+    targetId: i.targetId as string,
+    ...(i.planId ? { planId: i.planId as string } : {}),
+    subjectId: i.subjectId as string,
+    reporterId: i.reporterId as string,
+    reason: i.reason as Report['reason'],
+    text: (i.text as string) ?? '',
+    content: (i.content as Report['content']) ?? {},
+    status: i.status as Report['status'],
+    time: i.time as string,
+    ...(i.resolvedAt ? { resolvedAt: i.resolvedAt as string } : {}),
+    ...(i.resolvedBy ? { resolvedBy: i.resolvedBy as string } : {}),
   };
 }
 

@@ -9,7 +9,7 @@ const STRINGS = {
   en: {
     signIn: 'Sign in',
     freeBadge: '100% free',
-    heroTitle: 'Find a climbing plan.',
+    heroTitle: 'Join a climbing plan.',
     heroLead: 'Make a plan, or swipe right on one, and climb together.',
     signInWithGoogle: 'Sign in with Google',
     freeLine: 'Free for every climber: no card, no subscription.',
@@ -53,7 +53,7 @@ const STRINGS = {
   es: {
     signIn: 'Entrar',
     freeBadge: '100% gratis',
-    heroTitle: 'Encuentra un plan de escalada.',
+    heroTitle: 'Únete a un plan de escalada.',
     heroLead: 'Crea un plan o desliza a la derecha en uno, y a escalar juntos.',
     signInWithGoogle: 'Iniciar sesión con Google',
     freeLine: 'Gratis para todos: sin tarjeta, sin suscripción.',
@@ -97,7 +97,7 @@ const STRINGS = {
   de: {
     signIn: 'Anmelden',
     freeBadge: '100 % kostenlos',
-    heroTitle: 'Finde einen Kletterplan.',
+    heroTitle: 'Schließ dich einem Kletterplan an.',
     heroLead: 'Mach einen Plan oder wisch bei einem nach rechts, und klettert zusammen.',
     signInWithGoogle: 'Mit Google anmelden',
     freeLine: 'Kostenlos für alle: keine Karte, kein Abo.',
@@ -141,7 +141,7 @@ const STRINGS = {
   fr: {
     signIn: 'Connexion',
     freeBadge: '100 % gratuit',
-    heroTitle: 'Trouve un plan de grimpe.',
+    heroTitle: 'Rejoins un plan de grimpe.',
     heroLead: 'Crée un plan ou swipe à droite sur un plan, et grimpez ensemble.',
     signInWithGoogle: 'Se connecter avec Google',
     freeLine: 'Gratuit pour tous les grimpeurs : sans carte, sans abonnement.',
@@ -185,7 +185,7 @@ const STRINGS = {
   pt: {
     signIn: 'Entrar',
     freeBadge: '100% grátis',
-    heroTitle: 'Encontre um plano de escalada.',
+    heroTitle: 'Entre em um plano de escalada.',
     heroLead: 'Crie um plano ou deslize para a direita em um, e escalem juntos.',
     signInWithGoogle: 'Entrar com o Google',
     freeLine: 'Grátis para todos: sem cartão, sem assinatura.',
@@ -229,7 +229,7 @@ const STRINGS = {
   ca: {
     signIn: 'Entra',
     freeBadge: '100% gratuït',
-    heroTitle: 'Troba un pla d’escalada.',
+    heroTitle: 'Uneix-te a un pla d’escalada.',
     heroLead: 'Fes un pla o llisca a la dreta en un, i escaleu junts.',
     signInWithGoogle: 'Inicia la sessió amb Google',
     freeLine: 'Gratuït per a tothom: sense targeta, sense subscripció.',

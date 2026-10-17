@@ -1227,7 +1227,70 @@ spec.
     - Cost: none. The same Lambda invocation checks the token (and, with
       the key, calls Apple's free token endpoint); one small item per
       Apple account.
-83. **Make sure Sign in with Apple is also available and working, besides
+
+83. **In the profile view, let the discipline selection be a separate item
+    from the grading system; show examples on the grading system.**
+    - [Screens](screens.md): the profile editor has a **Grade system**
+      section of its own (heading and hint in all six languages) before
+      **What you climb**, which now holds only the disciplines and their
+      grade ranges. Each option of the switch shows the same route and
+      boulder grade written its way: 🧗 6a 🪨 7A (European), 🧗 5.10b 🪨 V6
+      (American). The plan editor's switch is unchanged.
+    - Cost: none.
+
+84. **Say "Join a climbing plan" instead of "Find a climbing plan".**
+    - [README](README.md), [screens](screens.md), [landing](landing.md),
+      [App Store](app-store.md): Grigri's line is now "Join a climbing
+      plan", in all six languages: the sign-in headline, the landing
+      page's hero and title, the web app's and store's descriptions
+      (es "Únete a un plan de escalada", de "Schließ dich einem
+      Kletterplan an", fr "Rejoins un plan de grimpe", pt "Entre em um
+      plano de escalada", ca "Uneix-te a un pla d’escalada").
+    - Cost: none.
+
+85. **Remove the "Grigri" icon and title at the top left of the landing
+    page.**
+    - [landing](landing.md): the landing page's bar holds only the
+      **Sign in** button, on the right. The support and privacy pages
+      keep their logo, which links home.
+    - Cost: none.
+
+86. **Let people report content, block abusive users, and filter objectionable posts (App Store guideline 1.2).**
+    - [Moderation](moderation.md), new: the API refuses slurs and
+      explicit sexual terms (a word list in English, Spanish, German,
+      French, Portuguese and Catalan; whole words, ignoring case, accents,
+      repeated letters, leetspeak and spaced-out letters) in profile names
+      and bios, plan notes and hand-typed places, chat messages and ad
+      text, with a 400 the app words as "Please keep it friendly";
+      photos aren't machine-filtered (Rekognition proposed, not built).
+      Anyone can **Report** a profile, plan, chat message, plan photo or
+      ad (spam, harassment, inappropriate content, fake profile, other,
+      and optional words): "Thanks, we'll review it within 24 hours."
+      Admins get a "New reports to review" notification and a live hint,
+      and answer in **Admin → Reports** (dismiss, remove the content, or
+      block the climber app-wide). Anyone can **Block** someone: plans
+      with them leave my deck and mine theirs, neither can ask to join a
+      plan the other is in (a neutral 409), their open requests on plans
+      I decide on are declined, the app hides their messages and
+      notifications from me, and they aren't told; **Profile → Blocked
+      people** unblocks.
+    - [API](api.md): `POST /api/reports`, `GET /api/admin/reports`,
+      `POST /api/admin/reports/{id}/dismiss|remove|block`,
+      `GET /api/blocks`, `POST`/`DELETE /api/blocks/{id}`; the Report
+      shape and the `report` notice; the filter's 400; the deck and join
+      follow blocks.
+    - [Admin](admin.md): the Reports sub-tab. [Screens](screens.md): ⋮
+      with Report and Block on profile sheets, the plan screen, Discover
+      cards, ads and request cards; a long press on chat messages;
+      Blocked people in Profile. [Matching](matching.md): what a block
+      does. [Ads](ads.md), [Live updates](live-updates.md): reports.
+    - [Backend](backend.md): report, block and admins-list items in the
+      table. Cost: no new resources; a report is a few reads and writes,
+      a block two writes, and the deck and joins one small query more.
+    - [Sign-in](sign-in.md#deleting-my-account): deleting an account also
+      removes its blocks both ways, so nobody's Blocked people keeps a
+      deleted climber, and it's no longer a known admin.
+87. **Make sure Sign in with Apple is also available and working, besides
     Google, in every stage (local, RC, GA) and on every platform (web,
     iOS, Android).**
     - Found: Sign in with Apple (request 82) was iOS only, and the

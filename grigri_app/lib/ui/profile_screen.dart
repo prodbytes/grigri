@@ -6,6 +6,7 @@ import '../model/premium.dart';
 import '../theme.dart';
 import 'common.dart';
 import 'location_picker.dart';
+import 'moderation.dart';
 import 'profile_editor.dart';
 import 'roles_card.dart';
 
@@ -116,6 +117,20 @@ class ProfileScreen extends StatelessWidget {
           const SizedBox(height: 12),
           const RolesCard(),
           const SizedBox(height: 12),
+          // The people I blocked (specs/moderation.md), to unblock them.
+          Card(
+            child: ListTile(
+              key: const ValueKey('blocked people'),
+              leading: const Icon(Icons.block, color: Mountain.granite),
+              title: Text(l.blockedPeopleTitle),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const BlockedPeopleScreen(),
+                ),
+              ),
+            ),
+          ),
           Wrap(
             alignment: WrapAlignment.center,
             spacing: 8,
