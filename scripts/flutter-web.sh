@@ -13,6 +13,12 @@ PORT="${FLUTTER_WEB_PORT:-7189}"
 HOST="${GRIGRI_BIND_HOST:-127.0.0.1}"
 
 cd "$(dirname "$0")/../grigri_app"
+# This app is the local site's (https://local.grigri.nu01.com:2543/app/), so
+# it signs in with the local Google web client, whose JavaScript origins are
+# the local site's; Google refuses the RC's or GA's client there
+# (origin_mismatch). The local API checks the same client (process-compose.yaml).
+_local_client="${GOOGLE_WEB_CLIENT_ID_LOCAL:-$(sed -n 's/^GOOGLE_WEB_CLIENT_ID_LOCAL=//p' ../.env 2>/dev/null | tail -1)}"
+[[ -n "$_local_client" ]] && export GOOGLE_WEB_CLIENT_ID="$_local_client"
 source ../scripts/dart-defines.sh
 source ../scripts/version.sh
 flutter pub get

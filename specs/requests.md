@@ -1108,3 +1108,15 @@ spec.
     - Cost: none added. The catalog and photos are files CloudFront
       already serves from its cache.
 
+76. **Google sign-in on the local site failed with "Error 400:
+    origin_mismatch" (origin `https://local.grigri.nu01.com:2543`): fix
+    the authentication for Google and Apple.**
+    - [Sign-in](sign-in.md), [dev environment](dev-environment.md): the
+      local site was built with the RC's web client, whose only origin is
+      the RC site. The local web app and the local API now use the local
+      web client, `GOOGLE_WEB_CLIENT_ID_LOCAL` in `.env` (else
+      `GOOGLE_WEB_CLIENT_ID`), whose JavaScript origins in Google Cloud
+      now include `https://local.grigri.nu01.com:2543` (with its port:
+      Google matches it).
+    - Cost: none. OAuth clients are free.
+
