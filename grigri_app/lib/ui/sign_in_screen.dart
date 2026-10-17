@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../app_version.dart';
 import '../data/auth.dart';
@@ -6,7 +7,9 @@ import '../theme.dart';
 import 'common.dart';
 import 'google_button/google_button.dart';
 
-/// The sign-in screen: Google only (Google's own button on the web).
+/// The sign-in screen: Google (Google's own button on the web), and on
+/// iOS Sign in with Apple, as prominent: first, the same size, in Apple's
+/// own style (white, on the dark theme).
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -17,9 +20,9 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   bool _busy = false;
 
-  Future<void> _signIn(Auth auth) async {
+  Future<void> _signIn(Future<void> Function() signIn) async {
     setState(() => _busy = true);
-    await auth.signIn();
+    await signIn();
     if (mounted) setState(() => _busy = false);
   }
 
@@ -72,6 +75,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           switch (error) {
                             SignInError.session => l.errorSession,
                             SignInError.google => l.errorSignIn,
+                            SignInError.apple => l.errorSignInApple,
                           },
                           style: const TextStyle(color: Mountain.clay),
                           textAlign: TextAlign.center,
@@ -88,25 +92,40 @@ class _SignInScreenState extends State<SignInScreen> {
     );
   }
 
+  /// Both buttons' height: Sign in with Apple no smaller than Google.
+  static const _buttonHeight = 52.0;
+
   List<Widget> _buttons(Auth auth) {
     final l = context.l10n;
-    return switch (auth.mode) {
-      SignInMode.google => [
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            icon: const Icon(Icons.login),
-            label: Text(l.signInWithGoogle),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            onPressed: _busy ? null : () => _signIn(auth),
-          ),
+    final google = switch (auth.mode) {
+      SignInMode.google => SizedBox(
+        width: double.infinity,
+        height: _buttonHeight,
+        child: FilledButton.icon(
+          icon: const Icon(Icons.login),
+          label: Text(l.signInWithGoogle),
+          onPressed: _busy ? null : () => _signIn(auth.signIn),
         ),
-      ],
-      SignInMode.googleWebButton => [
-        SizedBox(height: 50, child: googleWebButton()),
-      ],
+      ),
+      SignInMode.googleWebButton => SizedBox(
+        height: 50,
+        child: googleWebButton(),
+      ),
     };
+    return [
+      if (auth.appleAvailable) ...[
+        SignInWithAppleButton(
+          text: l.signInWithApple,
+          height: _buttonHeight,
+          style: SignInWithAppleButtonStyle.white,
+          borderRadius: const BorderRadius.all(
+            Radius.circular(_buttonHeight / 2),
+          ),
+          onPressed: _busy ? null : () => _signIn(auth.signInWithApple),
+        ),
+        const SizedBox(height: 12),
+      ],
+      google,
+    ];
   }
 }

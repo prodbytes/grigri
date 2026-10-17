@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/config.dart';
 import 'package:grigri_app/data/api.dart';
+import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/http_api.dart';
 import 'package:grigri_app/model/climbing.dart';
@@ -341,7 +342,12 @@ void main() {
           (_) async => json({'token': 's3ssion', 'expiresAt': '2027-10-12'}),
           seen: seen,
         );
-        expect(await api.createSession(idToken: 'id-t0ken'), 's3ssion');
+        expect(
+          await api.createSession(
+            const Credential(user: AuthUser(), idToken: 'id-t0ken'),
+          ),
+          's3ssion',
+        );
         expect(seen.single.method, 'POST');
         expect(seen.single.url.toString(), 'https://grigri.test/api/session');
         expect(jsonDecode(seen.single.body), {'idToken': 'id-t0ken'});
@@ -352,7 +358,7 @@ void main() {
     test('a refused session start is a 401', () async {
       final api = apiWith((_) async => json({'error': 'signed out'}, 401));
       await expectLater(
-        api.createSession(idToken: 'bad'),
+        api.createSession(const Credential(user: AuthUser(), idToken: 'bad')),
         throwsA(isA<ApiException>().having((e) => e.status, 'status', 401)),
       );
     });

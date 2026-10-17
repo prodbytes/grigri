@@ -36,8 +36,10 @@ always in the plural, "partners" (a plan's group), in every language.
   app is open: the API's hints, the custom authorizer that keeps each
   climber to their own topic, reconnecting, and polling as a slow safety
   net.
-- [Sign-in](sign-in.md): Google only, per platform; the profile made
-  from the Google account at the first sign-in; admins.
+- [Sign-in](sign-in.md): Google on every platform, and Sign in with
+  Apple on iOS (App Store guideline 4.8); the token checks; revoking
+  Apple's tokens on account deletion; the profile made from the account
+  at the first sign-in; admins.
 - [Admin](admin.md): the Admin tab, for admins, with a sub-navigation:
   Users, everyone, to block (they can't use Grigri, and their plans
   leave the deck) or unblock; and Ads, to approve or reject ads.

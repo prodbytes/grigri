@@ -4,6 +4,7 @@
 // caller's profile (409 "no profile" until GET /api/me creates it, from the
 // Google account's name, or PUT /api/me saves it).
 import { randomBytes } from 'node:crypto';
+import type { AppleTokens, RevokeOutcome } from './apple.js';
 import { type Auth, type Caller, subjectHash } from './auth.js';
 import { ApiError, badRequest, conflict, forbidden, notFound, unavailable } from './domain/errors.js';
 import {
@@ -122,6 +123,8 @@ export interface Deps {
   matchScorer?: MatchScorer;
   /** Stripe, for Premium (stripe.ts); none: no Premium (no keys). */
   billing?: Billing;
+  /** Revokes Sign in with Apple's tokens (apple.ts); none: nothing to revoke. */
+  appleTokens?: Pick<AppleTokens, 'revoke'>;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -320,6 +323,15 @@ export class Api {
     };
     if (me) names.set(me.id, me.name);
     return route.handler(full, session);
+  }
+
+  /**
+   * Revokes the climber's Sign in with Apple tokens at Apple (App Store
+   * guideline 5.1.1(v)): for account deletion, before the profile (whose
+   * subject it reads) is deleted. Never throws; see AppleTokens.revoke.
+   */
+  async revokeAppleTokens(climberId: string): Promise<RevokeOutcome> {
+    return this.deps.appleTokens ? this.deps.appleTokens.revoke(climberId) : 'none';
   }
 
   // --- Profile and photos --------------------------------------------------

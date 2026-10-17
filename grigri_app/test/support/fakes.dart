@@ -316,15 +316,17 @@ class FakeApi implements GrigriApi, SessionApi {
   // --- The routes -----------------------------------------------------------
 
   @override
-  Future<String> createSession({required String idToken}) async {
+  Future<String> createSession(Credential credential) async {
     calls.add('POST /api/session');
     final fail = failNext;
     if (fail != null) {
       failNext = null;
       throw fail;
     }
-    sessionBodies.add({'idToken': idToken});
-    if (idToken != 'google-id-token') {
+    final body = credential.sessionBody;
+    sessionBodies.add(body);
+    if (body['idToken'] != 'google-id-token' &&
+        body['appleIdToken'] != 'apple-id-token') {
       throw const ApiException(401, 'signed out');
     }
     return openSession('pat@example.com');
@@ -1192,6 +1194,31 @@ class FakeGoogle extends SignInMethod {
   Future<void> signOut() async => signOuts++;
 }
 
+/// Sign in with Apple, made up: [next] is what Apple's sheet answers
+/// (null: cancelled), or [error] when set.
+class FakeApple implements AppleSignIn {
+  FakeApple({this.available = true});
+
+  @override
+  final bool available;
+
+  AppleCredential? next = const AppleCredential(
+    user: AuthUser(name: 'Pat Quill'),
+    idToken: 'apple-id-token',
+    nonce: 'made-up-nonce-0123456789',
+    authorizationCode: 'made-up-code',
+  );
+  Object? error;
+  int sheets = 0;
+
+  @override
+  Future<AppleCredential?> signIn() async {
+    sheets++;
+    if (error case final e?) throw e;
+    return next;
+  }
+}
+
 // --- Made-up climbers and plans -----------------------------------------------
 
 DateTime inDays(int days, [int hour = 9]) {
@@ -1300,12 +1327,14 @@ GrigriStore storeFor(
   bool signedIn = true,
   SignInMode mode = SignInMode.google,
   MemorySessionStorage? storage,
+  AppleSignIn? apple,
   Preferences? preferences,
   RealtimeTransport? realtime,
   DeviceLocation deviceLocation = const DeviceLocation.none(),
 }) {
   final auth = SessionAuth(
     method: FakeGoogle(mode: mode),
+    apple: apple,
     sessions: api,
     storage:
         storage ??

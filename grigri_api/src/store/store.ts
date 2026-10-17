@@ -15,6 +15,7 @@ import {
   type TransactWriteCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import type { AppleTokenStore } from '../apple.js';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
@@ -38,7 +39,7 @@ export interface LoadedPlan extends VersionedPlan {
   requests: JoinRequest[];
 }
 
-export class Store implements SessionStore {
+export class Store implements SessionStore, AppleTokenStore {
   constructor(
     readonly doc: DynamoDBDocumentClient,
     readonly table: string,
@@ -180,6 +181,30 @@ export class Store implements SessionStore {
   /** Saves a profile whole. (Blocked is rbacr's role, not the profile's.) */
   async saveProfile(climber: Climber, subject: string | undefined, now: Date): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: climberItem(climber, subject, now) }));
+  }
+
+  /** The subject a profile was created for (its sign-in account). */
+  async subjectOf(climberId: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.climber(climberId), ProjectionExpression: 'subject' }));
+    return Item?.subject as string | undefined;
+  }
+
+  // --- Apple refresh tokens (src/apple.ts) ------------------------------------
+
+  async putAppleToken(subject: string, refreshToken: string, now: Date): Promise<void> {
+    await this.doc.send(new PutCommand({
+      TableName: this.table,
+      Item: { ...key.appleToken(subject), type: 'appleToken', refreshToken, updatedAt: now.toISOString() },
+    }));
+  }
+
+  async getAppleToken(subject: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.appleToken(subject), ConsistentRead: true }));
+    return typeof Item?.refreshToken === 'string' ? Item.refreshToken : undefined;
+  }
+
+  async deleteAppleToken(subject: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.appleToken(subject) }));
   }
 
   /**

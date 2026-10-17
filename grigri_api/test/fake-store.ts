@@ -19,6 +19,8 @@ export class FakeStore {
   msgs: Message[] = [];
   pics: PlanPic[] = [];
   sessions = new Map<string, SessionRecord>();
+  /** Apple refresh tokens by subject. */
+  appleTokens = new Map<string, string>();
   subscriptions = new Map<string, Subscription>();
   ads = new Map<string, Ad>();
   adSettings: AdSettings = DEFAULT_AD_SETTINGS;
@@ -92,6 +94,10 @@ export class FakeStore {
   }
 
   async climberIdFor(subject: string) { return this.subjects.get(subject); }
+  async subjectOf(id: string) { return [...this.subjects].find(([, cid]) => cid === id)?.[0]; }
+  async putAppleToken(subject: string, token: string) { this.appleTokens.set(subject, token); }
+  async getAppleToken(subject: string) { return this.appleTokens.get(subject); }
+  async deleteAppleToken(subject: string) { this.appleTokens.delete(subject); }
   async getClimber(id: string) { return this.climbers.get(id); }
   async getClimbers(ids: Iterable<string>) {
     return Object.fromEntries([...ids].flatMap((id) => (this.climbers.has(id) ? [[id, this.climbers.get(id)!]] : [])));
