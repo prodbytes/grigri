@@ -51,15 +51,19 @@ are unsigned (CI's are). `bash scripts/flutter-run.sh -d <iPhone id>
 The Android release APK is signed with the debug key until a release key
 is set up.
 
-**Sign in with Apple** ([sign-in](sign-in.md#apple)), iOS only: the
+**Sign in with Apple** ([sign-in](sign-in.md#apple)), on every platform.
+On iOS, the
 Runner target's `CODE_SIGN_ENTITLEMENTS` is
 [Runner.entitlements](../grigri_app/ios/Runner/Runner.entitlements), with
 `com.apple.developer.applesignin` = `[Default]`, in every configuration.
 Automatic signing adds the capability to the App ID `com.nu01.grigri`
 (or enable it in the Apple Developer portal); a free Personal Team can't
 sign an app with it, so a developer without the paid program builds
-unsigned or removes the entitlement locally (never committed). Android and
-the web don't offer it.
+unsigned or removes the entitlement locally (never committed). On
+Android, `AndroidManifest.xml` declares sign_in_with_apple's
+`SignInWithAppleCallback` activity (scheme `signinwithapple`, path
+`callback`), where Apple's web flow returns; on the web, `index.html`
+loads Apple's JS, which the site's CSP allows.
 
 **Google sign-in** ([sign-in](sign-in.md#per-platform)): Android needs no
 app setting (the Google Cloud project's Android OAuth client for

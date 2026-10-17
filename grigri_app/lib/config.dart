@@ -22,6 +22,21 @@ abstract final class AppConfig {
     'GOOGLE_IOS_CLIENT_ID',
   );
 
+  /// Sign in with Apple's Services ID: the client of Apple's web flow, on
+  /// the web and Android (iOS uses Apple's own sheet, for the bundle ID).
+  /// The same on every stage; public, not a secret.
+  static const String appleServiceId = String.fromEnvironment(
+    'APPLE_SERVICE_ID',
+    defaultValue: 'com.nu01.grigri.signin',
+  );
+
+  /// Where Apple's web flow returns, registered with the Services ID: the
+  /// site's `/api/apple/callback`. On Android the API sends Apple's answer
+  /// back to the app from there; on the web Apple's popup answers the page
+  /// itself, but the URL must still be one of the Services ID's.
+  static Uri get appleRedirectUri =>
+      origin.replace(path: '/api/apple/callback');
+
   static const _prod = 'https://grigri.nu01.com';
   static const _rc = 'https://rc.grigri.nu01.com';
 

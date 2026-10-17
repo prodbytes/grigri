@@ -112,13 +112,15 @@ the web, so the API issues its own sessions:
   `{"error": "invalid Google ID token"}` for a bad, expired or foreign
   token; 400 without `idToken` (or `appleIdToken`). Dev mode only: `{"devUser": "<email>"}`
   instead (401 outside dev mode).
-- <a id="sign-in-with-apple"></a>**Sign in with Apple** (the iOS app,
+- <a id="sign-in-with-apple"></a>**Sign in with Apple** (every platform,
   [sign-in.md](sign-in.md#token-checks)): the function verifies
   `appleIdToken`: RS256 signature against Apple's keys
   (`https://appleid.apple.com/auth/keys`, cached across warm
   invocations), `iss` `https://appleid.apple.com`, `aud` the app's
   bundle ID (template parameter `AppleBundleId`, default
-  `com.nu01.grigri`), not expired, and its `nonce` claim equal to the
+  `com.nu01.grigri`: Apple's sheet on iOS) or the Services ID
+  (`AppleServiceId`, default `com.nu01.grigri.signin`: Apple's web flow,
+  on the web and Android), not expired, and its `nonce` claim equal to the
   SHA-256 (hex) of `nonce` (16 to 128 URL-safe characters; required: 400
   without it). The subject is `apple#<sub>`; the email is kept like
   Google's (only when verified; maybe an Apple relay address). `name`
@@ -126,10 +128,17 @@ the web, so the API issues its own sessions:
   collapsed, at most 60 characters) starts the profile, like Google's
   `name` claim. With `authorizationCode` and a Sign in with Apple key
   configured, the function trades the code for a refresh token and keeps
-  it (item `SUB#apple#<sub>` / `APPLE`) to revoke it when the account is
+  it with the client it belongs to (item `SUB#apple#<sub>` / `APPLE`) to revoke it when the account is
   deleted ([sign-in.md](sign-in.md#apple-token-revocation)); best effort,
   it never fails the sign-in. 401 `{"error": "invalid Apple ID token"}`
   for a bad, expired, foreign or replayed token.
+- **`POST /api/apple/callback`** (public): Sign in with Apple's return
+  URL, where Apple's web flow posts its answer on Android
+  (`application/x-www-form-urlencoded`: `code`, `id_token`, `state`,
+  `user`, or `error`; anything but a form is 415). Answers **307** to
+  `intent://callback?<those fields>#Intent;package=com.nu01.grigri;scheme=signinwithapple;end`,
+  which opens the Android app; other fields are dropped, and no field
+  picks the app. Never logged ([sign-in.md](sign-in.md#apple)).
 - The token: 32 random bytes, base64url (43 characters). Stored only as
   its SHA-256 hash: item `SESSION#<hash>` with the subject, the email (only
   if verified), `emailVerified`, the account's name (when given), `createdAt`, `lastUsedAt` and `ttl`

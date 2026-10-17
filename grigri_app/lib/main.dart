@@ -57,7 +57,7 @@ Future<void> main() async {
     ),
     sessions: api,
     storage: SessionStorage.device(),
-    // Sign in with Apple next to Google, on iOS.
+    // Sign in with Apple next to Google, on every platform.
     apple: const NativeAppleSignIn(),
   );
   final store = GrigriStore(

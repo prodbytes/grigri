@@ -65,7 +65,7 @@ export interface AuthConfig {
 export interface AppleSignIn {
   verify: AppleTokenVerifier;
   /** Best effort, never throws (AppleTokens.keepRefreshToken). */
-  keepRefreshToken?: (subject: string, authorizationCode: string) => Promise<void>;
+  keepRefreshToken?: (subject: string, authorizationCode: string, clientId: string) => Promise<void>;
 }
 
 export interface AuthDeps {
@@ -108,7 +108,7 @@ export class Auth {
     if (typeof body !== 'object' || body === null || Array.isArray(body)) throw badRequest('send {"idToken"}');
     const { idToken, appleIdToken, nonce, authorizationCode, name, devUser } = body as Record<string, unknown>;
     let identity: GoogleIdentity;
-    let appleCode: string | undefined;
+    let appleCode: { code: string; clientId: string } | undefined;
     if (typeof idToken === 'string' && idToken.length > 0) {
       try {
         identity = await this.deps.verify(idToken);
@@ -120,8 +120,9 @@ export class Auth {
       if (typeof nonce !== 'string' || !NONCE.test(nonce)) throw badRequest('send {"appleIdToken", "nonce"}');
       const apple = this.deps.apple;
       if (!apple) throw new ApiError(401, 'invalid Apple ID token');
+      let clientId: string;
       try {
-        identity = await apple.verify(appleIdToken, nonce);
+        ({ clientId, ...identity } = await apple.verify(appleIdToken, nonce));
       } catch (e) {
         if (e instanceof InvalidIdToken) throw new ApiError(401, 'invalid Apple ID token');
         throw e;
@@ -131,7 +132,7 @@ export class Auth {
       // (PUT /api/me can set any name anyway).
       const given = typeof name === 'string' && name.length <= 200 ? profileName(name) : undefined;
       if (given) identity = { ...identity, name: given };
-      if (typeof authorizationCode === 'string' && CODE.test(authorizationCode)) appleCode = authorizationCode;
+      if (typeof authorizationCode === 'string' && CODE.test(authorizationCode)) appleCode = { code: authorizationCode, clientId };
     } else if (devUser !== undefined) {
       if (!this.deps.config.devMode) throw new ApiError(401, 'dev sign-in is local only');
       const email = typeof devUser === 'string' ? devUser.trim().toLowerCase() : '';
@@ -155,7 +156,7 @@ export class Auth {
     };
     await this.deps.store.putSession(session);
     // For revoking Apple's tokens when the account is deleted (apple.ts).
-    if (appleCode) await this.deps.apple?.keepRefreshToken?.(identity.subject, appleCode);
+    if (appleCode) await this.deps.apple?.keepRefreshToken?.(identity.subject, appleCode.code, appleCode.clientId);
     return { token, expiresAt: new Date(session.ttl * 1000).toISOString() };
   }
 

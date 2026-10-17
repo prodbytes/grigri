@@ -1325,8 +1325,35 @@ spec.
       an App Store subscription doesn't ask Stripe; it unties the
       subscription from the account instead. The App Store's verifier is
       `grigri_api/src/app-store.ts` (Sign in with Apple keeps `apple.ts`).
+88. **Make sure Sign in with Apple is also available and working, besides
+    Google, in every stage (local, RC, GA) and on every platform (web,
+    iOS, Android).**
+    - Found: Sign in with Apple (request 82) was iOS only, and the
+      Apple-side setup (Services ID, key) wasn't done.
+    - [Sign-in](sign-in.md#apple): the web and Android now offer it too,
+      first and as prominent as Google's. They use Apple's web flow for
+      the Services ID `com.nu01.grigri.signin` (`APPLE_SERVICE_ID`, the
+      same on every stage), returning to `<site>/api/apple/callback`. On
+      the web, Apple's JS opens a popup (`index.html` loads it, and the
+      CSP allows it); a closed popup is a quiet cancel. On Android, a
+      Custom Tab: Apple posts to the return URL, and the API sends the
+      answer back to the app with a 307 to an `intent://` link (only
+      Apple's fields, always to `com.nu01.grigri`), which
+      sign_in_with_apple's callback activity, now in the manifest,
+      catches.
+    - [API](api.md#sign-in-with-apple): Apple identity tokens for the
+      Services ID (`AppleServiceId`) are taken as well as the bundle
+      ID's. A refresh token is now kept with the client it was issued to,
+      and exchanged and revoked as that client. New public route
+      `POST /api/apple/callback`.
+    - [Deploy](deploy.md): the smoke test checks the return URL on each
+      stage. The owner's Apple setup (Services ID with the three domains
+      and return URLs, and the key for revocation) is listed in
+      [sign-in](sign-in.md#configuration-the-owner-does).
+    - Cost: no new resource. Android's return URL is one more request to
+      the existing API per sign-in, and Apple's endpoints are free.
 
-88. **Create a few sample ads for "Climbing Siurana" (images and info from
+89. **Create a few sample ads for "Climbing Siurana" (images and info from
     https://www.climbingsiurana.com/en/); show ads infrequently, about one
     every 10 plans, a little randomized; when a user rejects an ad, don't
     show it again.**

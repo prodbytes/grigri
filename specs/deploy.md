@@ -52,8 +52,9 @@ for that tag:
 4. uploads the index page and the web build (`Cache-Control: no-cache`,
    Flutter's files aren't content-hashed) and invalidates `/*`;
 5. checks, for up to 10 minutes, that `/app/version.json` reports the
-   version, `/` is the index page, `/app/` answers, and `/api/health`
-   reports the stage and version.
+   version, `/` is the index page, `/app/` answers, `/api/health`
+   reports the stage and version, and `/api/apple/callback` sends a
+   form post back to the Android app (a 307 to its intent).
 
 If a step fails, it says which version was live before and how to put it
 back (re-run the workflow for its tag, or deploy it by hand). One
@@ -99,7 +100,9 @@ and a Content Security Policy:
   (`www.gstatic.com/flutter-canvaskit/`) with `'wasm-unsafe-eval'`, inline
   styles (Flutter injects them), fonts from `fonts.gstatic.com`, Google
   Identity Services (`accounts.google.com/gsi/`: script, style, frame and
-  calls) and Google account pictures (`lh3.googleusercontent.com`), the
+  calls), Sign in with Apple's JS
+  (`appleid.cdn-apple.com/appleauth/static/jsapi/`; its popup is a
+  window, so nothing more) and Google account pictures (`lh3.googleusercontent.com`), the
   API, photos and chat videos from the site itself (`'self'`; videos
   fall back to `default-src`), photo and video uploads to the
   photos bucket (`https://<bucket>.s3.us-east-1.amazonaws.com`), [live

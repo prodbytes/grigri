@@ -13,7 +13,7 @@ import 'google_button/google_button.dart';
 
 /// The sign-in screen, in the landing page's look (specs/sign-in.md,
 /// specs/landing.md): a GriGri Pics photo edge to edge, "100% free", the
-/// headline and the sign-in buttons (on iOS Sign in with Apple first, as
+/// headline and the sign-in buttons (Sign in with Apple first, as
 /// prominent as Google's, in Apple's own white style; Google's own button
 /// on the web), a demo plan card swiping right, how it works, what's free,
 /// and a last call.
