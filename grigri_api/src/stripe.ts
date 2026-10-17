@@ -31,6 +31,12 @@ export interface Billing {
   event(rawBody: string, signature: string | undefined, now: Date): StripeEvent;
   /** The subscription as Stripe has it now; undefined when it isn't one of Grigri's. */
   subscription(subscriptionId: string, now: Date): Promise<Subscription | undefined>;
+  /**
+   * Cancels a subscription at once (deleting the account): no more
+   * charges, no refund of the period already paid. Done already, or no
+   * such subscription, is fine.
+   */
+  cancel(subscriptionId: string): Promise<void>;
 }
 
 export interface StripeEvent {
@@ -48,7 +54,7 @@ export function stripeBilling(config: StripeConfig, fetchFn: Fetch = fetch): Bil
   if (!config.secretKey || !config.webhookSecret || !config.siteUrl) return null;
   const site = config.siteUrl.replace(/\/+$/, '');
 
-  async function call(method: 'GET' | 'POST', path: string, form?: Record<string, string>): Promise<Record<string, unknown>> {
+  async function send(method: 'GET' | 'POST' | 'DELETE', path: string, form?: Record<string, string>) {
     const res = await fetchFn(`${API}${path}`, {
       method,
       headers: {
@@ -59,11 +65,18 @@ export function stripeBilling(config: StripeConfig, fetchFn: Fetch = fetch): Bil
       signal: AbortSignal.timeout(8000),
     });
     const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-    if (!res.ok) {
-      // Stripe's message, never the key or the request.
-      const message = (json.error as { message?: string } | undefined)?.message ?? `HTTP ${res.status}`;
-      throw new Error(`stripe ${method} ${path.split('?')[0]}: ${message}`);
-    }
+    return { status: res.status, ok: res.ok, json };
+  }
+
+  function failure(method: string, path: string, status: number, json: Record<string, unknown>): Error {
+    // Stripe's message, never the key or the request.
+    const message = (json.error as { message?: string } | undefined)?.message ?? `HTTP ${status}`;
+    return new Error(`stripe ${method} ${path.split('?')[0]}: ${message}`);
+  }
+
+  async function call(method: 'GET' | 'POST', path: string, form?: Record<string, string>): Promise<Record<string, unknown>> {
+    const { ok, status, json } = await send(method, path, form);
+    if (!ok) throw failure(method, path, status, json);
     return json;
   }
 
@@ -120,6 +133,17 @@ export function stripeBilling(config: StripeConfig, fetchFn: Fetch = fetch): Bil
     async subscription(subscriptionId, now) {
       const s = await call('GET', `/subscriptions/${encodeURIComponent(subscriptionId)}`);
       return toSubscription(s, now);
+    },
+
+    async cancel(subscriptionId) {
+      const path = `/subscriptions/${encodeURIComponent(subscriptionId)}`;
+      const { ok, status, json } = await send('DELETE', path);
+      // 404: no such subscription (any more).
+      if (ok || status === 404) return;
+      // Cancelled already (a retry): Stripe refuses to cancel it again.
+      const { ok: read, json: current } = await send('GET', path);
+      if (read && current.status === 'canceled') return;
+      throw failure('DELETE', path, status, json);
     },
   };
 }

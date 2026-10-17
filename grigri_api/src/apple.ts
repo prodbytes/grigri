@@ -1,309 +1,270 @@
-// Apple's in-app purchase, for Premium on iOS (specs/premium.md, App Store
-// guideline 3.1.1). The app buys an auto-renewable subscription through
-// StoreKit 2 and sends the signed transaction (a JWS) to the API; the App
-// Store sends App Store Server Notifications V2 (a JWS too) as it renews,
-// lapses or is refunded. Both are verified offline, the way Apple's own
-// app-store-server-library does it, with node:crypto only (no App Store
-// Server API call, no key, no new dependency):
+// Sign in with Apple (specs/sign-in.md): the identity token the iPhone app
+// gets from Apple, verified in the function like Google's (POST
+// /api/session): RS256 signature against Apple's published keys, issuer
+// https://appleid.apple.com, audience the app's bundle ID, expiry, and the
+// nonce (Apple's token carries the SHA-256 of the app's random nonce, which
+// the app sends along). The key set is fetched once and cached by jose
+// across warm invocations (an unknown key ID triggers a rate-limited
+// refetch).
 //
-// - the header's alg is ES256 and its x5c holds three certificates;
-// - the intermediate is issued and signed by a trusted root (Apple Root
-//   CA - G3 only, apple-root.ts), the leaf by the intermediate;
-// - the leaf carries Apple's OID 1.2.840.113635.100.6.11.1 and the
-//   intermediate 1.2.840.113635.100.6.2.1;
-// - all three certificates were valid when Apple signed it (its
-//   signedDate, as Apple's library does offline);
-// - the JWS's ES256 signature verifies with the leaf's P-256 key.
-import { X509Certificate, createHash, verify as verifySignature } from 'node:crypto';
-import { APPLE_ROOT_CA_G3 } from './apple-root.js';
-import type { PremiumPlan, Subscription } from './premium.js';
+// Revocation (Apple requires it when an account is deleted): with a Sign
+// in with Apple key configured, the authorization code that comes with a
+// sign-in is exchanged for a refresh token, kept with the account (never
+// logged), and revokeAppleTokens revokes it. Without the key, both are
+// skipped with a warning.
+import { createHash } from 'node:crypto';
+import { createRemoteJWKSet, decodeJwt, errors, importPKCS8, jwtVerify, type JWTVerifyGetKey, SignJWT } from 'jose';
+import { type GoogleIdentity, InvalidIdToken } from './google.js';
 
-/** Grigri's bundle id: only its transactions count. */
-export const APPLE_BUNDLE_ID = 'com.nu01.grigri';
+export const APPLE_ISSUER = 'https://appleid.apple.com';
+export const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
+export const APPLE_TOKEN_URL = 'https://appleid.apple.com/auth/token';
+export const APPLE_REVOKE_URL = 'https://appleid.apple.com/auth/revoke';
+/** The app's bundle ID: the audience of its identity tokens. */
+export const DEFAULT_APPLE_BUNDLE_ID = 'com.nu01.grigri';
+/** Subjects of Apple accounts: `apple#<sub>`. */
+export const APPLE_SUBJECT_PREFIX = 'apple#';
 
-/** The two auto-renewable subscriptions (one group, "Grigri Premium"). */
-export const APPLE_PRODUCTS: Readonly<Record<string, PremiumPlan>> = {
-  'com.nu01.grigri.premium.monthly': 'monthly',
-  'com.nu01.grigri.premium.yearly': 'yearly',
-};
+/** A verified Apple account (the same shape as a Google one). */
+export type AppleIdentity = GoogleIdentity;
 
-/** Apple's marker OIDs: the App Store receipt-signing leaf, and the WWDR intermediate. */
-export const LEAF_OID = '1.2.840.113635.100.6.11.1';
-export const INTERMEDIATE_OID = '1.2.840.113635.100.6.2.1';
+/** Verifies an identity token issued with the SHA-256 of `rawNonce`. */
+export type AppleTokenVerifier = (idToken: string, rawNonce: string) => Promise<AppleIdentity>;
 
-/** Larger than any JWS Apple sends (a notification nests two JWS, each with three certificates). */
-const MAX_JWS = 48 * 1024;
+/** Module scope: one key set per warm Lambda container. */
+let remoteKeys: JWTVerifyGetKey | undefined;
+function appleKeys(): JWTVerifyGetKey {
+  remoteKeys ??= createRemoteJWKSet(new URL(APPLE_JWKS_URL), { timeoutDuration: 3000 });
+  return remoteKeys;
+}
 
-export class BadAppleSignature extends Error {}
-
-/** Verifies an App Store JWS and answers its payload; throws BadAppleSignature. */
-export type AppleVerify = (jws: unknown) => Record<string, unknown>;
+export function sha256Hex(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
 
 /**
- * An App Store JWS verifier trusting `roots`: Apple Root CA - G3 alone in
- * production (handler.ts passes nothing); tests pass a made-up root.
+ * A verifier for identity tokens Apple issued to `bundleId` (the iOS app).
+ * `keys` defaults to Apple's JWKS (tests pass a local key set). No bundle
+ * ID: every token is refused.
  */
-export function appleVerifier(roots: readonly X509Certificate[] = [APPLE_ROOT_CA_G3]): AppleVerify {
-  if (roots.length === 0) throw new Error('no trusted roots');
-  return (jws) => {
-    if (typeof jws !== 'string' || jws.length > MAX_JWS) throw new BadAppleSignature('not a JWS');
-    const parts = jws.split('.');
-    if (parts.length !== 3 || !parts.every((p) => /^[A-Za-z0-9_-]+$/.test(p))) throw new BadAppleSignature('not a JWS');
-    const [h, p, s] = parts as [string, string, string];
-    const header = jsonPart(h);
-    const payload = jsonPart(p);
-    // Only ES256: no "none", no HMAC with a public key, no other curve.
-    if (header.alg !== 'ES256') throw new BadAppleSignature('alg must be ES256');
-    if (header.crit !== undefined) throw new BadAppleSignature('unexpected crit');
-    const x5c = header.x5c;
-    if (!Array.isArray(x5c) || x5c.length !== 3 || !x5c.every((c) => typeof c === 'string')) {
-      throw new BadAppleSignature('x5c must hold three certificates');
-    }
-    let leaf: X509Certificate;
-    let intermediate: X509Certificate;
+export function appleVerifier(bundleId: string, keys: JWTVerifyGetKey = appleKeys()): AppleTokenVerifier {
+  return async (idToken, rawNonce) => {
+    if (!bundleId) throw new InvalidIdToken('no Apple client configured');
+    if (idToken.length > 4096 || idToken.split('.').length !== 3) throw new InvalidIdToken('not a JWT');
+    if (rawNonce.length === 0) throw new InvalidIdToken('no nonce');
+    let payload;
     try {
-      leaf = new X509Certificate(Buffer.from(x5c[0] as string, 'base64'));
-      intermediate = new X509Certificate(Buffer.from(x5c[1] as string, 'base64'));
-    } catch {
-      throw new BadAppleSignature('bad certificate');
+      ({ payload } = await jwtVerify(idToken, keys, {
+        issuer: APPLE_ISSUER,
+        audience: bundleId,
+        algorithms: ['RS256'],
+        requiredClaims: ['sub', 'exp', 'iat', 'nonce'],
+        clockTolerance: 30,
+      }));
+    } catch (e) {
+      // Apple's key endpoint unreachable: our fault, not the token's.
+      if (e instanceof errors.JWKSTimeout || (e instanceof Error && e.name === 'TypeError')) throw e;
+      throw new InvalidIdToken(e instanceof Error ? e.message : String(e));
     }
-    // x5c[2] is the root the signer names; only ours is trusted, so the
-    // intermediate must chain to it whatever x5c[2] says.
-    const root = roots.find((r) => intermediate.checkIssued(r) && intermediate.verify(r.publicKey));
-    if (!root) throw new BadAppleSignature('not issued by a trusted root');
-    if (!intermediate.ca) throw new BadAppleSignature('intermediate is not a CA');
-    if (!leaf.checkIssued(intermediate) || !leaf.verify(intermediate.publicKey)) throw new BadAppleSignature('leaf not issued by the intermediate');
-    if (!extensionOids(leaf).has(LEAF_OID)) throw new BadAppleSignature("leaf lacks Apple's OID");
-    if (!extensionOids(intermediate).has(INTERMEDIATE_OID)) throw new BadAppleSignature("intermediate lacks Apple's OID");
-    const signedDate = payload.signedDate;
-    if (typeof signedDate !== 'number' || !Number.isFinite(signedDate)) throw new BadAppleSignature('no signedDate');
-    for (const cert of [leaf, intermediate, root]) {
-      if (!(Date.parse(cert.validFrom) <= signedDate && signedDate <= Date.parse(cert.validTo))) {
-        throw new BadAppleSignature('certificate not valid when signed');
+    if (typeof payload.sub !== 'string' || payload.sub.length === 0 || payload.sub.length > 255) {
+      throw new InvalidIdToken('bad sub');
+    }
+    // The token was issued for this sign-in: Apple signed the nonce's hash.
+    if (payload.nonce !== sha256Hex(rawNonce)) throw new InvalidIdToken('nonce mismatch');
+    // Apple's email (maybe a private relay address) is always verified,
+    // and said so as a boolean or a string.
+    const verified = payload.email_verified === true || payload.email_verified === 'true';
+    const email = verified && typeof payload.email === 'string' ? payload.email.toLowerCase() : undefined;
+    return {
+      subject: `${APPLE_SUBJECT_PREFIX}${payload.sub}`,
+      ...(email ? { email } : {}),
+      emailVerified: email !== undefined,
+    };
+  };
+}
+
+// --- Refresh tokens and revocation ----------------------------------------------
+
+/** What the Apple tokens need from the store (Store implements it). */
+export interface AppleTokenStore {
+  putAppleToken(subject: string, refreshToken: string, now: Date): Promise<void>;
+  getAppleToken(subject: string): Promise<string | undefined>;
+  deleteAppleToken(subject: string): Promise<void>;
+  /** The subject a profile was created for, if any. */
+  subjectOf(climberId: string): Promise<string | undefined>;
+}
+
+export interface AppleKeyConfig {
+  /** The client ID the codes and tokens belong to: the bundle ID. */
+  clientId: string;
+  /** The Apple Developer team ID (10 characters). */
+  teamId: string;
+  /** The Sign in with Apple key's ID (10 characters). */
+  keyId: string;
+  /** The key's .p8 file: PEM, or its base64 body alone. A secret. */
+  privateKey: string;
+}
+
+/** What became of a revocation. */
+export type RevokeOutcome = 'revoked' | 'none' | 'skipped' | 'failed';
+
+type Fetch = typeof fetch;
+
+const warn = (msg: string, extra: Record<string, unknown> = {}) =>
+  console.error(JSON.stringify({ level: 'warn', msg, ...extra }));
+
+/** PKCS#8 PEM from a .p8 file's text or its base64 body; undefined if neither. */
+export function pkcs8Pem(raw: string): string | undefined {
+  const body = raw.replace(/-----(BEGIN|END) PRIVATE KEY-----/g, '').replace(/\s+/g, '');
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(body)) return undefined;
+  return `-----BEGIN PRIVATE KEY-----\n${body.match(/.{1,64}/g)!.join('\n')}\n-----END PRIVATE KEY-----\n`;
+}
+
+/**
+ * Apple's token endpoints for one client: trades a sign-in's authorization
+ * code for a refresh token (kept per subject) and revokes it. Needs the
+ * Sign in with Apple key; without it, `configured` is false and both are
+ * skipped with a warning.
+ */
+export class AppleTokens {
+  readonly configured: boolean;
+  private readonly pem: string | undefined;
+  private key: ReturnType<typeof importPKCS8> | undefined;
+  private warned = false;
+
+  constructor(
+    private readonly config: AppleKeyConfig,
+    private readonly store: AppleTokenStore,
+    private readonly http: Fetch = fetch,
+    private readonly clock: () => Date = () => new Date(),
+  ) {
+    this.pem = config.privateKey ? pkcs8Pem(config.privateKey) : undefined;
+    this.configured =
+      config.clientId.length > 0 &&
+      /^[A-Z0-9]{10}$/.test(config.teamId) &&
+      /^[A-Z0-9]{10}$/.test(config.keyId) &&
+      this.pem !== undefined;
+  }
+
+  /**
+   * After an Apple sign-in: trades its authorization code for a refresh
+   * token and keeps it with `subject`. Best effort: a failure is logged
+   * (never the code or the token) and the sign-in goes on.
+   */
+  async keepRefreshToken(subject: string, code: string): Promise<void> {
+    if (!this.configured) {
+      if (!this.warned) warn('Sign in with Apple key not configured: Apple refresh tokens are not kept, so they cannot be revoked');
+      this.warned = true;
+      return;
+    }
+    try {
+      const res = await this.post(APPLE_TOKEN_URL, { code, grant_type: 'authorization_code' });
+      if (!res.ok) {
+        warn('Apple refused the authorization code', { status: res.status, error: await appleError(res) });
+        return;
       }
+      const body = (await res.json()) as { refresh_token?: unknown; id_token?: unknown };
+      if (typeof body.refresh_token !== 'string' || body.refresh_token.length === 0) {
+        warn('Apple answered no refresh token');
+        return;
+      }
+      // The code must be this account's (not someone else's sent along
+      // with my identity token): Apple's own ID token, straight from Apple
+      // over TLS, says whose it is.
+      const sub = typeof body.id_token === 'string' ? safeSub(body.id_token) : undefined;
+      if (`${APPLE_SUBJECT_PREFIX}${sub}` !== subject) {
+        warn('Apple authorization code is for another account: not kept');
+        return;
+      }
+      await this.store.putAppleToken(subject, body.refresh_token, this.clock());
+    } catch (e) {
+      warn('Apple authorization code exchange failed', { error: errorName(e) });
     }
-    const key = leaf.publicKey;
-    if (key.asymmetricKeyType !== 'ec' || key.asymmetricKeyDetails?.namedCurve !== 'prime256v1') {
-      throw new BadAppleSignature('leaf key is not P-256');
+  }
+
+  /**
+   * Revokes the Apple refresh token kept for the climber's account (an
+   * Apple account's; Google ones have none), then forgets it. Never
+   * throws: 'revoked', 'none' (not an Apple account, or no token kept),
+   * 'skipped' (no key configured) or 'failed' (logged). The kept token is
+   * deleted whatever the outcome, as the account is going.
+   */
+  async revoke(climberId: string): Promise<RevokeOutcome> {
+    try {
+      const subject = await this.store.subjectOf(climberId);
+      if (!subject?.startsWith(APPLE_SUBJECT_PREFIX)) return 'none';
+      const token = await this.store.getAppleToken(subject);
+      if (!this.configured) {
+        warn('Sign in with Apple key not configured: Apple tokens not revoked');
+        if (token) await this.store.deleteAppleToken(subject);
+        return 'skipped';
+      }
+      if (!token) return 'none';
+      let outcome: RevokeOutcome = 'revoked';
+      try {
+        const res = await this.post(APPLE_REVOKE_URL, { token, token_type_hint: 'refresh_token' });
+        if (!res.ok) {
+          warn('Apple refused to revoke the token', { status: res.status, error: await appleError(res) });
+          outcome = 'failed';
+        }
+      } catch (e) {
+        warn('Apple token revocation failed', { error: errorName(e) });
+        outcome = 'failed';
+      }
+      await this.store.deleteAppleToken(subject);
+      return outcome;
+    } catch (e) {
+      warn('Apple token revocation failed', { error: errorName(e) });
+      return 'failed';
     }
-    const signature = Buffer.from(s, 'base64url');
-    if (signature.length !== 64) throw new BadAppleSignature('bad signature');
-    const ok = verifySignature('sha256', Buffer.from(`${h}.${p}`, 'ascii'), { key, dsaEncoding: 'ieee-p1363' }, signature);
-    if (!ok) throw new BadAppleSignature('signature mismatch');
-    return payload;
-  };
+  }
+
+  /** A form POST to Apple with this client's ID and secret. */
+  private async post(url: string, form: Record<string, string>): Promise<Response> {
+    const body = new URLSearchParams({ client_id: this.config.clientId, client_secret: await this.clientSecret(), ...form });
+    return this.http(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body,
+      signal: AbortSignal.timeout(3000),
+    });
+  }
+
+  /** The client secret: a short-lived ES256 JWT signed with the key. */
+  async clientSecret(): Promise<string> {
+    this.key ??= importPKCS8(this.pem!, 'ES256');
+    const now = Math.floor(this.clock().getTime() / 1000);
+    return new SignJWT({})
+      .setProtectedHeader({ alg: 'ES256', kid: this.config.keyId })
+      .setIssuer(this.config.teamId)
+      .setIssuedAt(now)
+      .setExpirationTime(now + 300)
+      .setAudience(APPLE_ISSUER)
+      .setSubject(this.config.clientId)
+      .sign(await this.key);
+  }
 }
 
-function jsonPart(part: string): Record<string, unknown> {
-  let parsed: unknown;
+function safeSub(jwt: string): string | undefined {
   try {
-    parsed = JSON.parse(Buffer.from(part, 'base64url').toString('utf8'));
+    const sub = decodeJwt(jwt).sub;
+    return typeof sub === 'string' && sub.length > 0 ? sub : undefined;
   } catch {
-    throw new BadAppleSignature('not a JWS');
+    return undefined;
   }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new BadAppleSignature('not a JWS');
-  return parsed as Record<string, unknown>;
 }
 
-// --- DER: a certificate's extension OIDs ------------------------------------
-
-interface Tlv {
-  tag: number;
-  start: number;
-  end: number;
-}
-
-function tlv(der: Buffer, at: number, limit: number): Tlv {
-  if (at + 2 > limit) throw new BadAppleSignature('bad certificate');
-  const tag = der[at]!;
-  let len = der[at + 1]!;
-  let start = at + 2;
-  if (len & 0x80) {
-    const n = len & 0x7f;
-    if (n === 0 || n > 4 || start + n > limit) throw new BadAppleSignature('bad certificate');
-    len = 0;
-    for (let i = 0; i < n; i++) len = len * 256 + der[start + i]!;
-    start += n;
+/** Apple's error code (`invalid_grant`, say): never a token. */
+async function appleError(res: Response): Promise<string | undefined> {
+  try {
+    const body = (await res.json()) as { error?: unknown };
+    return typeof body.error === 'string' && /^[a-z_]{1,40}$/.test(body.error) ? body.error : undefined;
+  } catch {
+    return undefined;
   }
-  const end = start + len;
-  if (end > limit) throw new BadAppleSignature('bad certificate');
-  return { tag, start, end };
 }
 
-function children(der: Buffer, parent: Tlv): Tlv[] {
-  const out: Tlv[] = [];
-  for (let at = parent.start; at < parent.end; ) {
-    const t = tlv(der, at, parent.end);
-    out.push(t);
-    at = t.end;
-  }
-  return out;
-}
-
-function oidString(bytes: Buffer): string {
-  const arcs: number[] = [];
-  let value = 0;
-  for (const b of bytes) {
-    value = value * 128 + (b & 0x7f);
-    if (!(b & 0x80)) {
-      if (arcs.length === 0) arcs.push(value < 80 ? Math.floor(value / 40) : 2, value < 80 ? value % 40 : value - 80);
-      else arcs.push(value);
-      value = 0;
-    }
-  }
-  return arcs.join('.');
-}
-
-/** The OIDs of a certificate's X.509 v3 extensions. */
-export function extensionOids(cert: X509Certificate): Set<string> {
-  const der = cert.raw;
-  const certificate = tlv(der, 0, der.length);
-  const tbs = children(der, certificate)[0];
-  if (!tbs) throw new BadAppleSignature('bad certificate');
-  const oids = new Set<string>();
-  // tbsCertificate's [3] EXPLICIT Extensions: SEQUENCE OF Extension.
-  for (const field of children(der, tbs)) {
-    if (field.tag !== 0xa3) continue;
-    const list = children(der, field)[0];
-    if (!list) continue;
-    for (const ext of children(der, list)) {
-      const id = children(der, ext)[0];
-      if (id?.tag === 0x06) oids.add(oidString(der.subarray(id.start, id.end)));
-    }
-  }
-  return oids;
-}
-
-// --- Transactions and notifications ------------------------------------------
-
-/** A signed transaction's fields Grigri uses (JWSTransactionDecodedPayload). */
-export interface AppleTransaction {
-  transactionId: string;
-  originalTransactionId: string;
-  bundleId: string;
-  productId: string;
-  plan: PremiumPlan;
-  /** Milliseconds since the epoch. */
-  expiresDate: number;
-  revocationDate?: number;
-  /** Lowercase UUID; absent when bought without one. */
-  appAccountToken?: string;
-  environment: 'Production' | 'Sandbox';
-  signedDate: number;
-}
-
-/** A signed renewal info's fields Grigri uses (JWSRenewalInfoDecodedPayload). */
-export interface AppleRenewal {
-  originalTransactionId: string;
-  /** 1: renews; 0: turned off (cancelled, ends at expiresDate). */
-  autoRenewStatus?: number;
-  gracePeriodExpiresDate?: number;
-}
-
-/** Thrown for a verified JWS that isn't a Grigri Premium subscription. */
-export class NotGrigriPremium extends Error {}
-
-const str = (v: unknown) => (typeof v === 'string' && v.length > 0 && v.length <= 200 ? v : undefined);
-const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
-
-/** A verified transaction payload as Grigri's subscription transaction; throws NotGrigriPremium. */
-export function appleTransaction(payload: Record<string, unknown>): AppleTransaction {
-  const bundleId = str(payload.bundleId);
-  if (bundleId !== APPLE_BUNDLE_ID) throw new NotGrigriPremium("not Grigri's app");
-  const productId = str(payload.productId);
-  const plan = productId ? APPLE_PRODUCTS[productId] : undefined;
-  if (!productId || !plan) throw new NotGrigriPremium('not a Grigri Premium product');
-  if (payload.type !== undefined && payload.type !== 'Auto-Renewable Subscription') throw new NotGrigriPremium('not a subscription');
-  const environment = payload.environment;
-  if (environment !== 'Production' && environment !== 'Sandbox') throw new NotGrigriPremium('unknown environment');
-  const transactionId = str(payload.transactionId);
-  const originalTransactionId = str(payload.originalTransactionId);
-  const expiresDate = num(payload.expiresDate);
-  const signedDate = num(payload.signedDate);
-  if (!transactionId || !originalTransactionId || expiresDate === undefined || signedDate === undefined) {
-    throw new NotGrigriPremium('incomplete transaction');
-  }
-  const token = str(payload.appAccountToken)?.toLowerCase();
-  const revocationDate = num(payload.revocationDate);
-  return {
-    transactionId,
-    originalTransactionId,
-    bundleId,
-    productId,
-    plan,
-    expiresDate,
-    ...(revocationDate !== undefined ? { revocationDate } : {}),
-    ...(token ? { appAccountToken: token } : {}),
-    environment,
-    signedDate,
-  };
-}
-
-/** A verified renewal info payload. */
-export function appleRenewal(payload: Record<string, unknown>): AppleRenewal {
-  const originalTransactionId = str(payload.originalTransactionId);
-  if (!originalTransactionId) throw new NotGrigriPremium('incomplete renewal info');
-  const autoRenewStatus = num(payload.autoRenewStatus);
-  const gracePeriodExpiresDate = num(payload.gracePeriodExpiresDate);
-  return {
-    originalTransactionId,
-    ...(autoRenewStatus !== undefined ? { autoRenewStatus } : {}),
-    ...(gracePeriodExpiresDate !== undefined ? { gracePeriodExpiresDate } : {}),
-  };
-}
-
-/**
- * The appAccountToken the app buys with: a UUID derived from the climber
- * (SHA-256, formatted as an RFC 9562 version 8 UUID), so a transaction
- * names the Grigri account it was bought for. Not a secret: a transaction
- * bought with someone else's only ever makes them Premium.
- */
-export function appleAccountToken(climberId: string): string {
-  const b = createHash('sha256').update(`grigri apple account ${climberId}`).digest().subarray(0, 16);
-  b[6] = (b[6]! & 0x0f) | 0x80;
-  b[8] = (b[8]! & 0x3f) | 0x80;
-  const hex = b.toString('hex');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
-/** What a notification's subscription state is, when Apple says (its data.status). */
-export type AppleStatus = 1 | 2 | 3 | 4 | 5;
-
-/**
- * The App Store's subscription as Grigri keeps it. Its status in Stripe's
- * words: refunded or revoked → canceled; Apple's billing retry or grace
- * period → past_due (paid until the grace period's end, if any);
- * expired → expired; otherwise active until expiresDate (expired once
- * past it).
- */
-export function appleSubscription(
-  climberId: string,
-  tx: AppleTransaction,
-  opts: { now: Date; signedDate: number; status?: AppleStatus; renewal?: AppleRenewal; forced?: 'expired' | 'canceled'; cancelAtPeriodEnd?: boolean; email?: string },
-): Subscription {
-  const { now } = opts;
-  let periodEnd = tx.expiresDate;
-  let status: string;
-  if (opts.forced) status = opts.forced;
-  else if (tx.revocationDate !== undefined || opts.status === 5) status = 'canceled';
-  else if (opts.status === 2) status = 'expired';
-  else if (opts.status === 3 || opts.status === 4) {
-    status = 'past_due';
-    if (opts.renewal?.gracePeriodExpiresDate) periodEnd = Math.max(periodEnd, opts.renewal.gracePeriodExpiresDate);
-  } else status = tx.expiresDate > now.getTime() ? 'active' : 'expired';
-  const cancelAtPeriodEnd = opts.renewal?.autoRenewStatus !== undefined ? opts.renewal.autoRenewStatus === 0 : (opts.cancelAtPeriodEnd ?? false);
-  return {
-    climberId,
-    customerId: '',
-    subscriptionId: tx.originalTransactionId,
-    source: 'apple',
-    status,
-    plan: tx.plan,
-    periodEnd: new Date(periodEnd).toISOString(),
-    cancelAtPeriodEnd,
-    updatedAt: now.toISOString(),
-    ...(opts.email ? { email: opts.email } : {}),
-    environment: tx.environment,
-    appleSignedAt: new Date(opts.signedDate).toISOString(),
-  };
+/** An error's kind and message, without anything a request carried. */
+function errorName(e: unknown): string {
+  return e instanceof Error ? `${e.name}: ${e.message}` : 'unknown';
 }

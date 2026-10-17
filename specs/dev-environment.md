@@ -124,7 +124,10 @@
   `GRIGRI_API_URL`, `GOOGLE_WEB_CLIENT_ID`, `GOOGLE_IOS_CLIENT_ID`: see
   [sign-in](sign-in.md); no rbacr token: roles come from the API);
   the version is passed as `GRIGRI_VERSION`. The app always signs in
-  with Google, so a local build needs `GOOGLE_WEB_CLIENT_ID` to sign in.
+  with Google, so a local build needs `GOOGLE_WEB_CLIENT_ID` to sign in;
+  the local site and API use `GOOGLE_WEB_CLIENT_ID_LOCAL` (the local
+  client, whose origin is `https://local.grigri.nu01.com:2543`) when it's
+  set.
 - **Checks**: `flutter analyze` and `flutter test` in `grigri_app/`; the
   Release workflow runs both on pull requests that touch the app or the
   build. The API: `npm run check` in `grigri_api/` (type check, tests,

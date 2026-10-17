@@ -146,6 +146,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Anmeldung mit Google fehlgeschlagen. Versuch es noch einmal.';
 
   @override
+  String get errorSignInApple =>
+      'Anmeldung mit Apple fehlgeschlagen. Versuch es noch einmal.';
+
+  @override
   String get errorSession =>
       'Anmeldung fehlgeschlagen. Versuch es noch einmal.';
 
@@ -158,10 +162,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Finde einen Kletterplan: Mach einen oder wisch bei einem nach rechts, und klettert zusammen.';
+      'Mach einen Plan oder wisch bei einem nach rechts, und klettert zusammen.';
 
   @override
   String get signInWithGoogle => 'Mit Google anmelden';
+
+  @override
+  String get signInWithApple => 'Mit Apple anmelden';
 
   @override
   String get tabDiscover => 'Suche';
@@ -271,6 +278,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get bioLabel => 'Über dich';
+
+  @override
+  String get gradeSystem => 'Bewertungssystem';
+
+  @override
+  String get gradeSystemHint =>
+      'Wie Grade in der App geschrieben werden, hier für eine Route und einen Boulder.';
 
   @override
   String get whatYouClimb => 'Was du kletterst';
@@ -1271,4 +1285,216 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Offen: sofort dabei';
+
+  @override
+  String get signInBadge => '100 % kostenlos';
+
+  @override
+  String get signInHeadline => 'Schließ dich einem Kletterplan an.';
+
+  @override
+  String get signInFreeLine => 'Kostenlos für alle: keine Karte, kein Abo.';
+
+  @override
+  String get signInStampJoin => 'DABEI';
+
+  @override
+  String get signInDeckWhen => 'Diesen Samstag · Sport · 6b–7a';
+
+  @override
+  String get signInDeckWho => 'Mara, Jonas und 1 weitere Person';
+
+  @override
+  String get signInHowTitle => 'So funktioniert’s';
+
+  @override
+  String get signInStep1Title => 'Mach einen Plan';
+
+  @override
+  String get signInStep1Body =>
+      'Wo, wann und welche Grade: ein Gebiet, ein Samstag, 6a bis 7a.';
+
+  @override
+  String get signInStep2Title => 'Wisch nach rechts';
+
+  @override
+  String get signInStep2Body =>
+      'Dir gefällt ein Plan? Wisch nach rechts. Die Gruppe nimmt Neue einzeln auf, wenn alle Ja sagen.';
+
+  @override
+  String get signInStep3Title => 'Klettert zusammen';
+
+  @override
+  String get signInStep3Body =>
+      'Jedes Match öffnet den Gruppenchat des Plans: Seil, Mitfahrt und Kaffee klären.';
+
+  @override
+  String get signInFreeTitle => 'Kostenlos. Wirklich.';
+
+  @override
+  String get signInFree1 => 'Pläne und Wischen';
+
+  @override
+  String get signInFree2 => 'Matches und Gruppenchats';
+
+  @override
+  String get signInFree3 => 'Fotos der Gebiete';
+
+  @override
+  String get signInFree4 => 'Keine Karte zur Anmeldung';
+
+  @override
+  String get signInFreePremium =>
+      'Premium ist freiwillig: nur zum Werben auf Grigri und für den Routenfinder. Klettern mit Grigri kostet nichts.';
+
+  @override
+  String get signInFinalTitle =>
+      'Der Kletterplan fürs Wochenende ist nur einen Wisch entfernt.';
+
+  @override
+  String get signInJoinFree => 'Kostenlos mit Google beitreten';
+
+  @override
+  String signInPhotoBy(String author, String license) {
+    return 'Foto: $author, $license';
+  }
+
+  @override
+  String get signInDeckWhen2 => 'Sonntag · Mehrseillänge · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker und Lea';
+
+  @override
+  String get signInDeckWhen3 => 'Nächstes Wochenende · Bouldern · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás und 2 weitere';
+
+  @override
+  String get privacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get support => 'Support';
+
+  @override
+  String get deleteAccount => 'Konto löschen';
+
+  @override
+  String get deleteAccountQuestion => 'Dein Konto löschen?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Löscht dein Grigri-Konto endgültig: dein Profil und deine Fotos, deine Nachrichten und Fotos in Gruppenchats, deine Anfragen und deine Anzeigen. Du verlässt alle deine Pläne: Pläne, die du organisierst, übernimmt jemand anderes aus dem Plan, und ein Plan, in dem nur du bist, endet. Premium, hier per Karte bezahlt, wird sofort gekündigt, ohne Erstattung der restlichen Zeit. Ein über Apple gekauftes Abo musst du in den Einstellungen deines iPhones kündigen. Du wirst auf allen Geräten abgemeldet.';
+
+  @override
+  String get deleteAccountUnderstand =>
+      'Ich verstehe, dass das nicht rückgängig zu machen ist';
+
+  @override
+  String get deleteAccountConfirm => 'Endgültig löschen';
+
+  @override
+  String get errorDeleteAccount =>
+      'Dein Konto konnte nicht gelöscht werden. Versuch es noch einmal.';
+
+  @override
+  String get moreActions => 'Mehr';
+
+  @override
+  String get report => 'Melden';
+
+  @override
+  String blockPerson(String name) {
+    return '$name blockieren';
+  }
+
+  @override
+  String get reportTitle => 'Warum meldest du das?';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonHarassment => 'Belästigung';
+
+  @override
+  String get reportReasonInappropriate => 'Unangemessene Inhalte';
+
+  @override
+  String get reportReasonFake => 'Falsches Profil';
+
+  @override
+  String get reportReasonOther => 'Sonstiges';
+
+  @override
+  String get reportDetailsHint =>
+      'Sonst noch etwas, das wir wissen sollten? (optional)';
+
+  @override
+  String get reportSend => 'Meldung senden';
+
+  @override
+  String get reportThanks => 'Danke, wir prüfen es innerhalb von 24 Stunden.';
+
+  @override
+  String get blockPersonMessage =>
+      'Ihr seht eure Pläne gegenseitig nicht mehr, keiner kann bei einem Plan des anderen anfragen, seine Anfragen zu deinen Plänen werden abgelehnt und du siehst seine Nachrichten nicht. Die Person erfährt es nicht.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return '$name ist blockiert.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Blockierte Personen';
+
+  @override
+  String get blockedPeopleEmpty => 'Du hast niemanden blockiert.';
+
+  @override
+  String get adminReportsTab => 'Meldungen';
+
+  @override
+  String get adminReportsEmpty => 'Keine Meldungen zu prüfen.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Gemeldet von $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Profil';
+
+  @override
+  String get reportKindPlan => 'Plan';
+
+  @override
+  String get reportKindMessage => 'Chatnachricht';
+
+  @override
+  String get reportKindPic => 'Planfoto';
+
+  @override
+  String get reportKindAd => 'Anzeige';
+
+  @override
+  String get reportDismiss => 'Verwerfen';
+
+  @override
+  String get reportRemove => 'Inhalt entfernen';
+
+  @override
+  String get reportBlock => 'Kletterer sperren';
+
+  @override
+  String get noticeReportsTitle => 'Neue Meldungen zu prüfen';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Meldungen · innerhalb von 24 Stunden beantworten';
+
+  @override
+  String get errorObjectionable =>
+      'Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt.';
 }

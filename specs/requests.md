@@ -1091,7 +1091,207 @@ spec.
       decides").
     - [Backend](backend.md): the seed's Montserrat plan is guided and
       the after-work gym plan is open.
-79. **Sell Premium on iOS through Apple's in-app purchase (App Store
+
+75. **Still seeing the old login page locally, though it was replaced by
+    a more modern one: rebuild, restart, and make sure the new page is on
+    every platform, the web included.**
+    - [Sign-in](sign-in.md): the app's sign-in screen (at `/app/`, and on
+      Android and iOS, where the landing page never showed) now has the
+      landing page's look: a GriGri Pics photo edge to edge, "100% free",
+      **Find a climbing plan.**, Google's sign-in, the swiping demo card,
+      how it works, what's free and a last call, in the six languages.
+      The app reads GriGri Pics' catalog (`/pics/catalog.json`, no
+      token) for the photos.
+    - [Landing page](landing.md): the headline and the last call follow
+      "Find a climbing plan" (they said "partner"), in every language, as
+      do the page's title and description.
+    - Cost: none added. The catalog and photos are files CloudFront
+      already serves from its cache.
+
+76. **The swiping animation shows a single plan (Margalef): add two
+    more, at other crags.**
+    - [Landing page](landing.md) and [sign-in](sign-in.md): the demo card
+      cycles through three made-up plans (different days, styles and
+      climbers), each at a different crag from GriGri Pics' catalog, in
+      the six languages. On the landing page the next plan comes in
+      while the card is off screen, at the end of each animation loop.
+
+77. **Verify the app is ready for the Apple App Store, and help ship it.**
+    - [App Store](app-store.md), new: the submission's spec and
+      checklist: what the repo does, what other pull requests are adding
+      (Sign in with Apple, account deletion, report and block, Apple
+      in-app purchase for Premium), and what the owner does by hand (the
+      paid membership, the distribution certificate, the App Store
+      Connect record, App Privacy and age rating answers, category, URLs,
+      screenshots, draft store copy, review notes and a demo account,
+      building and uploading, TestFlight first).
+    - [Platforms](platforms.md): iOS is iPhone only
+      (`TARGETED_DEVICE_FAMILY = 1`, no iPad orientations),
+      `ITSAppUsesNonExemptEncryption` is false, and the app bundles a
+      privacy manifest (`PrivacyInfo.xcprivacy`: no tracking; name,
+      email, user ID, coarse location, photos and videos, messages,
+      other user content and purchases, all linked, for app
+      functionality; `UserDefaults` with reason CA92.1).
+    - [Landing page](landing.md): new `/privacy.html` and
+      `/support.html` (English, dated 2026-10-17, in the page's look),
+      linked from the footer in all six languages.
+    - [Screens](screens.md): **Privacy policy** and **Support** at the
+      end of Profile open those pages in the browser.
+    - [Release builds](release.md): `make ipa` builds the signed archive
+      for App Store Connect. Apple allows a version and a build number of
+      up to three integers in 18 characters (TN2420); Grigri's
+      (`0.1.YYYYMMDDHHMM`, 16, and Unix seconds, 10) fit, so iOS keeps
+      the same version, and iOS builds now refuse one that doesn't.
+    - Cost: none in AWS (two small static pages in the site bucket,
+      served from CloudFront's cache). The App Store itself needs the
+      Apple Developer Program, $99 a year.
+
+78. **Delete my account from inside the app (App Store guideline
+    5.1.1(v)).**
+    - [Sign-in](sign-in.md#deleting-my-account), new section: **Delete
+      account** at the end of the Profile tab, with a confirmation that
+      says what's deleted and a box to tick; then `DELETE /api/me`
+      `{"confirm": true}`, and the app is signed out and back on the
+      sign-in screen. The API cancels a Stripe subscription at once (no
+      refund of the period paid) and revokes rbacr's Premium role, runs
+      the `onDeleteAccount` hook (for Sign in with Apple's token
+      revocation), removes my messages, their media, my request notes
+      and my Your Pics photos, leaves every plan through the leave rules
+      (handed over, or ended; the note says "A climber left the plan"),
+      withdraws my requests, and deletes my ads, photos, every item keyed
+      to me, the sign-in link and every session. Each step can run
+      again, so a retry finishes the job.
+    - [API](api.md): the route; Stripe's events about a deleted
+      account's subscription are ignored.
+    - [Screens](screens.md), [Premium](premium.md), [Admin](admin.md),
+      [Backend](backend.md), [Plan photos](pics.md): the button, the
+      immediate cancellation (a restricted Stripe key now needs write
+      access to Subscriptions), blocked climbers may delete their
+      account, and photos go with it.
+    - Cost: no new resource; a deletion is a few dozen DynamoDB reads
+      and writes, free S3 deletes and one or two free Stripe calls.
+
+79. **Google sign-in on the local site failed with "Error 400:
+    origin_mismatch" (origin `https://local.grigri.nu01.com:2543`): fix
+    the authentication for Google and Apple.**
+    - [Sign-in](sign-in.md), [dev environment](dev-environment.md): the
+      local site was built with the RC's web client, whose only origin is
+      the RC site. The local web app and the local API now use the local
+      web client, `GOOGLE_WEB_CLIENT_ID_LOCAL` in `.env` (else
+      `GOOGLE_WEB_CLIENT_ID`), whose JavaScript origins in Google Cloud
+      now include `https://local.grigri.nu01.com:2543` (with its port:
+      Google matches it).
+    - Cost: none. OAuth clients are free.
+
+
+80. **In the nav bar, Me should always be the last tab, on the right; for
+    admins after Ads and Admin.**
+    - [Screens](screens.md), [ads](ads.md#the-ads-tab): the bottom bar is
+      now Discover, Plans, Chats, Alerts, then Ads (Premium) and Admin
+      (admins), and Me always last.
+    - Cost: none.
+
+81. **Remove the "You don't climb this discipline" pill.**
+    - [Match scores](match-scores.md#on-an-admins-deck): an admin's deck
+      card no longer shows the reason pill when the reason is that I
+      don't climb the plan's discipline; other reasons still show.
+    - Cost: none.
+
+82. **Offer Sign in with Apple next to Google (App Store guideline 4.8).**
+    - [Sign-in](sign-in.md), rewritten: on iOS the sign-in screen offers
+      **Sign in with Apple** (sign_in_with_apple 8, Apple's white button,
+      first and the same size as Google's), asking for name and email
+      (Apple lets people hide their email), with a fresh nonce per
+      sign-in. Android and the web keep Google only. Cancelling is quiet;
+      a failure says "Couldn't sign in with Apple. Try again." in the
+      six languages. The Runner target has the
+      `com.apple.developer.applesignin` entitlement
+      ([platforms](platforms.md)).
+    - [API](api.md#sessions): `POST /api/session` also takes
+      `{"appleIdToken", "nonce", "authorizationCode"?, "name"?}`, checked
+      with jose like Google's (RS256 against Apple's cached keys, issuer
+      `https://appleid.apple.com`, audience the bundle ID
+      `AppleBundleId`, expiry, nonce hash); the subject is `apple#<sub>`,
+      and the name Apple gives at the first sign-in starts the profile.
+    - Revocation, behind configuration: with a Sign in with Apple key
+      (`AppleTeamId`, `AppleKeyId`, `ApplePrivateKey`; CI variables
+      `GRIGRI_APPLE_TEAM_ID`, `GRIGRI_APPLE_KEY_ID` and the secret
+      `GRIGRI_APPLE_PRIVATE_KEY`), the API trades the authorization code
+      for a refresh token and keeps it (`SUB#apple#<sub>` / `APPLE`), and
+      `Api.revokeAppleTokens(climberId)` revokes it at Apple. Deleting an
+      account (`DELETE /api/me`) now calls it before any data goes, and
+      deletes the kept token with the sign-in link. Without the key:
+      skipped, with a warning.
+    - [Backend](backend.md), [Deploy](deploy.md), [Screens](screens.md),
+      `.env.example` and the API's data model follow.
+    - Cost: none. The same Lambda invocation checks the token (and, with
+      the key, calls Apple's free token endpoint); one small item per
+      Apple account.
+
+83. **In the profile view, let the discipline selection be a separate item
+    from the grading system; show examples on the grading system.**
+    - [Screens](screens.md): the profile editor has a **Grade system**
+      section of its own (heading and hint in all six languages) before
+      **What you climb**, which now holds only the disciplines and their
+      grade ranges. Each option of the switch shows the same route and
+      boulder grade written its way: 🧗 6a 🪨 7A (European), 🧗 5.10b 🪨 V6
+      (American). The plan editor's switch is unchanged.
+    - Cost: none.
+
+84. **Say "Join a climbing plan" instead of "Find a climbing plan".**
+    - [README](README.md), [screens](screens.md), [landing](landing.md),
+      [App Store](app-store.md): Grigri's line is now "Join a climbing
+      plan", in all six languages: the sign-in headline, the landing
+      page's hero and title, the web app's and store's descriptions
+      (es "Únete a un plan de escalada", de "Schließ dich einem
+      Kletterplan an", fr "Rejoins un plan de grimpe", pt "Entre em um
+      plano de escalada", ca "Uneix-te a un pla d’escalada").
+    - Cost: none.
+
+85. **Remove the "Grigri" icon and title at the top left of the landing
+    page.**
+    - [landing](landing.md): the landing page's bar holds only the
+      **Sign in** button, on the right. The support and privacy pages
+      keep their logo, which links home.
+    - Cost: none.
+
+86. **Let people report content, block abusive users, and filter objectionable posts (App Store guideline 1.2).**
+    - [Moderation](moderation.md), new: the API refuses slurs and
+      explicit sexual terms (a word list in English, Spanish, German,
+      French, Portuguese and Catalan; whole words, ignoring case, accents,
+      repeated letters, leetspeak and spaced-out letters) in profile names
+      and bios, plan notes and hand-typed places, chat messages and ad
+      text, with a 400 the app words as "Please keep it friendly";
+      photos aren't machine-filtered (Rekognition proposed, not built).
+      Anyone can **Report** a profile, plan, chat message, plan photo or
+      ad (spam, harassment, inappropriate content, fake profile, other,
+      and optional words): "Thanks, we'll review it within 24 hours."
+      Admins get a "New reports to review" notification and a live hint,
+      and answer in **Admin → Reports** (dismiss, remove the content, or
+      block the climber app-wide). Anyone can **Block** someone: plans
+      with them leave my deck and mine theirs, neither can ask to join a
+      plan the other is in (a neutral 409), their open requests on plans
+      I decide on are declined, the app hides their messages and
+      notifications from me, and they aren't told; **Profile → Blocked
+      people** unblocks.
+    - [API](api.md): `POST /api/reports`, `GET /api/admin/reports`,
+      `POST /api/admin/reports/{id}/dismiss|remove|block`,
+      `GET /api/blocks`, `POST`/`DELETE /api/blocks/{id}`; the Report
+      shape and the `report` notice; the filter's 400; the deck and join
+      follow blocks.
+    - [Admin](admin.md): the Reports sub-tab. [Screens](screens.md): ⋮
+      with Report and Block on profile sheets, the plan screen, Discover
+      cards, ads and request cards; a long press on chat messages;
+      Blocked people in Profile. [Matching](matching.md): what a block
+      does. [Ads](ads.md), [Live updates](live-updates.md): reports.
+    - [Backend](backend.md): report, block and admins-list items in the
+      table. Cost: no new resources; a report is a few reads and writes,
+      a block two writes, and the deck and joins one small query more.
+    - [Sign-in](sign-in.md#deleting-my-account): deleting an account also
+      removes its blocks both ways, so nobody's Blocked people keeps a
+      deleted climber, and it's no longer a known admin.
+
+87. **Sell Premium on iOS through Apple's in-app purchase (App Store
     guideline 3.1.1).** Stripe Checkout isn't allowed in the iOS app
     outside the US; the owner chose the App Store's auto-renewable
     subscriptions on iOS, keeping Stripe on Android and the web.
@@ -1121,3 +1321,7 @@ spec.
       never mentions Stripe.
     - [Backend](backend.md): the App Store's cost; no new AWS resource.
     - [Roles](roles.md): the App Store grants and revokes `premium` too.
+    - [Sign-in](sign-in.md#deleting-my-account): deleting an account with
+      an App Store subscription doesn't ask Stripe; it unties the
+      subscription from the account instead. The App Store's verifier is
+      `grigri_api/src/app-store.ts` (Sign in with Apple keeps `apple.ts`).

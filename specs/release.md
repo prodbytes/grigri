@@ -60,6 +60,10 @@ only prints the tag.
 ## Make
 
 `make` builds every platform this host can; `make web|android|ios` one
-(`scripts/make.sh`). `MODE=release|profile|debug` (release by default),
+(`scripts/make.sh`); `make ipa`, a signed release archive for App Store
+Connect ([app-store.md](app-store.md), never part of `make`). iOS
+builds (`ios`, `ipa`) refuse a version or build number that isn't one to
+three integers in at most 18 characters, App Store Connect's rule; today's
+`0.1.YYYYMMDDHHMM` (16) and Unix seconds (10) fit. `MODE=release|profile|debug` (release by default),
 `IOS_CODESIGN=1` signs iOS, `WEB_BASE_HREF` sets the web base (`/app/` for
 the site). `make clean` runs `flutter clean`.

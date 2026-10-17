@@ -144,6 +144,10 @@ class AppLocalizationsCa extends AppLocalizations {
       'No s\'ha pogut iniciar la sessió amb Google. Torna-ho a provar.';
 
   @override
+  String get errorSignInApple =>
+      'No s\'ha pogut iniciar la sessió amb Apple. Torna-ho a provar.';
+
+  @override
   String get errorSession =>
       'No s\'ha pogut iniciar la sessió. Torna-ho a provar.';
 
@@ -156,10 +160,13 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Troba un pla d\'escalada: fes-ne un o llisca a la dreta en un, i escaleu junts.';
+      'Fes un pla o llisca a la dreta en un, i escaleu junts.';
 
   @override
   String get signInWithGoogle => 'Inicia la sessió amb Google';
+
+  @override
+  String get signInWithApple => 'Inicia la sessió amb Apple';
 
   @override
   String get tabDiscover => 'Cerca';
@@ -269,6 +276,13 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get bioLabel => 'Sobre tu';
+
+  @override
+  String get gradeSystem => 'Sistema de graus';
+
+  @override
+  String get gradeSystemHint =>
+      'Com s\'escriuen els graus a l\'app, aquí per a una via i un bloc.';
 
   @override
   String get whatYouClimb => 'Què escales';
@@ -1262,4 +1276,215 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Obert: uneix-te al moment';
+
+  @override
+  String get signInBadge => '100% gratuït';
+
+  @override
+  String get signInHeadline => 'Uneix-te a un pla d’escalada.';
+
+  @override
+  String get signInFreeLine =>
+      'Gratuït per a tothom: sense targeta, sense subscripció.';
+
+  @override
+  String get signInStampJoin => 'M’HI APUNTO';
+
+  @override
+  String get signInDeckWhen => 'Aquest dissabte · Esportiva · 6b–7a';
+
+  @override
+  String get signInDeckWho => 'Mara, Jonas i 1 més';
+
+  @override
+  String get signInHowTitle => 'Com funciona';
+
+  @override
+  String get signInStep1Title => 'Fes un pla';
+
+  @override
+  String get signInStep1Body =>
+      'On, quan i quins graus: una escola, un dissabte, de 6a a 7a.';
+
+  @override
+  String get signInStep2Title => 'Llisca a la dreta';
+
+  @override
+  String get signInStep2Body =>
+      'T’agrada un pla? Llisca a la dreta. El grup admet els nous d’un en un, quan tothom diu que sí.';
+
+  @override
+  String get signInStep3Title => 'Escaleu junts';
+
+  @override
+  String get signInStep3Body =>
+      'Cada match obre el xat de grup del pla: la corda, el cotxe i el cafè.';
+
+  @override
+  String get signInFreeTitle => 'Gratuït. De debò.';
+
+  @override
+  String get signInFree1 => 'Plans i lliscar';
+
+  @override
+  String get signInFree2 => 'Matches i xats de grup';
+
+  @override
+  String get signInFree3 => 'Fotos de les escoles';
+
+  @override
+  String get signInFree4 => 'Sense targeta per registrar-te';
+
+  @override
+  String get signInFreePremium =>
+      'Premium és opcional: només serveix per anunciar-se a Grigri i per al cercador de vies. Escalar amb Grigri no costa res.';
+
+  @override
+  String get signInFinalTitle =>
+      'El pla d’escalada d’aquest cap de setmana és a un lliscament.';
+
+  @override
+  String get signInJoinFree => 'Uneix-te gratis amb Google';
+
+  @override
+  String signInPhotoBy(String author, String license) {
+    return 'Foto: $author, $license';
+  }
+
+  @override
+  String get signInDeckWhen2 => 'Diumenge · Via llarga · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker i Lea';
+
+  @override
+  String get signInDeckWhen3 => 'El cap de setmana que ve · Bloc · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás i 2 més';
+
+  @override
+  String get privacyPolicy => 'Política de privadesa';
+
+  @override
+  String get support => 'Suport';
+
+  @override
+  String get deleteAccount => 'Elimina el compte';
+
+  @override
+  String get deleteAccountQuestion => 'Vols eliminar el teu compte?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Elimina el teu compte de Grigri per sempre: el teu perfil i les teves fotos, els teus missatges i fotos als xats de grup, les teves sol·licituds i els teus anuncis. Surts de tots els teus plans: als que organitzes, una altra persona del pla passa a organitzar-lo, i un pla on només hi ets tu s\'acaba. El Premium pagat aquí amb targeta es cancel·la al moment, sense reemborsament del temps que queda. Una subscripció comprada a través d\'Apple s\'ha de cancel·lar a la Configuració de l\'iPhone. Es tanca la teva sessió a tots els dispositius.';
+
+  @override
+  String get deleteAccountUnderstand => 'Entenc que no es pot desfer';
+
+  @override
+  String get deleteAccountConfirm => 'Elimina per sempre';
+
+  @override
+  String get errorDeleteAccount =>
+      'No s\'ha pogut eliminar el teu compte. Torna-ho a provar.';
+
+  @override
+  String get moreActions => 'Més';
+
+  @override
+  String get report => 'Denuncia';
+
+  @override
+  String blockPerson(String name) {
+    return 'Bloqueja $name';
+  }
+
+  @override
+  String get reportTitle => 'Per què ho denuncies?';
+
+  @override
+  String get reportReasonSpam => 'Correu brossa';
+
+  @override
+  String get reportReasonHarassment => 'Assetjament';
+
+  @override
+  String get reportReasonInappropriate => 'Contingut inadequat';
+
+  @override
+  String get reportReasonFake => 'Perfil fals';
+
+  @override
+  String get reportReasonOther => 'Un altre motiu';
+
+  @override
+  String get reportDetailsHint => 'Res més que hàgim de saber? (opcional)';
+
+  @override
+  String get reportSend => 'Envia la denúncia';
+
+  @override
+  String get reportThanks => 'Gràcies, ho revisarem en menys de 24 hores.';
+
+  @override
+  String get blockPersonMessage =>
+      'No veureu els plans de l’altre, cap dels dos podrà demanar unir-se a un pla on sigui l’altre, les seves sol·licituds als teus plans es rebutgen i no veuràs els seus missatges. No se li diu.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return 'Has bloquejat $name.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Persones bloquejades';
+
+  @override
+  String get blockedPeopleEmpty => 'No has bloquejat ningú.';
+
+  @override
+  String get adminReportsTab => 'Denúncies';
+
+  @override
+  String get adminReportsEmpty => 'No hi ha denúncies per revisar.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Denunciat per $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Perfil';
+
+  @override
+  String get reportKindPlan => 'Pla';
+
+  @override
+  String get reportKindMessage => 'Missatge del xat';
+
+  @override
+  String get reportKindPic => 'Foto del pla';
+
+  @override
+  String get reportKindAd => 'Anunci';
+
+  @override
+  String get reportDismiss => 'Descarta';
+
+  @override
+  String get reportRemove => 'Treu el contingut';
+
+  @override
+  String get reportBlock => 'Bloqueja l’escalador';
+
+  @override
+  String get noticeReportsTitle => 'Noves denúncies per revisar';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Denúncies · respon en menys de 24 hores';
+
+  @override
+  String get errorObjectionable =>
+      'Mantén un to amable: hi ha paraules que Grigri no permet.';
 }

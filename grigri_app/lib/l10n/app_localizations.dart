@@ -340,6 +340,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t sign in with Google. Try again.'**
   String get errorSignIn;
 
+  /// Sign in with Apple failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t sign in with Apple. Try again.'**
+  String get errorSignInApple;
+
   /// The API would not start a session after signing in.
   ///
   /// In en, this message translates to:
@@ -358,10 +364,10 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load your profile'**
   String get loadFailedTitle;
 
-  /// Sign-in screen, under the app name.
+  /// Sign-in screen: under the headline.
   ///
   /// In en, this message translates to:
-  /// **'Find a climbing plan: make one, or swipe right on one, and climb together.'**
+  /// **'Make a plan, or swipe right on one, and climb together.'**
   String get signInTagline;
 
   /// Button: sign in with a Google account.
@@ -369,6 +375,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in with Google'**
   String get signInWithGoogle;
+
+  /// Button: Sign in with Apple (iOS). Use Apple's own wording for the language.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Apple'**
+  String get signInWithApple;
 
   /// Bottom tab: the deck of plans to join.
   ///
@@ -573,6 +585,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'About you'**
   String get bioLabel;
+
+  /// Profile editor section heading (shown uppercased) above the European/American grade toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Grade system'**
+  String get gradeSystem;
+
+  /// Hint under the "Grade system" heading; each option shows a route grade and a boulder grade as examples.
+  ///
+  /// In en, this message translates to:
+  /// **'How grades are written across the app, here for a route and a boulder.'**
+  String get gradeSystemHint;
 
   /// Profile editor section heading (shown uppercased).
   ///
@@ -2240,6 +2264,390 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open: join at once'**
   String get openJoinAtOnce;
+
+  /// Sign-in screen: badge over the headline.
+  ///
+  /// In en, this message translates to:
+  /// **'100% free'**
+  String get signInBadge;
+
+  /// Sign-in screen: the headline, Grigri's line.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a climbing plan.'**
+  String get signInHeadline;
+
+  /// Sign-in screen: under the sign-in button.
+  ///
+  /// In en, this message translates to:
+  /// **'Free for every climber: no card, no subscription.'**
+  String get signInFreeLine;
+
+  /// Sign-in screen: the stamp on the demo card as it's swiped right.
+  ///
+  /// In en, this message translates to:
+  /// **'JOIN'**
+  String get signInStampJoin;
+
+  /// Sign-in screen: the demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'This Saturday · Sport · 6b–7a'**
+  String get signInDeckWhen;
+
+  /// Sign-in screen: the demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Mara, Jonas and 1 more'**
+  String get signInDeckWho;
+
+  /// Sign-in screen: heading of the three steps.
+  ///
+  /// In en, this message translates to:
+  /// **'How it works'**
+  String get signInHowTitle;
+
+  /// Sign-in screen: step 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Make a plan'**
+  String get signInStep1Title;
+
+  /// Sign-in screen: step 1, explained.
+  ///
+  /// In en, this message translates to:
+  /// **'Where, when and which grades: a crag, a Saturday, 6a to 7a.'**
+  String get signInStep1Body;
+
+  /// Sign-in screen: step 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe right'**
+  String get signInStep2Title;
+
+  /// Sign-in screen: step 2, explained.
+  ///
+  /// In en, this message translates to:
+  /// **'Like someone\'s plan? Swipe right. The group lets newcomers in one at a time, when everyone says yes.'**
+  String get signInStep2Body;
+
+  /// Sign-in screen: step 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Climb together'**
+  String get signInStep3Title;
+
+  /// Sign-in screen: step 3, explained.
+  ///
+  /// In en, this message translates to:
+  /// **'Every match opens the plan\'s group chat: sort out the rope, the ride and the coffee.'**
+  String get signInStep3Body;
+
+  /// Sign-in screen: heading of what's free.
+  ///
+  /// In en, this message translates to:
+  /// **'Free. Really.'**
+  String get signInFreeTitle;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans and swiping'**
+  String get signInFree1;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'Matches and group chats'**
+  String get signInFree2;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'Crag photos'**
+  String get signInFree3;
+
+  /// Sign-in screen: a free feature.
+  ///
+  /// In en, this message translates to:
+  /// **'No card to sign up'**
+  String get signInFree4;
+
+  /// Sign-in screen: what Premium is for.
+  ///
+  /// In en, this message translates to:
+  /// **'Premium is optional: it\'s only for advertising on Grigri and for the route finder. Climbing with Grigri costs nothing.'**
+  String get signInFreePremium;
+
+  /// Sign-in screen: the last call, at the bottom.
+  ///
+  /// In en, this message translates to:
+  /// **'This weekend\'s climbing plan is one swipe away.'**
+  String get signInFinalTitle;
+
+  /// Sign-in screen: the last button.
+  ///
+  /// In en, this message translates to:
+  /// **'Join free with Google'**
+  String get signInJoinFree;
+
+  /// Sign-in screen: the hero photo's credit.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo: {author}, {license}'**
+  String signInPhotoBy(String author, String license);
+
+  /// Sign-in screen: the second demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday · Multi-pitch · 6a–6b'**
+  String get signInDeckWhen2;
+
+  /// Sign-in screen: the second demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Iker and Lea'**
+  String get signInDeckWho2;
+
+  /// Sign-in screen: the third demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Next weekend · Bouldering · 6C–7A'**
+  String get signInDeckWhen3;
+
+  /// Sign-in screen: the third demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Noor, Tomás and 2 more'**
+  String get signInDeckWho3;
+
+  /// Link at the end of Profile: opens the privacy policy on the site in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get privacyPolicy;
+
+  /// Link at the end of Profile: opens the support page on the site in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get support;
+
+  /// Profile: the button at the end that deletes my account for good.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccount;
+
+  /// Title of the delete-account confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get deleteAccountQuestion;
+
+  /// Body of the delete-account confirmation dialog: what's deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes your Grigri account for good: your profile and photos, your messages and photos in group chats, your join requests and your ads. You leave all your plans: someone else in a plan you organize takes it over, and a plan with only you in it ends. Premium paid with a card here is cancelled at once, with no refund of the time left. A subscription bought through Apple must be cancelled in your iPhone\'s Settings. You\'re signed out on every device.'**
+  String get deleteAccountMessage;
+
+  /// Checkbox in the delete-account dialog; the delete button works only once it's ticked.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand this can\'t be undone'**
+  String get deleteAccountUnderstand;
+
+  /// The delete-account dialog's destructive button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for good'**
+  String get deleteAccountConfirm;
+
+  /// Snackbar: deleting the account failed (trying again finishes the job).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete your account. Try again.'**
+  String get errorDeleteAccount;
+
+  /// Tooltip of the ⋮ menu with Report and Block.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get moreActions;
+
+  /// Menu item: report objectionable content to the admins.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get report;
+
+  /// Menu item: block this person (my own block, not an admin's).
+  ///
+  /// In en, this message translates to:
+  /// **'Block {name}'**
+  String blockPerson(String name);
+
+  /// Report dialog title: asks for the reason.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting this?'**
+  String get reportTitle;
+
+  /// A reason to report: spam.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam'**
+  String get reportReasonSpam;
+
+  /// A reason to report: harassment.
+  ///
+  /// In en, this message translates to:
+  /// **'Harassment'**
+  String get reportReasonHarassment;
+
+  /// A reason to report: inappropriate content.
+  ///
+  /// In en, this message translates to:
+  /// **'Inappropriate content'**
+  String get reportReasonInappropriate;
+
+  /// A reason to report: a fake profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Fake profile'**
+  String get reportReasonFake;
+
+  /// A reason to report: something else.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get reportReasonOther;
+
+  /// Report dialog: the optional text field's hint.
+  ///
+  /// In en, this message translates to:
+  /// **'Anything else we should know? (optional)'**
+  String get reportDetailsHint;
+
+  /// Report dialog: sends the report.
+  ///
+  /// In en, this message translates to:
+  /// **'Send report'**
+  String get reportSend;
+
+  /// Snackbar after a report was sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks, we\'ll review it within 24 hours.'**
+  String get reportThanks;
+
+  /// What blocking someone (my own block) does.
+  ///
+  /// In en, this message translates to:
+  /// **'You won\'t see each other\'s plans, neither of you can ask to join a plan the other is in, their requests to your plans are declined, and you won\'t see their messages. They aren\'t told.'**
+  String get blockPersonMessage;
+
+  /// Snackbar after blocking someone.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is blocked.'**
+  String blockedPersonDone(String name);
+
+  /// Profile: the list of people I blocked, and its screen title.
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked people'**
+  String get blockedPeopleTitle;
+
+  /// Blocked people: when I haven't blocked anyone.
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t blocked anyone.'**
+  String get blockedPeopleEmpty;
+
+  /// Admin tab's sub-navigation: reports to review.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get adminReportsTab;
+
+  /// Admin → Reports: nothing to review.
+  ///
+  /// In en, this message translates to:
+  /// **'No reports to review.'**
+  String get adminReportsEmpty;
+
+  /// Admin → Reports: who reported it.
+  ///
+  /// In en, this message translates to:
+  /// **'Reported by {name}'**
+  String reportedBy(String name);
+
+  /// Admin → Reports: what was reported, a profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get reportKindProfile;
+
+  /// Admin → Reports: what was reported, a plan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get reportKindPlan;
+
+  /// Admin → Reports: what was reported, a chat message.
+  ///
+  /// In en, this message translates to:
+  /// **'Chat message'**
+  String get reportKindMessage;
+
+  /// Admin → Reports: what was reported, a plan photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan photo'**
+  String get reportKindPic;
+
+  /// Admin → Reports: what was reported, an ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad'**
+  String get reportKindAd;
+
+  /// Admin → Reports: nothing wrong, close the report.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get reportDismiss;
+
+  /// Admin → Reports: take the reported content down.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove content'**
+  String get reportRemove;
+
+  /// Admin → Reports: block the climber whose content it is (app-wide).
+  ///
+  /// In en, this message translates to:
+  /// **'Block climber'**
+  String get reportBlock;
+
+  /// Notification (admins): new reports wait for review.
+  ///
+  /// In en, this message translates to:
+  /// **'New reports to review'**
+  String get noticeReportsTitle;
+
+  /// Notification (admins): where to review reports, and within how long.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin → Reports · answer within 24 hours'**
+  String get noticeReportsBody;
+
+  /// Error: the server refused text with words Grigri does not allow.
+  ///
+  /// In en, this message translates to:
+  /// **'Please keep it friendly: that has words Grigri doesn\'t allow.'**
+  String get errorObjectionable;
 }
 
 class _AppLocalizationsDelegate

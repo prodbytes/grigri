@@ -4,12 +4,14 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/config.dart';
 import 'package:grigri_app/data/api.dart';
+import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/http_api.dart';
 import 'package:grigri_app/model/climbing.dart';
 import 'package:grigri_app/model/climber.dart';
 import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/plan.dart';
+import 'package:grigri_app/model/report.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -341,7 +343,12 @@ void main() {
           (_) async => json({'token': 's3ssion', 'expiresAt': '2027-10-12'}),
           seen: seen,
         );
-        expect(await api.createSession(idToken: 'id-t0ken'), 's3ssion');
+        expect(
+          await api.createSession(
+            const Credential(user: AuthUser(), idToken: 'id-t0ken'),
+          ),
+          's3ssion',
+        );
         expect(seen.single.method, 'POST');
         expect(seen.single.url.toString(), 'https://grigri.test/api/session');
         expect(jsonDecode(seen.single.body), {'idToken': 'id-t0ken'});
@@ -352,7 +359,7 @@ void main() {
     test('a refused session start is a 401', () async {
       final api = apiWith((_) async => json({'error': 'signed out'}, 401));
       await expectLater(
-        api.createSession(idToken: 'bad'),
+        api.createSession(const Credential(user: AuthUser(), idToken: 'bad')),
         throwsA(isA<ApiException>().having((e) => e.status, 'status', 401)),
       );
     });
@@ -369,6 +376,35 @@ void main() {
       for (final r in seen) {
         expect(r.headers['Authorization'], 'Bearer s3ssion');
       }
+    });
+
+    test("GriGri Pics' catalog: a static file, read without a token", () async {
+      final seen = <http.Request>[];
+      final api = HttpGrigriApi(
+        origin: site,
+        headers: () async => {'Authorization': 'Bearer t0ken'},
+        client: MockClient((request) async {
+          seen.add(request);
+          return json({
+            'crags': [
+              {
+                'name': 'Peña Alta',
+                'photos': [
+                  {'key': 'crags/a/1.jpg', 'author': 'Ana Roca'},
+                  {'caption': 'no key'},
+                ],
+              },
+              {'name': 'Valle Gris'},
+            ],
+          });
+        }),
+      );
+      final pics = await api.picsCatalog();
+      expect(seen.single.url.path, '/pics/catalog.json');
+      expect(seen.single.headers.containsKey('Authorization'), isFalse);
+      expect(pics.single.key, 'crags/a/1.jpg');
+      expect(pics.single.crag, 'Peña Alta');
+      expect(pics.single.author, 'Ana Roca');
     });
 
     test('photos: a presigned POST with its fields, then the file', () async {
@@ -680,5 +716,97 @@ void main() {
       expect(store.myPlans, isEmpty);
       expect(store.notices, isEmpty);
     });
+  });
+
+  test('moderation: reports, the admin\'s list and actions, and my blocks '
+      '(specs/moderation.md)', () async {
+    final seen = <http.Request>[];
+    final api = apiWith((request) async {
+      final path = request.url.path;
+      if (path == '/api/admin/reports') {
+        return json({
+          'reports': [
+            {
+              'id': 'r1',
+              'kind': 'message',
+              'targetId': 'm1',
+              'planId': 'p1',
+              'subjectId': 'robin',
+              'reporterId': 'me',
+              'reason': 'harassment',
+              'text': 'Rude',
+              'content': {
+                'text': 'Something rude',
+                'media': [
+                  {'key': 'chat/p1/abc.mp4', 'kind': 'video'},
+                ],
+              },
+              'status': 'open',
+              'time': '2026-10-17T07:00:00.000Z',
+            },
+            // A kind this version doesn't know: left out.
+            {'id': 'r2', 'kind': 'wall', 'reason': 'spam'},
+          ],
+          'climbers': {'robin': robinJson},
+        });
+      }
+      if (path == '/api/blocks' && request.method == 'GET') {
+        return json({
+          'blocked': ['robin'],
+          'climbers': {'robin': robinJson},
+        });
+      }
+      return json({});
+    }, seen: seen);
+
+    await api.sendReport(
+      kind: ReportKind.message,
+      targetId: 'm1',
+      planId: 'p1',
+      reason: ReportReason.harassment,
+      text: '  Rude  ',
+    );
+    expect(seen.last.method, 'POST');
+    expect(seen.last.url.path, '/api/reports');
+    expect(jsonDecode(seen.last.body), {
+      'kind': 'message',
+      'targetId': 'm1',
+      'planId': 'p1',
+      'reason': 'harassment',
+      'text': 'Rude',
+    });
+
+    final reports = await api.adminReports();
+    expect(reports.reports, hasLength(1));
+    final r = reports.reports.single;
+    expect(r.kind, ReportKind.message);
+    expect(r.planId, 'p1');
+    expect(r.content.text, 'Something rude');
+    expect(r.content.media.single.video, isTrue);
+    expect(reports.climbers['robin']!.name, 'Robin Vale');
+
+    await api.resolveReport('r1', ReportAction.remove);
+    expect(seen.last.url.path, '/api/admin/reports/r1/remove');
+
+    final blocks = await api.blocks();
+    expect(blocks.blocked, ['robin']);
+    await api.setPersonBlocked('robin', true);
+    expect(
+      '${seen.last.method} ${seen.last.url.path}',
+      'POST /api/blocks/robin',
+    );
+    await api.setPersonBlocked('robin', false);
+    expect(
+      '${seen.last.method} ${seen.last.url.path}',
+      'DELETE /api/blocks/robin',
+    );
+  });
+
+  test('the filter\'s 400 is told apart', () {
+    expect(
+      const ApiException(400, 'objectionable: bio has words').objectionable,
+      isTrue,
+    );
+    expect(const ApiException(400, 'bio is too long').objectionable, isFalse);
   });
 }

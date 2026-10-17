@@ -15,9 +15,11 @@ import {
   type TransactWriteCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import type { AppleTokenStore } from '../apple.js';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
+import type { Report } from '../domain/moderation.js';
 import type { Delivery, Effects } from '../domain/rules.js';
 import { type Attachment, type Climber, type DayWindow, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, type Price, isOpen } from '../domain/model.js';
 import type { Wall } from '../domain/walls.js';
@@ -38,7 +40,7 @@ export interface LoadedPlan extends VersionedPlan {
   requests: JoinRequest[];
 }
 
-export class Store implements SessionStore {
+export class Store implements SessionStore, AppleTokenStore {
   constructor(
     readonly doc: DynamoDBDocumentClient,
     readonly table: string,
@@ -182,6 +184,30 @@ export class Store implements SessionStore {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: climberItem(climber, subject, now) }));
   }
 
+  /** The subject a profile was created for (its sign-in account). */
+  async subjectOf(climberId: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.climber(climberId), ProjectionExpression: 'subject' }));
+    return Item?.subject as string | undefined;
+  }
+
+  // --- Apple refresh tokens (src/apple.ts) ------------------------------------
+
+  async putAppleToken(subject: string, refreshToken: string, now: Date): Promise<void> {
+    await this.doc.send(new PutCommand({
+      TableName: this.table,
+      Item: { ...key.appleToken(subject), type: 'appleToken', refreshToken, updatedAt: now.toISOString() },
+    }));
+  }
+
+  async getAppleToken(subject: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.appleToken(subject), ConsistentRead: true }));
+    return typeof Item?.refreshToken === 'string' ? Item.refreshToken : undefined;
+  }
+
+  async deleteAppleToken(subject: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.appleToken(subject) }));
+  }
+
   /**
    * A climber's verified email from their sign-in sessions (the newest
    * that has one), for climbers whose email Grigri hasn't kept yet.
@@ -254,6 +280,23 @@ export class Store implements SessionStore {
     }
   }
 
+  /**
+   * Unties an App Store subscription from a deleted account (only if it's
+   * still that account's), so a new account can restore it.
+   */
+  async releaseAppleSubscription(originalTransactionId: string, climberId: string): Promise<void> {
+    try {
+      await this.doc.send(new DeleteCommand({
+        TableName: this.table,
+        Key: key.apple(originalTransactionId),
+        ConditionExpression: 'climberId = :c',
+        ExpressionAttributeValues: { ':c': climberId },
+      }));
+    } catch (e) {
+      if ((e as { name?: string }).name !== 'ConditionalCheckFailedException') throw e;
+    }
+  }
+
   /** The climber an App Store subscription is tied to, if any. */
   async appleOwner(originalTransactionId: string): Promise<string | undefined> {
     const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.apple(originalTransactionId), ConsistentRead: true }));
@@ -304,6 +347,126 @@ export class Store implements SessionStore {
 
   async putAdSettings(settings: AdSettings): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.adSettings(), type: 'adSettings', ...settings } }));
+  }
+
+  // --- Moderation: reports, blocks (specs/moderation.md) ----------------------
+
+  async getReport(reportId: string): Promise<Report | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.report(reportId) }));
+    return Item ? toReport(Item) : undefined;
+  }
+
+  /** Saves a report whole: open ones are in the open-reports index; handled ones expire a year later. */
+  async putReport(report: Report): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: reportItem(report) }));
+  }
+
+  /** Open reports, oldest first (the first to answer). */
+  async openReports(): Promise<Report[]> {
+    const items = await this.query({
+      IndexName: index.openReports.name,
+      KeyConditionExpression: 'gsi1pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.openReports.pk },
+    });
+    return items.map(toReport);
+  }
+
+  /**
+   * A climber's blocks, either way, in one query of their partition: who
+   * they blocked, and who blocked them (never returned to anyone).
+   */
+  async blocksOf(climberId: string): Promise<{ blocked: string[]; blockedBy: string[] }> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+      ExpressionAttributeValues: { ':pk': prefix.climber(climberId), ':sk': prefix.blocks },
+      ProjectionExpression: 'sk',
+    });
+    const blocked: string[] = [];
+    const blockedBy: string[] = [];
+    for (const i of items) {
+      const sk = i.sk as string;
+      if (sk.startsWith(prefix.blockedBy)) blockedBy.push(sk.slice(prefix.blockedBy.length));
+      else if (sk.startsWith(prefix.block)) blocked.push(sk.slice(prefix.block.length));
+    }
+    return { blocked, blockedBy };
+  }
+
+  /** I block them: my item and its mirror on their side, together. */
+  async addBlock(blockerId: string, blockedId: string, now: Date): Promise<void> {
+    const time = now.toISOString();
+    await this.transact([
+      { Put: { TableName: this.table, Item: { ...key.block(blockerId, blockedId), type: 'block', climberId: blockedId, time } } },
+      { Put: { TableName: this.table, Item: { ...key.blockedBy(blockedId, blockerId), type: 'blockedBy', climberId: blockerId, time } } },
+    ]);
+  }
+
+  async removeBlock(blockerId: string, blockedId: string): Promise<void> {
+    await this.transact([
+      { Delete: { TableName: this.table, Key: key.block(blockerId, blockedId) } },
+      { Delete: { TableName: this.table, Key: key.blockedBy(blockedId, blockerId) } },
+    ]);
+  }
+
+  /** The climbers known to be admins (each checked with rbacr before it's told anything). */
+  async adminIds(): Promise<string[]> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.admins() }));
+    return Item?.ids instanceof Set ? [...(Item.ids as Set<string>)] : Array.isArray(Item?.ids) ? (Item!.ids as string[]) : [];
+  }
+
+  /** Remembers an admin (a string set: adding one already there changes nothing). */
+  async addAdmin(climberId: string): Promise<void> {
+    await this.doc.send(new UpdateCommand({
+      TableName: this.table,
+      Key: key.admins(),
+      UpdateExpression: 'ADD ids :id SET #type = :type',
+      ExpressionAttributeNames: { '#type': 'type' },
+      ExpressionAttributeValues: { ':id': new Set([climberId]), ':type': 'admins' },
+    }));
+  }
+
+  /** Forgets climbers who aren't admins any more. */
+  async removeAdmins(climberIds: string[]): Promise<void> {
+    if (climberIds.length === 0) return;
+    await this.doc.send(new UpdateCommand({
+      TableName: this.table,
+      Key: key.admins(),
+      UpdateExpression: 'DELETE ids :ids',
+      ExpressionAttributeValues: { ':ids': new Set(climberIds) },
+    }));
+  }
+
+  /** An admin removes a profile's content: its bio, photo and gear photos (the name stays: the filter checks it). */
+  async clearProfileContent(climberId: string): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.climber(climberId),
+        UpdateExpression: 'SET bio = :empty, gearPhotos = :none REMOVE photo',
+        ConditionExpression: 'attribute_exists(pk)',
+        ExpressionAttributeValues: { ':empty': '', ':none': [] },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  /** An admin clears a plan's notes (a new version, so a concurrent change reloads). */
+  async clearPlanNotes(planId: string): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.plan(planId),
+        UpdateExpression: 'SET notes = :empty, version = version + :one',
+        ConditionExpression: 'attribute_exists(pk)',
+        ExpressionAttributeValues: { ':empty': '', ':one': 1 },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  async deleteMessage(message: Message): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.message(message.planId, message.time, message.id) }));
   }
 
   // --- Plans ----------------------------------------------------------------
@@ -623,6 +786,58 @@ export class Store implements SessionStore {
     }
   }
 
+  // --- Deleting an account (DELETE /api/me) ------------------------------------
+
+  /** Deletes chat messages (by their keys). */
+  async deleteMessages(messages: Pick<Message, 'planId' | 'time' | 'id'>[]): Promise<void> {
+    await this.batchWrite(messages.map((m) => ({ DeleteRequest: { Key: key.message(m.planId, m.time, m.id) } })));
+  }
+
+  /**
+   * Withdraws a join request: deletes it and moves the plan's version on,
+   * in one transaction conditioned on the version it was read with, so an
+   * answer racing it (read before) fails and reloads without it. Conflict
+   * when the plan changed meanwhile.
+   */
+  async withdrawRequest(previous: VersionedPlan, climberId: string): Promise<void> {
+    await this.transact([
+      {
+        Update: {
+          TableName: this.table,
+          Key: key.plan(previous.plan.id),
+          UpdateExpression: 'SET version = :next',
+          ConditionExpression: 'version = :v',
+          ExpressionAttributeValues: { ':v': previous.version, ':next': previous.version + 1 },
+        },
+      },
+      { Delete: { TableName: this.table, Key: key.request(previous.plan.id, climberId) } },
+    ]);
+  }
+
+  /** Deletes a request item outright (its plan is gone). */
+  async deleteRequest(planId: string, climberId: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.request(planId, climberId) }));
+  }
+
+  /**
+   * Everything in a climber's partition: the profile, memberships, passes,
+   * notices, the kept email, the Premium copy, and whatever else is ever
+   * keyed to them there.
+   */
+  async deleteClimberItems(climberId: string): Promise<void> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': prefix.climber(climberId) },
+      ProjectionExpression: 'pk, sk',
+    });
+    await this.batchWrite(items.map((i) => ({ DeleteRequest: { Key: { pk: i.pk, sk: i.sk } } })));
+  }
+
+  /** Unlinks a sign-in subject from its climber (the last step of deleting an account). */
+  async deleteSubject(subject: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.subject(subject) }));
+  }
+
   // --- Plumbing ---------------------------------------------------------------
 
   /** Everything left in a plan's partition (requests, messages, pics). */
@@ -938,6 +1153,38 @@ function toWall(i: Item): Wall {
     routes: (i.routes as Wall['routes']) ?? [],
     createdBy: i.createdBy as string,
     createdAt: i.createdAt as string,
+  };
+}
+
+/** How long a handled report is kept (TTL): a year after it was handled. */
+export const REPORT_DAYS = 365;
+
+export function reportItem(r: Report): Item {
+  return {
+    ...key.report(r.id),
+    type: 'report',
+    ...r,
+    ...(r.status === 'open'
+      ? { gsi1pk: index.openReports.pk, gsi1sk: `${r.time}#${r.id}` }
+      : { ttl: Math.floor(new Date(r.resolvedAt ?? r.time).getTime() / 1000) + REPORT_DAYS * 86400 }),
+  };
+}
+
+export function toReport(i: Item): Report {
+  return {
+    id: i.id as string,
+    kind: i.kind as Report['kind'],
+    targetId: i.targetId as string,
+    ...(i.planId ? { planId: i.planId as string } : {}),
+    subjectId: i.subjectId as string,
+    reporterId: i.reporterId as string,
+    reason: i.reason as Report['reason'],
+    text: (i.text as string) ?? '',
+    content: (i.content as Report['content']) ?? {},
+    status: i.status as Report['status'],
+    time: i.time as string,
+    ...(i.resolvedAt ? { resolvedAt: i.resolvedAt as string } : {}),
+    ...(i.resolvedBy ? { resolvedBy: i.resolvedBy as string } : {}),
   };
 }
 

@@ -4,7 +4,7 @@
 // transactions and notifications grant while the subscription is paid (and
 // admins hold through rbacr's implication). The billing state is Stripe's
 // or Apple's; the API keeps a copy, refreshed on every webhook event or
-// notification about it (stripe.ts, apple.ts), for the plan, the renewal
+// notification about it (stripe.ts, app-store.ts), for the plan, the renewal
 // date and where it's managed.
 
 export type PremiumPlan = 'monthly' | 'yearly';
@@ -29,7 +29,7 @@ export interface Subscription {
   source?: PremiumSource;
   /**
    * Stripe's status: active, trialing, past_due, canceled, unpaid,
-   * incomplete…; the App Store's are mapped onto them (apple.ts): active,
+   * incomplete…; the App Store's are mapped onto them (app-store.ts): active,
    * past_due (billing retry or grace period), expired, canceled (refunded
    * or revoked).
    */

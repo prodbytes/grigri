@@ -17,6 +17,7 @@ import 'package:grigri_app/model/match_score.dart';
 import 'package:grigri_app/model/pics.dart';
 import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/model/premium.dart';
+import 'package:grigri_app/model/report.dart';
 import 'package:grigri_app/ui/admin_screen.dart';
 import 'package:grigri_app/ui/chat_media.dart';
 import 'package:grigri_app/ui/chat_screen.dart';
@@ -103,6 +104,64 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Sign out'));
       await tester.pumpAndSettle();
       expect(find.text('Sign in with Google'), findsOneWidget);
+    });
+
+    testWidgets('deleting my account asks first, then lands on sign-in', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Me');
+      final delete = find.widgetWithText(TextButton, 'Delete account');
+      await tester.scrollUntilVisible(delete, 300);
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      // What goes, and Apple's subscriptions are cancelled in Settings.
+      expect(find.text('Delete your account?'), findsOneWidget);
+      expect(find.textContaining('your profile and photos'), findsOneWidget);
+      expect(find.textContaining("iPhone's Settings"), findsOneWidget);
+      // Cancel keeps the account.
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isNot(contains('DELETE /api/me')));
+      expect(find.byType(NavigationBar), findsOneWidget);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      // The button waits for the box to be ticked.
+      final confirm = find.widgetWithText(FilledButton, 'Delete for good');
+      expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+      await tester.tap(find.text("I understand this can't be undone"));
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('DELETE /api/me'));
+      expect(api.meId, isNull);
+      expect(api.sessions, isEmpty);
+      expect(find.text('Sign in with Google'), findsOneWidget);
+    });
+
+    testWidgets('a failed delete says so and keeps me signed in', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Me');
+      final delete = find.widgetWithText(TextButton, 'Delete account');
+      await tester.scrollUntilVisible(delete, 300);
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("I understand this can't be undone"));
+      await tester.pumpAndSettle();
+      api.failNext = const ApiException(503, 'Stripe is down');
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete for good'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't delete your account. Try again."),
+        findsOneWidget,
+      );
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(api.meId, isNotNull);
     });
 
     testWidgets('a 401 signs out', (tester) async {
@@ -1309,10 +1368,12 @@ void main() {
       expect(find.text('\$20 a month'), findsNothing);
     });
 
+    // The first one: the Premium card's (Profile also ends with a
+    // "Privacy policy" link of its own).
     Future<void> tapText(WidgetTester tester, String label) async {
-      await tester.ensureVisible(find.text(label));
+      await tester.ensureVisible(find.text(label).first);
       await tester.pumpAndSettle();
-      await tester.tap(find.text(label));
+      await tester.tap(find.text(label).first);
       await tester.pumpAndSettle();
     }
 
@@ -1750,7 +1811,7 @@ void main() {
       expect(find.text('Block Jules Fern?'), findsOneWidget);
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(api.calls.where((c) => c.contains('/block')), isEmpty);
+      expect(api.calls.where((c) => c.contains('/admin/climbers/')), isEmpty);
 
       await tester.tap(
         find.descendant(of: jules, matching: find.text('Block')),
@@ -2037,6 +2098,40 @@ void main() {
       );
       expect(find.byTooltip('Add a gear photo'), findsNothing);
     });
+
+    testWidgets('the grade system is its own section, with examples', (
+      tester,
+    ) async {
+      final store = storeFor(sampleApi());
+      await store.start();
+      await tester.pumpWidget(
+        StoreScope(
+          store: store,
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ProfileEditor(),
+          ),
+        ),
+      );
+      final page = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(
+        find.text('🧗 6a  🪨 7A'),
+        200,
+        scrollable: page,
+      );
+      // A section of its own, the disciplines in the next one.
+      expect(find.text('GRADE SYSTEM'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('WHAT YOU CLIMB')).dy,
+        greaterThan(tester.getTopLeft(find.text('🧗 6a  🪨 7A')).dy),
+      );
+      expect(find.text('🧗 6a  🪨 7A'), findsOneWidget);
+      expect(find.text('🧗 5.10b  🪨 V6'), findsOneWidget);
+      await tester.tap(find.text('American'));
+      await tester.pumpAndSettle();
+      expect(store.gradeSystem, GradeSystem.american);
+    });
   });
 
   group('the profile ends with my roles, from rbacr through the API', () {
@@ -2066,6 +2161,29 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('admin'), findsOneWidget);
     });
+  });
+
+  testWidgets('the profile ends with the privacy policy and support links', (
+    tester,
+  ) async {
+    final api = sampleApi();
+    await pumpApp(tester, api);
+    await tapTab(tester, 'Me');
+    await tester.scrollUntilVisible(find.text('Support'), 200);
+    expect(find.text('Privacy policy'), findsOneWidget);
+
+    await tester.tap(find.text('Privacy policy'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Support'));
+    await tester.pumpAndSettle();
+    expect(api.opened.map((url) => url.path), [
+      '/privacy.html',
+      '/support.html',
+    ]);
+    expect(
+      api.opened.every((url) => url.scheme == 'https' && url.host.isNotEmpty),
+      isTrue,
+    );
   });
 
   group('language', () {
@@ -2142,6 +2260,298 @@ void main() {
       // A language this version doesn't speak follows the device.
       await preferences.setLanguage('xx');
       expect(open(await Preferences.open()).locale, isNull);
+    });
+  });
+
+  group('reporting and blocking (specs/moderation.md)', () {
+    Finder topCardMenu(String planId) => find.descendant(
+      of: find.byKey(ValueKey('top-plan:$planId')),
+      matching: find.byKey(const ValueKey('moderation menu')),
+    );
+
+    testWidgets('a plan on the deck is reported with a reason, then thanks', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tester.tap(topCardMenu('boulder-night'));
+      await tester.pumpAndSettle();
+      expect(find.text('Block Kit Marlow'), findsOneWidget);
+      await tester.tap(find.text('Report'));
+      await tester.pumpAndSettle();
+      expect(find.text('Why are you reporting this?'), findsOneWidget);
+      // No reason yet: nothing to send.
+      final send = find.widgetWithText(FilledButton, 'Send report');
+      expect(tester.widget<FilledButton>(send).onPressed, isNull);
+      await tester.tap(find.text('Spam'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('report text')),
+        'Selling gear, not climbing',
+      );
+      await tester.tap(send);
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/reports'));
+      final report = api.reports.single;
+      expect(report.kind, ReportKind.plan);
+      expect(report.targetId, 'boulder-night');
+      expect(report.subjectId, 'kit');
+      expect(report.reason, ReportReason.spam);
+      expect(report.text, 'Selling gear, not climbing');
+      expect(find.text("Thanks, we'll review it within 24 hours."), findsOne);
+    });
+
+    testWidgets('blocking from a profile sheet takes their plans off my deck; '
+        'Profile → Blocked people unblocks', (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('top-plan:boulder-night')),
+          matching: find.text('Kit Marlow'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.byKey(const ValueKey('moderation menu')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Block Kit Marlow'));
+      await tester.pumpAndSettle();
+      expect(find.text('Block Kit Marlow?'), findsOneWidget);
+      expect(find.textContaining("They aren't told."), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Block'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/blocks/kit'));
+      expect(api.personBlocks, {'kit'});
+      expect(find.text('Kit Marlow is blocked.'), findsOneWidget);
+      Navigator.of(tester.element(find.byType(BottomSheet))).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Block Hall'), findsNothing);
+      expect(find.text('Grey Cliffs'), findsOneWidget);
+
+      await tapTab(tester, 'Me');
+      final entry = find.byKey(const ValueKey('blocked people'));
+      await tester.scrollUntilVisible(entry, 200);
+      // The "blocked" snackbar would cover it.
+      ScaffoldMessenger.of(tester.element(entry)).removeCurrentSnackBar();
+      await tester.pumpAndSettle();
+      await tester.tap(entry);
+      await tester.pumpAndSettle();
+      final row = find.byKey(const ValueKey('blocked kit'));
+      expect(
+        find.descendant(of: row, matching: find.text('Kit Marlow')),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(of: row, matching: find.text('Unblock')),
+      );
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('DELETE /api/blocks/kit'));
+      expect(api.personBlocks, isEmpty);
+      expect(find.text("You haven't blocked anyone."), findsOneWidget);
+    });
+
+    testWidgets("a long press on someone's message reports it, or blocks "
+        'them: their messages then hide', (tester) async {
+      final api = sampleApi();
+      api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
+        memberIds: ['robin', 'me'],
+      );
+      api.say('crag-day', 'robin', 'Something rude');
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Chats');
+      await tester.tap(find.text('Grey Cliffs'));
+      await tester.pumpAndSettle();
+      final message = api.allMessages.last;
+
+      await tester.longPress(find.text('Something rude'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Report'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Harassment'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Send report'));
+      await tester.pumpAndSettle();
+      final report = api.reports.single;
+      expect(report.kind, ReportKind.message);
+      expect(report.targetId, message.id);
+      expect(report.planId, 'crag-day');
+      expect(report.reason, ReportReason.harassment);
+
+      await tester.longPress(find.text('Something rude'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Block Robin Vale'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Block'));
+      await tester.pumpAndSettle();
+      expect(api.personBlocks, {'robin'});
+      expect(find.text('Something rude'), findsNothing);
+    });
+
+    testWidgets('blocking from a request card declines the request', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Chats');
+      await tester.tap(find.text('Wall Works'));
+      await tester.pumpAndSettle();
+      final card = find.byKey(const ValueKey('request my-gym/jules'));
+      await tester.tap(
+        find.descendant(
+          of: card,
+          matching: find.byKey(const ValueKey('moderation menu')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Block Jules Fern'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Block'));
+      await tester.pumpAndSettle();
+      expect(api.requestsById['my-gym/jules']!.rejected, isTrue);
+      expect(find.text('WANTS TO JOIN · YOUR ANSWER'), findsNothing);
+    });
+
+    testWidgets('my own things have no Report or Block', (tester) async {
+      await pumpApp(tester, sampleApi());
+      await tapTab(tester, 'Plans');
+      await tester.tap(find.text('Wall Works').first);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('moderation menu')), findsNothing);
+    });
+
+    testWidgets('an ad on the deck is reported from its ⋮', (tester) async {
+      final api = sampleApi()
+        ..adEvery = 1
+        ..addAd(
+          Ad(
+            id: 'ad-1',
+            ownerId: 'sasha',
+            text: 'Chalk sale',
+            link: Uri.parse('https://example.com/chalk'),
+            status: AdStatus.approved,
+          ),
+        );
+      await pumpApp(tester, api);
+      await tester.tap(find.byTooltip('Pass'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(const ValueKey('top-ad:ad-1')),
+          matching: find.byKey(const ValueKey('moderation menu')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Report'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Inappropriate content'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Send report'));
+      await tester.pumpAndSettle();
+      expect(api.reports.single.kind, ReportKind.ad);
+      expect(api.reports.single.subjectId, 'sasha');
+    });
+
+    testWidgets('the filter\'s refusal is worded by the app', (tester) async {
+      final api = sampleApi();
+      api.plans['crag-day'] = api.plans['crag-day']!.copyWith(
+        memberIds: ['robin', 'me'],
+      );
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Chats');
+      await tester.tap(find.text('Grey Cliffs'));
+      await tester.pumpAndSettle();
+      api.failNext = const ApiException(
+        400,
+        "objectionable: text has words Grigri doesn't allow; please keep it "
+        'friendly',
+      );
+      await tester.enterText(find.byType(TextField), 'something');
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          "Please keep it friendly: that has words Grigri doesn't allow.",
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('admins are told, see what was reported, and dismiss, '
+        'remove or block', (tester) async {
+      final api = sampleApi(admin: true);
+      Report report(String id, ReportKind kind, String subject, String text) =>
+          Report(
+            id: id,
+            kind: kind,
+            targetId: '$id-target',
+            subjectId: subject,
+            reporterId: 'jules',
+            reason: ReportReason.harassment,
+            text: 'Not nice',
+            time: DateTime.now().toUtc(),
+            content: ReportContent(text: text),
+          );
+      api.reports.addAll([
+        report('r1', ReportKind.plan, 'kit', 'Plan notes one'),
+        report('r2', ReportKind.message, 'robin', 'Message two'),
+        report('r3', ReportKind.profile, 'sasha', 'Bio three'),
+      ]);
+      (api.noticesFor['me'] ??= []).add(
+        Notice(
+          id: 'reports',
+          kind: NoticeKind.report,
+          planId: '',
+          planTitle: '',
+          time: DateTime.now().toUtc(),
+        ),
+      );
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Alerts');
+      expect(find.text('New reports to review'), findsOneWidget);
+      await tester.tap(find.text('New reports to review'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('GET /api/admin/reports'));
+      final r1 = find.byKey(const ValueKey('report r1'));
+      expect(
+        find.descendant(of: r1, matching: find.text('Plan notes one')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: r1, matching: find.text('Reported by Jules Fern')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: r1, matching: find.text('Harassment')),
+        findsOneWidget,
+      );
+      await tester.tap(find.descendant(of: r1, matching: find.text('Dismiss')));
+      await tester.pumpAndSettle();
+      expect(api.resolved, ['r1 dismiss']);
+      expect(r1, findsNothing);
+
+      final r2 = find.byKey(const ValueKey('report r2'));
+      await tester.tap(
+        find.descendant(of: r2, matching: find.text('Remove content')),
+      );
+      await tester.pumpAndSettle();
+      expect(api.resolved, ['r1 dismiss', 'r2 remove']);
+
+      final r3 = find.byKey(const ValueKey('report r3'));
+      await tester.tap(
+        find.descendant(of: r3, matching: find.text('Block climber')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Block Sasha Brook?'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, 'Block'));
+      await tester.pumpAndSettle();
+      expect(api.resolved.last, 'r3 block');
+      expect(api.blocked, {'sasha'});
+      expect(find.text('No reports to review.'), findsOneWidget);
     });
   });
 }

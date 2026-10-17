@@ -1,13 +1,14 @@
 // Who's calling. The API issues its own sessions (specs/api.md, "Sessions"):
-// POST /api/session trades a Google ID token, verified here, for an opaque
-// session token; every other route but GET /api/health sends it as
-// `Authorization: Bearer <token>`. Only the token's SHA-256 hash is stored.
+// POST /api/session trades a Google ID token or an Apple identity token,
+// verified here (google.ts, apple.ts), for an opaque session token; every
+// other route but GET /api/health sends it as `Authorization: Bearer <token>`. Only the token's SHA-256 hash is stored.
 // A session lasts until sign-out, or SESSION_DAYS without use: each use
 // more than a day after the last one slides it forward (at most one write
 // per session per day). In local dev mode only, the caller may instead
 // name themselves in the X-Grigri-Dev-User header, or POST
 // {"devUser": "<email>"} to /api/session.
 import { createHash, randomBytes } from 'node:crypto';
+import type { AppleTokenVerifier } from './apple.js';
 import { ApiError, badRequest } from './domain/errors.js';
 import { type GoogleIdentity, type IdTokenVerifier, InvalidIdToken, profileName } from './google.js';
 import type { AdminCheck } from './rbacr.js';
@@ -60,9 +61,19 @@ export interface AuthConfig {
   isAdmin: AdminCheck;
 }
 
+/** Sign in with Apple: its token check, and keeping its refresh token for revocation. */
+export interface AppleSignIn {
+  verify: AppleTokenVerifier;
+  /** Best effort, never throws (AppleTokens.keepRefreshToken). */
+  keepRefreshToken?: (subject: string, authorizationCode: string) => Promise<void>;
+}
+
 export interface AuthDeps {
   store: SessionStore;
+  /** Google ID tokens. */
   verify: IdTokenVerifier;
+  /** Apple identity tokens; none: refused. */
+  apple?: AppleSignIn;
   config: AuthConfig;
   clock?: () => Date;
 }
@@ -70,6 +81,10 @@ export interface AuthDeps {
 const EMAIL = /^[^\s@,]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,63}$/;
 /** 32 bytes, base64url without padding. */
 const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+/** The app's raw nonce for Apple: random, URL-safe. */
+const NONCE = /^[A-Za-z0-9._~-]{16,128}$/;
+/** Apple's authorization code (short, URL-safe). */
+const CODE = /^[A-Za-z0-9._-]{1,512}$/;
 
 const signedOut = () => new ApiError(401, 'signed out');
 
@@ -84,11 +99,16 @@ export class Auth {
     this.clock = deps.clock ?? (() => new Date());
   }
 
-  /** POST /api/session: a Google ID token (or, dev mode only, devUser) for a new session. */
+  /**
+   * POST /api/session: a Google ID token, an Apple identity token (with
+   * its nonce, and the name and authorization code Apple gave the app), or,
+   * dev mode only, devUser, for a new session.
+   */
   async signIn(body: unknown): Promise<{ token: string; expiresAt: string }> {
     if (typeof body !== 'object' || body === null || Array.isArray(body)) throw badRequest('send {"idToken"}');
-    const { idToken, devUser } = body as Record<string, unknown>;
+    const { idToken, appleIdToken, nonce, authorizationCode, name, devUser } = body as Record<string, unknown>;
     let identity: GoogleIdentity;
+    let appleCode: string | undefined;
     if (typeof idToken === 'string' && idToken.length > 0) {
       try {
         identity = await this.deps.verify(idToken);
@@ -96,6 +116,22 @@ export class Auth {
         if (e instanceof InvalidIdToken) throw new ApiError(401, 'invalid Google ID token');
         throw e;
       }
+    } else if (typeof appleIdToken === 'string' && appleIdToken.length > 0) {
+      if (typeof nonce !== 'string' || !NONCE.test(nonce)) throw badRequest('send {"appleIdToken", "nonce"}');
+      const apple = this.deps.apple;
+      if (!apple) throw new ApiError(401, 'invalid Apple ID token');
+      try {
+        identity = await apple.verify(appleIdToken, nonce);
+      } catch (e) {
+        if (e instanceof InvalidIdToken) throw new ApiError(401, 'invalid Apple ID token');
+        throw e;
+      }
+      // Apple tells the app the name only at the first sign-in, and never
+      // in the token: the app's word for it, only to start the profile with
+      // (PUT /api/me can set any name anyway).
+      const given = typeof name === 'string' && name.length <= 200 ? profileName(name) : undefined;
+      if (given) identity = { ...identity, name: given };
+      if (typeof authorizationCode === 'string' && CODE.test(authorizationCode)) appleCode = authorizationCode;
     } else if (devUser !== undefined) {
       if (!this.deps.config.devMode) throw new ApiError(401, 'dev sign-in is local only');
       const email = typeof devUser === 'string' ? devUser.trim().toLowerCase() : '';
@@ -118,6 +154,8 @@ export class Auth {
       ttl: expiry(now),
     };
     await this.deps.store.putSession(session);
+    // For revoking Apple's tokens when the account is deleted (apple.ts).
+    if (appleCode) await this.deps.apple?.keepRefreshToken?.(identity.subject, appleCode);
     return { token, expiresAt: new Date(session.ttl * 1000).toISOString() };
   }
 

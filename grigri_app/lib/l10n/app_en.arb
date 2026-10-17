@@ -194,6 +194,10 @@
   "@errorSignIn": {
     "description": "Google sign-in failed."
   },
+  "errorSignInApple": "Couldn't sign in with Apple. Try again.",
+  "@errorSignInApple": {
+    "description": "Sign in with Apple failed."
+  },
   "errorSession": "Couldn't sign in. Try again.",
   "@errorSession": {
     "description": "The API would not start a session after signing in."
@@ -206,13 +210,17 @@
   "@loadFailedTitle": {
     "description": "Title of the screen shown when the profile could not be loaded."
   },
-  "signInTagline": "Find a climbing plan: make one, or swipe right on one, and climb together.",
+  "signInTagline": "Make a plan, or swipe right on one, and climb together.",
   "@signInTagline": {
-    "description": "Sign-in screen, under the app name."
+    "description": "Sign-in screen: under the headline."
   },
   "signInWithGoogle": "Sign in with Google",
   "@signInWithGoogle": {
     "description": "Button: sign in with a Google account."
+  },
+  "signInWithApple": "Sign in with Apple",
+  "@signInWithApple": {
+    "description": "Button: Sign in with Apple (iOS). Use Apple's own wording for the language."
   },
   "tabDiscover": "Find",
   "@tabDiscover": {
@@ -369,6 +377,14 @@
   "bioLabel": "About you",
   "@bioLabel": {
     "description": "Label of the free-text field about the user."
+  },
+  "gradeSystem": "Grade system",
+  "@gradeSystem": {
+    "description": "Profile editor section heading (shown uppercased) above the European/American grade toggle."
+  },
+  "gradeSystemHint": "How grades are written across the app, here for a route and a boulder.",
+  "@gradeSystemHint": {
+    "description": "Hint under the \"Grade system\" heading; each option shows a route grade and a boulder grade as examples."
   },
   "whatYouClimb": "What you climb",
   "@whatYouClimb": {
@@ -1765,5 +1781,284 @@
   "openJoinAtOnce": "Open: join at once",
   "@openJoinAtOnce": {
     "description": "Tag on an open plan's card: swiping right joins at once."
+  },
+  "signInBadge": "100% free",
+  "@signInBadge": {
+    "description": "Sign-in screen: badge over the headline."
+  },
+  "signInHeadline": "Join a climbing plan.",
+  "@signInHeadline": {
+    "description": "Sign-in screen: the headline, Grigri's line."
+  },
+  "signInFreeLine": "Free for every climber: no card, no subscription.",
+  "@signInFreeLine": {
+    "description": "Sign-in screen: under the sign-in button."
+  },
+  "signInStampJoin": "JOIN",
+  "@signInStampJoin": {
+    "description": "Sign-in screen: the stamp on the demo card as it's swiped right."
+  },
+  "signInDeckWhen": "This Saturday · Sport · 6b–7a",
+  "@signInDeckWhen": {
+    "description": "Sign-in screen: the demo card's day, style and grades."
+  },
+  "signInDeckWho": "Mara, Jonas and 1 more",
+  "@signInDeckWho": {
+    "description": "Sign-in screen: the demo card's made-up climbers."
+  },
+  "signInHowTitle": "How it works",
+  "@signInHowTitle": {
+    "description": "Sign-in screen: heading of the three steps."
+  },
+  "signInStep1Title": "Make a plan",
+  "@signInStep1Title": {
+    "description": "Sign-in screen: step 1."
+  },
+  "signInStep1Body": "Where, when and which grades: a crag, a Saturday, 6a to 7a.",
+  "@signInStep1Body": {
+    "description": "Sign-in screen: step 1, explained."
+  },
+  "signInStep2Title": "Swipe right",
+  "@signInStep2Title": {
+    "description": "Sign-in screen: step 2."
+  },
+  "signInStep2Body": "Like someone's plan? Swipe right. The group lets newcomers in one at a time, when everyone says yes.",
+  "@signInStep2Body": {
+    "description": "Sign-in screen: step 2, explained."
+  },
+  "signInStep3Title": "Climb together",
+  "@signInStep3Title": {
+    "description": "Sign-in screen: step 3."
+  },
+  "signInStep3Body": "Every match opens the plan's group chat: sort out the rope, the ride and the coffee.",
+  "@signInStep3Body": {
+    "description": "Sign-in screen: step 3, explained."
+  },
+  "signInFreeTitle": "Free. Really.",
+  "@signInFreeTitle": {
+    "description": "Sign-in screen: heading of what's free."
+  },
+  "signInFree1": "Plans and swiping",
+  "@signInFree1": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFree2": "Matches and group chats",
+  "@signInFree2": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFree3": "Crag photos",
+  "@signInFree3": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFree4": "No card to sign up",
+  "@signInFree4": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFreePremium": "Premium is optional: it's only for advertising on Grigri and for the route finder. Climbing with Grigri costs nothing.",
+  "@signInFreePremium": {
+    "description": "Sign-in screen: what Premium is for."
+  },
+  "signInFinalTitle": "This weekend's climbing plan is one swipe away.",
+  "@signInFinalTitle": {
+    "description": "Sign-in screen: the last call, at the bottom."
+  },
+  "signInJoinFree": "Join free with Google",
+  "@signInJoinFree": {
+    "description": "Sign-in screen: the last button."
+  },
+  "signInPhotoBy": "Photo: {author}, {license}",
+  "@signInPhotoBy": {
+    "description": "Sign-in screen: the hero photo's credit.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
+  },
+  "signInDeckWhen2": "Sunday · Multi-pitch · 6a–6b",
+  "@signInDeckWhen2": {
+    "description": "Sign-in screen: the second demo card's day, style and grades."
+  },
+  "signInDeckWho2": "Iker and Lea",
+  "@signInDeckWho2": {
+    "description": "Sign-in screen: the second demo card's made-up climbers."
+  },
+  "signInDeckWhen3": "Next weekend · Bouldering · 6C–7A",
+  "@signInDeckWhen3": {
+    "description": "Sign-in screen: the third demo card's day, style and grades."
+  },
+  "signInDeckWho3": "Noor, Tomás and 2 more",
+  "@signInDeckWho3": {
+    "description": "Sign-in screen: the third demo card's made-up climbers."
+  },
+  "privacyPolicy": "Privacy policy",
+  "@privacyPolicy": {
+    "description": "Link at the end of Profile: opens the privacy policy on the site in the browser."
+  },
+  "support": "Support",
+  "@support": {
+    "description": "Link at the end of Profile: opens the support page on the site in the browser."
+  },
+  "deleteAccount": "Delete account",
+  "@deleteAccount": {
+    "description": "Profile: the button at the end that deletes my account for good."
+  },
+  "deleteAccountQuestion": "Delete your account?",
+  "@deleteAccountQuestion": {
+    "description": "Title of the delete-account confirmation dialog."
+  },
+  "deleteAccountMessage": "This deletes your Grigri account for good: your profile and photos, your messages and photos in group chats, your join requests and your ads. You leave all your plans: someone else in a plan you organize takes it over, and a plan with only you in it ends. Premium paid with a card here is cancelled at once, with no refund of the time left. A subscription bought through Apple must be cancelled in your iPhone's Settings. You're signed out on every device.",
+  "@deleteAccountMessage": {
+    "description": "Body of the delete-account confirmation dialog: what's deleted."
+  },
+  "deleteAccountUnderstand": "I understand this can't be undone",
+  "@deleteAccountUnderstand": {
+    "description": "Checkbox in the delete-account dialog; the delete button works only once it's ticked."
+  },
+  "deleteAccountConfirm": "Delete for good",
+  "@deleteAccountConfirm": {
+    "description": "The delete-account dialog's destructive button."
+  },
+  "errorDeleteAccount": "Couldn't delete your account. Try again.",
+  "@errorDeleteAccount": {
+    "description": "Snackbar: deleting the account failed (trying again finishes the job)."
+  },
+  "moreActions": "More",
+  "@moreActions": {
+    "description": "Tooltip of the ⋮ menu with Report and Block."
+  },
+  "report": "Report",
+  "@report": {
+    "description": "Menu item: report objectionable content to the admins."
+  },
+  "blockPerson": "Block {name}",
+  "@blockPerson": {
+    "description": "Menu item: block this person (my own block, not an admin's).",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportTitle": "Why are you reporting this?",
+  "@reportTitle": {
+    "description": "Report dialog title: asks for the reason."
+  },
+  "reportReasonSpam": "Spam",
+  "@reportReasonSpam": {
+    "description": "A reason to report: spam."
+  },
+  "reportReasonHarassment": "Harassment",
+  "@reportReasonHarassment": {
+    "description": "A reason to report: harassment."
+  },
+  "reportReasonInappropriate": "Inappropriate content",
+  "@reportReasonInappropriate": {
+    "description": "A reason to report: inappropriate content."
+  },
+  "reportReasonFake": "Fake profile",
+  "@reportReasonFake": {
+    "description": "A reason to report: a fake profile."
+  },
+  "reportReasonOther": "Other",
+  "@reportReasonOther": {
+    "description": "A reason to report: something else."
+  },
+  "reportDetailsHint": "Anything else we should know? (optional)",
+  "@reportDetailsHint": {
+    "description": "Report dialog: the optional text field's hint."
+  },
+  "reportSend": "Send report",
+  "@reportSend": {
+    "description": "Report dialog: sends the report."
+  },
+  "reportThanks": "Thanks, we'll review it within 24 hours.",
+  "@reportThanks": {
+    "description": "Snackbar after a report was sent."
+  },
+  "blockPersonMessage": "You won't see each other's plans, neither of you can ask to join a plan the other is in, their requests to your plans are declined, and you won't see their messages. They aren't told.",
+  "@blockPersonMessage": {
+    "description": "What blocking someone (my own block) does."
+  },
+  "blockedPersonDone": "{name} is blocked.",
+  "@blockedPersonDone": {
+    "description": "Snackbar after blocking someone.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedPeopleTitle": "Blocked people",
+  "@blockedPeopleTitle": {
+    "description": "Profile: the list of people I blocked, and its screen title."
+  },
+  "blockedPeopleEmpty": "You haven't blocked anyone.",
+  "@blockedPeopleEmpty": {
+    "description": "Blocked people: when I haven't blocked anyone."
+  },
+  "adminReportsTab": "Reports",
+  "@adminReportsTab": {
+    "description": "Admin tab's sub-navigation: reports to review."
+  },
+  "adminReportsEmpty": "No reports to review.",
+  "@adminReportsEmpty": {
+    "description": "Admin → Reports: nothing to review."
+  },
+  "reportedBy": "Reported by {name}",
+  "@reportedBy": {
+    "description": "Admin → Reports: who reported it.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "reportKindProfile": "Profile",
+  "@reportKindProfile": {
+    "description": "Admin → Reports: what was reported, a profile."
+  },
+  "reportKindPlan": "Plan",
+  "@reportKindPlan": {
+    "description": "Admin → Reports: what was reported, a plan."
+  },
+  "reportKindMessage": "Chat message",
+  "@reportKindMessage": {
+    "description": "Admin → Reports: what was reported, a chat message."
+  },
+  "reportKindPic": "Plan photo",
+  "@reportKindPic": {
+    "description": "Admin → Reports: what was reported, a plan photo."
+  },
+  "reportKindAd": "Ad",
+  "@reportKindAd": {
+    "description": "Admin → Reports: what was reported, an ad."
+  },
+  "reportDismiss": "Dismiss",
+  "@reportDismiss": {
+    "description": "Admin → Reports: nothing wrong, close the report."
+  },
+  "reportRemove": "Remove content",
+  "@reportRemove": {
+    "description": "Admin → Reports: take the reported content down."
+  },
+  "reportBlock": "Block climber",
+  "@reportBlock": {
+    "description": "Admin → Reports: block the climber whose content it is (app-wide)."
+  },
+  "noticeReportsTitle": "New reports to review",
+  "@noticeReportsTitle": {
+    "description": "Notification (admins): new reports wait for review."
+  },
+  "noticeReportsBody": "Admin → Reports · answer within 24 hours",
+  "@noticeReportsBody": {
+    "description": "Notification (admins): where to review reports, and within how long."
+  },
+  "errorObjectionable": "Please keep it friendly: that has words Grigri doesn't allow.",
+  "@errorObjectionable": {
+    "description": "Error: the server refused text with words Grigri does not allow."
   }
 }

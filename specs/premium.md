@@ -77,6 +77,17 @@ Without Stripe's keys on a stage, Premium can't be bought through Stripe:
 the Android and web card says "Premium isn't available yet." and the
 Stripe routes answer 503.
 
+**Deleting my account** ([sign-in.md](sign-in.md#deleting-my-account))
+cancels the subscription **at once** (Stripe's `DELETE
+/v1/subscriptions/{id}`: no more charges, no refund of the period
+already paid) and revokes the role, before anything else is deleted;
+Stripe's later events about it are ignored, so nothing of the deleted
+account is saved again. An **App Store** subscription can't be cancelled
+by Grigri: the confirmation says to cancel it in iOS Settings, and the
+deletion unties it from the account (`APPLE#<originalTransactionId>`
+goes), so a new account can restore it; its later notifications find no
+account and are ignored.
+
 ## Paying on iOS: the App Store
 
 Two **auto-renewable subscriptions** in one subscription group, "Grigri
@@ -135,7 +146,7 @@ Both the app's transactions and the notifications are JWS signed by
 Apple; the API verifies them **offline**, the way Apple's
 app-store-server-library does, with `node:crypto` only (no App Store
 Server API call, no key, no new dependency;
-[apple.ts](../grigri_api/src/apple.ts)):
+[app-store.ts](../grigri_api/src/app-store.ts)):
 
 - the header's `alg` is `ES256` (nothing else: no `none`, no HMAC), it
   has no `crit`, and its `x5c` holds exactly three certificates;
@@ -248,8 +259,9 @@ subscription belongs to: `APPLE#<originalTransactionId>` / `APPLE`
 ### Stripe
 
 - `GRIGRI_STRIPE_SECRET_KEY` (a secret key, `sk_live_…`/`sk_test_…`, or a
-  restricted one, `rk_…`, with write access to Checkout Sessions and
-  Customer portal and read access to Subscriptions) and
+  restricted one, `rk_…`, with write access to Checkout Sessions,
+  Customer portal and Subscriptions, to cancel one when an account is
+  deleted) and
   `GRIGRI_STRIPE_WEBHOOK_SECRET` (`whsec_…`): repository secrets for
   production (live mode), `GRIGRI_STRIPE_SECRET_KEY_RC` and
   `GRIGRI_STRIPE_WEBHOOK_SECRET_RC` for the RC (test mode); `.env` for

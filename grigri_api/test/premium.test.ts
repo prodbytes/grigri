@@ -67,6 +67,22 @@ describe('stripe', () => {
     expect(form.get('success_url')).toBe('https://grigri.example.com/app/premium.html?premium=done');
   });
 
+  it('cancels a subscription at once (deleting an account); gone or cancelled already is fine', async () => {
+    const { billing, calls, subscriptions } = fakeStripe();
+    subscriptions.set('sub_1', stripeSub('sub_1', 'c1'));
+    await billing.cancel('sub_1');
+    expect(calls.at(-1)).toMatchObject({ method: 'DELETE', url: 'https://api.stripe.com/v1/subscriptions/sub_1' });
+    await billing.cancel('sub_unknown');
+    // Stripe refuses to cancel twice: fine once it reads back cancelled, else an error.
+    const answers: Record<string, unknown>[] = [{ status: 'canceled' }, { status: 'active' }];
+    const refusing = stripeBilling({ secretKey: 'sk_test_made_up', webhookSecret: secret, siteUrl: 'https://x' }, (async (_url: string, init: RequestInit) =>
+      init.method === 'DELETE'
+        ? new Response(JSON.stringify({ error: { message: 'already canceled' } }), { status: 400 })
+        : new Response(JSON.stringify(answers.shift()))) as typeof fetch)!;
+    await refusing.cancel('sub_1');
+    await expect(refusing.cancel('sub_1')).rejects.toThrow(/already canceled/);
+  });
+
   it('no keys, no billing', () => {
     expect(stripeBilling({ secretKey: '', webhookSecret: secret, siteUrl: 'https://x' })).toBeNull();
     expect(stripeBilling({ secretKey: 'sk', webhookSecret: '', siteUrl: 'https://x' })).toBeNull();

@@ -11,6 +11,7 @@ import '../model/pics.dart';
 import '../model/walls.dart';
 import '../model/plan.dart';
 import '../model/premium.dart';
+import '../model/report.dart';
 import '../log.dart';
 import 'api.dart';
 import 'auth.dart';
@@ -79,6 +80,32 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Uri picUrl(String key) =>
       origin.replace(pathSegments: ['pics', ...key.split('/')]);
+
+  @override
+  Future<List<GrigriPic>> picsCatalog() async {
+    final url = origin.replace(pathSegments: ['pics', 'catalog.json']);
+    final http.Response response;
+    try {
+      response = await _client.get(url).timeout(timeout);
+    } on TimeoutException {
+      throw const ApiException(0, 'The catalog took too long.');
+    } on http.ClientException {
+      throw const ApiException(0, "Couldn't reach the catalog.");
+    }
+    if (response.statusCode != 200) {
+      throw ApiException(response.statusCode, "Couldn't load the catalog.");
+    }
+    final json = jsonDecode(utf8.decode(response.bodyBytes));
+    final crags = json is Map ? json['crags'] : null;
+    return [
+      if (crags is List)
+        for (final crag in crags.whereType<Map<String, Object?>>())
+          if (crag['photos'] case final List photos)
+            for (final photo in photos.whereType<Map<String, Object?>>())
+              if (photo['key'] is String)
+                GrigriPic.fromJson({...photo, 'crag': crag['name']}),
+    ];
+  }
 
   Future<Map<String, Object?>> _send(
     String method,
@@ -159,11 +186,11 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   };
 
   @override
-  Future<String> createSession({required String idToken}) async {
+  Future<String> createSession(Credential credential) async {
     final json = await _send(
       'POST',
       ['session'],
-      body: {'idToken': idToken},
+      body: credential.sessionBody,
       auth: const {},
     );
     final token = json['token'];
@@ -191,6 +218,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Future<Climber> saveMe(Climber profile) async =>
       ApiJson.climber(await _put(['me'], profile.toJson()));
+
+  @override
+  Future<void> deleteAccount() =>
+      _send('DELETE', ['me'], body: const {'confirm': true});
 
   @override
   Future<PlanList> discover() async =>
@@ -508,4 +539,38 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Future<void> setBlocked(String climberId, bool blocked) =>
       _post(['admin', 'climbers', climberId, blocked ? 'block' : 'unblock']);
+
+  @override
+  Future<void> sendReport({
+    required ReportKind kind,
+    required String targetId,
+    String? planId,
+    required ReportReason reason,
+    String text = '',
+  }) => _post(
+    ['reports'],
+    {
+      'kind': kind.name,
+      'targetId': targetId,
+      'planId': ?planId,
+      'reason': reason.name,
+      if (text.trim().isNotEmpty) 'text': text.trim(),
+    },
+  );
+
+  @override
+  Future<AdminReports> adminReports() async =>
+      ApiJson.adminReports(await _get(['admin', 'reports']));
+
+  @override
+  Future<void> resolveReport(String reportId, ReportAction action) =>
+      _post(['admin', 'reports', reportId, action.name]);
+
+  @override
+  Future<BlockList> blocks() async => ApiJson.blockList(await _get(['blocks']));
+
+  @override
+  Future<void> setPersonBlocked(String climberId, bool blocked) => blocked
+      ? _post(['blocks', climberId])
+      : _send('DELETE', ['blocks', climberId]);
 }

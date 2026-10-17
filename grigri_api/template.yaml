@@ -4,7 +4,8 @@ Description: >
   backend. One Node.js Lambda with an internal router behind one HTTP API,
   and one on-demand DynamoDB table (single-table design,
   grigri_api/README.md). The function authenticates every request itself:
-  POST /api/session verifies a Google ID token and issues the API's own
+  POST /api/session verifies a Google ID token (or an Apple identity
+  token) and issues the API's own
   session (365 days without use, sliding), which every other route but
   GET /api/health takes as a bearer token. Photos and chat media (photos and
   videos) live in the site stack's bucket (PhotosBucket), uploaded with
@@ -39,6 +40,38 @@ Parameters:
       The Google iOS OAuth clients, comma-separated: an iPhone's ID token
       is issued to the app's iOS client (its aud), not the web client, so
       POST /api/session takes these too. Public identifiers.
+  AppleBundleId:
+    Type: String
+    Default: com.nu01.grigri
+    AllowedPattern: '[A-Za-z0-9.-]{1,155}'
+    Description: >
+      Sign in with Apple: the iOS app's bundle ID, the audience of the
+      Apple identity tokens POST /api/session takes (specs/sign-in.md). A
+      public identifier.
+  AppleTeamId:
+    Type: String
+    Default: ''
+    AllowedPattern: '([A-Z0-9]{10})?'
+    Description: >
+      Sign in with Apple's token revocation: the Apple Developer team ID.
+      Empty (or any of the three Apple key settings empty): Apple tokens
+      are neither kept nor revoked.
+  AppleKeyId:
+    Type: String
+    Default: ''
+    AllowedPattern: '([A-Z0-9]{10})?'
+    Description: >
+      The Sign in with Apple key's ID (Apple Developer, Keys), for the
+      client secret that revokes Apple tokens.
+  ApplePrivateKey:
+    Type: String
+    Default: ''
+    NoEcho: true
+    AllowedPattern: '[A-Za-z0-9+/=]*'
+    Description: >
+      The Sign in with Apple key (the .p8 file's base64 body, without its
+      BEGIN/END lines or line breaks; the GRIGRI_APPLE_PRIVATE_KEY
+      secret). Empty: Apple tokens are neither kept nor revoked.
   RbacrUrl:
     Type: String
     Default: https://rbacr.nu01.com
@@ -424,6 +457,10 @@ Resources:
           RBACR_TOKEN: !Ref RbacrToken
           GOOGLE_WEB_CLIENT_ID: !Ref GoogleWebClientId
           GOOGLE_IOS_CLIENT_IDS: !Ref GoogleIosClientIds
+          APPLE_BUNDLE_ID: !Ref AppleBundleId
+          APPLE_TEAM_ID: !Ref AppleTeamId
+          APPLE_KEY_ID: !Ref AppleKeyId
+          APPLE_PRIVATE_KEY: !Ref ApplePrivateKey
           DEV_MODE: !Ref DevMode
           IOT_ENDPOINT: !Ref IotEndpoint
           IOT_AUTHORIZER: !If [CreateIotAuthorizer, !Sub '${AWS::StackName}-realtime', '']

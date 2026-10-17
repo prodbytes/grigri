@@ -189,9 +189,10 @@ export interface JoinRequest {
 
 /**
  * accepted/declined: a group answered my request; request: someone asked
- * to join a plan I'm in; nudge: they're still waiting for my answer.
+ * to join a plan I'm in; nudge: they're still waiting for my answer;
+ * report: (admins) there are reports to review (planId and planTitle empty).
  */
-export type NoticeKind = 'accepted' | 'declined' | 'request' | 'nudge';
+export type NoticeKind = 'accepted' | 'declined' | 'request' | 'nudge' | 'report';
 
 export interface Notice {
   id: string;
