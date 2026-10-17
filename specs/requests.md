@@ -1183,3 +1183,10 @@ spec.
       Google matches it).
     - Cost: none. OAuth clients are free.
 
+
+80. **In the nav bar, Me should always be the last tab, on the right; for
+    admins after Ads and Admin.**
+    - [Screens](screens.md), [ads](ads.md#the-ads-tab): the bottom bar is
+      now Discover, Plans, Chats, Alerts, then Ads (Premium) and Admin
+      (admins), and Me always last.
+    - Cost: none.
