@@ -539,18 +539,6 @@ class AppLocalizationsCa extends AppLocalizations {
   }
 
   @override
-  String noGradesYet(String discipline) {
-    String _temp0 = intl.Intl.selectLogic(discipline, {
-      'sport': 'Encara sense grau en esportiva',
-      'trad': 'Encara sense grau en clàssica',
-      'bouldering': 'Encara sense grau en bloc',
-      'gym': 'Encara sense grau en rocòdrom',
-      'other': 'Encara sense grau',
-    });
-    return '$_temp0';
-  }
-
-  @override
   String get joined => 'S\'hi ha unit';
 
   @override

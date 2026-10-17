@@ -1583,3 +1583,11 @@ spec.
        card's organizer). The report test now goes through the plan
        screen and checks the card has no menu.
      - Cost: none (app only).
+
+101. **On the chat's join request card, remove the "No sport grades yet"
+     pill: just don't show it.**
+     - [Matching](matching.md#join-requests-in-the-group-chat): the card
+       shows the person's grade for the plan's discipline only when they
+       have one; without, no tag. The `noGradesYet` string is gone from
+       every language.
+     - Cost: none (app only).

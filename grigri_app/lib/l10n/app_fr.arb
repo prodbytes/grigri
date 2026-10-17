@@ -153,7 +153,6 @@
   "declineName": "Refuser {name}",
   "acceptName": "Accepter {name}",
   "askedToJoinAt": "Demande · {time}",
-  "noGradesYet": "{discipline, select, sport{Pas encore de niveau en sportive} trad{Pas encore de niveau en trad} bouldering{Pas encore de niveau en bloc} gym{Pas encore de niveau en salle} other{Pas encore de niveau}}",
   "joined": "A rejoint",
   "closed": "Fermée",
   "namesSaidYes": "{count, plural, =1{A dit oui : {names}} other{Ont dit oui : {names}}}",

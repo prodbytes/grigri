@@ -757,16 +757,6 @@
       }
     }
   },
-  "noGradesYet": "{discipline, select, sport{No sport grades yet} trad{No trad grades yet} bouldering{No bouldering grades yet} gym{No gym grades yet} other{No grades yet}}",
-  "@noGradesYet": {
-    "description": "Someone asking to join has no grades for the plan discipline.",
-    "placeholders": {
-      "discipline": {
-        "type": "String",
-        "example": "sport"
-      }
-    }
-  },
   "joined": "Joined",
   "@joined": {
     "description": "Status tag: the person joined the plan."
