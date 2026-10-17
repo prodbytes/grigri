@@ -194,6 +194,10 @@
   "@errorSignIn": {
     "description": "Google sign-in failed."
   },
+  "errorSignInApple": "Couldn't sign in with Apple. Try again.",
+  "@errorSignInApple": {
+    "description": "Sign in with Apple failed."
+  },
   "errorSession": "Couldn't sign in. Try again.",
   "@errorSession": {
     "description": "The API would not start a session after signing in."
@@ -213,6 +217,10 @@
   "signInWithGoogle": "Sign in with Google",
   "@signInWithGoogle": {
     "description": "Button: sign in with a Google account."
+  },
+  "signInWithApple": "Sign in with Apple",
+  "@signInWithApple": {
+    "description": "Button: Sign in with Apple (iOS). Use Apple's own wording for the language."
   },
   "tabDiscover": "Find",
   "@tabDiscover": {

@@ -340,6 +340,12 @@ abstract class AppLocalizations {
   /// **'Couldn\'t sign in with Google. Try again.'**
   String get errorSignIn;
 
+  /// Sign in with Apple failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t sign in with Apple. Try again.'**
+  String get errorSignInApple;
+
   /// The API would not start a session after signing in.
   ///
   /// In en, this message translates to:
@@ -369,6 +375,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in with Google'**
   String get signInWithGoogle;
+
+  /// Button: Sign in with Apple (iOS). Use Apple's own wording for the language.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Apple'**
+  String get signInWithApple;
 
   /// Bottom tab: the deck of plans to join.
   ///

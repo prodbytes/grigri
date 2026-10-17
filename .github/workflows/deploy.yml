@@ -122,4 +122,10 @@ jobs:
           # Stripe, for Premium (live mode): secrets; empty: no Premium.
           GRIGRI_STRIPE_SECRET_KEY: ${{ secrets.GRIGRI_STRIPE_SECRET_KEY }}
           GRIGRI_STRIPE_WEBHOOK_SECRET: ${{ secrets.GRIGRI_STRIPE_WEBHOOK_SECRET }}
+          # Sign in with Apple's key, to revoke Apple tokens on account deletion
+          # (specs/sign-in.md): the IDs are variables, the .p8 key a secret;
+          # empty: not revoked. One key serves every stage.
+          GRIGRI_APPLE_TEAM_ID: ${{ vars.GRIGRI_APPLE_TEAM_ID }}
+          GRIGRI_APPLE_KEY_ID: ${{ vars.GRIGRI_APPLE_KEY_ID }}
+          GRIGRI_APPLE_PRIVATE_KEY: ${{ secrets.GRIGRI_APPLE_PRIVATE_KEY }}
         run: bash scripts/deploy.sh

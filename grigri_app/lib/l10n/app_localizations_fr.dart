@@ -143,6 +143,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorSignIn => 'Impossible de se connecter avec Google. Réessaie.';
 
   @override
+  String get errorSignInApple =>
+      'Impossible de se connecter avec Apple. Réessaie.';
+
+  @override
   String get errorSession => 'Impossible de se connecter. Réessaie.';
 
   @override
@@ -158,6 +162,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get signInWithGoogle => 'Se connecter avec Google';
+
+  @override
+  String get signInWithApple => 'Se connecter avec Apple';
 
   @override
   String get tabDiscover => 'Trouve';
