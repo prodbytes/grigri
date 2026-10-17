@@ -76,14 +76,16 @@ Premium** (3.1.1).
 
 ## In App Store Connect
 
-Set up on 2026-10-17. The GA build **0.1.202610171131** (build
-`1792236692`) is uploaded, processed and picked on the version's page;
-its icon replaced App Store Connect's grid placeholder (the icon comes
-from the build's `AppIcon`, the 1024 px `ios-marketing` one included;
-there's no separate icon upload). Both subscriptions have their review
-screenshot. What's left is the owner's: **Add for Review** on the
-version's page and on each subscription (the first subscriptions go to
-review with the app version), then **Submit for Review**.
+Set up on 2026-10-17. The version's page is **0.2.202610171217**, and
+the GA build **0.2.202610171217** (build `1792239420`, from the tag
+`0.2.202610171217-GA`) is uploaded and processed (Ready to Submit). The
+page still has the earlier 0.1.202610171131 build (`1792236692`) picked:
+swap it for `1792239420` before submitting. The icon comes from the
+build's `AppIcon` (the 1024 px `ios-marketing` one included); there's no
+separate icon upload. Both subscriptions have their review screenshot.
+What's left is the owner's: pick the 0.2 build, **Add for Review** on
+the version's page and on each subscription (the first subscriptions go
+to review with the app version), then **Submit for Review**.
 
 ### Apple accounts and signing
 
@@ -175,7 +177,7 @@ chat.
 
 ### The version's page
 
-Version **0.1.202610171131** (it must match the uploaded build's
+Version **0.2.202610171217** (it must match the uploaded build's
 version; change both together). The English copy is entered, as below,
 with the support and marketing URLs and the copyright "2026 Julio
 Machado Faerman". Keep to the "plans, not partners" wording
@@ -267,6 +269,13 @@ see real plans:
    - **Xcode → Window → Organizer**: open the archive, **Distribute App
      → App Store Connect → Upload**; or
    - **Transporter** (Mac App Store): drag the `.ipa` in, **Deliver**; or
+   - `xcodebuild -exportArchive -archivePath
+     grigri_app/build/ios/archive/Runner.xcarchive -exportOptionsPlist
+     <plist> -exportPath <dir> -allowProvisioningUpdates`, with an export
+     options plist of `method` `app-store-connect`, `destination`
+     `upload`, `teamID` `LMX88986F3` and automatic signing: it uploads
+     with the Apple account signed in to Xcode, no API key needed (how
+     0.2.202610171217 went up); or
    - `xcrun altool --upload-app -f grigri_app/build/ios/ipa/*.ipa -t ios
      --apiKey <key id> --apiIssuer <issuer id>`, with an App Store Connect
      API key (Users and Access → Integrations; the `.p8` file in
