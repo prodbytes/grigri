@@ -15,7 +15,7 @@ import { Auth, type AuthConfig } from './auth.js';
 import { REFUSED, originCheck } from './origin.js';
 import { rbacrAdminCheck, rbacrGrants, rbacrRoles } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
-import { AppleTokens, DEFAULT_APPLE_BUNDLE_ID, appleVerifier } from './apple.js';
+import { APPLE_CALLBACK, AppleTokens, DEFAULT_APPLE_BUNDLE_ID, DEFAULT_APPLE_SERVICE_ID, appleCallbackIntent, appleVerifier } from './apple.js';
 import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
@@ -129,18 +129,19 @@ const authConfig: AuthConfig = {
   // Admins are whoever rbacr says holds grigri's admin role.
   isAdmin: rbacrAdminCheck(rbacr),
 };
-// Sign in with Apple (the iOS app's): tokens for the app's bundle ID; with
-// a Sign in with Apple key, refresh tokens are kept to revoke on account
+// Sign in with Apple: tokens for the iOS app's bundle ID (Apple's sheet)
+// or the Services ID (Apple's web flow, on the web and Android); with a
+// Sign in with Apple key, refresh tokens are kept to revoke on account
 // deletion (the key never leaves the function); no key: not kept.
-const appleBundleId = env.APPLE_BUNDLE_ID || DEFAULT_APPLE_BUNDLE_ID;
+const appleClientIds = [env.APPLE_BUNDLE_ID || DEFAULT_APPLE_BUNDLE_ID, env.APPLE_SERVICE_ID || DEFAULT_APPLE_SERVICE_ID];
 const appleTokens = new AppleTokens(
-  { clientId: appleBundleId, teamId: env.APPLE_TEAM_ID ?? '', keyId: env.APPLE_KEY_ID ?? '', privateKey: env.APPLE_PRIVATE_KEY ?? '' },
+  { clientIds: appleClientIds, teamId: env.APPLE_TEAM_ID ?? '', keyId: env.APPLE_KEY_ID ?? '', privateKey: env.APPLE_PRIVATE_KEY ?? '' },
   store,
 );
 const auth = new Auth({
   store,
   verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? '', undefined, parseClientIds(env.GOOGLE_IOS_CLIENT_IDS)),
-  apple: { verify: appleVerifier(appleBundleId), keepRefreshToken: (subject, code) => appleTokens.keepRefreshToken(subject, code) },
+  apple: { verify: appleVerifier(appleClientIds), keepRefreshToken: (subject, code, clientId) => appleTokens.keepRefreshToken(subject, code, clientId) },
   config: authConfig,
 });
 // Live updates: hints to IoT Core in AWS; locally, over MQTT to Floci's
@@ -211,6 +212,18 @@ async function http(event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResul
       const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body) : '';
       if (raw.length > MAX_WEBHOOK_BODY) throw new ApiError(413, 'body too large');
       return json(200, await api.stripeWebhook(raw, headers['stripe-signature']));
+    }
+    // Sign in with Apple's web flow on Android: Apple's form post (never
+    // logged: it carries the identity token) goes back to the app.
+    if (method === 'POST' && path === APPLE_CALLBACK) {
+      const raw = event.body ? (event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body) : '';
+      if (raw.length > MAX_BODY) throw new ApiError(413, 'body too large');
+      if (!(headers['content-type'] ?? '').startsWith('application/x-www-form-urlencoded')) throw new ApiError(415, 'send a form');
+      return {
+        statusCode: 307,
+        headers: { location: appleCallbackIntent(raw), 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' },
+        body: '',
+      };
     }
     let body: unknown;
     if (event.body) {

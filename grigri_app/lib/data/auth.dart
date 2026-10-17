@@ -53,7 +53,7 @@ abstract class Auth extends ChangeNotifier {
   /// Signs in with Google ([SignInMode.google]).
   Future<void> signIn();
 
-  /// Whether Sign in with Apple is offered (iOS only).
+  /// Whether Sign in with Apple is offered (iOS, Android and the web).
   bool get appleAvailable => false;
 
   /// Signs in with Apple; a cancel is quiet.
@@ -157,7 +157,7 @@ class AppleCredential extends Credential {
 
 /// Sign in with Apple, offered next to Google (App Store guideline 4.8).
 abstract interface class AppleSignIn {
-  /// Whether this platform offers it (iOS).
+  /// Whether this platform offers it (iOS, Android and the web).
   bool get available;
 
   /// Apple's sheet: the credential, or null when the person cancelled.

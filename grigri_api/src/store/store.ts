@@ -15,7 +15,7 @@ import {
   type TransactWriteCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
-import type { AppleTokenStore } from '../apple.js';
+import type { AppleTokenStore, KeptAppleToken } from '../apple.js';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
@@ -191,16 +191,17 @@ export class Store implements SessionStore, AppleTokenStore {
 
   // --- Apple refresh tokens (src/apple.ts) ------------------------------------
 
-  async putAppleToken(subject: string, refreshToken: string, now: Date): Promise<void> {
+  async putAppleToken(subject: string, token: KeptAppleToken, now: Date): Promise<void> {
     await this.doc.send(new PutCommand({
       TableName: this.table,
-      Item: { ...key.appleToken(subject), type: 'appleToken', refreshToken, updatedAt: now.toISOString() },
+      Item: { ...key.appleToken(subject), type: 'appleToken', ...token, updatedAt: now.toISOString() },
     }));
   }
 
-  async getAppleToken(subject: string): Promise<string | undefined> {
+  async getAppleToken(subject: string): Promise<KeptAppleToken | undefined> {
     const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.appleToken(subject), ConsistentRead: true }));
-    return typeof Item?.refreshToken === 'string' ? Item.refreshToken : undefined;
+    if (typeof Item?.refreshToken !== 'string') return undefined;
+    return { refreshToken: Item.refreshToken, ...(typeof Item.clientId === 'string' ? { clientId: Item.clientId } : {}) };
   }
 
   async deleteAppleToken(subject: string): Promise<void> {

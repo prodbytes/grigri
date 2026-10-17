@@ -1,6 +1,7 @@
 // An in-memory stand-in for Store with the same behavior the routes rely
 // on (version checks included), so the API's authorization and flows can be
 // tested without DynamoDB. The real Store is exercised against Floci.
+import type { KeptAppleToken } from '../src/apple.js';
 import type { SessionRecord } from '../src/auth.js';
 import type { Effects, Delivery } from '../src/domain/rules.js';
 import { type Climber, type JoinRequest, type Message, type Notice, type PlanPic, isOpen } from '../src/domain/model.js';
@@ -20,7 +21,7 @@ export class FakeStore {
   pics: PlanPic[] = [];
   sessions = new Map<string, SessionRecord>();
   /** Apple refresh tokens by subject. */
-  appleTokens = new Map<string, string>();
+  appleTokens = new Map<string, KeptAppleToken>();
   subscriptions = new Map<string, Subscription>();
   ads = new Map<string, Ad>();
   adSettings: AdSettings = DEFAULT_AD_SETTINGS;
@@ -95,7 +96,7 @@ export class FakeStore {
 
   async climberIdFor(subject: string) { return this.subjects.get(subject); }
   async subjectOf(id: string) { return [...this.subjects].find(([, cid]) => cid === id)?.[0]; }
-  async putAppleToken(subject: string, token: string) { this.appleTokens.set(subject, token); }
+  async putAppleToken(subject: string, token: KeptAppleToken) { this.appleTokens.set(subject, token); }
   async getAppleToken(subject: string) { return this.appleTokens.get(subject); }
   async deleteAppleToken(subject: string) { this.appleTokens.delete(subject); }
   async getClimber(id: string) { return this.climbers.get(id); }

@@ -440,6 +440,13 @@ check() {
     | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["stage"], d["version"])')" \
     || { echo "    /api/health failed"; return 1; }
   [[ "$health" == "$STAGE $VERSION" ]] || { echo "    /api/health says '$health', want '$STAGE $VERSION'"; return 1; }
+  # Sign in with Apple's return URL on Android: Apple's form post (here a
+  # made-up cancel) goes back to the app with a 307.
+  local apple
+  apple="$(curl -sS --max-time 20 -o /dev/null -D - --data 'error=user_cancelled_authorize' \
+    "https://$DOMAIN/api/apple/callback" | tr -d '\r' | sed -n 's/^location: //Ip')"
+  [[ "$apple" == "intent://callback?error=user_cancelled_authorize#Intent;package=com.nu01.grigri;scheme=signinwithapple;end" ]] \
+    || { echo "    /api/apple/callback sent '$apple', want an intent back to the app"; return 1; }
   # Enforced: straight to the API's own host, refused.
   if [[ -n "$api_origin_secret" ]]; then
     local direct
