@@ -1435,3 +1435,15 @@ spec.
       guided than open, and each guided plan priced with its guide alone.
     - Cost: about 17 more DynamoDB writes twice a day per stage, a
       fraction of a cent a month. No new resource.
+
+93. **At the top of the plan card, beside "sport", show a pill with the
+    plan's type.**
+    - [Screens](screens.md) and [matching](matching.md#plan-types-who-decides): the
+      Discover card's type pill moves from the bottom row (beside the
+      grades) to the top, beside the discipline, and private plans get
+      one too: **Private** with a lock, **Open: join at once** with an
+      open door, **Guided · €60** with a flag. The bottom row keeps the
+      grades and **Your grades**.
+    - A widget test checks a private plan's card shows **Private** in the
+      top pill.
+    - Cost: none (app only).

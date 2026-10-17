@@ -565,6 +565,17 @@ void main() {
       expect(store.waiting, isEmpty);
     });
 
+    testWidgets("a private plan's card says so at the top", (tester) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      final pill = find.byKey(const ValueKey('type boulder-night'));
+      expect(pill, findsOneWidget);
+      expect(
+        find.descendant(of: pill, matching: find.text('Private')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('a guided plan shows its price on the card', (tester) async {
       final api = sampleApi();
       final plan = api.plans['boulder-night']!;

@@ -144,10 +144,13 @@ join**, which says who lets newcomers in (the plan's **deciders**):
 | **Guided** | **the organizer alone**, the guide | asks; only the guide answers |
 
 - **Private** is what every plan was before types, and a plan without a
-  type (stored before them) is private. It isn't marked anywhere.
+  type (stored before them) is private. The deck's card says
+  **Private** (with a lock) at the top, beside the discipline; elsewhere
+  it isn't marked.
 - **Open**: there's no request to answer, no "asked to join" note and no
   notices to the group; the chat just says "<name> joined the plan 🎉".
-  The deck's card says **Open: join at once**.
+  The deck's card says **Open: join at once** at the top, beside the
+  discipline.
 - **Guided**: the plan is a guide's outing, **expected to be paid**. It
   has a **price per climber** (an amount above 0, at most 10,000 with two
   decimals, in EUR, USD, GBP, CHF or BRL), shown as **Guided · €60** on
