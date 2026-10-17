@@ -20,6 +20,11 @@ abstract interface class GrigriApi {
   /// Where a GriGri Pics photo is served: `<site>/pics/<key>`.
   Uri picUrl(String key);
 
+  /// GriGri Pics' catalog, `<site>/pics/catalog.json`: a static file that
+  /// needs no sign-in, so the sign-in screen can show crag photos. Every
+  /// crag's photos, in the catalog's order, each with its crag's name.
+  Future<List<GrigriPic>> picsCatalog();
+
   /// A photo's bytes, from where [photoUrl] says (the route finder reads
   /// walls' reference photos itself).
   Future<Uint8List> photoBytes(String key);

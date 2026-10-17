@@ -91,6 +91,11 @@ always in the plural, "partners" (a plan's group), in every language.
 - [Development environment](dev-environment.md): devbox, the dev
   container, `devbox services up` and the health monitor, the run scripts.
 - [Release builds](release.md): versions, tags and the Release workflow.
+- [App Store](app-store.md): shipping the iOS app on Apple's App Store:
+  iPhone only, export compliance, the privacy manifest, the privacy
+  policy and support pages, the version strings, `make ipa`, and the
+  owner's checklist (membership, App Store Connect, App Privacy, age
+  rating, store copy, review notes, TestFlight).
 - [API](api.md): the backend's contract, which the app codes against.
 - [Deploy](deploy.md): the web app at https://grigri.nu01.com and the
   release candidate at https://rc.grigri.nu01.com.

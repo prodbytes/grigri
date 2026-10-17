@@ -115,6 +115,21 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const RolesCard(),
+          const SizedBox(height: 12),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            children: [
+              TextButton(
+                onPressed: () => store.openSitePage('privacy.html'),
+                child: Text(l.privacyPolicy),
+              ),
+              TextButton(
+                onPressed: () => store.openSitePage('support.html'),
+                child: Text(l.support),
+              ),
+            ],
+          ),
           const SizedBox(height: 24),
           const _DeleteAccount(),
           if (AppVersion.version.isNotEmpty) ...[

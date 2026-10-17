@@ -215,15 +215,17 @@ h1, h2, h3 { color: var(--sand); margin: 0; line-height: 1.1; letter-spacing: -0
 .round-no { color: var(--clay); }
 .round-yes { color: var(--olive); animation: press 6s ease-in-out infinite; }
 
+/* Each loop starts with the card off screen, so the script can bring in
+   the next plan on animationiteration, unseen. */
 @keyframes swipe {
-  0%, 45% { transform: none; opacity: 1; }
-  60% { transform: translateX(8%) rotate(6deg); opacity: 1; }
-  75% { transform: translateX(140%) rotate(24deg); opacity: 0; }
-  76% { transform: scale(0.95); opacity: 0; }
-  90%, 100% { transform: none; opacity: 1; }
+  0% { transform: scale(0.95); opacity: 0; }
+  14%, 69% { transform: none; opacity: 1; }
+  84% { transform: translateX(8%) rotate(6deg); opacity: 1; }
+  99% { transform: translateX(140%) rotate(24deg); opacity: 0; }
+  100% { transform: scale(0.95); opacity: 0; }
 }
-@keyframes stamp { 0%, 45% { opacity: 0; } 55%, 72% { opacity: 1; } 76%, 100% { opacity: 0; } }
-@keyframes press { 0%, 50% { transform: none; } 56% { transform: scale(1.18); background: var(--pine); } 64%, 100% { transform: none; } }
+@keyframes stamp { 0%, 69% { opacity: 0; } 79%, 96% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes press { 0%, 74% { transform: none; } 80% { transform: scale(1.18); background: var(--pine); } 88%, 100% { transform: none; } }
 @keyframes drift { from { transform: scale(1.04); } to { transform: scale(1.12) translateX(-2%); } }
 
 /* Sections */

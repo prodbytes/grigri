@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../config.dart';
 import '../l10n/app_localizations.dart';
 import '../model/ad.dart';
 import '../model/premium.dart';
@@ -1324,6 +1325,11 @@ class GrigriStore extends ChangeNotifier {
     final url = await _act(api.premiumPortal);
     return url != null && await _openOrSay(url);
   }
+
+  /// Opens one of the site's own pages in the browser, e.g.
+  /// `privacy.html` or `support.html` (specs/app-store.md).
+  Future<bool> openSitePage(String page) =>
+      _openOrSay(AppConfig.origin.resolve('/$page'));
 
   Future<bool> _openOrSay(Uri url) async {
     if (await openLink(url)) return true;

@@ -1091,7 +1091,62 @@ spec.
       decides").
     - [Backend](backend.md): the seed's Montserrat plan is guided and
       the after-work gym plan is open.
-76. **Delete my account from inside the app (App Store guideline
+
+75. **Still seeing the old login page locally, though it was replaced by
+    a more modern one: rebuild, restart, and make sure the new page is on
+    every platform, the web included.**
+    - [Sign-in](sign-in.md): the app's sign-in screen (at `/app/`, and on
+      Android and iOS, where the landing page never showed) now has the
+      landing page's look: a GriGri Pics photo edge to edge, "100% free",
+      **Find a climbing plan.**, Google's sign-in, the swiping demo card,
+      how it works, what's free and a last call, in the six languages.
+      The app reads GriGri Pics' catalog (`/pics/catalog.json`, no
+      token) for the photos.
+    - [Landing page](landing.md): the headline and the last call follow
+      "Find a climbing plan" (they said "partner"), in every language, as
+      do the page's title and description.
+    - Cost: none added. The catalog and photos are files CloudFront
+      already serves from its cache.
+
+76. **The swiping animation shows a single plan (Margalef): add two
+    more, at other crags.**
+    - [Landing page](landing.md) and [sign-in](sign-in.md): the demo card
+      cycles through three made-up plans (different days, styles and
+      climbers), each at a different crag from GriGri Pics' catalog, in
+      the six languages. On the landing page the next plan comes in
+      while the card is off screen, at the end of each animation loop.
+
+77. **Verify the app is ready for the Apple App Store, and help ship it.**
+    - [App Store](app-store.md), new: the submission's spec and
+      checklist: what the repo does, what other pull requests are adding
+      (Sign in with Apple, account deletion, report and block, Apple
+      in-app purchase for Premium), and what the owner does by hand (the
+      paid membership, the distribution certificate, the App Store
+      Connect record, App Privacy and age rating answers, category, URLs,
+      screenshots, draft store copy, review notes and a demo account,
+      building and uploading, TestFlight first).
+    - [Platforms](platforms.md): iOS is iPhone only
+      (`TARGETED_DEVICE_FAMILY = 1`, no iPad orientations),
+      `ITSAppUsesNonExemptEncryption` is false, and the app bundles a
+      privacy manifest (`PrivacyInfo.xcprivacy`: no tracking; name,
+      email, user ID, coarse location, photos and videos, messages,
+      other user content and purchases, all linked, for app
+      functionality; `UserDefaults` with reason CA92.1).
+    - [Landing page](landing.md): new `/privacy.html` and
+      `/support.html` (English, dated 2026-10-17, in the page's look),
+      linked from the footer in all six languages.
+    - [Screens](screens.md): **Privacy policy** and **Support** at the
+      end of Profile open those pages in the browser.
+    - [Release builds](release.md): `make ipa` builds the signed archive
+      for App Store Connect. Apple allows a version and a build number of
+      up to three integers in 18 characters (TN2420); Grigri's
+      (`0.1.YYYYMMDDHHMM`, 16, and Unix seconds, 10) fit, so iOS keeps
+      the same version, and iOS builds now refuse one that doesn't.
+    - Cost: none in AWS (two small static pages in the site bucket,
+      served from CloudFront's cache). The App Store itself needs the
+      Apple Developer Program, $99 a year.
+
+78. **Delete my account from inside the app (App Store guideline
     5.1.1(v)).**
     - [Sign-in](sign-in.md#deleting-my-account), new section: **Delete
       account** at the end of the Profile tab, with a confirmation that

@@ -371,6 +371,35 @@ void main() {
       }
     });
 
+    test("GriGri Pics' catalog: a static file, read without a token", () async {
+      final seen = <http.Request>[];
+      final api = HttpGrigriApi(
+        origin: site,
+        headers: () async => {'Authorization': 'Bearer t0ken'},
+        client: MockClient((request) async {
+          seen.add(request);
+          return json({
+            'crags': [
+              {
+                'name': 'Peña Alta',
+                'photos': [
+                  {'key': 'crags/a/1.jpg', 'author': 'Ana Roca'},
+                  {'caption': 'no key'},
+                ],
+              },
+              {'name': 'Valle Gris'},
+            ],
+          });
+        }),
+      );
+      final pics = await api.picsCatalog();
+      expect(seen.single.url.path, '/pics/catalog.json');
+      expect(seen.single.headers.containsKey('Authorization'), isFalse);
+      expect(pics.single.key, 'crags/a/1.jpg');
+      expect(pics.single.crag, 'Peña Alta');
+      expect(pics.single.author, 'Ana Roca');
+    });
+
     test('photos: a presigned POST with its fields, then the file', () async {
       final seen = <http.Request>[];
       final client = MockClient((request) async {

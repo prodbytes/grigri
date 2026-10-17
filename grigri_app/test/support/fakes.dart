@@ -103,6 +103,9 @@ class FakeApi implements GrigriApi, SessionApi {
   /// GriGri Pics, by plan (the server finds them by the plan's place;
   /// tests set them).
   final grigriPics = <String, List<GrigriPic>>{};
+
+  /// GriGri Pics' catalog, for the sign-in screen.
+  final catalog = <GrigriPic>[];
   final passed = <String>{};
 
   /// Plans I left: a refresh keeps them out of my deck.
@@ -356,6 +359,9 @@ class FakeApi implements GrigriApi, SessionApi {
 
   @override
   Uri picUrl(String key) => Uri.parse('https://grigri.test/pics/$key');
+
+  @override
+  Future<List<GrigriPic>> picsCatalog() async => catalog;
 
   @override
   Future<Uint8List> photoBytes(String key) async {

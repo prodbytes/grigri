@@ -155,7 +155,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Encontre um plano de escalada: crie um ou deslize para a direita em um, e escalem juntos.';
+      'Crie um plano ou deslize para a direita em um, e escalem juntos.';
 
   @override
   String get signInWithGoogle => 'Entrar com o Google';
@@ -1238,6 +1238,97 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Aberto: entre na hora';
+
+  @override
+  String get signInBadge => '100% grátis';
+
+  @override
+  String get signInHeadline => 'Encontre um plano de escalada.';
+
+  @override
+  String get signInFreeLine => 'Grátis para todos: sem cartão, sem assinatura.';
+
+  @override
+  String get signInStampJoin => 'EU VOU';
+
+  @override
+  String get signInDeckWhen => 'Este sábado · Esportiva · 6b–7a';
+
+  @override
+  String get signInDeckWho => 'Mara, Jonas e mais 1';
+
+  @override
+  String get signInHowTitle => 'Como funciona';
+
+  @override
+  String get signInStep1Title => 'Crie um plano';
+
+  @override
+  String get signInStep1Body =>
+      'Onde, quando e quais graus: um pico, um sábado, de 6a a 7a.';
+
+  @override
+  String get signInStep2Title => 'Deslize para a direita';
+
+  @override
+  String get signInStep2Body =>
+      'Gostou de um plano? Deslize para a direita. O grupo aceita novatos um de cada vez, quando todos dizem sim.';
+
+  @override
+  String get signInStep3Title => 'Escalem juntos';
+
+  @override
+  String get signInStep3Body =>
+      'Cada match abre o chat em grupo do plano: corda, carona e café.';
+
+  @override
+  String get signInFreeTitle => 'Grátis. De verdade.';
+
+  @override
+  String get signInFree1 => 'Planos e deslizar';
+
+  @override
+  String get signInFree2 => 'Matches e chats em grupo';
+
+  @override
+  String get signInFree3 => 'Fotos dos picos';
+
+  @override
+  String get signInFree4 => 'Sem cartão para se cadastrar';
+
+  @override
+  String get signInFreePremium =>
+      'O Premium é opcional: serve só para anunciar no Grigri e para o localizador de vias. Escalar com o Grigri não custa nada.';
+
+  @override
+  String get signInFinalTitle =>
+      'O plano de escalada deste fim de semana está a um deslize.';
+
+  @override
+  String get signInJoinFree => 'Entre grátis com o Google';
+
+  @override
+  String signInPhotoBy(String author, String license) {
+    return 'Foto: $author, $license';
+  }
+
+  @override
+  String get signInDeckWhen2 => 'Domingo · Via longa · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker e Lea';
+
+  @override
+  String get signInDeckWhen3 => 'No próximo fim de semana · Boulder · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás e mais 2';
+
+  @override
+  String get privacyPolicy => 'Política de privacidade';
+
+  @override
+  String get support => 'Suporte';
 
   @override
   String get deleteAccount => 'Excluir conta';

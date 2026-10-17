@@ -158,7 +158,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Finde einen Kletterplan: Mach einen oder wisch bei einem nach rechts, und klettert zusammen.';
+      'Mach einen Plan oder wisch bei einem nach rechts, und klettert zusammen.';
 
   @override
   String get signInWithGoogle => 'Mit Google anmelden';
@@ -1246,6 +1246,97 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Offen: sofort dabei';
+
+  @override
+  String get signInBadge => '100 % kostenlos';
+
+  @override
+  String get signInHeadline => 'Finde einen Kletterplan.';
+
+  @override
+  String get signInFreeLine => 'Kostenlos für alle: keine Karte, kein Abo.';
+
+  @override
+  String get signInStampJoin => 'DABEI';
+
+  @override
+  String get signInDeckWhen => 'Diesen Samstag · Sport · 6b–7a';
+
+  @override
+  String get signInDeckWho => 'Mara, Jonas und 1 weitere Person';
+
+  @override
+  String get signInHowTitle => 'So funktioniert’s';
+
+  @override
+  String get signInStep1Title => 'Mach einen Plan';
+
+  @override
+  String get signInStep1Body =>
+      'Wo, wann und welche Grade: ein Gebiet, ein Samstag, 6a bis 7a.';
+
+  @override
+  String get signInStep2Title => 'Wisch nach rechts';
+
+  @override
+  String get signInStep2Body =>
+      'Dir gefällt ein Plan? Wisch nach rechts. Die Gruppe nimmt Neue einzeln auf, wenn alle Ja sagen.';
+
+  @override
+  String get signInStep3Title => 'Klettert zusammen';
+
+  @override
+  String get signInStep3Body =>
+      'Jedes Match öffnet den Gruppenchat des Plans: Seil, Mitfahrt und Kaffee klären.';
+
+  @override
+  String get signInFreeTitle => 'Kostenlos. Wirklich.';
+
+  @override
+  String get signInFree1 => 'Pläne und Wischen';
+
+  @override
+  String get signInFree2 => 'Matches und Gruppenchats';
+
+  @override
+  String get signInFree3 => 'Fotos der Gebiete';
+
+  @override
+  String get signInFree4 => 'Keine Karte zur Anmeldung';
+
+  @override
+  String get signInFreePremium =>
+      'Premium ist freiwillig: nur zum Werben auf Grigri und für den Routenfinder. Klettern mit Grigri kostet nichts.';
+
+  @override
+  String get signInFinalTitle =>
+      'Der Kletterplan fürs Wochenende ist nur einen Wisch entfernt.';
+
+  @override
+  String get signInJoinFree => 'Kostenlos mit Google beitreten';
+
+  @override
+  String signInPhotoBy(String author, String license) {
+    return 'Foto: $author, $license';
+  }
+
+  @override
+  String get signInDeckWhen2 => 'Sonntag · Mehrseillänge · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker und Lea';
+
+  @override
+  String get signInDeckWhen3 => 'Nächstes Wochenende · Bouldern · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás und 2 weitere';
+
+  @override
+  String get privacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get support => 'Support';
 
   @override
   String get deleteAccount => 'Konto löschen';

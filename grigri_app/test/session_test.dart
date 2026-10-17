@@ -8,6 +8,7 @@ import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/http_api.dart';
 import 'package:grigri_app/data/session_storage.dart';
 import 'package:grigri_app/main.dart';
+import 'package:grigri_app/model/pics.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
@@ -195,6 +196,43 @@ void main() {
       await pumpApp(tester, storeFor(sampleApi()));
       expect(find.text('Sign in with Google'), findsNothing);
       expect(find.byType(NavigationBar), findsOneWidget);
+    });
+
+    testWidgets('the sign-in screen: the landing page, with a crag photo', (
+      tester,
+    ) async {
+      final api = sampleApi()
+        ..catalog.addAll(const [
+          GrigriPic(
+            key: 'crags/a/1.jpg',
+            crag: 'Peña Alta',
+            author: 'Ana Roca',
+            license: 'CC BY 4.0',
+          ),
+          GrigriPic(key: 'crags/b/1.jpg', crag: 'Valle Gris'),
+        ]);
+      final store = await pumpApp(tester, storeFor(api, signedIn: false));
+      expect(find.text('Find a climbing plan.'), findsOneWidget);
+      expect(find.text('100% free'), findsOneWidget);
+      expect(find.text('Sign in with Google'), findsOneWidget);
+      expect(find.text('Photo: Ana Roca, CC BY 4.0'), findsOneWidget);
+      expect(find.text('Valle Gris'), findsOneWidget);
+      expect(find.text('Mara, Jonas and 1 more'), findsOneWidget);
+      // The demo card swipes away, and the next plan, at another crag,
+      // comes in.
+      for (final ms in [2300, 800, 700, 400]) {
+        await tester.pump(Duration(milliseconds: ms));
+      }
+      expect(find.text('Iker and Lea'), findsOneWidget);
+      expect(find.text('Peña Alta'), findsOneWidget);
+      expect(find.text('How it works', skipOffstage: false), findsOneWidget);
+
+      await tester.scrollUntilVisible(find.text('Join free with Google'), 300);
+      await tester.tap(find.text('Join free with Google'));
+      await tester.pumpAndSettle();
+      // The last call signs in too.
+      expect(store.phase, Phase.ready);
+      expect(find.text('Sign in with Google'), findsNothing);
     });
 
     testWidgets('an ended session goes back to the sign-in screen', (
