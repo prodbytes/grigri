@@ -81,7 +81,8 @@ deck is scored.
 
 The card shows it under the plan: **"Match 72% · good"** in the level's
 color (great olive, good sky, possible granite, long shot clay), and the
-reason beside it ("In your grades and nearby").
+reason beside it ("In your grades and nearby"), except "You don't
+climb this discipline", which gets no pill.
 
 ## The scoring run and the scores table
 

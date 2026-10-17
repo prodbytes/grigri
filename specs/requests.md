@@ -1190,3 +1190,9 @@ spec.
       now Discover, Plans, Chats, Alerts, then Ads (Premium) and Admin
       (admins), and Me always last.
     - Cost: none.
+
+81. **Remove the "You don't climb this discipline" pill.**
+    - [Match scores](match-scores.md#on-an-admins-deck): an admin's deck
+      card no longer shows the reason pill when the reason is that I
+      don't climb the plan's discipline; other reasons still show.
+    - Cost: none.
