@@ -1327,4 +1327,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get signInDeckWho3 => 'Noor, Tomás y 2 más';
+
+  @override
+  String get privacyPolicy => 'Política de privacidad';
+
+  @override
+  String get support => 'Soporte';
 }

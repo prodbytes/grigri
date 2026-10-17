@@ -1328,4 +1328,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get signInDeckWho3 => 'Noor, Tomás et 2 autres';
+
+  @override
+  String get privacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get support => 'Assistance';
 }

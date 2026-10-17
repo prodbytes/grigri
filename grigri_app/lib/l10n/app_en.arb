@@ -1844,5 +1844,13 @@
   "signInDeckWho3": "Noor, Tomás and 2 more",
   "@signInDeckWho3": {
     "description": "Sign-in screen: the third demo card's made-up climbers."
+  },
+  "privacyPolicy": "Privacy policy",
+  "@privacyPolicy": {
+    "description": "Link at the end of Profile: opens the privacy policy on the site in the browser."
+  },
+  "support": "Support",
+  "@support": {
+    "description": "Link at the end of Profile: opens the support page on the site in the browser."
   }
 }

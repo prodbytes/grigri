@@ -2354,6 +2354,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Noor, Tomás and 2 more'**
   String get signInDeckWho3;
+
+  /// Link at the end of Profile: opens the privacy policy on the site in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get privacyPolicy;
+
+  /// Link at the end of Profile: opens the support page on the site in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get support;
 }
 
 class _AppLocalizationsDelegate

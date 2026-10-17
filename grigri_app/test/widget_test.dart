@@ -1857,6 +1857,29 @@ void main() {
     });
   });
 
+  testWidgets('the profile ends with the privacy policy and support links', (
+    tester,
+  ) async {
+    final api = sampleApi();
+    await pumpApp(tester, api);
+    await tapTab(tester, 'Me');
+    await tester.scrollUntilVisible(find.text('Support'), 200);
+    expect(find.text('Privacy policy'), findsOneWidget);
+
+    await tester.tap(find.text('Privacy policy'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Support'));
+    await tester.pumpAndSettle();
+    expect(api.opened.map((url) => url.path), [
+      '/privacy.html',
+      '/support.html',
+    ]);
+    expect(
+      api.opened.every((url) => url.scheme == 'https' && url.host.isNotEmpty),
+      isTrue,
+    );
+  });
+
   group('language', () {
     testWidgets(
       'follows the device, in English when the app lacks its language',
