@@ -57,7 +57,7 @@ TestFlight comes first, then review for the App Store.
   one to three; neither page gives a size limit for an integer. Apple's
   [TN2420](https://developer.apple.com/library/archive/technotes/tn2420/_index.html)
   adds that each may be **at most 18 characters**. Grigri's
-  ([release](release.md#versioning)) fit: the version `0.1.202610171230`
+  ([release](release.md#versioning)) fit: the version `0.2.202610171230`
   is 16 characters, the build number (Unix seconds, ten digits) 10, and
   both only grow (a version must be higher than the last one, a build
   number higher than the last one of its version). So iOS builds keep the

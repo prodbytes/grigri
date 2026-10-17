@@ -1397,3 +1397,11 @@ spec.
     - Cost: none. No new resource or API call: gear is a few more names
       in the profile item, and members' profiles already come with the
       plan.
+
+91. **Increment the Y version, merge all changes, and submit for review
+    on the App Store.**
+    - [Release](release.md): `version.Y.txt` is now 2, so releases are
+      `0.2.<Z>`; the App Store's first version is 0.2. The example
+      versions in [release](release.md) and [app store](app-store.md)
+      follow.
+    - Cost: none.
