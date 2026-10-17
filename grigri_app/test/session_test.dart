@@ -266,6 +266,15 @@ void main() {
       );
       expect(find.text('Sign in with Google'), findsOneWidget);
       expect(find.text('Sign in with Apple'), findsOneWidget);
+      // Google's first, and Apple's label stays on one line.
+      expect(
+        tester.getTopLeft(find.text('Sign in with Google')).dy,
+        lessThan(tester.getTopLeft(find.text('Sign in with Apple')).dy),
+      );
+      expect(
+        tester.getSize(find.text('Sign in with Apple')).height,
+        lessThan(24),
+      );
       await tester.tap(find.text('Sign in with Apple'));
       await tester.pumpAndSettle();
       expect(api.sessionBodies.single['appleIdToken'], 'apple-id-token');
@@ -313,7 +322,7 @@ void main() {
         ]);
       final store = await pumpApp(tester, storeFor(api, signedIn: false));
       expect(find.text('Join a climbing plan.'), findsOneWidget);
-      expect(find.text('100% free'), findsOneWidget);
+      expect(find.text('100% free'), findsNothing);
       expect(find.text('Sign in with Google'), findsOneWidget);
       expect(find.text('Photo: Ana Roca, CC BY 4.0'), findsOneWidget);
       expect(find.text('Valle Gris'), findsOneWidget);

@@ -27,9 +27,9 @@ is "Alerts" in English.
 
 - **Sign-in**: the app's name and tagline ("Join a climbing plan: make
   one, or swipe right on one, and climb together.") on the mountain night gradient,
-  **Sign in with Apple** on iOS (Apple's white button, first, the same
-  size as Google's), and **Sign in with Google** (Google's own button on
-  the web). See [sign-in](sign-in.md#the-sign-in-screen).
+  **Sign in with Google** first (Google's own button on the web), then
+  **Sign in with Apple** on every platform (Apple's white style, the
+  same width as Google's, its label on one line). See [sign-in](sign-in.md#the-sign-in-screen).
 - **Plan** (from Plans, a notification, or a chat's title): the plan
   highlighted (every one of its days, or "Date to be decided"), my request's status when I'm not in it yet (Pending, N of
   M said yes, or Declined), the group (tap someone for their profile),

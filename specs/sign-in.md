@@ -57,8 +57,9 @@ CanvasKit, Google Identity Services and Apple's sign-in JS) is what guards it.
    ([sign_in_screen.dart](../grigri_app/lib/ui/sign_in_screen.dart)):
    the [landing page](landing.md)'s look on every platform. A GriGri
    Pics photo edge to edge (the first photo in the catalog, credited
-   under it), the logo, "100% free", the headline **Find a climbing
-   plan.**, the tagline and the sign-in buttons (Sign in with Apple first), with a demo plan card
+   under it), the logo, the headline **Join a climbing plan.**, the
+   tagline and the sign-in buttons (Google's first, then Sign in with
+   Apple), with a demo plan card
    that swipes right on a loop, bringing in the landing page's three
    made-up plans in turn, each at another crag (still, on the first,
    when the device asks for less motion). Below: how it works, what's free, and a last call, **Join free
@@ -83,11 +84,12 @@ CanvasKit, Google Identity Services and Apple's sign-in JS) is what guards it.
 
 - **Sign in with Google**: the app's button on Android and iOS (a filled
   button), Google's own on the web.
-- **Sign in with Apple**, on every platform, above Google's and as prominent:
-  the same width and height (52), the same rounded ends, in Apple's own
-  style ([sign_in_with_apple](https://pub.dev/packages/sign_in_with_apple)'s
-  `SignInWithAppleButton`: the Apple logo and Apple's wording, white on
-  the dark theme), its text in the app's language ("Sign in with Apple",
+- **Sign in with Apple**, on every platform, below Google's and as
+  prominent: as wide, 50 tall, with rounded ends, in Apple's white style
+  (the Apple logo and Apple's wording in black on white, the app's own
+  button, not sign_in_with_apple's `SignInWithAppleButton`, whose text
+  is 43% of its height and broke onto two lines). The label is 16 px,
+  on one line, shrunk to fit a narrow screen, in the app's language ("Sign in with Apple",
   "Iniciar sesión con Apple", "Mit Apple anmelden", "Se connecter avec
   Apple", "Iniciar sessão com a Apple", "Inicia la sessió amb Apple").
 - Both are disabled while a sign-in is under way.

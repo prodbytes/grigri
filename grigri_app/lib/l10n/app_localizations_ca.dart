@@ -1335,9 +1335,6 @@ class AppLocalizationsCa extends AppLocalizations {
   String get openJoinAtOnce => 'Obert: uneix-te al moment';
 
   @override
-  String get signInBadge => '100% gratuït';
-
-  @override
   String get signInHeadline => 'Uneix-te a un pla d’escalada.';
 
   @override

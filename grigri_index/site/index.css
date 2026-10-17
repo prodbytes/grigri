@@ -139,18 +139,6 @@ h1, h2, h3 { color: var(--sand); margin: 0; line-height: 1.1; letter-spacing: -0
 .hero h1 { font-size: clamp(2.4rem, 6vw, 4.5rem); font-weight: 800; margin: 16px 0; }
 .lead { font-size: clamp(1.1rem, 2vw, 1.35rem); color: var(--snow); max-width: 34ch; margin: 0 0 32px; }
 .fine { color: var(--granite); margin: 16px 0 0; font-size: 0.95rem; }
-.badge {
-  display: inline-block;
-  margin: 0;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: var(--pine);
-  color: var(--sand);
-  font-weight: 800;
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
 /* The demo deck: a plan card that swipes right, Tinder-style */
 .deck { position: relative; justify-self: center; width: min(340px, 80vw); aspect-ratio: 3 / 4.2; }
