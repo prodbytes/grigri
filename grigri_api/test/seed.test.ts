@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { planInput, profileInput } from '../src/domain/validate.js';
 import { seedData } from '../seed/data.js';
+import { SEED_ADVERTISER, seedAds, seedAdvertiser } from '../seed/ads.js';
+import { adLink, MAX_AD_TEXT } from '../src/domain/ads.js';
 import { assertSeedable } from '../seed/seed.js';
 import { showcaseData } from '../seed/showcase.js';
 
@@ -31,6 +33,29 @@ describe('seed data', () => {
       expect(plan.memberIds).not.toContain(r.climberId);
       // Not already accepted by everyone (nobody answers automatically).
       expect(plan.memberIds.every((m) => r.acceptedBy.includes(m))).toBe(false);
+    }
+  });
+});
+
+describe('seed ads', () => {
+  const now = new Date('2030-05-01T10:00:00.000Z');
+  const ads = seedAds(now);
+
+  it("Climbing Siurana's: approved, valid, photos under the advertiser's folder", () => {
+    expect(seedAdvertiser.id).toBe(SEED_ADVERTISER);
+    expect(() => profileInput({ ...seedAdvertiser, id: undefined }, [])).not.toThrow();
+    expect(ads.length).toBeGreaterThanOrEqual(3);
+    for (const { ad, photoSource } of ads) {
+      expect(ad.id).toMatch(/^seed-/);
+      expect(ad.ownerId).toBe(SEED_ADVERTISER);
+      expect(ad.status).toBe('approved');
+      expect(ad.text.length).toBeLessThanOrEqual(MAX_AD_TEXT);
+      expect(adLink(ad.link)).toBe(ad.link);
+      expect(new URL(ad.link).host).toBe('www.climbingsiurana.com');
+      expect(ad.media?.key).toMatch(new RegExp(`^ads/${SEED_ADVERTISER}/[a-z-]+\\.(jpg|webp)$`));
+      expect(photoSource).toMatch(/^https:\/\/www\.climbingsiurana\.com\//);
+      // Plans, not partners.
+      expect(ad.text).not.toMatch(/partner/i);
     }
   });
 });

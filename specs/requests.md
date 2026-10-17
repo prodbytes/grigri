@@ -1352,3 +1352,25 @@ spec.
       [sign-in](sign-in.md#configuration-the-owner-does).
     - Cost: no new resource. Android's return URL is one more request to
       the existing API per sign-in, and Apple's endpoints are free.
+
+89. **Create a few sample ads for "Climbing Siurana" (images and info from
+    https://www.climbingsiurana.com/en/); show ads infrequently, about one
+    every 10 plans, a little randomized; when a user rejects an ad, don't
+    show it again.**
+    - [ads](ads.md#sample-ads), [backend](backend.md): the seed (RC and
+      local only) writes a made-up advertiser, Climbing Siurana, with four
+      approved ads (a guided day in Siurana, "From the gym to the rock",
+      the Margalef camp, the La Morera via ferrata), each linking to its
+      page on the school's site, with the school's photos copied into the
+      photos bucket. A demo owner advertises without Premium.
+    - [ads](ads.md#on-the-deck): the default is now an ad after every 10
+      plans, and the deck varies each gap by up to 30% at random (7 to 13
+      plans by default), kept stable until that ad is swiped.
+    - [ads](ads.md#on-the-deck), [API](api.md): ✕ on an ad skips it for
+      good: `POST /api/ads/{id}/skip` saves `ADSKIP#<ad>` under my
+      profile, and `GET /api/discover` leaves my skipped ads out, even
+      after ⟳.
+    - Cost: one more read per deck (my skipped ads) and one write per
+      skip, about $0.0000001 per deck; kept in DynamoDB rather than on the
+      device so a skip holds on every device. The sample photos (about
+      1 MB) in RC's and local's photos buckets: under a cent a month.

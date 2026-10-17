@@ -81,6 +81,9 @@ export class FakeStore {
   async adsByStatus(status: AdStatus) {
     return this.newestFirst([...this.ads.values()].filter((a) => a.status === status));
   }
+  adSkips = new Set<string>();
+  async skippedAdIds(cid: string) { return [...this.adSkips].filter((k) => k.startsWith(`${cid}|`)).map((k) => k.split('|')[1]!); }
+  async skipAd(cid: string, adId: string) { this.adSkips.add(`${cid}|${adId}`); }
   async getAdSettings() {
     return { ...this.adSettings };
   }

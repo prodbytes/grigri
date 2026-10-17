@@ -8,6 +8,7 @@ import { isOpen } from '../src/domain/model.js';
 import { key, prefix } from '../src/store/keys.js';
 import { Conflict, type Store, messageItem, planItem, requestItem, toPlan, toRequest } from '../src/store/store.js';
 import type { Climber, Plan } from '../src/domain/model.js';
+import { type SeedAd, seedAdvertiser, seedAds } from './ads.js';
 import { seedData } from './data.js';
 import { showcaseData } from './showcase.js';
 
@@ -25,13 +26,18 @@ export interface SeedCounts {
   plans: number;
   requests: number;
   messages: number;
+  ads: number;
 }
 
-export async function seed(store: Store, now: Date): Promise<SeedCounts> {
+/** Puts a photo at photos/<key> in the photos bucket. */
+export type PutPhoto = (key: string, body: Uint8Array, contentType: string) => Promise<void>;
+
+export async function seed(store: Store, now: Date, putPhoto?: PutPhoto): Promise<SeedCounts> {
   const data = seedData(now);
   const { doc, table } = store;
-  await writeClimbers(store, data.climbers, now);
+  await writeClimbers(store, [...data.climbers, seedAdvertiser], now);
   await writePlans(store, data.plans, now);
+  const ads = await writeAds(store, seedAds(now), putPhoto);
   // RC and local show the demo showcase too.
   await seedShowcase(store, now);
 
@@ -51,7 +57,33 @@ export async function seed(store: Store, now: Date): Promise<SeedCounts> {
     plans: data.plans.length,
     requests: data.requests.length,
     messages: data.messages.length,
+    ads,
   };
+}
+
+/**
+ * The sample ads, approved, with their photos copied into the photos
+ * bucket. An ad whose photo can't be copied is saved with its text alone.
+ */
+async function writeAds(store: Store, ads: SeedAd[], putPhoto?: PutPhoto): Promise<number> {
+  for (const { ad, photoSource } of ads) {
+    let saved = ad;
+    if (ad.media) {
+      try {
+        if (!putPhoto || !photoSource) throw new Error('no photo store');
+        const res = await fetch(photoSource, { signal: AbortSignal.timeout(10_000) });
+        const type = res.headers.get('content-type') ?? '';
+        if (!res.ok || !/^image\/(jpeg|png|webp)$/.test(type)) throw new Error(`${res.status} ${type}`);
+        await putPhoto(ad.media.key, new Uint8Array(await res.arrayBuffer()), type);
+      } catch (e) {
+        console.error(JSON.stringify({ level: 'warn', msg: 'seed ad photo not copied', ad: ad.id, error: String(e) }));
+        const { media: _media, ...rest } = ad;
+        saved = rest;
+      }
+    }
+    await store.putAd(saved);
+  }
+  return ads.length;
 }
 
 /** The seed's climbers, marked demo (all of them are made up). One an admin blocked stays as it is. */

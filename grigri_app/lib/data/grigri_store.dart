@@ -130,7 +130,9 @@ class GrigriStore extends ChangeNotifier {
     Future<SectorIndex> Function()? places,
     this.openLink = openInBrowser,
     this.appStore,
-  }) : _image = image ?? ((url) => NetworkImage(url.toString())),
+    math.Random? random,
+  }) : _random = random ?? math.Random(),
+       _image = image ?? ((url) => NetworkImage(url.toString())),
        _places = places ?? SectorIndex.load,
        _preferences = preferences ?? Preferences.none() {
     _gradeSystem = _preferences.gradeSystem;
@@ -236,6 +238,15 @@ class GrigriStore extends ChangeNotifier {
   /// Ads swiped this session: they don't come back until ⟳.
   final _seenAds = <String>{};
 
+  /// Ads I skipped: never again (the API leaves them out of my deck too).
+  final _skippedAds = <String>{};
+
+  /// How many plans come before each of the next ads: [adEvery], give or
+  /// take a little, drawn as the deck needs them and kept until that ad
+  /// is swiped, so the deck doesn't reshuffle as it rebuilds.
+  final _adGaps = <int>[];
+  final math.Random _random;
+
   /// Plans swiped since the deck last showed an ad.
   int _plansSinceAd = 0;
   List<Ad> _myAds = [];
@@ -324,6 +335,8 @@ class GrigriStore extends ChangeNotifier {
     _deckAds = [];
     _adEvery = 0;
     _seenAds.clear();
+    _skippedAds.clear();
+    _adGaps.clear();
     _plansSinceAd = 0;
     _myAds = [];
     _adminAds.clear();
@@ -468,27 +481,28 @@ class GrigriStore extends ChangeNotifier {
   /// Plans to swipe on, best fits first (the server's order).
   List<Plan> get discover => [for (final id in _discover) ?_plans[id]];
 
-  /// The Discover deck: its plans, with an approved ad after every
-  /// [adEvery] plans swiped (counting the ones swiped since the last ad,
-  /// so an ad comes up as the deck goes, not further down each time).
-  /// Ads swiped this session are left out. No plans: no ads either.
+  /// The Discover deck: its plans, with an approved ad after about every
+  /// [adEvery] plans swiped (each gap a little more or less, at random;
+  /// counting the plans swiped since the last ad, so an ad comes up as
+  /// the deck goes, not further down each time). Ads swiped this session,
+  /// and ads I skipped, are left out. No plans: no ads either.
   List<DeckItem> get deck {
     final plans = discover;
     final ads = [
       for (final a in _deckAds)
-        if (!_seenAds.contains(a.id)) a,
+        if (!_seenAds.contains(a.id) && !_skippedAds.contains(a.id)) a,
     ];
     if (_adEvery <= 0 || ads.isEmpty || plans.isEmpty) {
       return [for (final p in plans) DeckPlan(p)];
     }
     final items = <DeckItem>[];
-    var next = math.max(0, _adEvery - _plansSinceAd);
+    var next = math.max(0, _adGap(0) - _plansSinceAd);
     var shown = 0;
     var ad = 0;
     for (final p in plans) {
       if (shown == next && ad < ads.length) {
         items.add(DeckAd(ads[ad++]));
-        next = shown + _adEvery;
+        next = shown + _adGap(ad);
       }
       items.add(DeckPlan(p));
       shown++;
@@ -497,8 +511,19 @@ class GrigriStore extends ChangeNotifier {
     return items;
   }
 
-  /// One ad after every this many plans on the deck; 0: none.
+  /// One ad after about every this many plans on the deck; 0: none.
   int get adEvery => _adEvery;
+
+  /// The plans before the [i]th next ad: [adEvery] ± 30%, at least 1.
+  int _adGap(int i) {
+    while (_adGaps.length <= i) {
+      final spread = (_adEvery * 0.3).floor();
+      _adGaps.add(
+        math.max(1, _adEvery - spread + _random.nextInt(2 * spread + 1)),
+      );
+    }
+    return _adGaps[i];
+  }
 
   /// How far a plan on the deck is from my nearest location or area, in
   /// km; null when it isn't known.
@@ -787,6 +812,7 @@ class GrigriStore extends ChangeNotifier {
     _covers = list.covers;
     _matchScores = list.scores;
     _deckAds = list.ads;
+    if (_adEvery != list.adEvery) _adGaps.clear();
     _adEvery = list.adEvery;
     _loaded.add(Section.discover);
   });
@@ -1256,14 +1282,23 @@ class GrigriStore extends ChangeNotifier {
 
   // --- Ads (specs/ads.md) -------------------------------------------------
 
-  /// An ad on the deck was swiped: it leaves the deck for this session,
-  /// the plans count again to the next one, and [open] (swiped right)
-  /// opens its link in the browser.
+  /// An ad on the deck was swiped: the plans count again to the next one.
+  /// [open] (swiped right) opens its link in the browser, and the ad
+  /// leaves the deck for this session; skipped (left), it never shows to
+  /// me again (`POST /api/ads/{id}/skip`).
   Future<void> swipeAd(Ad ad, {required bool open}) async {
-    _seenAds.add(ad.id);
+    (open ? _seenAds : _skippedAds).add(ad.id);
     _plansSinceAd = 0;
+    if (_adGaps.isNotEmpty) _adGaps.removeAt(0);
     notifyListeners();
-    if (open) await _openOrSay(ad.link);
+    if (open) {
+      await _openOrSay(ad.link);
+    } else {
+      // Quiet: unsaved, it still stays off the deck until I sign out.
+      try {
+        await _call(() => api.skipAd(ad.id));
+      } on ApiException catch (_) {}
+    }
   }
 
   /// My ads, newest first.

@@ -19,6 +19,8 @@ export const key = {
   plan: (planId: string) => ({ pk: `PLAN#${planId}`, sk: 'PLAN' }),
   member: (climberId: string, planId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `MEMBER#${planId}` }),
   pass: (climberId: string, planId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `PASS#${planId}` }),
+  /** An ad I skipped on the deck: it never shows to me again. */
+  adSkip: (climberId: string, adId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `ADSKIP#${adId}` }),
   notice: (climberId: string, noticeId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `NOTICE#${noticeId}` }),
   request: (planId: string, climberId: string) => ({ pk: `PLAN#${planId}`, sk: `REQ#${climberId}` }),
   message: (planId: string, time: string, messageId: string) => ({ pk: `PLAN#${planId}`, sk: `MSG#${time}#${messageId}` }),
@@ -56,6 +58,7 @@ export const prefix = {
   plan: (planId: string) => `PLAN#${planId}`,
   member: 'MEMBER#',
   pass: 'PASS#',
+  adSkip: 'ADSKIP#',
   notice: 'NOTICE#',
   request: 'REQ#',
   message: 'MSG#',

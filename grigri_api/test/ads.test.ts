@@ -3,6 +3,7 @@ import { Api } from '../src/api.js';
 import { Auth, type Caller } from '../src/auth.js';
 import { adInput, adLink, adSettingsInput } from '../src/domain/ads.js';
 import { ApiError } from '../src/domain/errors.js';
+import { seedAds, seedAdvertiser } from '../seed/ads.js';
 import { FakeRbacr } from './fake-rbacr.js';
 import { FakeStore } from './fake-store.js';
 
@@ -115,7 +116,7 @@ describe('ads', () => {
     const pending = await call(root, 'GET', '/api/admin/ads');
     expect(pending.ads.map((a: { id: string }) => a.id)).toEqual([ad.id]);
     expect(Object.keys(pending.climbers)).toEqual([ad.ownerId]);
-    expect(pending.every).toBe(5);
+    expect(pending.every).toBe(10);
 
     // Pending ads never reach a deck.
     expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
@@ -127,7 +128,7 @@ describe('ads', () => {
 
     const deck = await call(ben, 'GET', '/api/discover');
     expect(deck.ads.map((a: { id: string }) => a.id)).toEqual([ad.id]);
-    expect(deck.adEvery).toBe(5);
+    expect(deck.adEvery).toBe(10);
     expect(deck.climbers[ad.ownerId].name).toBeDefined();
     // Never my own.
     expect((await call(ada, 'GET', '/api/discover')).ads).toEqual([]);
@@ -157,6 +158,33 @@ describe('ads', () => {
     rbacr.give('ada@example.com', 'premium');
     expect((await call(ben, 'GET', '/api/discover')).ads).toHaveLength(1);
     await call(root, 'POST', `/api/admin/climbers/${adaId}/block`);
+    expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
+  });
+
+  it('an ad I skip never shows to me again; others still see it', async () => {
+    await climber(ada);
+    await climber(ben, false);
+    await climber(who('cy'), false);
+    await call(root, 'GET', '/api/me');
+    const { ad } = await call(ada, 'POST', '/api/ads', { text: 'Rope sale', link: 'https://rope.example.com' });
+    await call(root, 'POST', `/api/admin/ads/${ad.id}/approve`);
+    expect((await call(ben, 'GET', '/api/discover')).ads).toHaveLength(1);
+    expect(await call(ben, 'POST', `/api/ads/${ad.id}/skip`)).toEqual({});
+    expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
+    // Not even after refreshing the deck (which brings passed plans back).
+    await call(ben, 'DELETE', '/api/passes');
+    expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
+    expect((await call(who('cy'), 'GET', '/api/discover')).ads).toHaveLength(1);
+    expect(await status(call(ben, 'POST', '/api/ads/bad id!/skip'))).toBe(400);
+  });
+
+  it("the seed's made-up advertiser shows ads without Premium", async () => {
+    await climber(ben, false);
+    await store.saveProfile({ ...seedAdvertiser, demo: true });
+    for (const { ad } of seedAds(now)) await store.putAd(ad);
+    expect((await call(ben, 'GET', '/api/discover')).ads).toHaveLength(seedAds(now).length);
+    // A real climber without Premium doesn't.
+    await store.saveProfile({ ...seedAdvertiser, demo: undefined } as never);
     expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
   });
 
