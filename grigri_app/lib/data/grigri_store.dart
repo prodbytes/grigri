@@ -1316,6 +1316,7 @@ class GrigriStore extends ChangeNotifier {
     required String text,
     required String link,
     ChatMedia? media,
+    List<AdRegion> regions = const [],
     void Function(double sent)? onProgress,
   }) async {
     final ad = await _act(() async {
@@ -1326,13 +1327,23 @@ class GrigriStore extends ChangeNotifier {
         await api.uploadPhoto(upload, media.bytes, onProgress: onProgress);
         key = upload.key;
       }
-      return api.createAd(text: text.trim(), link: link.trim(), mediaKey: key);
+      return api.createAd(
+        text: text.trim(),
+        link: link.trim(),
+        mediaKey: key,
+        regions: regions,
+      );
     });
     if (ad == null) return false;
     _myAds = [ad, ..._myAds];
     notifyListeners();
     return true;
   }
+
+  /// Places named like [query], for an ad's regions; null when the search
+  /// failed (its error goes to [errors]).
+  Future<List<AdRegion>?> searchPlaces(String query, String language) =>
+      _act(() => api.searchPlaces(query.trim(), language));
 
   /// Takes my ad down for good.
   Future<bool> deleteAd(String adId) async {

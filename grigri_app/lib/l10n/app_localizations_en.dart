@@ -1533,4 +1533,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorObjectionable =>
       'Please keep it friendly: that has words Grigri doesn\'t allow.';
+
+  @override
+  String get adRegionsTitle => 'Where it shows';
+
+  @override
+  String get adRegionsEverywhere =>
+      'Everywhere. Add a country, region or town to show it only to climbers there.';
+
+  @override
+  String get adRegionsHelp =>
+      'To climbers who are in these places, or climb near them.';
+
+  @override
+  String get adAddRegion => 'Add a region';
+
+  @override
+  String adRemoveRegion(String name) {
+    return 'Remove $name';
+  }
+
+  @override
+  String get adRegionSearchLabel => 'Country, region or town';
+
+  @override
+  String get adRegionSearchHelp =>
+      'For example Spain, Catalonia or Siurana. The ad also reaches a little around it.';
+
+  @override
+  String adShowsIn(String places) {
+    return 'Shows in $places';
+  }
+
+  @override
+  String get adShowsEverywhere => 'Shows everywhere';
 }

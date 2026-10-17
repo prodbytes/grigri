@@ -20,6 +20,7 @@ import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
 import { aityxScorer } from './match/aityx.js';
+import { nominatim } from './places.js';
 import { stripeBilling } from './stripe.js';
 import { appStoreVerifier } from './app-store.js';
 import { Store } from './store/store.js';
@@ -189,6 +190,8 @@ const api = new Api({
   // key, no call to Apple).
   appStore: appStoreVerifier(),
   appleTokens,
+  // Ads' regions: OpenStreetMap's place search (free, no key).
+  places: nominatim(),
   showcase,
   config: { stage, version: env.VERSION ?? 'dev', roleSuffix: env.ROLE_SUFFIX ?? '' },
 });

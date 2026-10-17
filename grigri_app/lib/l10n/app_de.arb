@@ -439,5 +439,14 @@
   "reportBlock": "Kletterer sperren",
   "noticeReportsTitle": "Neue Meldungen zu prüfen",
   "noticeReportsBody": "Admin → Meldungen · innerhalb von 24 Stunden beantworten",
-  "errorObjectionable": "Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt."
+  "errorObjectionable": "Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt.",
+  "adRegionsTitle": "Wo sie erscheint",
+  "adRegionsEverywhere": "Überall. Füge ein Land, eine Region oder einen Ort hinzu, um sie nur Kletternden dort zu zeigen.",
+  "adRegionsHelp": "Für Kletternde, die an diesen Orten sind oder in der Nähe klettern.",
+  "adAddRegion": "Region hinzufügen",
+  "adRemoveRegion": "{name} entfernen",
+  "adRegionSearchLabel": "Land, Region oder Ort",
+  "adRegionSearchHelp": "Zum Beispiel Spanien, Katalonien oder Siurana. Die Anzeige reicht auch etwas darüber hinaus.",
+  "adShowsIn": "Erscheint in {places}",
+  "adShowsEverywhere": "Erscheint überall"
 }

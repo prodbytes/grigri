@@ -1474,3 +1474,25 @@ spec.
       versions in [release](release.md) and [app store](app-store.md)
       follow.
     - Cost: none.
+
+96. **On the new ad screen, let advertisers add the regions where the ad
+    shows: a whole country (Spain) or just a town (Siurana). Make the ad
+    cover that region and a bit further, to be sure: Siurana's ads should
+    show where I am.**
+    - [Ads](ads.md#regions): an ad keeps up to 10 regions (a name and a
+      bounding box); none: everywhere. The editor's **Where it shows**
+      adds them through a place search (OpenStreetMap's Nominatim,
+      through the new `GET /api/places`, Premium only; it searches when
+      asked, never as you type, and credits OpenStreetMap). The deck
+      shows a region-limited ad to climbers whose location or areas fall
+      in a region's box widened by 50 km, or a tenth of its size when
+      that's more. My ads and Admin → Ads show where each ad shows.
+    - The sample ads show around Siurana, Margalef and La Morera de
+      Montsant (`SHOWCASE_VERSION` 6), reaching the Priorat and the Costa
+      Daurada.
+    - The ad editor is no longer a lazy list: with the longer form, a
+      link scrolled away wasn't checked before sending.
+    - [API](api.md): the new route.
+    - Cost: none to speak of. Nominatim is free; a search is one Lambda
+      call, only when an advertiser asks; the deck's check is arithmetic
+      on ads it already reads.

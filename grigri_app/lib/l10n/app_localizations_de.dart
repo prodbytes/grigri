@@ -1554,4 +1554,38 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get errorObjectionable =>
       'Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt.';
+
+  @override
+  String get adRegionsTitle => 'Wo sie erscheint';
+
+  @override
+  String get adRegionsEverywhere =>
+      'Überall. Füge ein Land, eine Region oder einen Ort hinzu, um sie nur Kletternden dort zu zeigen.';
+
+  @override
+  String get adRegionsHelp =>
+      'Für Kletternde, die an diesen Orten sind oder in der Nähe klettern.';
+
+  @override
+  String get adAddRegion => 'Region hinzufügen';
+
+  @override
+  String adRemoveRegion(String name) {
+    return '$name entfernen';
+  }
+
+  @override
+  String get adRegionSearchLabel => 'Land, Region oder Ort';
+
+  @override
+  String get adRegionSearchHelp =>
+      'Zum Beispiel Spanien, Katalonien oder Siurana. Die Anzeige reicht auch etwas darüber hinaus.';
+
+  @override
+  String adShowsIn(String places) {
+    return 'Erscheint in $places';
+  }
+
+  @override
+  String get adShowsEverywhere => 'Erscheint überall';
 }
