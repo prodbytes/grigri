@@ -1072,3 +1072,22 @@ spec.
     - [Deploy](deploy.md): the index CSP allows the page's own script,
       style and fetches (`'self'`, no inline code), and allows location for
       the page itself. The smoke test checks for the landing page.
+74. **Add plan types: "open", which anyone can join; "guided", which is
+    expected to be paid; and "private", the default, like now, where a
+    newcomer must be accepted.**
+    - [Matching](matching.md): new section, plan types. Each type has
+      its deciders: every member (private), nobody (open: a swipe right
+      joins at once) or the organizer alone (guided). A guided plan has a
+      price per climber (EUR, USD, GBP, CHF or BRL), paid to the guide,
+      not through Grigri. Changing a plan's type lets in whoever now has
+      enough yeses.
+    - [API](api.md): `type` and `price` on Plan; join, accept, reject,
+      requests to review and nudges follow the deciders; plans without a
+      type are private.
+    - [Screens](screens.md): **Who can join** in the plan editor (with
+      the price for guided plans); the deck's card and the plan show
+      "Open: join at once" or "Guided · €60"; only deciders get Accept
+      and Decline (other members of a guided plan see "The guide
+      decides").
+    - [Backend](backend.md): the seed's Montserrat plan is guided and
+      the after-work gym plan is open.

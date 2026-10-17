@@ -102,6 +102,22 @@ describe('planInput', () => {
     spots: 3,
   };
 
+  it('types: private by default (left out), open, and guided with a price', () => {
+    expect(planInput(valid, now)).not.toHaveProperty('type');
+    expect(planInput({ ...valid, type: 'private' }, now)).not.toHaveProperty('type');
+    expect(planInput({ ...valid, type: 'open', price: { amount: 5, currency: 'EUR' } }, now)).toMatchObject({ type: 'open' });
+    expect(planInput({ ...valid, type: 'open', price: { amount: 5, currency: 'EUR' } }, now)).not.toHaveProperty('price');
+    expect(planInput({ ...valid, type: 'guided', price: { amount: 49.5, currency: 'CHF' } }, now)).toMatchObject({
+      type: 'guided',
+      price: { amount: 49.5, currency: 'CHF' },
+    });
+    expect(() => planInput({ ...valid, type: 'secret' }, now)).toThrow(/type must be/);
+    expect(() => planInput({ ...valid, type: 'guided' }, now)).toThrow(/needs a price/);
+    expect(() => planInput({ ...valid, type: 'guided', price: { amount: 0, currency: 'EUR' } }, now)).toThrow(/above 0/);
+    expect(() => planInput({ ...valid, type: 'guided', price: { amount: 10.555, currency: 'EUR' } }, now)).toThrow(/decimals/);
+    expect(() => planInput({ ...valid, type: 'guided', price: { amount: 10, currency: 'XYZ' } }, now)).toThrow(/currency/);
+  });
+
   it('accepts a valid plan, normalizes dates to UTC and ignores unknown fields', () => {
     expect(planInput({ ...valid, start: '2030-05-02T10:00:00+02:00', grades: { scale: 'vScale', min: 2, max: 5 } }, now)).toEqual({
       discipline: 'bouldering',

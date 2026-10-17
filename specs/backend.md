@@ -129,6 +129,11 @@ API can't send that event) by [scripts/seed.sh](../scripts/seed.sh):
   `grigri-rc-api` or `grigri-local-api`, and the production deploy role
   may only invoke the RC function.
 
+Two seed plans show the [plan types](matching.md#plan-types-who-decides):
+Montserrat is guided (€60 a climber) and the after-work gym leads are
+open; the rest are private. A plan's type is stored as `planType` (the
+item's `type` names the kind of item), only when it isn't private.
+
 It's idempotent: re-running rewrites the seed's own profiles, plans,
 requests and chat lines with fresh dates. Real people's data stays: their
 profiles, requests, notices and messages, and their membership of a seed

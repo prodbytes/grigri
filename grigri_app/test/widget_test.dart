@@ -485,6 +485,35 @@ void main() {
       expect(store.waiting, isEmpty);
     });
 
+    testWidgets('an open plan says so, and asking to join it matches at once', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      final plan = api.plans['boulder-night']!;
+      api.addPlan(plan.copyWith(type: PlanType.open));
+      final store = await pumpApp(tester, api);
+      expect(find.text('Open: join at once'), findsOneWidget);
+      await tester.tap(find.byTooltip('Ask to join'));
+      await tester.pumpAndSettle();
+      expect(find.text("It's a match!"), findsOneWidget);
+      expect(api.plans['boulder-night']!.memberIds, contains('me'));
+      expect(store.waiting, isEmpty);
+    });
+
+    testWidgets('a guided plan shows its price on the card', (tester) async {
+      final api = sampleApi();
+      final plan = api.plans['boulder-night']!;
+      api.addPlan(
+        plan.copyWith(
+          type: PlanType.guided,
+          price: () => const Price(amount: 45, currency: 'EUR'),
+        ),
+      );
+      await pumpApp(tester, api);
+      expect(find.textContaining('Guided ·'), findsOneWidget);
+      expect(find.textContaining('45'), findsWidgets);
+    });
+
     testWidgets('refresh brings back the plans I passed on', (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);
@@ -965,7 +994,12 @@ void main() {
 
     Future<void> publish(WidgetTester tester) async {
       final button = find.text('Publish the plan');
-      await tester.ensureVisible(button);
+      // The editor's list builds lazily: scroll until the button is built.
+      await tester.dragUntilVisible(
+        button,
+        find.byType(ListView).last,
+        const Offset(0, -300),
+      );
       await tester.pumpAndSettle();
       await tester.tap(button);
       await tester.pumpAndSettle();
@@ -1032,6 +1066,41 @@ void main() {
       expect(plan.start, isNull);
       expect(plan.end, isNull);
       expect(find.text('Date to be decided'), findsOneWidget);
+    });
+
+    testWidgets('a guided plan needs a price; an open one says who joins', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await openNewPlan(tester);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Sector, crag or gym'),
+        'Guide Wall',
+      );
+      final guided = find.byKey(const ValueKey('type guided'));
+      await tester.dragUntilVisible(
+        guided,
+        find.byType(ListView).last,
+        const Offset(0, -300),
+      );
+      await tester.tap(find.byKey(const ValueKey('type open')));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Anyone can join at once'), findsOneWidget);
+      await tester.tap(guided);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Only you answer'), findsOneWidget);
+      await publish(tester);
+      expect(
+        find.text('Enter a price above 0, with at most two decimals'),
+        findsOneWidget,
+      );
+      expect(api.plans.values.where((p) => p.place == 'Guide Wall'), isEmpty);
+      await tester.enterText(find.byKey(const ValueKey('price')), '45,50');
+      await publish(tester);
+      final plan = api.plans.values.firstWhere((p) => p.place == 'Guide Wall');
+      expect(plan.type, PlanType.guided);
+      expect(plan.price, const Price(amount: 45.5, currency: 'EUR'));
     });
 
     testWidgets('a plan takes more days, at the same hours', (tester) async {

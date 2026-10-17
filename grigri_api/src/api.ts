@@ -14,6 +14,7 @@ import {
   type PlanPic,
   type PublicClimber,
   isOpen,
+  planType,
   publicClimber,
   requestJson,
 } from './domain/model.js';
@@ -945,11 +946,14 @@ export class Api {
   private async updatePlan(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
     return this.retry(async () => {
-      const current = await this.store.getPlan(planId);
-      if (!current) throw notFound('no such plan');
+      const current = await this.loadPlan(planId);
       const input = planInput(req.body, s.now);
-      const plan = rules.updatePlan(current.plan, s.me.id, input);
-      await this.store.apply(current, { plan, requests: [], notices: [], messages: [], matches: [] }, s.now);
+      const changed = rules.updatePlan(current.plan, s.me.id, input);
+      // A new type may need fewer yeses (open: none): who now has them joins.
+      await this.loadNames(s, changed.memberIds, current.requests.map((r) => r.climberId));
+      const effects = rules.settle({ plan: changed, requests: current.requests }, s.ctx);
+      const plan = effects.plan!;
+      await this.store.apply(current, effects, s.now);
       await this.hint(hintsFor(plan.memberIds, { kind: 'plan', planId }, s.me.id));
       return { plan };
     });
@@ -973,13 +977,16 @@ export class Api {
   private async join(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
     const asked = await this.ask(planId, s);
-    if (!asked.demo) return { request: requestJson(asked.request) };
+    if (!asked.demo && !asked.open) return { request: requestJson(asked.request) };
     // A demo plan's made-up members can't answer: the group says yes at
-    // once, as an admin's yes would, and I match.
+    // once, as an admin's yes would, and I match. An open plan lets me in
+    // at once: nobody decides.
     return this.retry(async () => {
       const loaded = await this.loadPlan(planId);
       await this.loadNames(s, loaded.plan.memberIds, loaded.requests.map((r) => r.climberId));
-      const effects = rules.accept(loaded, { id: loaded.plan.organizerId, admin: true }, s.me.id, s.ctx);
+      const effects = asked.demo
+        ? rules.accept(loaded, { id: loaded.plan.organizerId, admin: true }, s.me.id, s.ctx)
+        : rules.settle(loaded, s.ctx);
       await this.store.apply(loaded, effects, s.now);
       await this.hint(answerHints(loaded, effects, 'accept', s.me.id, s.me.id));
       const request = effects.requests.find((r) => r.climberId === s.me.id) ?? asked.request;
@@ -987,8 +994,8 @@ export class Api {
     });
   }
 
-  /** My join request, saved; whether the plan is a demo. */
-  private async ask(planId: string, s: Session): Promise<{ request: JoinRequest; demo: boolean }> {
+  /** My join request, saved; whether the plan is a demo, or open. */
+  private async ask(planId: string, s: Session): Promise<{ request: JoinRequest; demo: boolean; open: boolean }> {
     return this.retry(async () => {
       const loaded = await this.loadPlan(planId);
       if (loaded.requests.filter(isOpen).length >= MAX_OPEN_REQUESTS) {
@@ -1006,7 +1013,7 @@ export class Api {
         throw e;
       }
       await this.hint(hintsFor(loaded.plan.memberIds, { kind: 'request', planId }, s.me.id));
-      return { request: effects.requests[0]!, demo: loaded.plan.demo === true };
+      return { request: effects.requests[0]!, demo: loaded.plan.demo === true, open: planType(loaded.plan) === 'open' };
     });
   }
 

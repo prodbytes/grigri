@@ -10,7 +10,9 @@ it.
 Grigri is a matchmaking app for sports, climbing first, like Tinder or
 Happn: swipe right or left. People match on **plans** (an outing: what,
 where, when, which grades), which are separate from their profiles, and
-a plan's group grows one newcomer at a time, when every member says yes.
+a plan's group grows one newcomer at a time, when every member says yes
+(a private plan, the default), when the guide says yes (a guided, paid
+plan), or at once (an open plan).
 Each match opens the plan's group chat.
 
 **Wording: plans, not partners.** People match with a plan, not with a
@@ -26,6 +28,7 @@ always in the plural, "partners" (a plan's group), in every language.
   sign in (free, Google), with GriGri Pics of crags near them; signed-in
   climbers go straight to the app.
 - [Matching](matching.md): profiles and plans, the Discover deck,
+  plan types (private, open, guided with a price),
   join requests answered in the group chat, the group's unanimous yes, my requests' status (pending, accepted,
   declined), matches, notifications and group chats; the data, all from
   the backend API (GA has real data plus the demo showcase), and refreshing it.

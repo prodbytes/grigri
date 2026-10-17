@@ -9,7 +9,8 @@ import 'common.dart';
 
 /// Creates a plan, or edits one I organize: what, where (a sector from the
 /// index, or typed in), when (a first day, left open if not known yet, any
-/// more days, and the hours, the same each day) and which grades.
+/// more days, and the hours, the same each day), which grades, and who can
+/// join (private, open, or guided with a price).
 class PlanEditor extends StatefulWidget {
   const PlanEditor({super.key, this.plan});
 
@@ -26,6 +27,27 @@ class _PlanEditorState extends State<PlanEditor> {
   final _placeFocus = FocusNode();
   late final _notes = TextEditingController(text: widget.plan?.notes);
   late Discipline _discipline = widget.plan?.discipline ?? Discipline.sport;
+  late PlanType _type = widget.plan?.type ?? PlanType.private;
+
+  /// A guided plan's price: the amount as typed, and its currency.
+  late final _amount = TextEditingController(
+    text: switch (widget.plan?.price?.amount) {
+      null => '',
+      final a when a % 1 == 0 => a.toInt().toString(),
+      final a => a.toStringAsFixed(2),
+    },
+  );
+  late String _currency = widget.plan?.price?.currency ?? currencies.first;
+
+  /// The typed amount: a number above 0 with at most two decimals ("45",
+  /// "45.5", "45,50"); null otherwise.
+  num? get _parsedAmount {
+    final t = _amount.text.trim().replaceAll(',', '.');
+    if (!RegExp(r'^\d{1,5}(\.\d{1,2})?$').hasMatch(t)) return null;
+    final n = num.parse(t);
+    if (n <= 0 || n > 10000) return null;
+    return n % 1 == 0 ? n.toInt() : n;
+  }
 
   /// The first day; null while it's left open (an undated plan). A new
   /// plan starts on the next Saturday.
@@ -137,6 +159,7 @@ class _PlanEditorState extends State<PlanEditor> {
     _place.dispose();
     _placeFocus.dispose();
     _notes.dispose();
+    _amount.dispose();
     super.dispose();
   }
 
@@ -225,6 +248,10 @@ class _PlanEditorState extends State<PlanEditor> {
           : [for (final d in _moreDays) _window(d)],
       grades: grades,
       notes: _notes.text.trim(),
+      type: _type,
+      price: () => _type == PlanType.guided
+          ? Price(amount: _parsedAmount!, currency: _currency)
+          : null,
     );
     setState(() => _saving = true);
     final saved = existing == null
@@ -485,6 +512,61 @@ class _PlanEditorState extends State<PlanEditor> {
                 ),
               ],
             ),
+            label(l.sectionWhoCanJoin),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final t in PlanType.values)
+                  ChoiceChip(
+                    key: ValueKey('type ${t.name}'),
+                    avatar: Icon(planTypeIcon(t), size: 18),
+                    label: Text(t.label(l)),
+                    selected: _type == t,
+                    onSelected: (_) => setState(() => _type = t),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _type.hint(l),
+              style: text.bodySmall?.copyWith(color: Mountain.granite),
+            ),
+            if (_type == PlanType.guided) ...[
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      key: const ValueKey('price'),
+                      controller: _amount,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(labelText: l.pricePerClimber),
+                      validator: (_) =>
+                          _parsedAmount == null ? l.priceInvalid : null,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  DropdownButton<String>(
+                    value: _currency,
+                    hint: Text(l.currency),
+                    items: [
+                      for (final c in currencies)
+                        DropdownMenuItem(value: c, child: Text(c)),
+                    ],
+                    onChanged: (c) => setState(() => _currency = c!),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                l.paidToGuide,
+                style: text.bodySmall?.copyWith(color: Mountain.granite),
+              ),
+            ],
             label(l.sectionNotes),
             TextFormField(
               controller: _notes,

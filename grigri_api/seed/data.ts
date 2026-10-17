@@ -144,8 +144,11 @@ export function seedData(now: Date): SeedData {
       start: next(0, 7),
       end: next(0, 15),
       grades: routes('5c', '6b'),
+      // A guide's day out: only Tomas lets people in, and it's paid.
+      type: 'guided',
+      price: { amount: 60, currency: 'EUR' },
       memberIds: ['seed-tomas', 'seed-ravi'],
-      notes: 'Two ropes of two. Approach is 1 h; bring a headlamp.',
+      notes: 'Two ropes of two. Approach is 1 h; bring a headlamp. Guided: gear included.',
     }),
     plan({
       id: 'seed-margalef-project',
@@ -185,6 +188,8 @@ export function seedData(now: Date): SeedData {
       start: next(3, 19),
       end: next(3, 21),
       grades: routes('6a', '6c+'),
+      // Anyone joins at once.
+      type: 'open',
       memberIds: ['seed-bruno'],
     }),
     // Two people want to join.

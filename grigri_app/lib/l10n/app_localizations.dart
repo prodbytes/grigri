@@ -2114,6 +2114,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{km} km'**
   String kmAway(String km);
+
+  /// Plan editor section (shown uppercased): the plan's type.
+  ///
+  /// In en, this message translates to:
+  /// **'Who can join'**
+  String get sectionWhoCanJoin;
+
+  /// Plan type: every member says yes to each newcomer (the default).
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get planTypePrivate;
+
+  /// Plan type: anyone joins at once.
+  ///
+  /// In en, this message translates to:
+  /// **'Open'**
+  String get planTypeOpen;
+
+  /// Plan type: a guide's plan, paid; only the guide answers requests.
+  ///
+  /// In en, this message translates to:
+  /// **'Guided'**
+  String get planTypeGuided;
+
+  /// Plan editor: what a private plan means.
+  ///
+  /// In en, this message translates to:
+  /// **'Everyone in the group says yes to each newcomer.'**
+  String get planTypePrivateHint;
+
+  /// Plan editor: what an open plan means.
+  ///
+  /// In en, this message translates to:
+  /// **'Anyone can join at once, without waiting for a yes.'**
+  String get planTypeOpenHint;
+
+  /// Plan editor: what a guided plan means (the organizer is the guide).
+  ///
+  /// In en, this message translates to:
+  /// **'You guide, and climbers pay you. Only you answer requests to join.'**
+  String get planTypeGuidedHint;
+
+  /// Plan editor: a guided plan's price field.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per climber'**
+  String get pricePerClimber;
+
+  /// Plan editor: the price isn't valid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a price above 0, with at most two decimals'**
+  String get priceInvalid;
+
+  /// Plan editor: the price's currency picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get currency;
+
+  /// Tag on a guided plan: its price per climber.
+  ///
+  /// In en, this message translates to:
+  /// **'Guided · {price}'**
+  String guidedPrice(String price);
+
+  /// Under a guided plan's price: Grigri takes no payment.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid to the guide, not through Grigri.'**
+  String get paidToGuide;
+
+  /// Plan screen: on a guided plan, members other than the guide don't answer requests.
+  ///
+  /// In en, this message translates to:
+  /// **'The guide decides'**
+  String get theGuideDecides;
+
+  /// Tag on an open plan's card: swiping right joins at once.
+  ///
+  /// In en, this message translates to:
+  /// **'Open: join at once'**
+  String get openJoinAtOnce;
 }
 
 class _AppLocalizationsDelegate

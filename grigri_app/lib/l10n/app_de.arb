@@ -333,5 +333,19 @@
   "routeScale": "Route",
   "boulderScale": "Boulder",
   "routeGrade": "Grad",
-  "kmAway": "{km} km"
+  "kmAway": "{km} km",
+  "sectionWhoCanJoin": "Wer mitmachen kann",
+  "planTypePrivate": "Privat",
+  "planTypeOpen": "Offen",
+  "planTypeGuided": "Geführt",
+  "planTypePrivateHint": "Alle in der Gruppe sagen Ja zu jeder neuen Person.",
+  "planTypeOpenHint": "Alle können sofort mitmachen, ohne auf ein Ja zu warten.",
+  "planTypeGuidedHint": "Du führst, und die Kletternden bezahlen dich. Nur du beantwortest Anfragen.",
+  "pricePerClimber": "Preis pro Person",
+  "priceInvalid": "Gib einen Preis über 0 mit höchstens zwei Nachkommastellen ein",
+  "currency": "Währung",
+  "guidedPrice": "Geführt · {price}",
+  "paidToGuide": "Wird an die Führung bezahlt, nicht über Grigri.",
+  "theGuideDecides": "Die Führung entscheidet",
+  "openJoinAtOnce": "Offen: sofort dabei"
 }

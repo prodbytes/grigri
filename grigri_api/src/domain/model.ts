@@ -89,6 +89,47 @@ export function publicClimber(c: Climber): PublicClimber {
 }
 
 /**
+ * Who lets people into a plan (specs/matching.md#plan-types):
+ * - private: every member says yes (the default, and what a plan without
+ *   a type is);
+ * - open: nobody; a swipe right joins at once;
+ * - guided: the organizer, a guide, alone; it carries a price.
+ */
+export const PLAN_TYPES = ['private', 'open', 'guided'] as const;
+export type PlanType = (typeof PLAN_TYPES)[number];
+
+/** The currencies a guided plan's price may be in. */
+export const CURRENCIES = ['EUR', 'USD', 'GBP', 'CHF', 'BRL'] as const;
+export type Currency = (typeof CURRENCIES)[number];
+
+/** What a guided plan costs each climber, paid to the guide (not through Grigri). */
+export interface Price {
+  /** In the currency's units, at most two decimals. */
+  amount: number;
+  currency: Currency;
+}
+
+/** A plan's type: absent (plans made before types) is private. */
+export function planType(plan: Pick<Plan, 'type'>): PlanType {
+  return plan.type ?? 'private';
+}
+
+/**
+ * Whose yes a request needs: every member (private), the organizer
+ * (guided) or nobody (open).
+ */
+export function deciders(plan: Plan): string[] {
+  switch (planType(plan)) {
+    case 'open':
+      return [];
+    case 'guided':
+      return [plan.organizerId];
+    default:
+      return plan.memberIds;
+  }
+}
+
+/**
  * A plan to climb. No title (the app names it by its place) and no group
  * size: a group is as big as the people who match, so it's never full.
  */
@@ -118,6 +159,10 @@ export interface Plan {
   /** More days after the first, soonest first: each a window like start–end, starting after the one before ends. Absent for a one-day (or undated) plan. */
   moreDays?: DayWindow[];
   grades: GradeRange;
+  /** Who lets people in; absent is private. */
+  type?: PlanType;
+  /** A guided plan's price per climber; only on guided plans. */
+  price?: Price;
   /** Organizer first, then in join order. */
   memberIds: string[];
   notes: string;

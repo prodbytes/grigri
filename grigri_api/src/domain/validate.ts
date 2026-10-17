@@ -4,6 +4,8 @@ import { badRequest } from './errors.js';
 import {
   type Attachment,
   type Climber,
+  CURRENCIES,
+  type Currency,
   type DayWindow,
   DISCIPLINES,
   type Discipline,
@@ -13,6 +15,9 @@ import {
   type Location,
   MAX_AREAS,
   type Plan,
+  PLAN_TYPES,
+  type PlanType,
+  type Price,
   LEGACY_SCALES,
   SCALES,
   type Scale,
@@ -195,6 +200,9 @@ export function planInput(body: unknown, now: Date): PlanInput {
   }
   const grades = gradeRange(o.grades, 'grades', scaleOf(d));
   const notes = text(o.notes, 'notes', { max: 1000 });
+  const type = planTypeOf(o.type);
+  // A guided plan has a price; the others never keep one.
+  const price = type === 'guided' ? priceOf(o.price) : undefined;
   // Both or neither: a crag's point (public, so kept to ~10 m).
   let point: { lat: number; lon: number } | undefined;
   if ((o.lat !== undefined && o.lat !== null) || (o.lon !== undefined && o.lon !== null)) {
@@ -209,8 +217,36 @@ export function planInput(body: unknown, now: Date): PlanInput {
     ...first,
     ...(moreDays.length ? { moreDays } : {}),
     grades,
+    // Private is the default: left out, as plans made before types are.
+    ...(type !== 'private' ? { type } : {}),
+    ...(price ? { price } : {}),
     notes,
   };
+}
+
+/** The most a guided plan may cost each climber, in any currency. */
+export const MAX_PRICE = 10000;
+
+function planTypeOf(value: unknown): PlanType {
+  if (value === undefined || value === null) return 'private';
+  if (typeof value !== 'string' || !(PLAN_TYPES as readonly string[]).includes(value)) {
+    throw badRequest(`type must be one of ${PLAN_TYPES.join(', ')}`);
+  }
+  return value as PlanType;
+}
+
+function priceOf(value: unknown): Price {
+  if (value === undefined || value === null) throw badRequest('a guided plan needs a price');
+  const o = asObject(value, 'price');
+  const amount = o.amount;
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0 || amount > MAX_PRICE) {
+    throw badRequest(`price.amount must be a number above 0 and at most ${MAX_PRICE}`);
+  }
+  if (Math.round(amount * 100) !== amount * 100) throw badRequest('price.amount has more than two decimals');
+  if (typeof o.currency !== 'string' || !(CURRENCIES as readonly string[]).includes(o.currency)) {
+    throw badRequest(`price.currency must be one of ${CURRENCIES.join(', ')}`);
+  }
+  return { amount, currency: o.currency as Currency };
 }
 
 /** A plan's days, besides the first: two weeks in all. */

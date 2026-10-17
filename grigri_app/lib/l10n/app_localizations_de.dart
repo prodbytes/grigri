@@ -1198,4 +1198,52 @@ class AppLocalizationsDe extends AppLocalizations {
   String kmAway(String km) {
     return '$km km';
   }
+
+  @override
+  String get sectionWhoCanJoin => 'Wer mitmachen kann';
+
+  @override
+  String get planTypePrivate => 'Privat';
+
+  @override
+  String get planTypeOpen => 'Offen';
+
+  @override
+  String get planTypeGuided => 'Geführt';
+
+  @override
+  String get planTypePrivateHint =>
+      'Alle in der Gruppe sagen Ja zu jeder neuen Person.';
+
+  @override
+  String get planTypeOpenHint =>
+      'Alle können sofort mitmachen, ohne auf ein Ja zu warten.';
+
+  @override
+  String get planTypeGuidedHint =>
+      'Du führst, und die Kletternden bezahlen dich. Nur du beantwortest Anfragen.';
+
+  @override
+  String get pricePerClimber => 'Preis pro Person';
+
+  @override
+  String get priceInvalid =>
+      'Gib einen Preis über 0 mit höchstens zwei Nachkommastellen ein';
+
+  @override
+  String get currency => 'Währung';
+
+  @override
+  String guidedPrice(String price) {
+    return 'Geführt · $price';
+  }
+
+  @override
+  String get paidToGuide => 'Wird an die Führung bezahlt, nicht über Grigri.';
+
+  @override
+  String get theGuideDecides => 'Die Führung entscheidet';
+
+  @override
+  String get openJoinAtOnce => 'Offen: sofort dabei';
 }

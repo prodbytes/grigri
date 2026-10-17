@@ -267,6 +267,37 @@ describe('the matchmaking flow', () => {
     await fails(call(ben, 'POST', `/api/plans/${planId}/join`), 409, /already in this plan/);
   });
 
+  it('joining an open plan matches at once, with no request for anyone to answer', async () => {
+    const open = (await call(ada, 'POST', '/api/plans', { ...planBody, type: 'open' })).plan;
+    expect(open.type).toBe('open');
+    await call(ben, 'POST', `/api/plans/${open.id}/join`);
+    expect((await call(ben, 'GET', '/api/plans')).plans.map((p: any) => p.id)).toEqual([open.id]);
+    expect((await call(ben, 'GET', '/api/notices')).notices[0]).toMatchObject({ kind: 'accepted', planId: open.id });
+    expect((await call(ada, 'GET', '/api/requests')).requests).toEqual([]);
+    expect((await call(ada, 'GET', '/api/notices')).notices).toEqual([]);
+  });
+
+  it('a guided plan has a price, and only its guide answers', async () => {
+    await fails(call(ada, 'POST', '/api/plans', { ...planBody, type: 'guided' }), 400, /needs a price/);
+    const guided = (await call(ada, 'POST', '/api/plans', { ...planBody, type: 'guided', price: { amount: 45, currency: 'EUR' } })).plan;
+    expect(guided).toMatchObject({ type: 'guided', price: { amount: 45, currency: 'EUR' } });
+    await call(ben, 'POST', `/api/plans/${guided.id}/join`);
+    await call(ada, 'POST', `/api/requests/${guided.id}/${ids.Ben}/accept`);
+    await call(cy, 'POST', `/api/plans/${guided.id}/join`);
+    expect((await call(ben, 'GET', '/api/requests')).requests).toEqual([]);
+    await fails(call(ben, 'POST', `/api/requests/${guided.id}/${ids.Cy}/accept`), 403, /guide/);
+    const { match } = await call(ada, 'POST', `/api/requests/${guided.id}/${ids.Cy}/accept`);
+    expect(match.plan.memberIds).toEqual([ids.Ada, ids.Ben, ids.Cy]);
+    expect((await call(ben, 'GET', `/api/plans/${guided.id}`)).plan.price).toEqual({ amount: 45, currency: 'EUR' });
+  });
+
+  it('making a plan open lets in whoever is waiting', async () => {
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    const { plan } = await call(ada, 'PUT', `/api/plans/${planId}`, { ...planBody, type: 'open' });
+    expect(plan.memberIds).toEqual([ids.Ada, ids.Ben]);
+    expect((await call(ben, 'GET', '/api/notices')).notices[0]).toMatchObject({ kind: 'accepted', planId });
+  });
+
   it("refreshing brings passed plans back, but not ones I asked to join", async () => {
     await call(ben, 'POST', `/api/plans/${planId}/pass`);
     expect((await call(ben, 'GET', '/api/discover')).plans).toEqual([]);

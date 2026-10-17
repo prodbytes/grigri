@@ -290,3 +290,63 @@ describe('plans', () => {
     expect(rules.toReview(states, 'ada').map((r) => r.id)).toEqual(['p1/cy']);
   });
 });
+
+describe('plan types', () => {
+  it('open: nobody decides; a swipe asks quietly and settle lets them in at once', () => {
+    const p = plan({ type: 'open', memberIds: ['ada', 'ben'] });
+    const asked = rules.ask(p, 'cy', undefined, ctx);
+    expect(asked.notices).toEqual([]);
+    expect(asked.messages).toEqual([]);
+    const settled = rules.settle({ plan: p, requests: asked.requests }, ctx);
+    expect(settled.plan!.memberIds).toEqual(['ada', 'ben', 'cy']);
+    expect(settled.matches.map((m) => m.newcomerId)).toEqual(['cy']);
+    expect(settled.notices.map((d) => [d.to, d.notice.kind])).toEqual([['cy', 'accepted']]);
+    expect(settled.messages.map((m) => m.text)).toEqual(['Cy joined the plan 🎉']);
+  });
+
+  it('open: members cannot answer requests (nobody decides), admins still can', () => {
+    const state = { plan: plan({ type: 'open', memberIds: ['ada', 'ben'] }), requests: [request('cy')] };
+    expect(() => rules.accept(state, { id: 'ben' }, 'cy', ctx)).toThrow(/open plan/);
+    expect(() => rules.reject(state, { id: 'ada' }, 'cy', ctx)).toThrow(/open plan/);
+    expect(rules.accept(state, { id: 'x', admin: true }, 'cy', ctx).plan!.memberIds).toContain('cy');
+  });
+
+  it('guided: only the organizer is notified, answers, and lets people in alone', () => {
+    const p = plan({ type: 'guided', price: { amount: 40, currency: 'EUR' }, memberIds: ['ada', 'ben'] });
+    const asked = rules.ask(p, 'cy', undefined, ctx);
+    expect(asked.notices.map((d) => d.to)).toEqual(['ada']);
+    expect(asked.messages).toHaveLength(1);
+    const state = { plan: p, requests: asked.requests };
+    expect(() => rules.accept(state, { id: 'ben' }, 'cy', ctx)).toThrow(/guide/);
+    expect(() => rules.reject(state, { id: 'ben' }, 'cy', ctx)).toThrow(/guide/);
+    const accepted = rules.accept(state, { id: 'ada' }, 'cy', ctx);
+    expect(accepted.plan!.memberIds).toEqual(['ada', 'ben', 'cy']);
+    // A client who joined isn't asked about the others.
+    expect(accepted.notices.filter((d) => d.notice.kind === 'request')).toEqual([]);
+  });
+
+  it('guided: toReview and nudges are the organizer\'s only', () => {
+    const p = plan({ type: 'guided', price: { amount: 40, currency: 'EUR' }, memberIds: ['ada', 'ben'] });
+    const states = [{ plan: p, requests: [request('cy')] }];
+    expect(rules.toReview(states, 'ada').map((r) => r.climberId)).toEqual(['cy']);
+    expect(rules.toReview(states, 'ben')).toEqual([]);
+    expect(rules.nudge(states[0]!, 'cy', ctx).notices.map((d) => d.to)).toEqual(['ada']);
+  });
+
+  it('private stays unanimous, and a plan without a type is private', () => {
+    const state = { plan: plan({ memberIds: ['ada', 'ben'] }), requests: [request('cy')] };
+    expect(rules.accept(state, { id: 'ada' }, 'cy', ctx).plan!.memberIds).toEqual(['ada', 'ben']);
+  });
+
+  it('settle after becoming open lets in everyone waiting; an edit without type or price makes it private', () => {
+    const before = plan({ memberIds: ['ada', 'ben'] });
+    const open = rules.updatePlan(before, 'ada', { ...before, type: 'open' });
+    const settled = rules.settle({ plan: open, requests: [request('cy'), request('dee', { rejected: true })] }, ctx);
+    expect(settled.plan!.memberIds).toEqual(['ada', 'ben', 'cy']);
+    const guided = { ...open, type: 'guided' as const, price: { amount: 30, currency: 'USD' as const } };
+    const { type: _t, price: _p, id: _i, organizerId: _o, memberIds: _m, ...input } = guided;
+    const back = rules.updatePlan(guided, 'ada', input);
+    expect(back.type).toBeUndefined();
+    expect(back.price).toBeUndefined();
+  });
+});
