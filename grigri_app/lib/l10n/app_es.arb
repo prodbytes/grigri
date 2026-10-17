@@ -369,5 +369,17 @@
   "signInFreePremium": "Premium es opcional: solo sirve para anunciarse en Grigri y para el buscador de vías. Escalar con Grigri no cuesta nada.",
   "signInFinalTitle": "El plan de escalada de este fin de semana está a un deslizamiento.",
   "signInJoinFree": "Únete gratis con Google",
-  "signInPhotoBy": "Foto: {author}, {license}"
+  "signInPhotoBy": "Foto: {author}, {license}",
+  "signInDeckWhen2": "Domingo · Vías largas · 6a–6b",
+  "signInDeckWho2": "Iker y Lea",
+  "signInDeckWhen3": "El próximo finde · Búlder · 6C–7A",
+  "signInDeckWho3": "Noor, Tomás y 2 más",
+  "privacyPolicy": "Política de privacidad",
+  "support": "Soporte",
+  "deleteAccount": "Eliminar la cuenta",
+  "deleteAccountQuestion": "¿Eliminar tu cuenta?",
+  "deleteAccountMessage": "Elimina tu cuenta de Grigri para siempre: tu perfil y tus fotos, tus mensajes y fotos en los chats de grupo, tus solicitudes y tus anuncios. Sales de todos tus planes: en los que organizas, otra persona del plan pasa a organizarlo, y un plan en el que solo estás tú se acaba. Premium pagado aquí con tarjeta se cancela al momento, sin reembolso del tiempo que queda. Una suscripción comprada a través de Apple se tiene que cancelar en los Ajustes del iPhone. Se cierra tu sesión en todos los dispositivos.",
+  "deleteAccountUnderstand": "Entiendo que no se puede deshacer",
+  "deleteAccountConfirm": "Eliminar para siempre",
+  "errorDeleteAccount": "No se ha podido eliminar tu cuenta. Inténtalo de nuevo."
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../app_version.dart';
 import '../data/auth.dart';
+import '../data/grigri_store.dart';
 import '../model/pics.dart';
 import '../theme.dart';
 import 'common.dart';
@@ -24,10 +25,10 @@ class _SignInScreenState extends State<SignInScreen> {
   final _heroKey = GlobalKey();
   bool _busy = false;
 
-  /// The hero's photo and the demo card's, from GriGri Pics' catalog; none
+  /// The hero's photo and the demo cards', from GriGri Pics' catalog; none
   /// until it loads, or when it can't be read.
   GrigriPic? _heroPic;
-  GrigriPic? _cardPic;
+  List<GrigriPic> _cardPics = const [];
 
   @override
   void initState() {
@@ -44,15 +45,16 @@ class _SignInScreenState extends State<SignInScreen> {
       return; // No photos: the screen works without them.
     }
     if (!mounted || catalog.isEmpty) return;
-    // The first photo of the first crag for the hero, and another crag's
-    // for the card.
-    final hero = catalog.first;
+    // The first photo of the first crag for the hero, and one photo each
+    // of up to three other crags for the demo cards (the hero's crag last).
+    final firsts = <String, GrigriPic>{};
+    for (final pic in catalog) {
+      firsts.putIfAbsent(pic.crag, () => pic);
+    }
+    final crags = firsts.values.toList();
     setState(() {
-      _heroPic = hero;
-      _cardPic = catalog.firstWhere(
-        (p) => p.crag != hero.crag,
-        orElse: () => catalog.length > 1 ? catalog[1] : hero,
-      );
+      _heroPic = catalog.first;
+      _cardPics = [...crags.skip(1), ...crags.take(1)].take(3).toList();
     });
   }
 
@@ -105,12 +107,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     null => null,
                   },
                 ),
-                deck: _DemoDeck(
-                  photo: _cardPic == null
-                      ? null
-                      : store.grigriPic(_cardPic!.key),
-                  crag: _cardPic?.crag ?? 'Siurana',
-                ),
+                deck: _DemoDeck(plans: _demoPlans(store)),
               ),
               const _Section(child: _HowItWorks()),
               const _Section(child: _Free()),
@@ -123,6 +120,30 @@ class _SignInScreenState extends State<SignInScreen> {
         ),
       ),
     );
+  }
+
+  /// The demo cards: three made-up plans, at the catalog's crags (or, with
+  /// no catalog, at three well-known ones, without photos).
+  List<_DemoPlan> _demoPlans(GrigriStore store) {
+    final l = context.l10n;
+    const crags = ['Siurana', 'Margalef', 'Montserrat'];
+    final details = [
+      (l.signInDeckWhen, l.signInDeckWho),
+      (l.signInDeckWhen2, l.signInDeckWho2),
+      (l.signInDeckWhen3, l.signInDeckWho3),
+    ];
+    return [
+      for (final (i, (day, who)) in details.indexed)
+        if (_cardPics.isEmpty)
+          _DemoPlan(crag: crags[i], when: day, who: who)
+        else
+          _DemoPlan(
+            photo: store.grigriPic(_cardPics[i % _cardPics.length].key),
+            crag: _cardPics[i % _cardPics.length].crag,
+            when: day,
+            who: who,
+          ),
+    ];
   }
 
   Widget _signInButton(Auth auth) => switch (auth.mode) {
@@ -366,13 +387,28 @@ class _GoogleButton extends StatelessWidget {
   );
 }
 
-/// A plan card that swipes right on a loop, with a JOIN stamp, like the
-/// Discover deck. Still when the device asks for less motion.
-class _DemoDeck extends StatefulWidget {
-  const _DemoDeck({required this.photo, required this.crag});
+/// A made-up plan on the demo deck.
+class _DemoPlan {
+  const _DemoPlan({
+    this.photo,
+    required this.crag,
+    required this.when,
+    required this.who,
+  });
 
   final ImageProvider? photo;
   final String crag;
+  final String when;
+  final String who;
+}
+
+/// Plan cards that swipe right on a loop, one after another, with a JOIN
+/// stamp, like the Discover deck. Still (on the first plan) when the
+/// device asks for less motion.
+class _DemoDeck extends StatefulWidget {
+  const _DemoDeck({required this.plans});
+
+  final List<_DemoPlan> plans;
 
   @override
   State<_DemoDeck> createState() => _DemoDeckState();
@@ -385,6 +421,9 @@ class _DemoDeckState extends State<_DemoDeck> {
   _Swipe _swipe = _Swipe.resting;
   Timer? _timer;
 
+  /// The plan on top: it moves on each time a card has swiped away.
+  int _at = 0;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -392,6 +431,7 @@ class _DemoDeckState extends State<_DemoDeck> {
     _timer = null;
     if (MediaQuery.disableAnimationsOf(context)) {
       _swipe = _Swipe.resting;
+      _at = 0;
     } else {
       _next(_Swipe.resting);
     }
@@ -408,7 +448,10 @@ class _DemoDeckState extends State<_DemoDeck> {
       () {
         if (!mounted) return;
         final next = _Swipe.values[(swipe.index + 1) % _Swipe.values.length];
-        setState(() => _swipe = next);
+        setState(() {
+          _swipe = next;
+          if (next == _Swipe.resting) _at++;
+        });
         _next(next);
       },
     );
@@ -423,7 +466,8 @@ class _DemoDeckState extends State<_DemoDeck> {
   @override
   Widget build(BuildContext context) {
     final l = context.l10n;
-    // Back from "gone", the card fades in at once in place.
+    final plan = widget.plans[_at % widget.plans.length];
+    // Back from "gone", the next card fades in at once in place.
     final moving = _swipe != _Swipe.resting;
     final duration = Duration(milliseconds: moving ? 500 : 0);
     return SizedBox(
@@ -467,8 +511,7 @@ class _DemoDeckState extends State<_DemoDeck> {
                             ? const Duration(milliseconds: 300)
                             : duration,
                         child: _DemoCard(
-                          photo: widget.photo,
-                          crag: widget.crag,
+                          plan: plan,
                           stamp: l.signInStampJoin,
                           stamped: _swipe != _Swipe.resting,
                         ),
@@ -496,26 +539,23 @@ class _DemoDeckState extends State<_DemoDeck> {
 
 class _DemoCard extends StatelessWidget {
   const _DemoCard({
-    required this.photo,
-    required this.crag,
+    required this.plan,
     required this.stamp,
     required this.stamped,
   });
 
-  final ImageProvider? photo;
-  final String crag;
+  final _DemoPlan plan;
   final String stamp;
   final bool stamped;
 
   @override
   Widget build(BuildContext context) {
-    final l = context.l10n;
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (photo == null)
+          if (plan.photo == null)
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -527,7 +567,7 @@ class _DemoCard extends StatelessWidget {
             )
           else
             Image(
-              image: photo!,
+              image: plan.photo!,
               fit: BoxFit.cover,
               errorBuilder: (_, _, _) => const ColoredBox(color: Mountain.pine),
             ),
@@ -581,7 +621,7 @@ class _DemoCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  crag,
+                  plan.crag,
                   style: const TextStyle(
                     color: Mountain.snow,
                     fontSize: 24,
@@ -589,15 +629,9 @@ class _DemoCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  l.signInDeckWhen,
-                  style: const TextStyle(color: Mountain.sand),
-                ),
+                Text(plan.when, style: const TextStyle(color: Mountain.sand)),
                 const SizedBox(height: 2),
-                Text(
-                  l.signInDeckWho,
-                  style: const TextStyle(color: Mountain.granite),
-                ),
+                Text(plan.who, style: const TextStyle(color: Mountain.granite)),
               ],
             ),
           ),

@@ -40,6 +40,11 @@ abstract interface class GrigriApi {
   /// `PUT /api/me`: creates or updates my profile.
   Future<Climber> saveMe(Climber profile);
 
+  /// `DELETE /api/me` with `{"confirm": true}`: deletes my account for
+  /// good (specs/sign-in.md#deleting-my-account). Every session of mine
+  /// ends with it.
+  Future<void> deleteAccount();
+
   /// `GET /api/discover`: plans to swipe on, best first (how well they
   /// match my profile plus how close they are), with their distances, and
   /// for admins the best ones' match scores.

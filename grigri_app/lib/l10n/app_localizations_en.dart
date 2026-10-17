@@ -1306,4 +1306,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String signInPhotoBy(String author, String license) {
     return 'Photo: $author, $license';
   }
+
+  @override
+  String get signInDeckWhen2 => 'Sunday · Multi-pitch · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker and Lea';
+
+  @override
+  String get signInDeckWhen3 => 'Next weekend · Bouldering · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás and 2 more';
+
+  @override
+  String get privacyPolicy => 'Privacy policy';
+
+  @override
+  String get support => 'Support';
+
+  @override
+  String get deleteAccount => 'Delete account';
+
+  @override
+  String get deleteAccountQuestion => 'Delete your account?';
+
+  @override
+  String get deleteAccountMessage =>
+      'This deletes your Grigri account for good: your profile and photos, your messages and photos in group chats, your join requests and your ads. You leave all your plans: someone else in a plan you organize takes it over, and a plan with only you in it ends. Premium paid with a card here is cancelled at once, with no refund of the time left. A subscription bought through Apple must be cancelled in your iPhone\'s Settings. You\'re signed out on every device.';
+
+  @override
+  String get deleteAccountUnderstand => 'I understand this can\'t be undone';
+
+  @override
+  String get deleteAccountConfirm => 'Delete for good';
+
+  @override
+  String get errorDeleteAccount => 'Couldn\'t delete your account. Try again.';
 }

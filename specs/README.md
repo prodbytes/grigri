@@ -37,7 +37,8 @@ always in the plural, "partners" (a plan's group), in every language.
   climber to their own topic, reconnecting, and polling as a slow safety
   net.
 - [Sign-in](sign-in.md): Google only, per platform; the profile made
-  from the Google account at the first sign-in; admins.
+  from the Google account at the first sign-in; admins; deleting my
+  account from the Profile tab.
 - [Admin](admin.md): the Admin tab, for admins, with a sub-navigation:
   Users, everyone, to block (they can't use Grigri, and their plans
   leave the deck) or unblock; and Ads, to approve or reject ads.
@@ -90,6 +91,11 @@ always in the plural, "partners" (a plan's group), in every language.
 - [Development environment](dev-environment.md): devbox, the dev
   container, `devbox services up` and the health monitor, the run scripts.
 - [Release builds](release.md): versions, tags and the Release workflow.
+- [App Store](app-store.md): shipping the iOS app on Apple's App Store:
+  iPhone only, export compliance, the privacy manifest, the privacy
+  policy and support pages, the version strings, `make ipa`, and the
+  owner's checklist (membership, App Store Connect, App Privacy, age
+  rating, store copy, review notes, TestFlight).
 - [API](api.md): the backend's contract, which the app codes against.
 - [Deploy](deploy.md): the web app at https://grigri.nu01.com and the
   release candidate at https://rc.grigri.nu01.com.

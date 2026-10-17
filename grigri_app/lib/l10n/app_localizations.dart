@@ -2330,6 +2330,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Photo: {author}, {license}'**
   String signInPhotoBy(String author, String license);
+
+  /// Sign-in screen: the second demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday · Multi-pitch · 6a–6b'**
+  String get signInDeckWhen2;
+
+  /// Sign-in screen: the second demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Iker and Lea'**
+  String get signInDeckWho2;
+
+  /// Sign-in screen: the third demo card's day, style and grades.
+  ///
+  /// In en, this message translates to:
+  /// **'Next weekend · Bouldering · 6C–7A'**
+  String get signInDeckWhen3;
+
+  /// Sign-in screen: the third demo card's made-up climbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Noor, Tomás and 2 more'**
+  String get signInDeckWho3;
+
+  /// Link at the end of Profile: opens the privacy policy on the site in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get privacyPolicy;
+
+  /// Link at the end of Profile: opens the support page on the site in the browser.
+  ///
+  /// In en, this message translates to:
+  /// **'Support'**
+  String get support;
+
+  /// Profile: the button at the end that deletes my account for good.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete account'**
+  String get deleteAccount;
+
+  /// Title of the delete-account confirmation dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete your account?'**
+  String get deleteAccountQuestion;
+
+  /// Body of the delete-account confirmation dialog: what's deleted.
+  ///
+  /// In en, this message translates to:
+  /// **'This deletes your Grigri account for good: your profile and photos, your messages and photos in group chats, your join requests and your ads. You leave all your plans: someone else in a plan you organize takes it over, and a plan with only you in it ends. Premium paid with a card here is cancelled at once, with no refund of the time left. A subscription bought through Apple must be cancelled in your iPhone\'s Settings. You\'re signed out on every device.'**
+  String get deleteAccountMessage;
+
+  /// Checkbox in the delete-account dialog; the delete button works only once it's ticked.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand this can\'t be undone'**
+  String get deleteAccountUnderstand;
+
+  /// The delete-account dialog's destructive button.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for good'**
+  String get deleteAccountConfirm;
+
+  /// Snackbar: deleting the account failed (trying again finishes the job).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t delete your account. Try again.'**
+  String get errorDeleteAccount;
 }
 
 class _AppLocalizationsDelegate

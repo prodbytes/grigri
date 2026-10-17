@@ -1311,4 +1311,43 @@ class AppLocalizationsPt extends AppLocalizations {
   String signInPhotoBy(String author, String license) {
     return 'Foto: $author, $license';
   }
+
+  @override
+  String get signInDeckWhen2 => 'Domingo · Via longa · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker e Lea';
+
+  @override
+  String get signInDeckWhen3 => 'No próximo fim de semana · Boulder · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás e mais 2';
+
+  @override
+  String get privacyPolicy => 'Política de privacidade';
+
+  @override
+  String get support => 'Suporte';
+
+  @override
+  String get deleteAccount => 'Excluir conta';
+
+  @override
+  String get deleteAccountQuestion => 'Excluir sua conta?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Exclui sua conta do Grigri para sempre: seu perfil e suas fotos, suas mensagens e fotos nas conversas em grupo, seus pedidos e seus anúncios. Você sai de todos os seus planos: outra pessoa do plano assume os que você organiza, e um plano só com você termina. O Premium pago aqui com cartão é cancelado na hora, sem reembolso do tempo restante. Uma assinatura comprada pela Apple precisa ser cancelada nos Ajustes do iPhone. Você sai da conta em todos os dispositivos.';
+
+  @override
+  String get deleteAccountUnderstand =>
+      'Entendo que isso não pode ser desfeito';
+
+  @override
+  String get deleteAccountConfirm => 'Excluir para sempre';
+
+  @override
+  String get errorDeleteAccount =>
+      'Não foi possível excluir sua conta. Tente de novo.';
 }

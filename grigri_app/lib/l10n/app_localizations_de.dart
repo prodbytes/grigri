@@ -1319,4 +1319,43 @@ class AppLocalizationsDe extends AppLocalizations {
   String signInPhotoBy(String author, String license) {
     return 'Foto: $author, $license';
   }
+
+  @override
+  String get signInDeckWhen2 => 'Sonntag · Mehrseillänge · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker und Lea';
+
+  @override
+  String get signInDeckWhen3 => 'Nächstes Wochenende · Bouldern · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás und 2 weitere';
+
+  @override
+  String get privacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get support => 'Support';
+
+  @override
+  String get deleteAccount => 'Konto löschen';
+
+  @override
+  String get deleteAccountQuestion => 'Dein Konto löschen?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Löscht dein Grigri-Konto endgültig: dein Profil und deine Fotos, deine Nachrichten und Fotos in Gruppenchats, deine Anfragen und deine Anzeigen. Du verlässt alle deine Pläne: Pläne, die du organisierst, übernimmt jemand anderes aus dem Plan, und ein Plan, in dem nur du bist, endet. Premium, hier per Karte bezahlt, wird sofort gekündigt, ohne Erstattung der restlichen Zeit. Ein über Apple gekauftes Abo musst du in den Einstellungen deines iPhones kündigen. Du wirst auf allen Geräten abgemeldet.';
+
+  @override
+  String get deleteAccountUnderstand =>
+      'Ich verstehe, dass das nicht rückgängig zu machen ist';
+
+  @override
+  String get deleteAccountConfirm => 'Endgültig löschen';
+
+  @override
+  String get errorDeleteAccount =>
+      'Dein Konto konnte nicht gelöscht werden. Versuch es noch einmal.';
 }

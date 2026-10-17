@@ -1311,4 +1311,42 @@ class AppLocalizationsCa extends AppLocalizations {
   String signInPhotoBy(String author, String license) {
     return 'Foto: $author, $license';
   }
+
+  @override
+  String get signInDeckWhen2 => 'Diumenge · Via llarga · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker i Lea';
+
+  @override
+  String get signInDeckWhen3 => 'El cap de setmana que ve · Bloc · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás i 2 més';
+
+  @override
+  String get privacyPolicy => 'Política de privadesa';
+
+  @override
+  String get support => 'Suport';
+
+  @override
+  String get deleteAccount => 'Elimina el compte';
+
+  @override
+  String get deleteAccountQuestion => 'Vols eliminar el teu compte?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Elimina el teu compte de Grigri per sempre: el teu perfil i les teves fotos, els teus missatges i fotos als xats de grup, les teves sol·licituds i els teus anuncis. Surts de tots els teus plans: als que organitzes, una altra persona del pla passa a organitzar-lo, i un pla on només hi ets tu s\'acaba. El Premium pagat aquí amb targeta es cancel·la al moment, sense reemborsament del temps que queda. Una subscripció comprada a través d\'Apple s\'ha de cancel·lar a la Configuració de l\'iPhone. Es tanca la teva sessió a tots els dispositius.';
+
+  @override
+  String get deleteAccountUnderstand => 'Entenc que no es pot desfer';
+
+  @override
+  String get deleteAccountConfirm => 'Elimina per sempre';
+
+  @override
+  String get errorDeleteAccount =>
+      'No s\'ha pogut eliminar el teu compte. Torna-ho a provar.';
 }

@@ -1108,7 +1108,70 @@ spec.
     - Cost: none added. The catalog and photos are files CloudFront
       already serves from its cache.
 
-76. **Google sign-in on the local site failed with "Error 400:
+76. **The swiping animation shows a single plan (Margalef): add two
+    more, at other crags.**
+    - [Landing page](landing.md) and [sign-in](sign-in.md): the demo card
+      cycles through three made-up plans (different days, styles and
+      climbers), each at a different crag from GriGri Pics' catalog, in
+      the six languages. On the landing page the next plan comes in
+      while the card is off screen, at the end of each animation loop.
+
+77. **Verify the app is ready for the Apple App Store, and help ship it.**
+    - [App Store](app-store.md), new: the submission's spec and
+      checklist: what the repo does, what other pull requests are adding
+      (Sign in with Apple, account deletion, report and block, Apple
+      in-app purchase for Premium), and what the owner does by hand (the
+      paid membership, the distribution certificate, the App Store
+      Connect record, App Privacy and age rating answers, category, URLs,
+      screenshots, draft store copy, review notes and a demo account,
+      building and uploading, TestFlight first).
+    - [Platforms](platforms.md): iOS is iPhone only
+      (`TARGETED_DEVICE_FAMILY = 1`, no iPad orientations),
+      `ITSAppUsesNonExemptEncryption` is false, and the app bundles a
+      privacy manifest (`PrivacyInfo.xcprivacy`: no tracking; name,
+      email, user ID, coarse location, photos and videos, messages,
+      other user content and purchases, all linked, for app
+      functionality; `UserDefaults` with reason CA92.1).
+    - [Landing page](landing.md): new `/privacy.html` and
+      `/support.html` (English, dated 2026-10-17, in the page's look),
+      linked from the footer in all six languages.
+    - [Screens](screens.md): **Privacy policy** and **Support** at the
+      end of Profile open those pages in the browser.
+    - [Release builds](release.md): `make ipa` builds the signed archive
+      for App Store Connect. Apple allows a version and a build number of
+      up to three integers in 18 characters (TN2420); Grigri's
+      (`0.1.YYYYMMDDHHMM`, 16, and Unix seconds, 10) fit, so iOS keeps
+      the same version, and iOS builds now refuse one that doesn't.
+    - Cost: none in AWS (two small static pages in the site bucket,
+      served from CloudFront's cache). The App Store itself needs the
+      Apple Developer Program, $99 a year.
+
+78. **Delete my account from inside the app (App Store guideline
+    5.1.1(v)).**
+    - [Sign-in](sign-in.md#deleting-my-account), new section: **Delete
+      account** at the end of the Profile tab, with a confirmation that
+      says what's deleted and a box to tick; then `DELETE /api/me`
+      `{"confirm": true}`, and the app is signed out and back on the
+      sign-in screen. The API cancels a Stripe subscription at once (no
+      refund of the period paid) and revokes rbacr's Premium role, runs
+      the `onDeleteAccount` hook (for Sign in with Apple's token
+      revocation), removes my messages, their media, my request notes
+      and my Your Pics photos, leaves every plan through the leave rules
+      (handed over, or ended; the note says "A climber left the plan"),
+      withdraws my requests, and deletes my ads, photos, every item keyed
+      to me, the sign-in link and every session. Each step can run
+      again, so a retry finishes the job.
+    - [API](api.md): the route; Stripe's events about a deleted
+      account's subscription are ignored.
+    - [Screens](screens.md), [Premium](premium.md), [Admin](admin.md),
+      [Backend](backend.md), [Plan photos](pics.md): the button, the
+      immediate cancellation (a restricted Stripe key now needs write
+      access to Subscriptions), blocked climbers may delete their
+      account, and photos go with it.
+    - Cost: no new resource; a deletion is a few dozen DynamoDB reads
+      and writes, free S3 deletes and one or two free Stripe calls.
+
+79. **Google sign-in on the local site failed with "Error 400:
     origin_mismatch" (origin `https://local.grigri.nu01.com:2543`): fix
     the authentication for Google and Apple.**
     - [Sign-in](sign-in.md), [dev environment](dev-environment.md): the

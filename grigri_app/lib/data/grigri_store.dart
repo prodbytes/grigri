@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
+import '../config.dart';
 import '../l10n/app_localizations.dart';
 import '../model/ad.dart';
 import '../model/premium.dart';
@@ -358,6 +359,24 @@ class GrigriStore extends ChangeNotifier {
     if (!await auth.signOutEverywhere()) {
       _errors.add(l10n.errorSignOutEverywhere);
     }
+  }
+
+  /// Deletes my account for good (`DELETE /api/me`): the API ends every
+  /// session of mine with it, so this device then forgets its session and
+  /// goes back to the sign-in screen. False, saying why, when it failed
+  /// (nothing changes here; trying again finishes the job).
+  Future<bool> deleteAccount() async {
+    try {
+      await _call(api.deleteAccount);
+    } on ApiException catch (e) {
+      // A 401 already signed out (and said so).
+      if (e.status != _stale && e.status != 401) {
+        _errors.add(l10n.errorDeleteAccount);
+      }
+      return false;
+    }
+    await auth.signedOut();
+    return true;
   }
 
   // --- Reading -----------------------------------------------------------
@@ -1306,6 +1325,11 @@ class GrigriStore extends ChangeNotifier {
     final url = await _act(api.premiumPortal);
     return url != null && await _openOrSay(url);
   }
+
+  /// Opens one of the site's own pages in the browser, e.g.
+  /// `privacy.html` or `support.html` (specs/app-store.md).
+  Future<bool> openSitePage(String page) =>
+      _openOrSay(AppConfig.origin.resolve('/$page'));
 
   Future<bool> _openOrSay(Uri url) async {
     if (await openLink(url)) return true;
