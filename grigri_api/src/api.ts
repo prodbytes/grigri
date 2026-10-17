@@ -1155,7 +1155,7 @@ export class Api {
       await Promise.all(owners.map(async (o) => {
         if (await this.isPremium(emails[o])) premium.add(o);
       }));
-      // Demo owners (the seed's, RC and local only) advertise without Premium.
+      // Demo owners (the showcase's sample advertiser) advertise without Premium.
       const ok = (ownerId: string) =>
         (premium.has(ownerId) || climbers[ownerId]?.demo === true) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '') && !apart.has(ownerId);
       const ads = deckAds(approved, s.me.id, ok, new Set(skipped));

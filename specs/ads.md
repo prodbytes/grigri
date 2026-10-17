@@ -39,7 +39,7 @@ I renew) and stop showing on the deck at once.
 ## On the deck
 
 `GET /api/discover` also answers `"ads": [Ad]` and `"adEvery": n`: the
-approved ads whose owner is Premium (or the seed's made-up advertiser,
+approved ads whose owner is Premium (or the showcase's made-up advertiser,
 see [Sample ads](#sample-ads)) and not blocked, never my own, never one
 I skipped, the most recently approved first (20 at most), and how often
 to show one. The app puts an ad after about every *n* plans **swiped**:
@@ -94,10 +94,10 @@ Ads shows:
 
 ## Sample ads
 
-RC and local (never production) have sample ads from a made-up advertiser
-account, **Climbing Siurana** (`seed-climbing-siurana`, a demo profile),
-written by the seed ([seed/ads.ts](../grigri_api/seed/ads.ts)): four
-approved ads for the climbing school at
+Every stage, production included, has sample ads from a made-up
+advertiser account, **Climbing Siurana** (`seed-climbing-siurana`, a demo
+profile), written with the [demo showcase](backend.md#the-demo-showcase)
+([seed/ads.ts](../grigri_api/seed/ads.ts)): four approved ads for the climbing school at
 https://www.climbingsiurana.com/en/, each linking to its page there:
 
 - a guided climbing day in Siurana (from 65€);
@@ -105,10 +105,14 @@ https://www.climbingsiurana.com/en/, each linking to its page there:
 - a sport climbing camp in Margalef, with coaching (from 490€);
 - the via ferrata at La Morera de Montsant (from 45€).
 
-Their photos are the school's own: the seed downloads each from the
+Their photos are the school's own: the showcase downloads each from the
 school's site and puts it in the photos bucket at
-`photos/ads/seed-climbing-siurana/<name>.<ext>`, never tagged pending.
-If a photo can't be copied, that ad is saved with its text alone. A demo
+`photos/ads/seed-climbing-siurana/<name>.<ext>`, never tagged pending,
+once: an ad already saved with its photo isn't copied again. If a photo
+can't be copied, that ad is saved with its text alone, and the copy is
+tried again the next time the showcase is written. Rewriting a sample ad
+keeps its status (an admin can reject one, and it stays rejected) and
+its dates, so it never moves ahead of real advertisers' ads. A demo
 owner advertises without Premium; real climbers still need it.
 
 ## Data
@@ -135,7 +139,7 @@ the approved ads, one query of the ads I skipped) plus a batch read of
 their owners' subscriptions and profiles: about $0.0000006 per deck. A
 skip is one write ($0.000000625). The skips sit in DynamoDB rather than
 on the device so they hold on every device I use; they cost a few bytes
-each. The sample ads' four photos (about 1 MB) sit in RC's and local's
-photos buckets: a fraction of a cent a month. Ad photos and videos cost what chat
+each. The sample ads' four photos (about 1 MB) sit in each stage's
+photos bucket: a fraction of a cent a month. Ad photos and videos cost what chat
 media does (S3 storage and uploads); videos load only when someone plays
 them, so the deck's ads cost no CloudFront transfer beyond their photos.

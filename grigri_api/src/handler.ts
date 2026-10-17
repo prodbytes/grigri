@@ -1,8 +1,8 @@
 // The Lambda entry point: HTTP API (payload 2.0) events to the router, and
 // one direct-invoke event, {"grigriSeed": true}, that loads the made-up
 // test data (RC and local only: refused in prod; see seed/seed.ts). The
-// demo showcase (seed/showcase.ts) is on every stage, refreshed by the
-// deck itself. The
+// demo showcase (seed/showcase.ts) and its sample ads (seed/ads.ts) are on
+// every stage, refreshed by the deck itself. The
 // HTTP API can't send that event: its events always carry requestContext.
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DeleteObjectCommand, DeleteObjectTaggingCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
@@ -155,10 +155,14 @@ const publisher = !iotEndpoint
     ? mqttWebSocketPublisher(`${env.AWS_ENDPOINT_URL!.replace(/^http/, 'ws').replace(/\/+$/, '')}/mqtt`)
     : iotDataPublisher(iotEndpoint);
 const realtime = new Realtime({ stage, endpoint: iotEndpoint, authorizer: env.IOT_AUTHORIZER ?? '' }, publisher);
-// The demo showcase, on every stage: re-dated when over 12 h old (one read
-// per deck; a dozen writes twice a day).
+// The sample ads' photos, put straight into the photos bucket (kept: never tagged pending).
+const putSeedPhoto = async (key: string, body: Uint8Array, contentType: string) => {
+  await s3.send(new PutObjectCommand({ Bucket: bucket, Key: `photos/${key}`, Body: body, ContentType: contentType, CacheControl: 'public, max-age=86400' }));
+};
+// The demo showcase and sample ads, on every stage: re-dated when over
+// 12 h old (one read per deck; a few dozen writes twice a day).
 const showcase = async (now: Date) => {
-  if (await showcaseIsStale(store, now)) await seedShowcase(store, now);
+  if (await showcaseIsStale(store, now)) await seedShowcase(store, now, putSeedPhoto);
 };
 // Match scores from aityx on admins' decks (the key never leaves the
 // function); no key: none.
@@ -198,11 +202,7 @@ export async function handler(event: Event): Promise<APIGatewayProxyResultV2 | R
   if (!('requestContext' in event)) {
     if ((event as { grigriSeed?: boolean }).grigriSeed === true) {
       assertSeedable(stage, table);
-      // The sample ads' photos, put straight into the photos bucket (kept: never tagged pending).
-      const putPhoto = async (key: string, body: Uint8Array, contentType: string) => {
-        await s3.send(new PutObjectCommand({ Bucket: bucket, Key: `photos/${key}`, Body: body, ContentType: contentType, CacheControl: 'public, max-age=86400' }));
-      };
-      return { seeded: await seed(store, new Date(), putPhoto) };
+      return { seeded: await seed(store, new Date(), putSeedPhoto) };
     }
     return { error: 'unknown event' };
   }
