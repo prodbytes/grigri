@@ -4,6 +4,7 @@
 // caller's profile (409 "no profile" until GET /api/me creates it, from the
 // Google account's name, or PUT /api/me saves it).
 import { randomBytes } from 'node:crypto';
+import { APPLE_SUBJECT_PREFIX, type AppleTokens, type RevokeOutcome } from './apple.js';
 import { type Auth, type Caller, subjectHash } from './auth.js';
 import { ApiError, badRequest, conflict, forbidden, notFound, unavailable } from './domain/errors.js';
 import {
@@ -136,6 +137,8 @@ export interface Deps {
   matchScorer?: MatchScorer;
   /** Stripe, for Premium (stripe.ts); none: no Premium (no keys). */
   billing?: Billing;
+  /** Revokes Sign in with Apple's tokens (apple.ts); none: nothing to revoke. */
+  appleTokens?: Pick<AppleTokens, 'revoke'>;
   /**
    * Runs while DELETE /api/me deletes an account, after Premium is
    * cancelled and before any of its data is deleted: where an identity
@@ -344,6 +347,15 @@ export class Api {
     };
     if (me) names.set(me.id, me.name);
     return route.handler(full, session);
+  }
+
+  /**
+   * Revokes the climber's Sign in with Apple tokens at Apple (App Store
+   * guideline 5.1.1(v)): for account deletion, before the profile (whose
+   * subject it reads) is deleted. Never throws; see AppleTokens.revoke.
+   */
+  async revokeAppleTokens(climberId: string): Promise<RevokeOutcome> {
+    return this.deps.appleTokens ? this.deps.appleTokens.revoke(climberId) : 'none';
   }
 
   // --- Profile and photos --------------------------------------------------
@@ -664,6 +676,8 @@ export class Api {
       await this.deps.onDeleteAccount?.({ subject, ...(s.caller.email ? { email: s.caller.email } : {}) });
     }
     await this.store.deleteSubject(subject);
+    // A Sign in with Apple refresh token kept for revocation goes with it.
+    if (subject.startsWith(APPLE_SUBJECT_PREFIX)) await this.store.deleteAppleToken(subject);
     // Signed out everywhere, this device too.
     await this.deps.auth.signOutEverywhere(s.caller);
     console.log(JSON.stringify({ level: 'info', msg: 'account deleted' }));
@@ -691,7 +705,10 @@ export class Api {
     if (grants) {
       for (const e of new Set([email, sub?.email].filter((x): x is string => !!x))) await grants.revoke(e, this.premiumRole);
     }
-    // 2. The sign-in provider's own grants (Sign in with Apple).
+    // 2. The sign-in provider's own grants: Sign in with Apple's tokens,
+    // which Apple requires revoking (never throws: a failure is logged, and
+    // the account is still deleted), then any other provider's.
+    await this.revokeAppleTokens(climberId);
     await this.deps.onDeleteAccount?.({ subject, climberId, ...(email ? { email } : {}) });
     // 3. What I wrote and added in every plan I'm in, left or asked to join.
     const [memberOf, left, asked] = await Promise.all([

@@ -52,6 +52,12 @@
 #                secret (whsec_...), for Premium (specs/premium.md; also
 #                from .env; secrets in CI, test mode for RC). Optional:
 #                without both, no Premium.
+#   GRIGRI_APPLE_TEAM_ID, GRIGRI_APPLE_KEY_ID, GRIGRI_APPLE_PRIVATE_KEY
+#                Sign in with Apple's key (team ID, key ID, and the .p8
+#                file, whole or its base64 body), to revoke Apple tokens
+#                when an account is deleted (specs/sign-in.md; also from
+#                .env; the key a secret in CI). Optional: without all
+#                three, Apple tokens are neither kept nor revoked.
 #   GRIGRI_ORIGIN_SECRET what the site's CloudFront sends the API so it
 #                answers only through the site (specs/origin-check.md;
 #                also from .env). Default: derived from GRIGRI_RBACR_TOKEN
@@ -169,7 +175,8 @@ if [[ -z "${GRIGRI_RBACR_TOKEN:-}" && -f .env ]]; then
   GRIGRI_RBACR_TOKEN="$(sed -n 's/^GRIGRI_RBACR_TOKEN=//p' .env | tail -1)"
 fi
 GRIGRI_RBACR_TOKEN="${GRIGRI_RBACR_TOKEN:-}"
-for name in GRIGRI_AITYX_API_KEY GRIGRI_AITYX_URL GRIGRI_ORIGIN_SECRET GRIGRI_STRIPE_SECRET_KEY GRIGRI_STRIPE_WEBHOOK_SECRET; do
+for name in GRIGRI_AITYX_API_KEY GRIGRI_AITYX_URL GRIGRI_ORIGIN_SECRET GRIGRI_STRIPE_SECRET_KEY GRIGRI_STRIPE_WEBHOOK_SECRET \
+  GRIGRI_APPLE_TEAM_ID GRIGRI_APPLE_KEY_ID GRIGRI_APPLE_PRIVATE_KEY; do
   if [[ -z "${!name:-}" && -f .env ]]; then
     printf -v "$name" '%s' "$(sed -n "s/^$name=//p" .env | tail -1)"
   fi
@@ -178,6 +185,11 @@ GRIGRI_AITYX_API_KEY="${GRIGRI_AITYX_API_KEY:-}"
 GRIGRI_AITYX_URL="${GRIGRI_AITYX_URL:-https://api.aityx.ai}"
 GRIGRI_STRIPE_SECRET_KEY="${GRIGRI_STRIPE_SECRET_KEY:-}"
 GRIGRI_STRIPE_WEBHOOK_SECRET="${GRIGRI_STRIPE_WEBHOOK_SECRET:-}"
+GRIGRI_APPLE_TEAM_ID="${GRIGRI_APPLE_TEAM_ID:-}"
+GRIGRI_APPLE_KEY_ID="${GRIGRI_APPLE_KEY_ID:-}"
+# The .p8 key's base64 body on one line (a CloudFormation parameter):
+# without its BEGIN/END lines and line breaks. Never echoed.
+GRIGRI_APPLE_PRIVATE_KEY="$(printf '%s' "${GRIGRI_APPLE_PRIVATE_KEY:-}" | sed '/-----/d' | tr -d ' \t\r\n')"
 # The iOS clients whose ID tokens the API also takes (an iPhone's token is
 # its iOS client's): optional, comma-separated; empties and spaces dropped.
 GOOGLE_IOS_CLIENT_IDS="$(tr -d ' ' <<<"${GOOGLE_IOS_CLIENT_IDS:-}" | tr -s ',' | sed 's/^,//; s/,$//')"
@@ -227,6 +239,21 @@ if [[ -n "$GRIGRI_STRIPE_WEBHOOK_SECRET" && ! "$GRIGRI_STRIPE_WEBHOOK_SECRET" =~
 fi
 if [[ -z "$GRIGRI_STRIPE_SECRET_KEY" || -z "$GRIGRI_STRIPE_WEBHOOK_SECRET" ]]; then
   echo "warning: GRIGRI_STRIPE_SECRET_KEY or GRIGRI_STRIPE_WEBHOOK_SECRET isn't set: no Premium" >&2
+fi
+if [[ -n "$GRIGRI_APPLE_TEAM_ID" && ! "$GRIGRI_APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+  echo "error: GRIGRI_APPLE_TEAM_ID must be an Apple team ID (10 letters and digits)" >&2
+  exit 1
+fi
+if [[ -n "$GRIGRI_APPLE_KEY_ID" && ! "$GRIGRI_APPLE_KEY_ID" =~ ^[A-Z0-9]{10}$ ]]; then
+  echo "error: GRIGRI_APPLE_KEY_ID must be an Apple key ID (10 letters and digits)" >&2
+  exit 1
+fi
+if [[ -n "$GRIGRI_APPLE_PRIVATE_KEY" && ! "$GRIGRI_APPLE_PRIVATE_KEY" =~ ^[A-Za-z0-9+/]+=*$ ]]; then
+  echo "error: GRIGRI_APPLE_PRIVATE_KEY must be a Sign in with Apple .p8 key" >&2
+  exit 1
+fi
+if [[ -z "$GRIGRI_APPLE_TEAM_ID" || -z "$GRIGRI_APPLE_KEY_ID" || -z "$GRIGRI_APPLE_PRIVATE_KEY" ]]; then
+  echo "warning: GRIGRI_APPLE_TEAM_ID, GRIGRI_APPLE_KEY_ID or GRIGRI_APPLE_PRIVATE_KEY isn't set: Apple tokens aren't revoked on account deletion" >&2
 fi
 # The origin secret (specs/origin-check.md): given, or derived per stage
 # from the rbacr token (one-way, so it reveals nothing of it). Never logged.
@@ -350,6 +377,8 @@ aws cloudformation deploy --stack-name "$API_STACK" \
     "AityxApiKey=$GRIGRI_AITYX_API_KEY" "AityxUrl=$GRIGRI_AITYX_URL" \
     "StripeSecretKey=$GRIGRI_STRIPE_SECRET_KEY" \
     "StripeWebhookSecret=$GRIGRI_STRIPE_WEBHOOK_SECRET" "SiteUrl=https://$DOMAIN" \
+    "AppleTeamId=$GRIGRI_APPLE_TEAM_ID" "AppleKeyId=$GRIGRI_APPLE_KEY_ID" \
+    "ApplePrivateKey=$GRIGRI_APPLE_PRIVATE_KEY" \
     "Version=$VERSION" "PermissionsBoundary=$PERMISSIONS_BOUNDARY" \
     "DevMode=false" "Architecture=arm64" "PhotosUploadUrl=" \
     "IotEndpoint=$IOT_ENDPOINT" "OriginSecret=$api_origin_secret" \

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../app_version.dart';
 import '../data/auth.dart';
@@ -12,8 +13,10 @@ import 'google_button/google_button.dart';
 
 /// The sign-in screen, in the landing page's look (specs/sign-in.md,
 /// specs/landing.md): a GriGri Pics photo edge to edge, "100% free", the
-/// headline and Google's sign-in (Google's own button on the web), a demo
-/// plan card swiping right, how it works, what's free, and a last call.
+/// headline and the sign-in buttons (on iOS Sign in with Apple first, as
+/// prominent as Google's, in Apple's own white style; Google's own button
+/// on the web), a demo plan card swiping right, how it works, what's free,
+/// and a last call.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -58,9 +61,9 @@ class _SignInScreenState extends State<SignInScreen> {
     });
   }
 
-  Future<void> _signIn(Auth auth) async {
+  Future<void> _signIn(Future<void> Function() signIn) async {
     setState(() => _busy = true);
-    await auth.signIn();
+    await signIn();
     if (mounted) setState(() => _busy = false);
   }
 
@@ -77,7 +80,7 @@ class _SignInScreenState extends State<SignInScreen> {
         );
       }
     } else if (!_busy) {
-      _signIn(auth);
+      _signIn(auth.signIn);
     }
   }
 
@@ -104,6 +107,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   error: switch (auth.error) {
                     SignInError.session => l.errorSession,
                     SignInError.google => l.errorSignIn,
+                    SignInError.apple => l.errorSignInApple,
                     null => null,
                   },
                 ),
@@ -146,16 +150,38 @@ class _SignInScreenState extends State<SignInScreen> {
     ];
   }
 
-  Widget _signInButton(Auth auth) => switch (auth.mode) {
-    SignInMode.google => _GoogleButton(
-      label: context.l10n.signInWithGoogle,
-      onPressed: _busy ? null : () => _signIn(auth),
-    ),
-    SignInMode.googleWebButton => SizedBox(
-      height: 50,
-      child: googleWebButton(),
-    ),
-  };
+  /// Sign in with Apple's height: no smaller than Google's button.
+  static const _appleHeight = 52.0;
+
+  Widget _signInButton(Auth auth) {
+    final google = switch (auth.mode) {
+      SignInMode.google => _GoogleButton(
+        label: context.l10n.signInWithGoogle,
+        onPressed: _busy ? null : () => _signIn(auth.signIn),
+      ),
+      SignInMode.googleWebButton => SizedBox(
+        height: 50,
+        child: googleWebButton(),
+      ),
+    };
+    if (!auth.appleAvailable) return google;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SignInWithAppleButton(
+          text: context.l10n.signInWithApple,
+          height: _appleHeight,
+          style: SignInWithAppleButtonStyle.white,
+          borderRadius: const BorderRadius.all(
+            Radius.circular(_appleHeight / 2),
+          ),
+          onPressed: _busy ? null : () => _signIn(auth.signInWithApple),
+        ),
+        const SizedBox(height: 12),
+        google,
+      ],
+    );
+  }
 }
 
 /// Wider than this, the hero's copy and the demo card sit side by side.

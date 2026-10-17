@@ -146,6 +146,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Anmeldung mit Google fehlgeschlagen. Versuch es noch einmal.';
 
   @override
+  String get errorSignInApple =>
+      'Anmeldung mit Apple fehlgeschlagen. Versuch es noch einmal.';
+
+  @override
   String get errorSession =>
       'Anmeldung fehlgeschlagen. Versuch es noch einmal.';
 
@@ -162,6 +166,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get signInWithGoogle => 'Mit Google anmelden';
+
+  @override
+  String get signInWithApple => 'Mit Apple anmelden';
 
   @override
   String get tabDiscover => 'Suche';

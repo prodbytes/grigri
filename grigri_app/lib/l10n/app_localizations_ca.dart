@@ -144,6 +144,10 @@ class AppLocalizationsCa extends AppLocalizations {
       'No s\'ha pogut iniciar la sessió amb Google. Torna-ho a provar.';
 
   @override
+  String get errorSignInApple =>
+      'No s\'ha pogut iniciar la sessió amb Apple. Torna-ho a provar.';
+
+  @override
   String get errorSession =>
       'No s\'ha pogut iniciar la sessió. Torna-ho a provar.';
 
@@ -160,6 +164,9 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get signInWithGoogle => 'Inicia la sessió amb Google';
+
+  @override
+  String get signInWithApple => 'Inicia la sessió amb Apple';
 
   @override
   String get tabDiscover => 'Cerca';

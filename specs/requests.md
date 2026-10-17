@@ -1197,7 +1197,38 @@ spec.
       don't climb the plan's discipline; other reasons still show.
     - Cost: none.
 
-82. **Say "Join a climbing plan" instead of "Find a climbing plan".**
+82. **Offer Sign in with Apple next to Google (App Store guideline 4.8).**
+    - [Sign-in](sign-in.md), rewritten: on iOS the sign-in screen offers
+      **Sign in with Apple** (sign_in_with_apple 8, Apple's white button,
+      first and the same size as Google's), asking for name and email
+      (Apple lets people hide their email), with a fresh nonce per
+      sign-in. Android and the web keep Google only. Cancelling is quiet;
+      a failure says "Couldn't sign in with Apple. Try again." in the
+      six languages. The Runner target has the
+      `com.apple.developer.applesignin` entitlement
+      ([platforms](platforms.md)).
+    - [API](api.md#sessions): `POST /api/session` also takes
+      `{"appleIdToken", "nonce", "authorizationCode"?, "name"?}`, checked
+      with jose like Google's (RS256 against Apple's cached keys, issuer
+      `https://appleid.apple.com`, audience the bundle ID
+      `AppleBundleId`, expiry, nonce hash); the subject is `apple#<sub>`,
+      and the name Apple gives at the first sign-in starts the profile.
+    - Revocation, behind configuration: with a Sign in with Apple key
+      (`AppleTeamId`, `AppleKeyId`, `ApplePrivateKey`; CI variables
+      `GRIGRI_APPLE_TEAM_ID`, `GRIGRI_APPLE_KEY_ID` and the secret
+      `GRIGRI_APPLE_PRIVATE_KEY`), the API trades the authorization code
+      for a refresh token and keeps it (`SUB#apple#<sub>` / `APPLE`), and
+      `Api.revokeAppleTokens(climberId)` revokes it at Apple. Deleting an
+      account (`DELETE /api/me`) now calls it before any data goes, and
+      deletes the kept token with the sign-in link. Without the key:
+      skipped, with a warning.
+    - [Backend](backend.md), [Deploy](deploy.md), [Screens](screens.md),
+      `.env.example` and the API's data model follow.
+    - Cost: none. The same Lambda invocation checks the token (and, with
+      the key, calls Apple's free token endpoint); one small item per
+      Apple account.
+
+83. **Say "Join a climbing plan" instead of "Find a climbing plan".**
     - [README](README.md), [screens](screens.md), [landing](landing.md),
       [App Store](app-store.md): Grigri's line is now "Join a climbing
       plan", in all six languages: the sign-in headline, the landing
