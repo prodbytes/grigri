@@ -5,10 +5,12 @@ import '../config.dart';
 import '../data/grigri_store.dart';
 import '../model/climbing.dart';
 import '../model/plan.dart';
+import '../model/report.dart';
 import '../theme.dart';
 import 'ad_card.dart';
 import 'common.dart';
 import 'match_score.dart';
+import 'moderation.dart';
 import 'profile_editor.dart';
 import 'swipe_deck.dart';
 
@@ -180,7 +182,22 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                               _swipedItem(store, item, right: right),
                           builder: (context, item) => switch (item) {
                             DeckPlan(:final plan) => _PlanCard(plan: plan),
-                            DeckAd(:final ad) => AdCard(ad),
+                            // Its ⋮: report the ad, or block whoever placed it.
+                            DeckAd(:final ad) => Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                AdCard(ad),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: ModerationMenu(
+                                    report: ReportTarget(ReportKind.ad, ad.id),
+                                    person: store.climber(ad.ownerId),
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           },
                         ),
                       ),
@@ -357,6 +374,11 @@ class _PlanCardState extends State<_PlanCard> {
                                   ),
                                 ),
                               ),
+                            // ⋮: report the plan, or block its organizer.
+                            ModerationMenu(
+                              report: ReportTarget(ReportKind.plan, plan.id),
+                              person: organizer,
+                            ),
                           ],
                         ),
                       ),

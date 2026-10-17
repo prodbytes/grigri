@@ -308,6 +308,9 @@ enum NoticeKind {
   /// Someone who asked to join a plan I'm in is still waiting for my
   /// answer (they nudged the members who haven't answered).
   nudge,
+
+  /// (Admins) there are reports to review; [Notice.planId] is empty.
+  report,
 }
 
 /// A notification for me: a group answered my request to join its plan,

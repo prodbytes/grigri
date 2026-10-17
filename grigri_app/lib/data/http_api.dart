@@ -11,6 +11,7 @@ import '../model/pics.dart';
 import '../model/walls.dart';
 import '../model/plan.dart';
 import '../model/premium.dart';
+import '../model/report.dart';
 import '../log.dart';
 import 'api.dart';
 import 'auth.dart';
@@ -502,4 +503,38 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Future<void> setBlocked(String climberId, bool blocked) =>
       _post(['admin', 'climbers', climberId, blocked ? 'block' : 'unblock']);
+
+  @override
+  Future<void> sendReport({
+    required ReportKind kind,
+    required String targetId,
+    String? planId,
+    required ReportReason reason,
+    String text = '',
+  }) => _post(
+    ['reports'],
+    {
+      'kind': kind.name,
+      'targetId': targetId,
+      'planId': ?planId,
+      'reason': reason.name,
+      if (text.trim().isNotEmpty) 'text': text.trim(),
+    },
+  );
+
+  @override
+  Future<AdminReports> adminReports() async =>
+      ApiJson.adminReports(await _get(['admin', 'reports']));
+
+  @override
+  Future<void> resolveReport(String reportId, ReportAction action) =>
+      _post(['admin', 'reports', reportId, action.name]);
+
+  @override
+  Future<BlockList> blocks() async => ApiJson.blockList(await _get(['blocks']));
+
+  @override
+  Future<void> setPersonBlocked(String climberId, bool blocked) => blocked
+      ? _post(['blocks', climberId])
+      : _send('DELETE', ['blocks', climberId]);
 }

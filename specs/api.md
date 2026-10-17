@@ -8,7 +8,10 @@ the demo showcase (fictional climbers and their plans, marked `demo`); RC
 and local also get made-up test data from a seed (never in GA). Real
 plans' requests wait for real members everywhere; a demo plan's group says
 yes at once.
-An admin can list everyone and block or unblock them ([admin.md](admin.md)).
+An admin can list everyone and block or unblock them ([admin.md](admin.md)),
+and answer reports; anyone can report content and block someone for
+themselves, and the API filters objectionable words
+([moderation.md](moderation.md)).
 
 ## Architecture (cost first: $0 idle)
 
@@ -156,7 +159,10 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   kept to 4 decimals); absent for a place typed by hand.
 - **JoinRequest**: `{"id": "<planId>/<climberId>", "planId", "climberId", "acceptedBy": [climberIds], "rejected": bool, "time", "nudgedAt"?}`
   (`nudgedAt`: when the requester last [nudged](#routes) the group; absent until they do.)
-- **Notice**: `{"id", "kind": "accepted"|"declined"|"request"|"nudge", "planId", "planTitle" (the plan's place when the notice was made), "climberId"? (who asked, for request and nudge), "time", "read": bool}`.
+- **Notice**: `{"id", "kind": "accepted"|"declined"|"request"|"nudge"|"report", "planId", "planTitle" (the plan's place when the notice was made), "climberId"? (who asked, for request and nudge), "time", "read": bool}`.
+  `report` goes to admins only, id `reports`, with `planId` and
+  `planTitle` empty: there are reports to review.
+- **Report** (admins only): `{"id", "kind": "profile"|"plan"|"message"|"pic"|"ad", "targetId", "planId"? (a message's or photo's), "subjectId" (whose content it is), "reporterId", "reason": "spam"|"harassment"|"inappropriate"|"fake"|"other", "text", "content": {"title"?, "text"?, "media"?: [{"key", "kind": "image"|"video"}], "link"?} (a copy, as it was when reported), "status": "open"|"dismissed"|"removed"|"blocked", "time", "resolvedAt"?, "resolvedBy"?}`.
   Apps skip kinds they don't know, so a new kind never breaks an older app.
 - **Message**: `{"id", "planId", "authorId": climberId|null, "text", "time", "requestId"?, "attachment"?: {"key", "kind": "image"|"video"}}`
   (authorId null: the chat's own notes: someone joined, left, asked to join;
@@ -179,7 +185,9 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
 
 ## Errors
 
-`{"error": "<message>"}` with 400 (invalid input), 401 (`signed out`: no,
+`{"error": "<message>"}` with 400 (invalid input; `objectionable: <field> …`
+when the [filter](moderation.md#the-filter) refuses a name, bio, plan
+text, message or ad), 401 (`signed out`: no,
 unknown or expired session token; or a bad Google ID token at
 `POST /api/session`),
 403 (not allowed; `use the site` for a request that didn't come through
@@ -205,14 +213,14 @@ and `POST /api/stripe/webhook` (signed by Stripe instead).
 | `DELETE /api/sessions` | sign out everywhere: all my sessions end. → `{}` |
 | `GET /api/me` | `{"climber": Climber, "admin": bool, "roles": [string] \| null, "premium": {"active", "plan"?, "until"?, "ending"?}}` (`premium`: my [Premium](premium.md)). `roles`: my roles in Grigri from rbacr (see **Roles** above), or null when it can't say. The first time, it creates my profile from my Google account: the session's name (`Climber` when the session has none, as sessions from before names were kept), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
 | `GET /api/realtime` | where [live updates](#live-updates) come from: `{"url": "wss://<IoT endpoint>/mqtt", "authorizer": "<prefix>-api-realtime" (empty locally), "topic": "grigri/<stage>/climbers/<my climber id>/#", "clientIdPrefix": "<my climber id>-"}`, or `{"url": null}` when they're off |
-| `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars, age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
-| `GET /api/discover` | plans to swipe on: upcoming (start > now, or undated), I'm not in, I haven't passed or asked; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known); `"covers": {planId: {"key", "crag", "author", "license"}}`, each plan's best [GriGri Pics](pics.md#on-the-deck) photo (only for plans that have one; from the catalog the function keeps, never failing the deck); for admins also `"scores": {planId: {"score", "level", "reason"}}`, the best 30 plans' [match scores](match-scores.md#on-an-admins-deck); `"ads": [Ad]` and `"adEvery": n`, the [ads](ads.md#on-the-deck) to show between plans (their owners in `climbers`; never failing the deck) |
-| `POST /api/plans` | new plan, I organize it; body: Plan without id, organizerId, memberIds. Validates: place required (≤ 80), area ≤ 120, sectorId ≤ 64 when given, start and end both or neither (neither: an **undated** plan, its day still to be decided), start in the future and at most a year away, end after start and at most 24 h later; `moreDays` (only with a start, at most 13: two weeks in all) are more days, each a start–end checked the same way and starting after the day before ends; notes ≤ 1000, grades on the discipline's scale; `type` private (default), open or guided; a guided plan needs `price` (amount > 0 and ≤ 10000 with at most two decimals, currency EUR, USD, GBP, CHF or BRL), which other types drop. → `{"plan"}` |
+| `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars (name and bio through the [filter](moderation.md#the-filter)), age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
+| `GET /api/discover` | plans to swipe on: upcoming (start > now, or undated), I'm not in, I haven't passed or asked, with nobody in the group [blocked](moderation.md#blocking-someone) either way between us; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known); `"covers": {planId: {"key", "crag", "author", "license"}}`, each plan's best [GriGri Pics](pics.md#on-the-deck) photo (only for plans that have one; from the catalog the function keeps, never failing the deck); for admins also `"scores": {planId: {"score", "level", "reason"}}`, the best 30 plans' [match scores](match-scores.md#on-an-admins-deck); `"ads": [Ad]` and `"adEvery": n`, the [ads](ads.md#on-the-deck) to show between plans (their owners in `climbers`; never failing the deck) |
+| `POST /api/plans` | new plan, I organize it; body: Plan without id, organizerId, memberIds. Validates: place required (≤ 80), area ≤ 120, sectorId ≤ 64 when given, start and end both or neither (neither: an **undated** plan, its day still to be decided), start in the future and at most a year away, end after start and at most 24 h later; `moreDays` (only with a start, at most 13: two weeks in all) are more days, each a start–end checked the same way and starting after the day before ends; notes ≤ 1000 (and the place and area when typed by hand) through the [filter](moderation.md#the-filter), grades on the discipline's scale; `type` private (default), open or guided; a guided plan needs `price` (amount > 0 and ≤ 10000 with at most two decimals, currency EUR, USD, GBP, CHF or BRL), which other types drop. → `{"plan"}` |
 | `GET /api/plans` | mine: `{"plans": [plans I'm in, soonest first], "asked": [{"request", "plan"}] (my requests still waiting, or declined and not dismissed), "climbers"}` |
 | `GET /api/plans/{id}` | `{"plan", "requests": [open requests, only if I'm a member], "climbers"}` |
 | `PUT /api/plans/{id}` | organizer only; same body and rules as POST (the whole plan: a `sectorId`, `type` or `price` left out is cleared). A new type that needs fewer yeses lets in whoever now has them (an open plan: everyone waiting). → `{"plan"}` |
 | `POST /api/plans/{id}/leave` | I leave (the app's "Cancel the plan"). Organizer leaves → a remaining member picked at random organizes. Last member leaves → the plan, its requests and its chat are gone. Open requests stop waiting for me (so one may now have every yes, and join). A "left" note in the chat. The plan stays out of my deck. → `{}` |
-| `POST /api/plans/{id}/join` | swipe right: a join request. Notifies the plan's deciders (every member, or a guided plan's organizer; Notice kind request) and posts a request note in the chat. On an **open** plan nobody decides: no notices or note, and I join at once (membership, the joined note, the accepted notice). 409 if I'm a member, already asked (whatever became of that request), the plan has started, or 30 requests are already waiting on it. On a **demo** plan, whose made-up members can't answer, the group then says yes at once (as an admin's yes): I join, get the accepted notice, and the chat gets the joined note; the request comes back accepted by every member. → `{"request"}` |
+| `POST /api/plans/{id}/join` | swipe right: a join request. Notifies the plan's deciders (every member, or a guided plan's organizer; Notice kind request) and posts a request note in the chat. On an **open** plan nobody decides: no notices or note, and I join at once (membership, the joined note, the accepted notice). 409 if I'm a member, already asked (whatever became of that request), the plan has started, or 30 requests are already waiting on it; "you can't ask to join this plan" when someone in the group blocked me or I blocked them (it doesn't say which). On a **demo** plan, whose made-up members can't answer, the group then says yes at once (as an admin's yes): I join, get the accepted notice, and the chat gets the joined note; the request comes back accepted by every member. → `{"request"}` |
 | `POST /api/plans/{id}/nudge` | the requester reminds the group: a Notice kind nudge (`climberId`: me) for each member who hasn't said yes to my open request on the plan. 404 if I haven't asked; 409 if it was declined, I'm already in, or the plan has started; **429** "you nudged the group less than 12 hours ago; try again later" within 12 hours of my last nudge (saved on the request as `nudgedAt`, with a conditional write, so two at once can't both pass). → `{"request"` (with its new `nudgedAt`)`, "nudged": <how many members>}` |
 | `POST /api/plans/{id}/pass` | swipe left: out of my deck. → `{}` |
 | `DELETE /api/passes` | Discover's refresh: forgets my passes, so those plans are on my deck again; not on plans I asked to join (a declined request I dismissed stays hidden) or left (cancelled: leaving marks its pass `left`). → `{}` |
@@ -223,7 +231,7 @@ and `POST /api/stripe/webhook` (signed by Stripe instead).
 | `GET /api/notices` | mine, newest first: `{"notices", "climbers"}` |
 | `POST /api/notices/read` | marks all mine read. → `{}` |
 | `GET /api/plans/{id}/messages?after=<time>` | members only, oldest first, those after `after` when given. → `{"messages", "climbers"}` |
-| `POST /api/plans/{id}/messages` | members only; a photo attachment also joins the plan's Your Pics ([pics.md](pics.md)); body `{"text"?, "attachment"?: key}`: text up to 2000 chars, 1–2000 without an attachment. The attachment must be a key `POST /api/plans/{id}/media` issued for this plan (`chat/<this planId>/<random>.<jpg\|png\|webp\|mp4\|mov>`; 400 otherwise) and uploaded: it loses its pending tag, only after the caller is known to be a member (400 if it isn't uploaded, or already expired). → `{"message"}` |
+| `POST /api/plans/{id}/messages` | members only; a photo attachment also joins the plan's Your Pics ([pics.md](pics.md)); body `{"text"?, "attachment"?: key}`: text up to 2000 chars, 1–2000 without an attachment, through the [filter](moderation.md#the-filter). The attachment must be a key `POST /api/plans/{id}/media` issued for this plan (`chat/<this planId>/<random>.<jpg\|png\|webp\|mp4\|mov>`; 400 otherwise) and uploaded: it loses its pending tag, only after the caller is known to be a member (400 if it isn't uploaded, or already expired). → `{"message"}` |
 | `POST /api/plans/{id}/media` | members only (403; 404 for no such plan); body `{"contentType"}`: `image/jpeg`, `image/png`, `image/webp`, `video/mp4` or `video/quicktime`, nothing else (400). → `{"key", "url", "fields", "maxBytes"}`: a presigned S3 POST as `POST /api/photos` gives, ≤ 2 MB for a photo and ≤ 50 MB for a video (`maxBytes`), its content type fixed by the policy. Keys are `chat/<planId>/<random>.<ext>` (object `photos/chat/...`, served at `/photos/chat/...`), tagged pending: an upload no message sends expires after a day. Sent ones expire 400 days after their upload ([backend](backend.md#chat-media)). |
 | `GET /api/plans/{id}/pics` | the plan's [photos](pics.md): `{"yours": [PlanPic] (oldest first; members only, else empty), "grigri": [GrigriPic] (up to 12, best first, for the plan's sector, point, place and area), "member": bool, "climbers"}` (who added them). 404 for no such plan |
 | `POST /api/plans/{id}/pics/upload` | members only (403); body `{"contentType"}`: `image/jpeg`, `image/png` or `image/webp` (400 otherwise). → `{"key", "url", "fields", "maxBytes"}`: a presigned POST (≤ 2 MB) for `plans/<planId>/<random>.<ext>` (object `photos/plans/...`), tagged pending, as `POST /api/photos` gives |
@@ -246,6 +254,12 @@ and `POST /api/stripe/webhook` (signed by Stripe instead).
 | `GET /api/admin/climbers` | admin only: every profile, by name, without location or areas, each with `"blocked": bool` → `{"climbers"}` ([admin.md](admin.md)) |
 | `POST /api/admin/climbers/{id}/block` | admin only: blocks them (400 for myself, 404 for no such climber). → `{"blocked": true}` |
 | `POST /api/admin/climbers/{id}/unblock` | admin only: unblocks them (404 for no such climber). → `{"blocked": false}` |
+| `POST /api/reports` | [report](moderation.md#reporting) something: body `{"kind", "targetId", "planId"? (a message's or photo's), "reason", "text"? (≤ 500)}`; a message or plan photo only as a member (403); 404 when there's no such thing; 400 for my own, or the chat's notes. Again by me on the same thing replaces it. Tells the admins (a `report` notice, a `notice` hint). → `{}` |
+| `GET /api/admin/reports` | admin only: the open reports, oldest first → `{"reports": [Report], "climbers"}` (whose and who reported) |
+| `POST /api/admin/reports/{id}/dismiss` / `remove` / `block` | admin only: closes it; `remove` takes the content down (deletes a message, photo or ad with its files; clears a plan's notes, or a profile's bio and photos); `block` blocks its climber as `…/climbers/{id}/block` does. 404 for no such report, 409 when already handled. → `{"report"}` |
+| `GET /api/blocks` | the people I [blocked](moderation.md#blocking-someone) (never who blocked me) → `{"blocked": [climberId], "climbers"}` |
+| `POST /api/blocks/{id}` | I block them: their plans and mine leave each other's decks, neither can ask to join a plan the other is in, and their open requests on plans I decide on are declined. 400 for myself, 404 for no such climber. → `{"blocked": true}` |
+| `DELETE /api/blocks/{id}` | I unblock them. → `{"blocked": false}` |
 
 ## The deck's ranking
 
@@ -290,6 +304,9 @@ Details: [live-updates.md](live-updates.md).
 | reject | `notice` to the requester, `request` to the members |
 | `POST /api/plans/{id}/nudge` | `notice` to the members who haven't said yes |
 | `PUT /api/plans/{id}`, `POST /api/plans/{id}/leave` | `plan` to the (remaining) members |
+| `POST /api/reports` | `notice` (no plan) to every admin |
+| `POST /api/blocks/{id}` declining their requests | as reject |
+| `POST /api/admin/reports/{id}/remove` | `message`, `pics` or `plan` to the plan's members, for removed chat messages, photos or notes |
 | `POST /api/plans/{id}/pics`, `DELETE /api/plans/{id}/pics/{picId}` | `pics` to the members |
 
 Publishing is best effort: it waits at most 1.5 s and never fails the

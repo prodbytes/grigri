@@ -1246,4 +1246,104 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Offen: sofort dabei';
+
+  @override
+  String get moreActions => 'Mehr';
+
+  @override
+  String get report => 'Melden';
+
+  @override
+  String blockPerson(String name) {
+    return '$name blockieren';
+  }
+
+  @override
+  String get reportTitle => 'Warum meldest du das?';
+
+  @override
+  String get reportReasonSpam => 'Spam';
+
+  @override
+  String get reportReasonHarassment => 'Belästigung';
+
+  @override
+  String get reportReasonInappropriate => 'Unangemessene Inhalte';
+
+  @override
+  String get reportReasonFake => 'Falsches Profil';
+
+  @override
+  String get reportReasonOther => 'Sonstiges';
+
+  @override
+  String get reportDetailsHint =>
+      'Sonst noch etwas, das wir wissen sollten? (optional)';
+
+  @override
+  String get reportSend => 'Meldung senden';
+
+  @override
+  String get reportThanks => 'Danke, wir prüfen es innerhalb von 24 Stunden.';
+
+  @override
+  String get blockPersonMessage =>
+      'Ihr seht eure Pläne gegenseitig nicht mehr, keiner kann bei einem Plan des anderen anfragen, seine Anfragen zu deinen Plänen werden abgelehnt und du siehst seine Nachrichten nicht. Die Person erfährt es nicht.';
+
+  @override
+  String blockedPersonDone(String name) {
+    return '$name ist blockiert.';
+  }
+
+  @override
+  String get blockedPeopleTitle => 'Blockierte Personen';
+
+  @override
+  String get blockedPeopleEmpty => 'Du hast niemanden blockiert.';
+
+  @override
+  String get adminReportsTab => 'Meldungen';
+
+  @override
+  String get adminReportsEmpty => 'Keine Meldungen zu prüfen.';
+
+  @override
+  String reportedBy(String name) {
+    return 'Gemeldet von $name';
+  }
+
+  @override
+  String get reportKindProfile => 'Profil';
+
+  @override
+  String get reportKindPlan => 'Plan';
+
+  @override
+  String get reportKindMessage => 'Chatnachricht';
+
+  @override
+  String get reportKindPic => 'Planfoto';
+
+  @override
+  String get reportKindAd => 'Anzeige';
+
+  @override
+  String get reportDismiss => 'Verwerfen';
+
+  @override
+  String get reportRemove => 'Inhalt entfernen';
+
+  @override
+  String get reportBlock => 'Kletterer sperren';
+
+  @override
+  String get noticeReportsTitle => 'Neue Meldungen zu prüfen';
+
+  @override
+  String get noticeReportsBody =>
+      'Admin → Meldungen · innerhalb von 24 Stunden beantworten';
+
+  @override
+  String get errorObjectionable =>
+      'Bitte bleib freundlich: Der Text enthält Wörter, die Grigri nicht erlaubt.';
 }

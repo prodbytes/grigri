@@ -3,9 +3,12 @@
 The **Admin** tab, for [admins](roles.md) only (rbacr's `admin` role of
 the `grigri` system; the API checks on every request). A sub-navigation
 (tabs under its title, "Admin") holds **Users**, everyone, to block or
-unblock (below), and **Ads**, to approve or reject Premium climbers' ads
-and set how often the deck shows them ([ads.md](ads.md#admin--ads)). The
-refresh button reloads the open one.
+unblock (below), **Ads**, to approve or reject Premium climbers' ads
+and set how often the deck shows them ([ads.md](ads.md#admin--ads)), and
+**Reports**, what people reported, to dismiss, remove or block within 24
+hours ([moderation.md](moderation.md#answering-reports-admins)). The
+refresh button reloads the open one. A "New reports to review"
+notification opens Admin on Reports.
 
 ## The list
 
@@ -54,11 +57,16 @@ A blocked climber:
 Others never see whether someone is blocked: `blocked` is left out of
 every profile the API shares, except the admin's list.
 
+This is the admin's block. Anyone can also block someone for themselves
+([moderation.md](moderation.md#blocking-someone)), which only keeps the
+two of them apart.
+
 ## Cost
 
 Nothing new to run: the list is one query of the `CLIMBERS` index
 partition (one read unit per 4 KB of profiles), and blocking is one
-conditional write. Hiding blocked organizers' plans reuses the deck's
+conditional write. Reports are one query of the open-reports index
+([moderation.md](moderation.md#data-and-cost)). Hiding blocked organizers' plans reuses the deck's
 profile reads.
 
 **How the API knows**: it lists who holds `blocked` in rbacr (`GET

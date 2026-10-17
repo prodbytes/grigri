@@ -236,6 +236,25 @@ most 50 MB: send a shorter one"). Only the plan's members can upload to
 its chat or read its messages; the media is kept 400 days
 ([backend](backend.md#chat-media)).
 
+## Blocking someone
+
+Anyone can block someone from their profile sheet, a card, a plan, an ad,
+a join request card or a long press on their chat message, and unblock
+them in Profile → Blocked people ([moderation.md](moderation.md#blocking-someone)).
+Between two people with a block either way:
+
+- no plan with one of them in its group is on the other's deck (nor
+  their ads);
+- neither can ask to join a plan the other is in (a neutral 409);
+- blocking declines their open requests on plans I decide on (as my
+  no);
+- in plans we're both already in, nothing changes for the group; my app
+  hides their messages and notifications about them from me;
+- they aren't told.
+
+Others can also report a profile, plan, message, photo or ad, which
+admins answer within 24 hours ([moderation.md](moderation.md#reporting)).
+
 ## Data: the backend API
 
 Everything comes from the database, through the backend's API
@@ -245,8 +264,8 @@ between runs but my grade system and the app's [language](i18n.md)
 a cache over the API client ([api.dart](../grigri_app/lib/data/api.dart),
 [http_api.dart](../grigri_app/lib/data/http_api.dart)): screens read it
 and call its actions (like, pass, accept, reject, dismiss, create,
-update, leave, send, save the profile, and the admin's block and
-unblock), which call the API and update the cache with the answers. A
+update, leave, send, save the profile, report, block and unblock
+someone, and the admin's block, unblock and report answers), which call the API and update the cache with the answers. A
 failed action shows the server's message at the bottom of the screen; a
 401 tries fresh credentials once, then signs out; a 409 "no profile"
 loads my profile again (`GET /api/me`, which makes a new one); a 403

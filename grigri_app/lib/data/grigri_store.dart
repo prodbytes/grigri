@@ -13,6 +13,7 @@ import '../model/location.dart';
 import '../model/match_score.dart';
 import '../model/pics.dart';
 import '../model/plan.dart';
+import '../model/report.dart';
 import '../model/sector.dart';
 import 'api.dart';
 import 'auth.dart';
@@ -53,7 +54,17 @@ enum Phase {
 }
 
 /// The parts of the app's data that load separately.
-enum Section { discover, plans, requests, notices, admin, ads, adminAds }
+enum Section {
+  discover,
+  plans,
+  requests,
+  notices,
+  admin,
+  ads,
+  adminAds,
+  adminReports,
+  blocks,
+}
 
 /// A card on the Discover deck: a plan, or an ad between plans
 /// (specs/ads.md).
@@ -185,6 +196,7 @@ class GrigriStore extends ChangeNotifier {
   /// What failed, in the server's words, or in the app's for the failures
   /// it describes itself.
   String _describe(ApiException e) => switch (e.client) {
+    null when e.objectionable => l10n.errorObjectionable,
     null => e.message,
     ClientError.timeout => l10n.errorTimeout,
     ClientError.unreachable => l10n.errorUnreachable,
@@ -231,6 +243,10 @@ class GrigriStore extends ChangeNotifier {
   List<JoinRequest> _asked = [];
   List<JoinRequest> _toReview = [];
   List<AdminClimber> _adminClimbers = [];
+  List<Report> _adminReports = [];
+
+  /// The people I blocked (specs/moderation.md#blocking-someone).
+  Set<String> _blockedPeople = {};
   final _open = <String, List<JoinRequest>>{};
   final _declinedHere = <String>{};
   List<Notice> _notices = [];
@@ -311,6 +327,8 @@ class GrigriStore extends ChangeNotifier {
     _asked = [];
     _toReview = [];
     _adminClimbers = [];
+    _adminReports = [];
+    _blockedPeople = {};
     _open.clear();
     _declinedHere.clear();
     _notices = [];
@@ -511,12 +529,31 @@ class GrigriStore extends ChangeNotifier {
   List<AdminClimber> get adminClimbers => _adminClimbers;
 
   /// My notifications, newest first.
-  List<Notice> get notices => _notices;
+  /// (Not about someone I blocked.)
+  List<Notice> get notices => [
+    for (final n in _notices)
+      if (!_blockedPeople.contains(n.climberId)) n,
+  ];
 
-  int get unreadNotices => _notices.where((n) => !n.read).length;
+  int get unreadNotices => notices.where((n) => !n.read).length;
 
   /// A plan's group chat, oldest first.
-  List<Message> messages(String planId) => _messages[planId] ?? const [];
+  /// (Without the messages of people I blocked: hidden on my side only.)
+  List<Message> messages(String planId) => [
+    for (final m in _messages[planId] ?? const <Message>[])
+      if (!_blockedPeople.contains(m.authorId)) m,
+  ];
+
+  /// The people I blocked, by name.
+  List<Climber> get blockedPeople =>
+      [for (final id in _blockedPeople) climber(id)]
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+  /// Whether I blocked them.
+  bool hasBlocked(String climberId) => _blockedPeople.contains(climberId);
+
+  /// The open reports, oldest first (admins).
+  List<Report> get adminReports => _adminReports;
 
   /// Why a plan suits me.
   Fit fit(Plan plan) {
@@ -690,7 +727,9 @@ class GrigriStore extends ChangeNotifier {
       refreshPlans(),
       refreshRequests(),
       refreshDiscover(),
+      refreshBlocks(),
       if (_admin) refreshAdmin(),
+      if (_admin) refreshAdminReports(),
       if (_premium.active) refreshMyAds(),
     ]);
     await refreshNotices();
@@ -1311,6 +1350,81 @@ class GrigriStore extends ChangeNotifier {
     if (await openLink(url)) return true;
     _errors.add(l10n.errorOpenLink);
     return false;
+  }
+
+  // --- Moderation: reports and blocks (specs/moderation.md) ---------------
+
+  /// I report something objectionable; true when it was sent (the caller
+  /// thanks me: it's reviewed within 24 hours).
+  Future<bool> sendReport({
+    required ReportKind kind,
+    required String targetId,
+    String? planId,
+    required ReportReason reason,
+    String text = '',
+  }) => _ok(
+    () => api.sendReport(
+      kind: kind,
+      targetId: targetId,
+      planId: planId,
+      reason: reason,
+      text: text,
+    ),
+  );
+
+  /// The people I blocked.
+  Future<void> refreshBlocks() => _refresh(api.blocks, (list) {
+    _learn(list.climbers);
+    _blockedPeople = list.blocked.toSet();
+    _loaded.add(Section.blocks);
+  });
+
+  /// I block someone, or unblock them. Blocking takes their plans off my
+  /// deck and their requests off my list at once (the server declines
+  /// them), and hides their messages from me. True when it worked.
+  Future<bool> setPersonBlocked(String climberId, bool blocked) async {
+    if (!await _ok(() => api.setPersonBlocked(climberId, blocked))) {
+      return false;
+    }
+    if (blocked) {
+      _blockedPeople = {..._blockedPeople, climberId};
+      _discover = [
+        for (final id in _discover)
+          if (!(_plans[id]?.memberIds.contains(climberId) ?? false)) id,
+      ];
+      _toReview = [
+        for (final r in _toReview)
+          if (r.climberId != climberId) r,
+      ];
+    } else {
+      _blockedPeople = {..._blockedPeople}..remove(climberId);
+    }
+    notifyListeners();
+    await Future.wait([_refreshDeck(), refreshRequests()]);
+    return true;
+  }
+
+  /// The open reports (admins).
+  Future<void> refreshAdminReports() async {
+    if (!_admin) return;
+    await _refresh(api.adminReports, (list) {
+      _learn(list.climbers);
+      _adminReports = list.reports;
+      _loaded.add(Section.adminReports);
+    });
+  }
+
+  /// An admin handles a report: dismisses it, removes the content, or
+  /// blocks its climber. It leaves the list; true when it worked.
+  Future<bool> resolveReport(Report report, ReportAction action) async {
+    if (!await _ok(() => api.resolveReport(report.id, action))) return false;
+    _adminReports = [
+      for (final r in _adminReports)
+        if (r.id != report.id) r,
+    ];
+    notifyListeners();
+    if (action == ReportAction.block) await refreshAdmin();
+    return true;
   }
 
   // --- Admin -------------------------------------------------------------
