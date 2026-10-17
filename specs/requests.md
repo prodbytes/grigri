@@ -1419,3 +1419,19 @@ spec.
       uploaded, and each subscription needs its review screenshot.
     - Cost: none beyond the Apple Developer Program ($99 a year). App
       Store Connect, TestFlight and the notifications are free.
+
+92. **Generate more demo plans, mostly private, some open, a few guided.**
+    - [Backend](backend.md#the-demo-showcase): the demo showcase grows
+      from twenty plans to thirty-seven: ten more private ones (Siurana's
+      Esperó Primavera, Montsant, Arco, Céüse over two days, Rodellar,
+      Albarracín's boulders, Chulilla, Stanage, Gorges du Tarn, Red River
+      Gorge), four open ones (Barcelona's climbing gym, Montgai, an
+      afternoon at Siurana's L'Olla, Fontainebleau circuits) and three
+      guided ones (Montserrat multipitch, a Margalef gym-to-crag day, El
+      Chorro), led by two new made-up guides, Ferran Roig and Ailsa Moray.
+      Before, every showcase plan was private. `SHOWCASE_VERSION` is 4,
+      so every stage rewrites the showcase on its next deck.
+    - A test checks the mix: mostly private, at least three open, fewer
+      guided than open, and each guided plan priced with its guide alone.
+    - Cost: about 17 more DynamoDB writes twice a day per stage, a
+      fraction of a cent a month. No new resource.
