@@ -80,6 +80,8 @@
   "ageLabel": "Edat (opcional)",
   "ageRange": "De {min} a {max}",
   "bioLabel": "Sobre tu",
+  "gradeSystem": "Sistema de graus",
+  "gradeSystemHint": "Com s'escriuen els graus a l'app, aquí per a una via i un bloc.",
   "whatYouClimb": "Què escales",
   "whatYouClimbHint": "Tria les teves disciplines i els graus que escales.",
   "gearYouCanBring": "Material que pots portar",

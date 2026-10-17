@@ -85,8 +85,10 @@ is "Alerts" in English.
   a camera, choose one, or remove it), name, age (optional, 16–99
   when given), about, **where you climb** ("Only you see it"): my
   location (tap to pick, ✕ clears) and up to 5 other areas (chips: ✕
-  removes one, **Add an area** adds one), then the European / American grade switch, per
-  discipline a switch and a grade range, and gear: the gear chips, then
+  removes one, **Add an area** adds one), then **Grade system**: the
+  European / American switch on its own, each option showing a route and
+  a boulder grade written its way (🧗 6a 🪨 7A, 🧗 5.10b 🪨 V6), then
+  **What you climb**: per discipline a switch and a grade range, and gear: the gear chips, then
   its photos (✕ removes one, + adds one, up to 6), then **Language**:
   System default or one of the app's six languages, each named in itself,
   switching the app at once ([languages](i18n.md)). Saving uploads the new

@@ -663,9 +663,22 @@ class EmptyState extends StatelessWidget {
 }
 
 /// European or American grades, like Celsius or Fahrenheit: switches how
-/// grades are written everywhere in the app.
+/// grades are written everywhere in the app. With [examples], each option
+/// also shows a route grade and a boulder grade written its way.
 class GradeSystemToggle extends StatelessWidget {
-  const GradeSystemToggle({super.key});
+  const GradeSystemToggle({super.key, this.examples = false});
+
+  final bool examples;
+
+  /// The same route and boulder grade in every system: 6a and 7A in
+  /// European grades, 5.10b and V6 in American ones.
+  static const _exampleRoute = 6;
+  static const _exampleBoulder = 7;
+
+  static String _examples(GradeSystem s) =>
+      '${Discipline.sport.emoji} ${GradeScale.routes.grades(s)[_exampleRoute]}'
+      '  ${Discipline.bouldering.emoji} '
+      '${GradeScale.boulders.grades(s)[_exampleBoulder]}';
 
   @override
   Widget build(BuildContext context) {
@@ -674,7 +687,23 @@ class GradeSystemToggle extends StatelessWidget {
       showSelectedIcon: false,
       segments: [
         for (final s in GradeSystem.values)
-          ButtonSegment(value: s, label: Text(s.label(context.l10n))),
+          ButtonSegment(
+            value: s,
+            label: examples
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Column(
+                      children: [
+                        Text(s.label(context.l10n)),
+                        Text(
+                          _examples(s),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  )
+                : Text(s.label(context.l10n)),
+          ),
       ],
       selected: {store.gradeSystem},
       onSelectionChanged: (s) => store.gradeSystem = s.single,

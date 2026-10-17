@@ -1885,6 +1885,40 @@ void main() {
       );
       expect(find.byTooltip('Add a gear photo'), findsNothing);
     });
+
+    testWidgets('the grade system is its own section, with examples', (
+      tester,
+    ) async {
+      final store = storeFor(sampleApi());
+      await store.start();
+      await tester.pumpWidget(
+        StoreScope(
+          store: store,
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ProfileEditor(),
+          ),
+        ),
+      );
+      final page = find.byType(Scrollable).first;
+      await tester.scrollUntilVisible(
+        find.text('🧗 6a  🪨 7A'),
+        200,
+        scrollable: page,
+      );
+      // A section of its own, the disciplines in the next one.
+      expect(find.text('GRADE SYSTEM'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('WHAT YOU CLIMB')).dy,
+        greaterThan(tester.getTopLeft(find.text('🧗 6a  🪨 7A')).dy),
+      );
+      expect(find.text('🧗 6a  🪨 7A'), findsOneWidget);
+      expect(find.text('🧗 5.10b  🪨 V6'), findsOneWidget);
+      await tester.tap(find.text('American'));
+      await tester.pumpAndSettle();
+      expect(store.gradeSystem, GradeSystem.american);
+    });
   });
 
   group('the profile ends with my roles, from rbacr through the API', () {
