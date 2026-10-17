@@ -1171,6 +1171,7 @@ class FakeApi implements GrigriApi, SessionApi {
     required String text,
     required String link,
     String? mediaKey,
+    List<AdRegion> regions = const [],
   }) => _route('POST /api/ads', () {
     if (!myPremium.active) throw const ApiException(403, 'ads are for Premium');
     final url = Uri.tryParse(link);
@@ -1183,6 +1184,7 @@ class FakeApi implements GrigriApi, SessionApi {
       text: text,
       link: url,
       mediaKey: mediaKey,
+      regions: regions,
       mediaKind: mediaKey == null
           ? null
           : (mediaKey.endsWith('.mp4') || mediaKey.endsWith('.quicktime')
@@ -1192,6 +1194,18 @@ class FakeApi implements GrigriApi, SessionApi {
     ads[ad.id] = ad;
     return ad;
   });
+
+  /// What GET /api/places finds, by query.
+  final Map<String, List<AdRegion>> places = {};
+
+  @override
+  Future<List<AdRegion>> searchPlaces(String query, String language) =>
+      _route('GET /api/places', () {
+        if (!myPremium.active) {
+          throw const ApiException(403, 'ads are for Premium');
+        }
+        return places[query] ?? const [];
+      });
 
   @override
   Future<void> deleteAd(String adId) => _route('DELETE /api/ads/$adId', () {

@@ -41,6 +41,7 @@ import {
 import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { PREMIUM_PRICES, type PremiumPlan, type Subscription, isPaid, premiumOf, premiumUntil, premiumView } from './premium.js';
+import { MAX_PLACE_QUERY, type PlaceSearch } from './places.js';
 import { BadSignature, type Billing, subscriptionIdOf } from './stripe.js';
 import {
   type AppleStatus,
@@ -171,6 +172,8 @@ export interface Deps {
    * failure runs it again; throwing stops the deletion, to be retried.
    */
   onDeleteAccount?: (account: DeletingAccount) => Promise<void>;
+  /** Finds places for ads' regions (places.ts); none: GET /api/places answers 503. */
+  places?: PlaceSearch;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -290,6 +293,7 @@ export class Api {
     r('POST /api/ads', 'profile', (req, s) => this.createAd(req, s));
     r('DELETE /api/ads/{id}', 'profile', (req, s) => this.deleteAd(req, s));
     r('POST /api/ads/{id}/skip', 'profile', (req, s) => this.skipAd(req, s));
+    r('GET /api/places', 'profile', (req, s) => this.searchPlaces(req, s));
 
     r('GET /api/discover', 'profile', (_req, s) => this.discover(s));
     r('POST /api/plans', 'profile', (req, s) => this.createPlan(req, s));
@@ -1096,6 +1100,21 @@ export class Api {
     return { ad };
   }
 
+  /** GET /api/places?q=&lang=: places for an ad's regions (Premium only: only advertisers need it). */
+  private async searchPlaces(req: Request, s: Session) {
+    const q = (req.query.q ?? '').trim();
+    if (q.length < 2 || q.length > MAX_PLACE_QUERY) throw badRequest(`q must be 2 to ${MAX_PLACE_QUERY} characters`);
+    const lang = /^[a-z]{2}$/.test(req.query.lang ?? '') ? req.query.lang! : 'en';
+    if (!(await this.isPremium(s.caller.email))) throw forbidden('ads are for Premium');
+    if (!this.deps.places) throw unavailable('place search is off');
+    try {
+      return { places: await this.deps.places(q, lang) };
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'place search failed', error: String(e) }));
+      throw unavailable("the place search didn't answer; try again");
+    }
+  }
+
   /** DELETE /api/ads/{id}: its owner (or an admin) takes it down for good, with its media. */
   private async deleteAd(req: Request, s: Session) {
     const ad = await this.store.getAd(id(req.params.id, 'ad id'));
@@ -1140,7 +1159,8 @@ export class Api {
 
   /**
    * The deck's ads: approved, not mine, not one I skipped, their owner
-   * Premium (or the seed's made-up advertiser) and not blocked; and how
+   * Premium (or the seed's made-up advertiser) and not blocked, reaching
+   * my location or areas when they're limited to regions; and how
    * often to show one. Never fails the deck.
    */
   private async deckAds(s: Session, apart: Set<string>): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
@@ -1158,7 +1178,9 @@ export class Api {
       // Demo owners (the showcase's sample advertiser) advertise without Premium.
       const ok = (ownerId: string) =>
         (premium.has(ownerId) || climbers[ownerId]?.demo === true) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '') && !apart.has(ownerId);
-      const ads = deckAds(approved, s.me.id, ok, new Set(skipped));
+      // Region-limited ads reach where I am and where I'd climb.
+      const points = [...(s.me.location ? [s.me.location] : []), ...(s.me.areas ?? [])];
+      const ads = deckAds(approved, s.me.id, ok, new Set(skipped), points);
       const adOwners = Object.fromEntries(ads.map((a) => [a.ownerId, publicClimber(climbers[a.ownerId]!)]));
       return { ads, adEvery: settings.every, adOwners };
     } catch (e) {

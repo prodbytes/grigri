@@ -10,7 +10,9 @@ A **link** (an absolute `https://` or `http://` web address with a host,
 no credentials, at most 500 characters) and what's shown for it: **text**
 (at most 200 characters, over the media) and a **photo or video** (a
 JPEG, PNG or WebP photo up to 2 MB, or an MP4 or MOV video up to 50 MB,
-as in chats), or text alone. It needs text or media.
+as in chats), or text alone. It needs text or media. It can be limited
+to **regions** (see [Regions](#regions)); without any, it shows
+everywhere.
 
 It's `pending` when added, then `approved` or `rejected` by an admin
 (who can change their mind either way). A climber keeps at most 20 ads.
@@ -20,15 +22,17 @@ It's `pending` when added, then `approved` or `rejected` by an admin
 A tab of its own in the bottom bar, **Ads** ("Anuncios", "Anzeigen",
 "Pubs", "Anúncios", "Anuncis"), shown while I'm Premium, after
 Alerts and before Admin and Me. It lists my ads, newest first: a thumbnail, the text (or the
-link's site), the site, and its status ("Waiting for review",
+link's site), the site, where it shows ("Shows in Siurana, España" or
+"Shows everywhere"), and its status ("Waiting for review",
 "Approved: showing", "Rejected"), with **Delete** (after a confirmation;
 the ad and its media are deleted for good). Empty: "No ads yet" and what
 an ad does.
 
 **New ad** opens the editor: the text over the ad, the link (checked as
 the API does: "Enter a web address, starting with https://"), **Add a
-photo or video** (the chat's picker: camera or gallery) and a **preview**
-of its card as the deck shows it. **Send for review** uploads the media
+photo or video** (the chat's picker: camera or gallery), **Where it
+shows** (its regions, as chips with ✕, and **Add a region**; none:
+"Everywhere") and a **preview** of its card as the deck shows it. **Send for review** uploads the media
 (`POST /api/ads/media`, a presigned upload under `photos/ads/<my id>/`,
 pending until the ad is saved), saves the ad (`POST /api/ads`), and says
 "Sent: an admin will review it."
@@ -36,12 +40,37 @@ pending until the ad is saved), saves the ad (`POST /api/ads`), and says
 If my Premium ends, the tab goes away; my ads stay (they show again once
 I renew) and stop showing on the deck at once.
 
+## Regions
+
+An advertiser picks where an ad shows: a whole country (Spain), a region
+(Catalonia) or a town (Siurana), up to 10. **Add a region** opens a
+search ("Country, region or town"): it searches when I press search
+(never as I type), lists what it finds with each place's full name, to
+tell two Siuranas apart, and credits "© OpenStreetMap contributors".
+Picking one adds it.
+
+The search is OpenStreetMap's Nominatim, through the API
+(`GET /api/places`, Premium only): free, with no key; the API identifies
+itself as Grigri, as Nominatim's terms ask, and climbers' addresses
+never reach it. A place found is a short name ("Siurana, España"; a
+country by its name alone), in the app's language where it can be, and
+its bounding box.
+
+An ad keeps each region's name and box. The deck widens each box on
+every side by **50 km, or a tenth of its size when that's more**, so it
+reaches a bit further, to be sure: Siurana's reaches Cornudella, Reus and
+Tarragona (not Barcelona, about 100 km away), and Spain's reaches just
+over its borders (Perpignan, not Paris). Boxes across the antimeridian
+work too.
+
 ## On the deck
 
 `GET /api/discover` also answers `"ads": [Ad]` and `"adEvery": n`: the
 approved ads whose owner is Premium (or the showcase's made-up advertiser,
 see [Sample ads](#sample-ads)) and not blocked, never my own, never one
-I skipped, the most recently approved first (20 at most), and how often
+I skipped, only ones that [reach](#regions) my profile's location or one
+of my areas (an ad without regions reaches everyone; with regions, it
+never reaches someone who set neither), the most recently approved first (20 at most), and how often
 to show one. The app puts an ad after about every *n* plans **swiped**:
 each gap is *n* give or take 30% (rounded down; at least 1), drawn at
 random as the deck needs it and kept until that ad is swiped, so the
@@ -74,7 +103,7 @@ Ads shows:
   varies each gap a little around it;
 - **Waiting for review** / **Approved: showing** / **Rejected**: the ads
   in that status, newest first, each with who placed it (tap for their
-  profile), its full link, its card's preview, and **Approve** /
+  profile), its full link, where it shows, its card's preview, and **Approve** /
   **Reject**.
 
 ## API
@@ -83,14 +112,16 @@ Ads shows:
 |---|---|
 | `GET /api/ads` | → `{"ads": [Ad], "premium": bool}`: mine, newest first |
 | `POST /api/ads/media` | body `{"contentType"}` → `{"key", "url", "fields", "maxBytes"}` (Premium only, 403 otherwise) |
-| `POST /api/ads` | body `{"text", "link", "media"?: {"key"}}` → `{"ad"}`, pending (Premium only; 400 for a bad link, text over 200, no content, or media not uploaded; 409 past 20 ads) |
+| `POST /api/ads` | body `{"text", "link", "media"?: {"key"}, "regions"?: [Region]}` → `{"ad"}`, pending (Premium only; 400 for a bad link, text over 200, no content, media not uploaded, or bad regions: over 10, a name missing or over 120 characters, or a box out of range or with its south north of its north; 409 past 20 ads) |
+| `GET /api/places?q=&lang=` | Premium only: places named like `q` (2–100 characters), named in `lang` where they can be → `{"places": [Region + "label"]}` (8 at most; `label` is the full name); 503 when the search doesn't answer |
 | `DELETE /api/ads/{id}` | its owner or an admin: deletes it and its media → `{}` |
 | `POST /api/ads/{id}/skip` | I skipped it on the deck: never on my deck again (one write, no read; 400 for a bad id) → `{}` |
 | `GET /api/admin/ads?status=pending\|approved\|rejected` | admins: → `{"ads", "climbers", "every"}` |
 | `POST /api/admin/ads/{id}/approve`, `…/reject` | admins: → `{"ad"}` |
 | `PUT /api/admin/ads/settings` | admins: body `{"every": 0–50}` → `{"every"}` (0: no ads) |
 
-`Ad` = `{"id", "ownerId", "text", "link", "media"?: {"kind": "image"|"video", "key"}, "status", "createdAt", "reviewedAt"?}`.
+`Ad` = `{"id", "ownerId", "text", "link", "media"?: {"kind": "image"|"video", "key"}, "regions"?: [Region], "status", "createdAt", "reviewedAt"?}`;
+`Region` = `{"name", "south", "west", "north", "east"}` (degrees; `west` > `east` across the antimeridian).
 
 ## Sample ads
 
@@ -100,10 +131,15 @@ profile), written with the [demo showcase](backend.md#the-demo-showcase)
 ([seed/ads.ts](../grigri_api/seed/ads.ts)): four approved ads for the climbing school at
 https://www.climbingsiurana.com/en/, each linking to its page there:
 
-- a guided climbing day in Siurana (from 65€);
-- "From the gym to the rock", a five-day course (from 450€);
-- a sport climbing camp in Margalef, with coaching (from 490€);
-- the via ferrata at La Morera de Montsant (from 45€).
+- a guided climbing day in Siurana (from 65€), shown around Siurana;
+- "From the gym to the rock", a five-day course (from 450€), around
+  Siurana;
+- a sport climbing camp in Margalef, with coaching (from 490€), around
+  Margalef;
+- the via ferrata at La Morera de Montsant (from 45€), around La Morera.
+
+Their regions are OpenStreetMap's boxes for those villages, so they show
+to climbers in the Priorat and the Costa Daurada.
 
 Their photos are the school's own: the showcase downloads each from the
 school's site and puts it in the photos bucket at
@@ -133,6 +169,10 @@ can remove a reported ad from Admin → Reports
 us don't show on my deck.
 
 ## Cost
+
+The place search is free (Nominatim) and costs a Lambda call per search,
+only when an advertiser presses search. Regions are a few numbers in the
+ad's item; checking them is arithmetic on ads the deck already reads.
 
 Nothing while idle. Each deck adds three reads (the setting, one query of
 the approved ads, one query of the ads I skipped) plus a batch read of

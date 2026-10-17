@@ -2750,6 +2750,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please keep it friendly: that has words Grigri doesn\'t allow.'**
   String get errorObjectionable;
+
+  /// Heading of the ad editor's regions.
+  ///
+  /// In en, this message translates to:
+  /// **'Where it shows'**
+  String get adRegionsTitle;
+
+  /// The ad editor, with no regions.
+  ///
+  /// In en, this message translates to:
+  /// **'Everywhere. Add a country, region or town to show it only to climbers there.'**
+  String get adRegionsEverywhere;
+
+  /// The ad editor, with regions.
+  ///
+  /// In en, this message translates to:
+  /// **'To climbers who are in these places, or climb near them.'**
+  String get adRegionsHelp;
+
+  /// Button and page title: adds a place where the ad shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a region'**
+  String get adAddRegion;
+
+  /// Tooltip: removes a region from the ad.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}'**
+  String adRemoveRegion(String name);
+
+  /// Label of the region search field.
+  ///
+  /// In en, this message translates to:
+  /// **'Country, region or town'**
+  String get adRegionSearchLabel;
+
+  /// Help under the region search field.
+  ///
+  /// In en, this message translates to:
+  /// **'For example Spain, Catalonia or Siurana. The ad also reaches a little around it.'**
+  String get adRegionSearchHelp;
+
+  /// An ad's tile: where it shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows in {places}'**
+  String adShowsIn(String places);
+
+  /// An ad's tile: it has no regions.
+  ///
+  /// In en, this message translates to:
+  /// **'Shows everywhere'**
+  String get adShowsEverywhere;
 }
 
 class _AppLocalizationsDelegate

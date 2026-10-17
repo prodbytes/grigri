@@ -505,6 +505,7 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
     required String text,
     required String link,
     String? mediaKey,
+    List<AdRegion> regions = const [],
   }) async => ApiJson.ad(
     await _post(
       ['ads'],
@@ -512,9 +513,15 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
         'text': text,
         'link': link,
         if (mediaKey != null) 'media': {'key': mediaKey},
+        if (regions.isNotEmpty)
+          'regions': [for (final r in regions) r.toJson()],
       },
     ),
   );
+
+  @override
+  Future<List<AdRegion>> searchPlaces(String query, String language) async =>
+      ApiJson.places(await _get(['places'], {'q': query, 'lang': language}));
 
   @override
   Future<void> deleteAd(String adId) => _send('DELETE', ['ads', adId]);

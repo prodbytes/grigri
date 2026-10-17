@@ -5,6 +5,7 @@ import '../model/ad.dart';
 import '../model/plan.dart' show MediaKind;
 import '../theme.dart';
 import 'ad_editor.dart';
+import 'ad_region_picker.dart';
 import 'common.dart';
 
 /// The Ads tab (Premium; specs/ads.md): my ads, newest first, each with
@@ -126,6 +127,12 @@ class _MyAdTile extends StatelessWidget {
               ad.site,
               style: const TextStyle(color: Mountain.sky),
               maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              adWhere(context, ad),
+              style: const TextStyle(color: Mountain.granite),
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),

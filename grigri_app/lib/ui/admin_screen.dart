@@ -6,6 +6,7 @@ import '../model/ad.dart';
 import '../theme.dart';
 import 'ad_card.dart';
 import 'ads_screen.dart' show AdStatusTag;
+import 'ad_region_picker.dart';
 import 'common.dart';
 import 'moderation.dart';
 
@@ -233,11 +234,20 @@ class _AdReview extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Avatar(owner),
               title: Text(owner.name),
-              subtitle: Text(
-                ad.link.toString(),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Mountain.sky),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ad.link.toString(),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Mountain.sky),
+                  ),
+                  Text(
+                    adWhere(context, ad),
+                    style: const TextStyle(color: Mountain.granite),
+                  ),
+                ],
               ),
               onTap: () => showProfileSheet(context, owner),
             ),

@@ -1543,4 +1543,38 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get errorObjectionable =>
       'Mantenha a gentileza: o texto tem palavras que o Grigri não permite.';
+
+  @override
+  String get adRegionsTitle => 'Onde aparece';
+
+  @override
+  String get adRegionsEverywhere =>
+      'Em todo lugar. Adicione um país, uma região ou uma cidade para mostrá-lo só a quem escala lá.';
+
+  @override
+  String get adRegionsHelp =>
+      'Para quem está nesses lugares ou escala perto deles.';
+
+  @override
+  String get adAddRegion => 'Adicionar uma região';
+
+  @override
+  String adRemoveRegion(String name) {
+    return 'Remover $name';
+  }
+
+  @override
+  String get adRegionSearchLabel => 'País, região ou cidade';
+
+  @override
+  String get adRegionSearchHelp =>
+      'Por exemplo Espanha, Catalunha ou Siurana. O anúncio também chega um pouco além.';
+
+  @override
+  String adShowsIn(String places) {
+    return 'Aparece em $places';
+  }
+
+  @override
+  String get adShowsEverywhere => 'Aparece em todo lugar';
 }

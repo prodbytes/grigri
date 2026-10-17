@@ -439,5 +439,14 @@
   "reportBlock": "Bloquear escalador",
   "noticeReportsTitle": "Novas denúncias para analisar",
   "noticeReportsBody": "Admin → Denúncias · responda em até 24 horas",
-  "errorObjectionable": "Mantenha a gentileza: o texto tem palavras que o Grigri não permite."
+  "errorObjectionable": "Mantenha a gentileza: o texto tem palavras que o Grigri não permite.",
+  "adRegionsTitle": "Onde aparece",
+  "adRegionsEverywhere": "Em todo lugar. Adicione um país, uma região ou uma cidade para mostrá-lo só a quem escala lá.",
+  "adRegionsHelp": "Para quem está nesses lugares ou escala perto deles.",
+  "adAddRegion": "Adicionar uma região",
+  "adRemoveRegion": "Remover {name}",
+  "adRegionSearchLabel": "País, região ou cidade",
+  "adRegionSearchHelp": "Por exemplo Espanha, Catalunha ou Siurana. O anúncio também chega um pouco além.",
+  "adShowsIn": "Aparece em {places}",
+  "adShowsEverywhere": "Aparece em todo lugar"
 }
