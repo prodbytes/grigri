@@ -49,8 +49,9 @@ Any signed-in climber can **Report** a profile, a plan, a chat message,
 a plan photo or an ad, from:
 
 - the ⋮ on a **profile sheet** (Report and Block),
-- the ⋮ on the **plan screen** (on others' plans) and on the **Discover
-  card** (next to the organizer),
+- the ⋮ on the **plan screen** (on others' plans; the Discover card has
+  none: tapping its organizer opens their profile sheet, with Report and
+  Block),
 - the ⋮ on an **ad** on the deck,
 - the ⋮ on a **join request card** in a chat (their profile),
 - a **long press on a chat message** (someone else's): Report or Block.

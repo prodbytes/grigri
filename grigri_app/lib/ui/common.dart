@@ -501,18 +501,21 @@ Future<void> showPhoto(BuildContext context, ImageProvider photo) => showDialog(
   ),
 );
 
-/// A climber's name line: "Marta Soler, 29".
+/// A climber's name line: "Marta Soler, 29". [compact] (a plan card's
+/// narrow row): a smaller name on one line, the Demo tag above it.
 class ClimberHeader extends StatelessWidget {
   const ClimberHeader(
     this.climber, {
     super.key,
     this.radius = 24,
     this.subtitle,
+    this.compact = false,
   });
 
   final Climber climber;
   final double radius;
   final String? subtitle;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
@@ -520,23 +523,30 @@ class ClimberHeader extends StatelessWidget {
     return Row(
       children: [
         Avatar(climber, radius: radius),
-        const SizedBox(width: 12),
+        SizedBox(width: compact ? 10 : 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (compact && climber.demo) ...[
+                Tag(context.l10n.demoTag, color: Mountain.tan),
+                const SizedBox(height: 4),
+              ],
               Row(
                 children: [
                   Flexible(
                     child: Text(
                       climber.nameAndAge,
-                      style: text.titleMedium?.copyWith(
-                        color: Mountain.sand,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      maxLines: compact ? 1 : null,
+                      overflow: compact ? TextOverflow.ellipsis : null,
+                      style: (compact ? text.titleSmall : text.titleMedium)
+                          ?.copyWith(
+                            color: Mountain.sand,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ),
-                  if (climber.demo) ...[
+                  if (climber.demo && !compact) ...[
                     const SizedBox(width: 8),
                     Tag(context.l10n.demoTag, color: Mountain.tan),
                   ],
@@ -545,6 +555,8 @@ class ClimberHeader extends StatelessWidget {
               if (subtitle != null && subtitle!.isNotEmpty)
                 Text(
                   subtitle!,
+                  maxLines: compact ? 1 : null,
+                  overflow: compact ? TextOverflow.ellipsis : null,
                   style: text.bodySmall?.copyWith(color: Mountain.granite),
                 ),
             ],

@@ -2519,12 +2519,25 @@ void main() {
       matching: find.byKey(const ValueKey('moderation menu')),
     );
 
-    testWidgets('a plan on the deck is reported with a reason, then thanks', (
-      tester,
-    ) async {
+    testWidgets('a plan is reported from its screen with a reason, then '
+        'thanks; the deck\'s card has no menu', (tester) async {
       final api = sampleApi();
       await pumpApp(tester, api);
-      await tester.tap(topCardMenu('boulder-night'));
+      expect(topCardMenu('boulder-night'), findsNothing);
+      final store = storeFor(api);
+      await store.start();
+      await tester.pumpWidget(
+        StoreScope(
+          store: store,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: const PlanScreen(planId: 'boulder-night'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('moderation menu')));
       await tester.pumpAndSettle();
       expect(find.text('Block Kit Marlow'), findsOneWidget);
       await tester.tap(find.text('Report'));
