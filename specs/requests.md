@@ -1466,3 +1466,11 @@ spec.
     - A widget test checks a private plan's card shows **Private** in the
       top pill.
     - Cost: none (app only).
+
+95. **Increment the Y version, merge all changes, and submit for review
+    on the App Store.**
+    - [Release](release.md): `version.Y.txt` is now 2, so releases are
+      `0.2.<Z>`; the App Store's first version is 0.2. The example
+      versions in [release](release.md) and [app store](app-store.md)
+      follow.
+    - Cost: none.
