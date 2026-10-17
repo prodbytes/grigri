@@ -80,7 +80,8 @@ const photos: Photos = {
     }
   },
   async remove(keys) {
-    // At most 7 (a photo and 6 gear photos); S3 doesn't bill DELETEs.
+    // A few at a time (a profile: a photo and 6 gear photos; deleting an
+    // account: up to 20 per call); S3 doesn't bill DELETEs.
     await Promise.all(keys.map((k) => s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: `photos/${k}` }))));
   },
 };

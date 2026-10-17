@@ -24,7 +24,8 @@ Routes and JSON shapes are in [api.md](api.md#routes); the screen is in
   at once (`fromChat`); videos don't.
 - **Deleting**: whoever added it, the organizer, or an admin. A photo
   added to the plan is deleted from S3 too; a chat photo only leaves the
-  pics, and the chat keeps it.
+  pics, and the chat keeps it. Deleting an account deletes every photo
+  it added, chat photos too ([sign-in](sign-in.md#deleting-my-account)).
 - **Limits**: at most 100 photos a plan (409 past that; a chat photo past
   it stays in the chat only). Like chat media, they're kept 400 days
   after their upload: the photos bucket's lifecycle rule

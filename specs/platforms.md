@@ -4,11 +4,24 @@ The app is built with Flutter 3.47 for Android, iOS and the web.
 
 | | Android | iOS | Web |
 |---|---|---|---|
-| Built by | `make android` (release APK) | `make ios` (unsigned unless `IOS_CODESIGN=1`) | `make web` |
-| Released as | `grigri-<tag>-android.apk` | `grigri-<tag>-ios-unsigned.zip` | `grigri-<tag>-web.zip`, and [deployed](deploy.md) |
+| Built by | `make android` (release APK) | `make ios` (unsigned unless `IOS_CODESIGN=1`); `make ipa` for App Store Connect | `make web` |
+| Released as | `grigri-<tag>-android.apk` | `grigri-<tag>-ios-unsigned.zip`; the App Store ([app-store.md](app-store.md)) | `grigri-<tag>-web.zip`, and [deployed](deploy.md) |
 
 App IDs: `com.nu01.grigri` (Android application ID and iOS bundle ID).
 The app is named **Grigri** everywhere.
+
+**iOS for the App Store** ([app-store.md](app-store.md)):
+
+- **iPhone only**: `TARGETED_DEVICE_FAMILY = 1` (project and Runner
+  target), and `Info.plist` lists only the iPhone's orientations; iPads
+  run it as an iPhone app.
+- **Encryption**: `ITSAppUsesNonExemptEncryption` is `false` in
+  `Info.plist` (HTTPS/TLS and the system's crypto only).
+- **Privacy manifest**: `ios/Runner/PrivacyInfo.xcprivacy`, in the
+  Runner target's resources: no tracking; the data Grigri collects
+  (linked to the user, for the app's functionality only); `UserDefaults`
+  with reason CA92.1. Change it, the App Privacy answers and the
+  [privacy policy](../grigri_index/site/privacy.html) together.
 
 **Icon**: an orange grigri (the belay device) over sage and slate
 mountains, on the night of the [theme](theme.md). The source art is

@@ -103,6 +103,9 @@ class FakeApi implements GrigriApi, SessionApi {
   /// GriGri Pics, by plan (the server finds them by the plan's place;
   /// tests set them).
   final grigriPics = <String, List<GrigriPic>>{};
+
+  /// GriGri Pics' catalog, for the sign-in screen.
+  final catalog = <GrigriPic>[];
   final passed = <String>{};
 
   /// Plans I left: a refresh keeps them out of my deck.
@@ -360,6 +363,9 @@ class FakeApi implements GrigriApi, SessionApi {
   Uri picUrl(String key) => Uri.parse('https://grigri.test/pics/$key');
 
   @override
+  Future<List<GrigriPic>> picsCatalog() async => catalog;
+
+  @override
   Future<Uint8List> photoBytes(String key) async {
     final bytes = uploads[key];
     if (bytes == null) throw const ApiException(404, 'No such photo.');
@@ -613,6 +619,38 @@ class FakeApi implements GrigriApi, SessionApi {
     climbers[meId!] = saved;
     return saved;
   });
+
+  @override
+  Future<void> deleteAccount() async {
+    final token = headers == null ? null : await _caller();
+    await _route('DELETE /api/me', () {
+      final id = meId;
+      if (id != null) {
+        // Like the API: out of every plan (the last one out ends it), my
+        // requests withdrawn, my profile gone.
+        for (final p in plans.values.toList()) {
+          if (!p.memberIds.contains(id)) continue;
+          final rest = [...p.memberIds]..remove(id);
+          if (rest.isEmpty) {
+            plans.remove(p.id);
+          } else {
+            plans[p.id] = p.copyWith(
+              memberIds: rest,
+              organizerId: p.organizerId == id ? rest.first : p.organizerId,
+            );
+          }
+        }
+        requestsById.removeWhere((_, r) => r.climberId == id);
+        climbers.remove(id);
+        meId = null;
+      }
+      // Signed out everywhere.
+      if (token != null) {
+        final email = sessions[token];
+        sessions.removeWhere((_, owner) => owner == email);
+      }
+    });
+  }
 
   bool _fits(Plan p) {
     final level = climbers[meId]?.levels[p.discipline];

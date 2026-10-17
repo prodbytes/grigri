@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import '../config.dart';
 import '../data/grigri_store.dart';
 import '../model/climbing.dart';
+import '../model/match_score.dart';
 import '../model/plan.dart';
 import '../theme.dart';
 import 'ad_card.dart';
@@ -541,12 +542,15 @@ class _PlanCover extends StatelessWidget {
                   key: ValueKey('match ${plan.id}'),
                   compact: true,
                 ),
-                _Glass(
-                  child: Text(
-                    match.reason.label(l),
-                    style: const TextStyle(color: Colors.white),
+                // The plan's discipline is already in view: no pill for
+                // "You don't climb this discipline".
+                if (match.reason != MatchReason.otherDiscipline)
+                  _Glass(
+                    child: Text(
+                      match.reason.label(l),
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   ),
-                ),
               ],
             ],
           ),

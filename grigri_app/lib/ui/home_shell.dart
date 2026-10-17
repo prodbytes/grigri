@@ -17,8 +17,8 @@ import 'plan_editor.dart';
 import 'plans_screen.dart';
 import 'profile_screen.dart';
 
-/// The app's tabs: Discover, Plans, Chats, Notifications and Profile, Ads
-/// for Premium climbers (specs/ads.md), and Admin for admins. While the app is in the foreground it keeps a live
+/// The app's tabs: Discover, Plans, Chats, Notifications, Ads for Premium
+/// climbers (specs/ads.md), Admin for admins, and Profile, always last. While the app is in the foreground it keeps a live
 /// connection (specs/live-updates.md), whose hints refresh what changed,
 /// and refreshes from the API: the tab I open, and every [refreshEvery]
 /// my plans, requests, notifications and the open tab; only every
@@ -172,9 +172,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       _plans,
       _chats,
       _notices,
-      _profile,
       if (ads) _ads,
       if (admin) _admin,
+      _profile,
     ];
     if (!tabs.contains(_tab)) _tab = _discover;
     final screens = [
@@ -225,11 +225,6 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
             selectedIcon: badged(Icons.notifications, unread),
             label: l.tabNotifications,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: l.tabProfile,
-          ),
           if (ads)
             NavigationDestination(
               icon: const Icon(Icons.campaign_outlined),
@@ -242,6 +237,11 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
               selectedIcon: const Icon(Icons.admin_panel_settings),
               label: l.tabAdmin,
             ),
+          NavigationDestination(
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: l.tabProfile,
+          ),
         ],
       ),
     );

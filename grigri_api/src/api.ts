@@ -4,7 +4,7 @@
 // caller's profile (409 "no profile" until GET /api/me creates it, from the
 // Google account's name, or PUT /api/me saves it).
 import { randomBytes } from 'node:crypto';
-import type { AppleTokens, RevokeOutcome } from './apple.js';
+import { APPLE_SUBJECT_PREFIX, type AppleTokens, type RevokeOutcome } from './apple.js';
 import { type Auth, type Caller, subjectHash } from './auth.js';
 import { ApiError, badRequest, conflict, forbidden, notFound, unavailable } from './domain/errors.js';
 import {
@@ -17,6 +17,7 @@ import {
   isOpen,
   planType,
   publicClimber,
+  requestId,
   requestJson,
 } from './domain/model.js';
 import { type Ad, AD_STATUSES, type AdStatus, MAX_ADS_PER_OWNER, adInput, adSettingsInput, deckAds } from './domain/ads.js';
@@ -49,6 +50,19 @@ export const MAX_OPEN_REQUESTS = 30;
 
 /** A new profile's name when Google didn't give one (sessions from before names were kept). */
 export const NO_NAME = 'Climber';
+
+/** Who left, in the chat's note, when an account is deleted: never their name. */
+export const DELETED_CLIMBER = 'A climber';
+
+/** The account DELETE /api/me is deleting, as Deps.onDeleteAccount gets it. */
+export interface DeletingAccount {
+  /** The sign-in subject, `<iss>#<sub>` (Sign in with Apple's issuer is https://appleid.apple.com). */
+  subject: string;
+  /** Its climber; undefined when the profile was already gone (or never made). */
+  climberId?: string;
+  /** Its verified email, when known. */
+  email?: string;
+}
 
 /** The deck's plans an admin's deck scores (the best first), and how many at once. */
 export const SCORED_DECK = 30;
@@ -125,6 +139,14 @@ export interface Deps {
   billing?: Billing;
   /** Revokes Sign in with Apple's tokens (apple.ts); none: nothing to revoke. */
   appleTokens?: Pick<AppleTokens, 'revoke'>;
+  /**
+   * Runs while DELETE /api/me deletes an account, after Premium is
+   * cancelled and before any of its data is deleted: where an identity
+   * provider's grants are revoked (Sign in with Apple's tokens, which
+   * Apple requires revoking). It must be idempotent: a retry after a
+   * failure runs it again; throwing stops the deletion, to be retried.
+   */
+  onDeleteAccount?: (account: DeletingAccount) => Promise<void>;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -225,6 +247,8 @@ export class Api {
       return { climber, admin: s.caller.admin, roles, premium };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
+    // A session route: a blocked climber may delete their account too.
+    r('DELETE /api/me', 'session', (req, s) => this.deleteAccount(req, s));
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
     r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });
 
@@ -301,7 +325,7 @@ export class Api {
     const now = this.clock();
     if (route.access === 'session') {
       const names = new Map<string, string>();
-      const ctx = { now, newId: messageIds(), name: () => 'Someone', random: this.random };
+      const ctx = { now, newId: messageIds(), name: (cid: string) => names.get(cid) ?? 'Someone', random: this.random };
       return route.handler(full, { caller: req.caller, me: undefined as never, now, ctx, names });
     }
     const climberId = await this.store.climberIdFor(req.caller.subject);
@@ -634,6 +658,130 @@ export class Api {
     });
   }
 
+  // --- Deleting my account (specs/sign-in.md#deleting-my-account) -----------
+
+  /**
+   * DELETE /api/me {"confirm": true}: deletes my account for good. Each
+   * step can run again, so a retry after a failure finishes the job; the
+   * sign-in subject's link to my climber and my sessions go last, so a
+   * retry still finds what's left.
+   */
+  private async deleteAccount(req: Request, s: Session) {
+    if (asObject(req.body).confirm !== true) throw badRequest('send {"confirm": true} to delete your account for good');
+    const subject = s.caller.subject;
+    const climberId = await this.store.climberIdFor(subject);
+    if (climberId) {
+      await this.deleteClimber(climberId, s);
+    } else {
+      await this.deps.onDeleteAccount?.({ subject, ...(s.caller.email ? { email: s.caller.email } : {}) });
+    }
+    await this.store.deleteSubject(subject);
+    // A Sign in with Apple refresh token kept for revocation goes with it.
+    if (subject.startsWith(APPLE_SUBJECT_PREFIX)) await this.store.deleteAppleToken(subject);
+    // Signed out everywhere, this device too.
+    await this.deps.auth.signOutEverywhere(s.caller);
+    console.log(JSON.stringify({ level: 'info', msg: 'account deleted' }));
+    return {};
+  }
+
+  private async deleteClimber(climberId: string, s: Session): Promise<void> {
+    const subject = s.caller.subject;
+    const [me, sub, kept] = await Promise.all([
+      this.store.getClimber(climberId),
+      this.store.getSubscription(climberId),
+      this.store.getEmails([climberId]),
+    ]);
+    const email = s.caller.email ?? kept[climberId];
+    // 1. Premium: Stripe stops charging at once (no refund of the period
+    // paid), then rbacr's role goes. Either failing stops here: nothing is
+    // deleted while I could still be charged.
+    if (sub && sub.status !== 'canceled' && sub.status !== 'incomplete_expired') {
+      if (!this.deps.billing) throw unavailable("your Premium subscription can't be cancelled right now; try again later");
+      await this.deps.billing.cancel(sub.subscriptionId);
+      // So a retry doesn't ask Stripe again.
+      await this.store.putSubscription({ ...sub, status: 'canceled', updatedAt: s.now.toISOString() });
+    }
+    const grants = this.deps.grants;
+    if (grants) {
+      for (const e of new Set([email, sub?.email].filter((x): x is string => !!x))) await grants.revoke(e, this.premiumRole);
+    }
+    // 2. The sign-in provider's own grants: Sign in with Apple's tokens,
+    // which Apple requires revoking (never throws: a failure is logged, and
+    // the account is still deleted), then any other provider's.
+    await this.revokeAppleTokens(climberId);
+    await this.deps.onDeleteAccount?.({ subject, climberId, ...(email ? { email } : {}) });
+    // 3. What I wrote and added in every plan I'm in, left or asked to join.
+    const [memberOf, left, asked] = await Promise.all([
+      this.store.memberPlanIds(climberId),
+      this.store.leftPlanIds(climberId),
+      this.store.askedRequests(climberId),
+    ]);
+    for (const planId of new Set([...memberOf, ...left, ...asked.map((r) => r.planId)])) {
+      await this.eraseFromPlan(planId, climberId);
+    }
+    // 4. Out of my plans, as leaving does: the organizer hands over, or the
+    // last member ends the plan. The note doesn't name me.
+    s.names.set(climberId, DELETED_CLIMBER);
+    for (const planId of memberOf) await this.leaveForGood(planId, climberId, s);
+    // 5. My join requests, whatever became of them.
+    for (const r of await this.store.askedRequests(climberId)) await this.withdraw(r, climberId);
+    // 6. My ads, with their media.
+    for (const ad of await this.store.adsBy(climberId)) {
+      if (ad.media) await this.deps.photos.remove([ad.media.key]);
+      await this.store.deleteAd(ad.id);
+    }
+    // 7. My profile's photos (only ever my own folder's), then everything
+    // keyed to me: profile, memberships, passes, notices, email, Premium.
+    if (me) {
+      const owners = [subjectHash(subject), climberId];
+      const photos = photosOf(me).filter((k) => owners.includes(k.split('/')[0]!));
+      if (photos.length > 0) await this.deps.photos.remove(photos);
+    }
+    await this.store.deleteClimberItems(climberId);
+  }
+
+  /** My messages (and their media), my request's note and my photos in a plan's chat and Your Pics. */
+  private async eraseFromPlan(planId: string, climberId: string): Promise<void> {
+    const current = await this.store.getPlan(planId);
+    if (!current) return;
+    const [messages, pics] = await Promise.all([this.store.messages(planId), this.store.planPics(planId)]);
+    const myRequest = requestId(planId, climberId);
+    const mine = messages.filter((m) => m.authorId === climberId || m.requestId === myRequest);
+    const myPics = pics.filter((p) => p.uploaderId === climberId);
+    const keys = [...new Set([...mine.flatMap((m) => (m.attachment ? [m.attachment.key] : [])), ...myPics.map((p) => p.key)])];
+    for (let i = 0; i < keys.length; i += 20) await this.deps.photos.remove(keys.slice(i, i + 20));
+    for (const p of myPics) await this.store.deletePlanPic(planId, p.id);
+    if (mine.length > 0) await this.store.deleteMessages(mine);
+    const others = current.plan.memberIds;
+    await this.hint([
+      ...(mine.length > 0 ? hintsFor(others, { kind: 'message', planId }, climberId) : []),
+      ...(myPics.length > 0 ? hintsFor(others, { kind: 'pics', planId }, climberId) : []),
+    ]);
+  }
+
+  /** Leaves a plan as POST /api/plans/{id}/leave does (none: not in it any more). */
+  private async leaveForGood(planId: string, climberId: string, s: Session): Promise<void> {
+    const members = await this.retry(async () => {
+      const loaded = await this.store.loadPlan(planId);
+      if (!loaded || !loaded.plan.memberIds.includes(climberId)) return null;
+      await this.loadNames(s, loaded.plan.memberIds, loaded.requests.map((r) => r.climberId));
+      const effects = rules.leave(loaded, climberId, s.ctx);
+      await this.store.apply(loaded, effects, s.now);
+      return effects.plan?.memberIds ?? [];
+    });
+    if (members) await this.hint(hintsFor(members, { kind: 'plan', planId }, climberId));
+  }
+
+  /** Withdraws my request: gone, and an answer racing it fails (the plan's version moves on). */
+  private async withdraw(request: JoinRequest, climberId: string): Promise<void> {
+    await this.retry(async () => {
+      const current = await this.store.getPlan(request.planId);
+      if (!current) return this.store.deleteRequest(request.planId, climberId);
+      await this.store.withdrawRequest(current, climberId);
+      if (isOpen(request)) await this.hint(hintsFor(current.plan.memberIds, { kind: 'request', planId: request.planId }, climberId));
+    });
+  }
+
   // --- Premium (specs/premium.md) --------------------------------------------
 
   /** GET /api/premium: mine, and the prices (null when Premium can't be bought here: no Stripe keys). */
@@ -689,6 +837,9 @@ export class Api {
     const sub = await billing.subscription(subscriptionId, now);
     // Not Grigri Premium (another product on the account): nothing to do.
     if (!sub) return { received: true };
+    // Its account was deleted (which cancelled it and revoked the role):
+    // nothing of theirs is kept again.
+    if (!(await this.store.getClimber(sub.climberId))) return { received: true };
     const current = await this.store.getSubscription(sub.climberId);
     const stale = current && current.subscriptionId !== sub.subscriptionId && isPaid(current.status) && !isPaid(sub.status);
     if (stale) return { received: true };

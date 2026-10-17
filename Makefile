@@ -5,6 +5,8 @@
 #   make web       grigri_app/build/web/
 #   make android   release APK
 #   make ios       Runner.app (macOS only; unsigned unless IOS_CODESIGN=1)
+#   make ipa       signed .ipa for App Store Connect (macOS only;
+#                  specs/app-store.md)
 #   make clean     flutter clean
 
 # One build time for every target in a run, so they share a version (see
@@ -15,7 +17,7 @@ endif
 
 export MODE IOS_CODESIGN BUILD_NUMBER VERSION_Z
 
-.PHONY: all web android ios clean
+.PHONY: all web android ios ipa clean
 
-all web android ios clean:
+all web android ios ipa clean:
 	@bash scripts/make.sh $@

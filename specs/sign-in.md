@@ -53,7 +53,18 @@ CanvasKit and Google Identity Services) is what guards it.
 1. **Start**: with a kept session the app goes straight to step 2, with
    no Google or Apple round-trip. Without one, the **sign-in screen**
    ([sign_in_screen.dart](../grigri_app/lib/ui/sign_in_screen.dart)):
-   the app's name and tagline, and the sign-in buttons. (Without a kept
+   the [landing page](landing.md)'s look on every platform. A GriGri
+   Pics photo edge to edge (the first photo in the catalog, credited
+   under it), the logo, "100% free", the headline **Find a climbing
+   plan.**, the tagline and the sign-in buttons (on iOS, Sign in with Apple first), with a demo plan card
+   that swipes right on a loop, bringing in the landing page's three
+   made-up plans in turn, each at another crag (still, on the first,
+   when the device asks for less motion). Below: how it works, what's free, and a last call, **Join free
+   with Google**, which signs in (on the web it scrolls back up to
+   Google's button, the only one that can). The photos come from GriGri
+   Pics' catalog, `<site>/pics/catalog.json`, a static file read without
+   a token. When it can't be read, the screen shows no photos and works
+   the same. (Without a kept
    session, the app also tries google_sign_in's lightweight
    authentication at start, and starts a session if Google answers.)
 2. `GET /api/me`: my profile, and whether I'm an admin. The first time,
@@ -82,6 +93,83 @@ CanvasKit and Google Identity Services) is what guards it.
   sign in with Apple. Try again." (Google's: "Couldn't sign in with
   Google. Try again."); the API refusing the token: "Couldn't sign in.
   Try again."
+
+## Deleting my account
+
+App Store guideline 5.1.1(v): an app that makes accounts lets people
+delete them from inside it.
+
+- **Delete account**, at the end of the Profile tab (in clay, the
+  theme's warning color), opens a confirmation that says what goes: my
+  profile and photos, my messages and photos in group chats, my join
+  requests and ads; I leave all my plans (someone else takes over the
+  ones I organize; one with only me ends); Premium paid by card is
+  cancelled at once, with no refund of the time left; a subscription
+  bought through Apple must be cancelled in the iPhone's Settings; I'm
+  signed out on every device. **Delete for good** works only once
+  "I understand this can't be undone" is ticked; **Cancel** keeps the
+  account.
+- Confirmed, the app calls `DELETE /api/me` with `{"confirm": true}`.
+  Done, the API has ended every session of mine, so the app forgets
+  its own and goes back to the sign-in screen. If it fails, the app says
+  "Couldn't delete your account. Try again." and stays signed in; trying
+  again finishes the job.
+- Only ever my own account: the route takes no id, the account is the
+  session's. It's a session route, so a [blocked](admin.md#blocking)
+  climber can delete theirs too (rbacr's block stays on their email).
+
+What the API does, in this order. Every step can run again, so a retry
+after a failure picks up where it stopped; the account's link to its
+climber and its sessions go last, so a retry still gets in.
+
+1. **Premium**: a [Stripe](premium.md) subscription that isn't cancelled
+   yet is cancelled **at once** (no more charges, no refund of the period
+   paid; Stripe keeps its invoices, as tax records require), and rbacr's
+   `premium` role is revoked. If Stripe or rbacr fails, nothing is
+   deleted. Stripe's later events about that subscription are ignored.
+   Grigri can't cancel a subscription bought through Apple: the
+   confirmation says to cancel it in Settings.
+2. **The sign-in provider's grants**, before any data is deleted: Sign
+   in with Apple's tokens are revoked at Apple, which Apple requires on
+   deletion (`revokeAppleTokens`, [below](#apple-token-revocation); it never
+   throws, so a failure at Apple is logged and the deletion goes on).
+   Then the API's `onDeleteAccount` hook (`Deps.onDeleteAccount` in
+   [api.ts](../grigri_api/src/api.ts)) runs with `{subject, climberId,
+   email}`, for any other provider; it must be idempotent, and throwing
+   stops the deletion, to be retried. Google needs nothing: its ID token
+   is used once, at sign-in.
+3. **What I wrote and added, removed** (the privacy-friendly choice, not
+   "Deleted climber" placeholders): in every plan I'm in, left or asked
+   to join, my messages (and their photos and videos in S3), the request
+   notes of my join requests, and the photos I added to its Your Pics.
+   The others get live-update hints. Notes the chat wrote earlier
+   ("… created the plan", "… joined") keep the name they were written
+   with.
+4. **Out of every plan**, through the usual [leave](matching.md) rules:
+   an organizer's plan is handed to a member picked at random, a plan
+   with only me ends (with its requests and chat), open requests stop
+   waiting for my yes; the chat's note says "A climber left the plan",
+   never my name; the others get live-update hints.
+5. **My join requests withdrawn**, whatever became of them (the plan's
+   version moves on, so an answer racing it reloads without it).
+6. **My ads**, with their photos or videos.
+7. **My profile and gear photos** in S3, then **every item keyed to me**
+   (`CLIMBER#<id>`: the profile, memberships, passes, notices, the kept
+   email, the Premium copy, and anything added there later), then the
+   sign-in subject's link to my climber (`SUB#<subject>`), then **every
+   session** (signed out on every device: an old token gets 401).
+
+Not deleted: walls and routes I added to the [route finder](route-finder.md)
+(the shared map of the rock, without personal data; they lose their
+attribution); notices other people got about me (they point to a profile
+that's gone); [match scores](match-scores.md) (they expire a day after
+their plan starts, and the next run skips me); uploads never saved
+(expired within a day by the bucket's rule). Signing in again with the
+same Google account starts a new, empty profile.
+
+Cost: no new resource. A deletion is a few dozen DynamoDB reads and
+writes, S3 deletes (free) and one or two Stripe calls (free): well under
+a cent.
 
 ## Per platform
 
@@ -112,6 +200,13 @@ or `.env`; see [.env.example](../.env.example)):
   the repository variable `GOOGLE_WEB_CLIENT_ID` (Deploy, and Release for
   GA tags) and the RC's from `GOOGLE_WEB_CLIENT_ID_RC` (Deploy RC, and
   Release for the other tags).
+- `GOOGLE_WEB_CLIENT_ID_LOCAL`: the local site's web client
+  (`devbox services up`), whose JavaScript origin is
+  `https://local.grigri.nu01.com:2543`: Google matches the port too, so
+  the origin without it isn't enough. `scripts/flutter-web.sh` builds the
+  local web app with it, and the local API checks it (process-compose's
+  Floci); without it both use `GOOGLE_WEB_CLIENT_ID`. Device builds still
+  use `GOOGLE_WEB_CLIENT_ID`, as they talk to a deployed stage.
 - `GOOGLE_IOS_CLIENT_ID`: iOS only. `scripts/dart-defines.sh` also writes
   it, and its reversed form `com.googleusercontent.apps.<id>`, to the
   git-ignored `grigri_app/ios/Flutter/Private.xcconfig` as
@@ -205,9 +300,9 @@ person's Apple tokens when they delete their account**. The pieces, in
   the kept token whatever Apple said. It never throws; it answers
   `'revoked'`, `'none'` (not an Apple account, or no token kept),
   `'skipped'` (no key configured: a warning) or `'failed'` (logged).
-  **Account deletion (`DELETE /api/me`) must call it before it deletes
-  the profile** (it reads the profile's `subject`), and delete the
-  `SUB#<subject>` items (`SUB` and `APPLE`) with the rest.
+  Account deletion (`DELETE /api/me`) calls it in its step 2, before
+  any data goes (it reads the profile's `subject`), and deletes the
+  `SUB#<subject>` items (`SUB` and `APPLE`) with the sign-in link.
 - **Without the key** (any of `AppleTeamId`, `AppleKeyId`,
   `ApplePrivateKey` empty, or a key that isn't a PKCS#8 .p8): Sign in with
   Apple still works; no code is exchanged and nothing is revoked, with a

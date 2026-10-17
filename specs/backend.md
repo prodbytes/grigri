@@ -71,7 +71,8 @@ who are members, or by an admin.
   after its last use, it moves forward (at most one write a day), and it
   expires after **365 days without use** (DynamoDB's TTL deletes it). No
   absolute limit: people stay signed in until they sign out
-  (`DELETE /api/session`, or `DELETE /api/sessions` everywhere). Google ID
+  (`DELETE /api/session`, or `DELETE /api/sessions` everywhere) or
+  delete their account (`DELETE /api/me`, [sign-in](sign-in.md#deleting-my-account)). Google ID
   tokens last an hour and can't be refreshed quietly on the web, which
   had signed people out hourly.
 - **Identity**: a Google account (`https://accounts.google.com#<sub>`)

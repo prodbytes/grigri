@@ -47,6 +47,13 @@ Subscribed, the card says "Premium: renews on <date>" (or "ends on <date>"
 once cancelled) and offers **Manage subscription**: Stripe's billing
 portal (`POST /api/premium/portal`), to cancel or change the card.
 
+**Deleting my account** ([sign-in.md](sign-in.md#deleting-my-account))
+cancels the subscription **at once** (Stripe's `DELETE
+/v1/subscriptions/{id}`: no more charges, no refund of the period
+already paid) and revokes the role, before anything else is deleted;
+Stripe's later events about it are ignored, so nothing of the deleted
+account is saved again.
+
 **Who is Premium**: whoever holds the `premium` role of rbacr's `grigri`
 system (`premium-rc` on the RC, which asks production's rbacr too, so
 its test-mode payments never make anyone Premium on production). Like
@@ -92,8 +99,9 @@ for admins, or a comp).
 ## Keys and setup
 
 - `GRIGRI_STRIPE_SECRET_KEY` (a secret key, `sk_live_…`/`sk_test_…`, or a
-  restricted one, `rk_…`, with write access to Checkout Sessions and
-  Customer portal and read access to Subscriptions) and
+  restricted one, `rk_…`, with write access to Checkout Sessions,
+  Customer portal and Subscriptions, to cancel one when an account is
+  deleted) and
   `GRIGRI_STRIPE_WEBHOOK_SECRET` (`whsec_…`): repository secrets for
   production (live mode), `GRIGRI_STRIPE_SECRET_KEY_RC` and
   `GRIGRI_STRIPE_WEBHOOK_SECRET_RC` for the RC (test mode); `.env` for
