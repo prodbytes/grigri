@@ -341,6 +341,16 @@ export class Store implements SessionStore, AppleTokenStore {
     return items.map(toAd);
   }
 
+  /** The ads I skipped on the deck. */
+  async skippedAdIds(climberId: string): Promise<string[]> {
+    return this.climberChildren(climberId, prefix.adSkip);
+  }
+
+  /** I skipped an ad: it never shows to me again. */
+  async skipAd(climberId: string, adId: string, now: Date): Promise<void> {
+    await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.adSkip(climberId, adId), type: 'adSkip', adId, time: now.toISOString() } }));
+  }
+
   async getAdSettings(): Promise<AdSettings> {
     const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.adSettings() }));
     return typeof Item?.every === 'number' ? { every: Item.every } : DEFAULT_AD_SETTINGS;

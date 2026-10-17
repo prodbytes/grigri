@@ -39,7 +39,7 @@ export const DECK_ADS = 20;
 export interface AdSettings {
   every: number;
 }
-export const DEFAULT_AD_SETTINGS: AdSettings = { every: 5 };
+export const DEFAULT_AD_SETTINGS: AdSettings = { every: 10 };
 export const MAX_AD_EVERY = 50;
 
 const MEDIA_EXT: Record<string, AdMedia['kind']> = {
@@ -90,15 +90,16 @@ export function adSettingsInput(body: unknown): AdSettings {
 
 /**
  * The ads a deck shows: approved, their owner Premium and not blocked,
- * not mine; newest approved first, at most DECK_ADS.
+ * not mine, not one I skipped; newest approved first, at most DECK_ADS.
  */
 export function deckAds(
   approved: Ad[],
   meId: string,
   ownerOk: (ownerId: string) => boolean,
+  skipped: ReadonlySet<string> = new Set(),
 ): Ad[] {
   return approved
-    .filter((a) => a.status === 'approved' && a.ownerId !== meId && ownerOk(a.ownerId))
+    .filter((a) => a.status === 'approved' && a.ownerId !== meId && !skipped.has(a.id) && ownerOk(a.ownerId))
     .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt))
     .slice(0, DECK_ADS);
 }

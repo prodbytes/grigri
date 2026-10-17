@@ -520,6 +520,9 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   Future<void> deleteAd(String adId) => _send('DELETE', ['ads', adId]);
 
   @override
+  Future<void> skipAd(String adId) => _post(['ads', adId, 'skip']);
+
+  @override
   Future<AdminAds> adminAds(AdStatus status) async =>
       ApiJson.adminAds(await _get(['admin', 'ads'], {'status': status.name}));
 
