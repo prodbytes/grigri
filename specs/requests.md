@@ -1397,3 +1397,25 @@ spec.
     - Cost: none. No new resource or API call: gear is a few more names
       in the profile item, and members' profiles already come with the
       plan.
+
+91. **On Apple's App Store Connect, create all the resources needed to
+    publish the app and submit it (after merging and syncing all
+    changes); make sure the app icon shows.**
+    - [App Store](app-store.md): the App ID `com.nu01.grigri` has Sign in
+      with Apple. The app record is **Grigri Climbing** (`6823947725`;
+      "Grigri" is taken), with subtitle, categories, content rights, a
+      16+ age rating (overriding Apple's 13+), Free in 175 countries, the
+      published privacy label, review contact and notes (no demo account:
+      Sign in with Apple), and five 6.3-inch screenshots of made-up demo
+      data. Apple now requires the 6.3-inch set, not the 6.9-inch one.
+    - [Premium](premium.md): the **Grigri Premium** group with the
+      monthly ($19.99) and yearly ($199.99, paid upfront) subscriptions,
+      available everywhere, with English names and review notes, and
+      both App Store Server Notifications URLs pointing at production.
+    - The icon: App Store Connect shows a grid placeholder until a build
+      is processed. The GA archive already has the logo, so uploading it
+      is the fix; nothing needs generating.
+    - Not submitted yet: the GA build (0.1.202610171131) still has to be
+      uploaded, and each subscription needs its review screenshot.
+    - Cost: none beyond the Apple Developer Program ($99 a year). App
+      Store Connect, TestFlight and the notifications are free.

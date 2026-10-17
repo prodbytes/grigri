@@ -69,51 +69,69 @@ TestFlight comes first, then review for the App Store.
   (`flutter build ipa --release`, with the version, build number and
   build settings `make ios` uses), in `grigri_app/build/ios/ipa/`.
 
-## In progress, in their own pull requests
+The four the guidelines asked for are merged: **Sign in with Apple**
+(4.8), **account deletion** in Me → Delete account (5.1.1(v)),
+**report, block and filter** (1.2), and **Apple in-app purchase for
+Premium** (3.1.1).
 
-- **Sign in with Apple** (guideline 4.8: an app that offers Google
-  sign-in must offer it too).
-- **Account deletion** in the app, **Me → Delete account** (guideline
-  5.1.1(v)). Until then, by email, as the policy says.
-- **Report, block and filter** for people and content (guideline 1.2,
-  user-generated content): report a person, plan or message; block a
-  person; act on reports within 24 hours (the support page promises it).
-- **Apple in-app purchase for Premium** (guideline 3.1.1: Premium is
-  sold in the app, so it can't send iPhone users to Stripe).
+## In App Store Connect
 
-Submit for review only once these four are merged.
-
-## By hand, by the owner
+Set up on 2026-10-17. What's left before **Add for Review**: an
+uploaded build picked on the version's page, and each subscription's
+review screenshot (the Premium card with the App Store's prices, which
+only an iOS build shows). Until a build is processed, App Store Connect
+shows a grid placeholder for the app's icon: the icon comes from the
+build (`AppIcon` in the asset catalog, the 1024 px `ios-marketing` one
+included); there's no separate icon upload.
 
 ### Apple accounts and signing
 
-1. Join the paid **Apple Developer Program** ($99 a year; a free
-   Personal Team can't distribute). It's the only running cost here, and
-   there's no cheaper way onto the App Store.
+1. The paid **Apple Developer Program** ($99 a year; a free Personal
+   Team can't distribute), team `LMX88986F3`. It's the only running cost
+   here, and there's no cheaper way onto the App Store.
 2. An **Apple Distribution** certificate: Xcode's automatic signing makes
    it on the first archive (Xcode → Settings → Accounts → the team →
    Manage Certificates otherwise). `IOS_DEVELOPMENT_TEAM` in `.env` is the
    paid team's ID ([platforms](platforms.md)).
-3. In **App Store Connect → Apps → +**: a new iOS app, name **Grigri**,
-   primary language **English (U.S.)**, bundle ID **com.nu01.grigri**
-   (register it under Certificates, Identifiers & Profiles first, with
-   the Sign in with Apple capability once that's in), SKU
-   **grigri-ios**, full access.
+3. The App ID **com.nu01.grigri** (Certificates, Identifiers & Profiles,
+   "XC com nu01 grigri") has **Sign in with Apple** (primary App ID) and
+   In-App Purchase. Adding a capability invalidates the provisioning
+   profiles; automatic signing makes new ones.
+4. The app record: **Grigri Climbing** (Apple ID `6823947725`; the name
+   "Grigri" is taken on the App Store), primary language **English
+   (U.S.)**, bundle ID **com.nu01.grigri**, SKU **grigri-ios**, full
+   access. The home screen still says **Grigri** (the bundle's display
+   name); only the store listing's name differs.
+5. **Business**: the Free and Paid Apps agreements, the bank account and
+   the tax forms are active, so Premium can be sold.
 
 ### App information
 
+- **Subtitle**: `Join a climbing plan`.
 - **Category**: **Sports** (primary), **Social Networking** (secondary).
   Climbing comes first; Sports keeps it away from dating apps.
+- **Content rights**: contains third-party content, with the rights to
+  it (the crag photos, credited; what climbers post).
 - **Privacy policy URL**: https://grigri.nu01.com/privacy.html
 - **Support URL**: https://grigri.nu01.com/support.html
 - **Marketing URL** (optional): https://grigri.nu01.com/
 - **Copyright**: 2026, the owner's name.
-- **Price**: Free. **In-app purchases**: Premium monthly and yearly, once
-  Apple's in-app purchase is in.
+- **Price**: Free, available in all 175 countries or regions.
+- **Subscriptions**: the group **Grigri Premium** with
+  `com.nu01.grigri.premium.monthly` (1 month, $19.99) and
+  `com.nu01.grigri.premium.yearly` (1 year upfront, $199.99; not
+  Apple's "monthly with a 12-month commitment"), in all countries at
+  Apple's converted prices, with English display names ("Grigri Premium
+  (monthly)" / "(yearly)": "Advertise and find routes with the camera.")
+  and review notes ([premium](premium.md)). They go to review with the
+  first app version; each still needs its review screenshot of the
+  Premium card.
+- **App Store Server Notifications**: the production and sandbox URLs
+  are both `https://grigri.nu01.com/api/apple/notifications`.
 
 ### App Privacy questionnaire
 
-Answer **Yes, we collect data**, and for each type below: **linked to
+Published. **Yes, we collect data**, and for each type below: **linked to
 the user**, **not used for tracking**, purpose **App Functionality**
 only. It must match the privacy manifest above.
 
@@ -142,18 +160,24 @@ The questionnaire's answers:
   the app).
 - Contests, in-app controls: **No**.
 
-With unmoderated chat between strangers and meetings in person, expect
-**16+** in Apple's current scale (older questionnaires gave **17+**);
-it also fits the policy's "not for under-16s" and the profile's age
-rule (16–99). Apple works the rating out from the answers; don't pick a
-lower one by answering "No" to chat.
+- Social media (plans spread to many people through the deck),
+  advertising: **Yes**. Social media off for under-13s: **No** (that
+  needs Apple's Declared Age Range API, which Grigri doesn't call).
+
+Apple's answers-based rating is **13+**; it's **overridden to 16+**
+(17+ on iOS before 26), to match the policy's "not for under-16s" and
+the profile's age rule (16–99). Don't lower it by answering "No" to
+chat.
 
 ### The version's page
 
-Draft copy (English); keep to the "plans, not partners" wording
+Version **0.1.202610171131** (it must match the uploaded build's
+version; change both together). The English copy is entered, as below,
+with the support and marketing URLs and the copyright "2026 Julio
+Machado Faerman". Keep to the "plans, not partners" wording
 ([README](README.md)):
 
-- **Name**: Grigri
+- **Name**: Grigri Climbing
 - **Subtitle** (30 characters): `Join a climbing plan`
 - **Promotional text** (170): `Make a plan for the crag or the gym, or
   swipe right on someone else's. Each match opens the group's chat.
@@ -185,38 +209,38 @@ Draft copy (English); keep to the "plans, not partners" wording
 
 - **Keywords** (100 characters, commas, no spaces):
   `climbing,bouldering,crag,belay,partners,sport climbing,trad,gym,outdoor,rope`
-- **Screenshots**: the **6.9-inch iPhone** set is required, **1320 ×
-  2868** portrait (an iPhone 16 Pro Max or 17 Pro Max simulator); 3 to
-  10 of them: Find (the deck, a plan with a crag photo), the plan's
-  group chat, Plans, the profile, the plan editor. Use the demo showcase
-  or made-up people only; no real climbers' names or faces.
+- **Screenshots**: App Store Connect now requires the **6.3-inch
+  iPhone** set ("iPhone with Dynamic Island, medium display": **1206 ×
+  2622** portrait, or 1179 × 2556) and scales it to the other iPhones;
+  the 6.9-inch set (1320 × 2868) is optional. Five are up: Find (the
+  deck, a demo plan with a credited crag photo), a group chat, a chat
+  with join requests to answer, Plans, and the plan editor. They're the
+  web app on the local stack, signed in as the made-up seed climber Sam
+  Okoro, taken with Playwright at a 402 × 874 viewport and 3× scale.
+  Use the demo showcase or made-up people only; no real climbers' names
+  or faces.
 - **What's New**: for later versions.
 
 ### Review notes and demo account
 
-Reviewers must be able to sign in and see real plans:
+Entered on the version's page. Reviewers must be able to sign in and
+see real plans:
 
-- **Sign-in**: Sign in with Apple, once it's in, needs no demo account.
-  Until then (and as a fallback), make a Google account for review only
-  (e.g. a new Gmail address), sign in with it once on production, and
-  give its email and password in **App Review Information → Sign-in
-  required**. Turn off its two-step verification, or Google's challenge
-  stops the reviewer.
+- **Sign-in**: **Sign-in required** is off: reviewers sign in with
+  Apple, so there's no demo account. If Apple asks for one, make a
+  Google account for review only, sign in with it once on production,
+  turn off its two-step verification, and give its email and password
+  there.
 - **What they'll see**: production's **demo showcase** (made-up
   climbers' plans around the world, [matching](matching.md)), so the
   deck isn't empty.
-- **Notes** to paste:
-
-  > Grigri matches climbers with climbing plans. Swipe right on a plan
-  > in Find to ask to join; the group answers in its chat. Open plans
-  > let you in at once: swipe right on one to see the group chat right
-  > away. To report a person or content, open their profile or the
-  > message and tap Report; Block hides them. Account deletion is in
-  > Me → Delete account. Premium (advertising and the route finder) is
-  > an auto-renewing subscription bought with in-app purchase. Location
-  > is used only to show nearby plans first, rounded to about 1 km.
-
-- **Contact**: the owner's name, phone and julio@nu01.com.
+- **Notes**: how to sign in (Apple or Google, no demo account), the
+  Find deck and its demo plans, swiping right and open plans, Report
+  and Block (acted on within 24 hours), Me → Delete account, Premium by
+  in-app purchase (Me → Grigri Premium), and the location rounded to
+  about 1 km.
+- **Contact**: Julio Machado Faerman, the owner's phone and
+  julio@nu01.com.
 
 ### Build and upload
 
