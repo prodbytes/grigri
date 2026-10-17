@@ -1472,7 +1472,16 @@ spec.
     - [Release](release.md): `version.Y.txt` is now 2, so releases are
       `0.2.<Z>`; the App Store's first version is 0.2. The example
       versions in [release](release.md) and [app store](app-store.md)
-      follow.
+      follow. Released as `0.2.202610171217-RC` and `-GA`.
+    - [App Store](app-store.md): the GA build 0.2.202610171217 (build
+      `1792239420`) is uploaded (through `xcodebuild -exportArchive` with
+      `destination` `upload`, using Xcode's signed-in account) and
+      processed, and the version's page is renamed 0.2.202610171217.
+      Not yet submitted: the page still picks the 0.1 build, and swapping
+      it and submitting are left to the owner.
+    - Not merged: the draft DNS change (#51), which waits on the zone
+      migration, and the stale `sector-build-ci` branch (no PR; it
+      conflicts with main's newer sector build).
     - Cost: none.
 
 96. **On the new ad screen, let advertisers add the regions where the ad
