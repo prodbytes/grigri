@@ -454,6 +454,12 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       ApiJson.url(await _post(['premium', 'portal']));
 
   @override
+  Future<PremiumOffer> premiumApple(String signedTransaction) async =>
+      ApiJson.premiumOffer(
+        await _post(['premium', 'apple'], {'transaction': signedTransaction}),
+      );
+
+  @override
   Future<MyAds> myAds() async => ApiJson.myAds(await _get(['ads']));
 
   @override

@@ -63,6 +63,11 @@ dependencies:
   # Opens links in the browser: Stripe's Checkout and billing portal
   # (specs/premium.md), and an ad's link (specs/ads.md).
   url_launcher: ^6.3.2
+  # Premium on iOS through the App Store's in-app purchase (StoreKit 2;
+  # specs/premium.md), Flutter's own plugin. Its iOS implementation is
+  # pinned too, to a release that has been out a while.
+  in_app_purchase: 3.3.1
+  in_app_purchase_storekit: 0.4.13+3
 
 dev_dependencies:
   flutter_test:

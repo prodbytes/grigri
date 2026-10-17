@@ -177,6 +177,10 @@ abstract interface class GrigriApi {
   /// invoices), to open in the browser.
   Future<Uri> premiumPortal();
 
+  /// `POST /api/premium/apple`: a StoreKit 2 transaction (its signed JWS)
+  /// the iOS app bought or restored; my Premium after it.
+  Future<PremiumOffer> premiumApple(String signedTransaction);
+
   /// `GET /api/ads`: my ads, newest first, and whether I'm Premium (ads
   /// need it).
   Future<MyAds> myAds();
@@ -510,11 +514,16 @@ abstract final class ApiJson {
   static Wall wall(Map<String, Object?> json) =>
       Wall.fromJson(_map(json['wall']));
 
-  static PremiumOffer premiumOffer(Map<String, Object?> json) =>
-      PremiumOffer(Premium.fromJson(json['premium']), {
-        for (final plan in PremiumPlan.values)
-          plan: ?PremiumPrice.fromJson((json['prices'] as Map?)?[plan.name]),
-      });
+  static PremiumOffer premiumOffer(Map<String, Object?> json) => PremiumOffer(
+    Premium.fromJson(json['premium']),
+    {
+      for (final plan in PremiumPlan.values)
+        plan: ?PremiumPrice.fromJson((json['prices'] as Map?)?[plan.name]),
+    },
+    appleAccountToken: json['appleAccountToken'] is String
+        ? json['appleAccountToken']! as String
+        : null,
+  );
 
   static Uri url(Map<String, Object?> json) =>
       Uri.parse(json['url']! as String);

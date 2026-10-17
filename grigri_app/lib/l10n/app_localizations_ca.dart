@@ -976,6 +976,31 @@ class AppLocalizationsCa extends AppLocalizations {
   String get premiumCheckRefresh => 'Ja he pagat: comprova-ho';
 
   @override
+  String get premiumRestore => 'Restaura les compres';
+
+  @override
+  String premiumAppStoreTerms(String prices) {
+    return 'Grigri Premium és una subscripció amb renovació automàtica: $prices. El pagament es carrega al teu ID d\'Apple quan confirmes. Es renova automàticament tret que la cancel·lis com a mínim 24 hores abans del final del període. Gestiona-la o cancel·la-la als ajustos del teu compte de l\'App Store.';
+  }
+
+  @override
+  String get premiumPrivacyPolicy => 'Política de privadesa';
+
+  @override
+  String get premiumTermsOfUse => 'Condicions d\'ús (EULA)';
+
+  @override
+  String get premiumStoreUnavailable =>
+      'Ara no es pot connectar amb l\'App Store.';
+
+  @override
+  String get premiumNothingToRestore =>
+      'No hi ha cap subscripció de l\'App Store per restaurar.';
+
+  @override
+  String get premiumPurchaseFailed => 'La compra no s\'ha completat.';
+
+  @override
   String get errorOpenLink => 'No s\'ha pogut obrir l\'enllaç.';
 
   @override

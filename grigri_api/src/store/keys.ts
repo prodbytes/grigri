@@ -26,8 +26,10 @@ export const key = {
    * rbacr, whose roles are by email, about someone else (an ad's owner).
    */
   email: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'EMAIL' }),
-  /** A climber's Premium subscription, as last read from Stripe (src/premium.ts). */
+  /** A climber's Premium subscription, as last read from Stripe or signed by Apple (src/premium.ts). */
   premium: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'PREMIUM' }),
+  /** Whose an App Store subscription is, by its original transaction id (src/apple.ts): one subscription, one climber. */
+  apple: (originalTransactionId: string) => ({ pk: `APPLE#${originalTransactionId}`, sk: 'APPLE' }),
   /** An ad (src/domain/ads.ts). */
   ad: (adId: string) => ({ pk: `AD#${adId}`, sk: 'AD' }),
   /** How often the deck shows ads (the admins' setting). */

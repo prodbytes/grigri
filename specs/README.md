@@ -61,8 +61,11 @@ always in the plural, "partners" (a plan's group), in every language.
   the camera, recognized on the phone; recording routes bolt by bolt, and
   learning walls from confirmed views.
 - [Premium](premium.md): $20 a month or $200 a year, for advertising
-  only; paid through Stripe Checkout, managed in Stripe's billing
-  portal, kept in step by Stripe's webhook.
+  and the route finder; on Android and the web paid through Stripe
+  Checkout, managed in Stripe's billing portal, kept in step by Stripe's
+  webhook; on iOS ($19.99 / $199.99) through the App Store's in-app
+  purchase, kept in step by its signed transactions and server
+  notifications.
 - [Ads](ads.md): Premium climbers' ads (a link, with text over a photo
   or video) in their own Ads tab; approved by admins (Admin → Ads, which
   also sets how often they show); between plans on Discover, where ✓

@@ -228,9 +228,36 @@ export class Store implements SessionStore {
     return Object.fromEntries(items.map((i) => [i.climberId as string, i as unknown as Subscription]));
   }
 
-  /** Saves Stripe's latest copy of a subscription (a climber has one at a time: the newest wins). */
+  /** Saves Stripe's or Apple's latest copy of a subscription (a climber has one at a time: the newest wins). */
   async putSubscription(sub: Subscription): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.premium(sub.climberId), type: 'premium', ...sub } }));
+  }
+
+  /**
+   * Ties an App Store subscription (its original transaction id) to a
+   * climber, the first time it's seen; answers whose it is (the climber
+   * it was first tied to: one subscription, one account).
+   */
+  async claimAppleSubscription(originalTransactionId: string, climberId: string, now: Date): Promise<string> {
+    try {
+      await this.doc.send(new PutCommand({
+        TableName: this.table,
+        Item: { ...key.apple(originalTransactionId), type: 'apple', climberId, createdAt: now.toISOString() },
+        ConditionExpression: 'attribute_not_exists(pk)',
+      }));
+      return climberId;
+    } catch (e) {
+      if ((e as { name?: string }).name !== 'ConditionalCheckFailedException') throw e;
+      const owner = await this.appleOwner(originalTransactionId);
+      if (!owner) throw new Conflict('apple claim vanished');
+      return owner;
+    }
+  }
+
+  /** The climber an App Store subscription is tied to, if any. */
+  async appleOwner(originalTransactionId: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.apple(originalTransactionId), ConsistentRead: true }));
+    return typeof Item?.climberId === 'string' ? Item.climberId : undefined;
   }
 
   // --- Ads --------------------------------------------------------------------

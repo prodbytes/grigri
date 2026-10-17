@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 
 import '../l10n/app_localizations.dart';
+import '../log.dart';
 import '../model/ad.dart';
 import '../model/premium.dart';
 import '../model/climber.dart';
@@ -15,6 +16,7 @@ import '../model/pics.dart';
 import '../model/plan.dart';
 import '../model/sector.dart';
 import 'api.dart';
+import 'app_store.dart';
 import 'auth.dart';
 import 'device_location.dart';
 import 'links.dart';
@@ -115,6 +117,7 @@ class GrigriStore extends ChangeNotifier {
     this.deviceLocation = const DeviceLocation.none(),
     Future<SectorIndex> Function()? places,
     this.openLink = openInBrowser,
+    this.appStore,
   }) : _image = image ?? ((url) => NetworkImage(url.toString())),
        _places = places ?? SectorIndex.load,
        _preferences = preferences ?? Preferences.none() {
@@ -134,6 +137,9 @@ class GrigriStore extends ChangeNotifier {
         onReconnected: () => unawaited(_catchUp()),
       )..addListener(notifyListeners);
     }
+    // From the start: StoreKit hands over purchases left unfinished last
+    // time as soon as someone listens.
+    _storePurchases = appStore?.purchases.listen(_onStorePurchases);
   }
 
   /// Live updates (none without a transport: polling only).
@@ -149,6 +155,10 @@ class GrigriStore extends ChangeNotifier {
 
   /// Opens Stripe's pages, and ads' links, in the browser.
   final OpenLink openLink;
+
+  /// The App Store, which sells Premium on iOS (specs/premium.md); null
+  /// elsewhere (Android and the web pay through Stripe).
+  final AppStore? appStore;
 
   /// The sector index, to name a place the device found.
   final Future<SectorIndex> Function() _places;
@@ -292,6 +302,8 @@ class GrigriStore extends ChangeNotifier {
     _admin = false;
     _premium = const Premium.none();
     _premiumPrices = const {};
+    _appleAccountToken = null;
+    _buying = false;
     _deckAds = [];
     _adEvery = 0;
     _seenAds.clear();
@@ -339,6 +351,7 @@ class GrigriStore extends ChangeNotifier {
       _climbers[climber.id] = climber;
       _phase = Phase.ready;
       notifyListeners();
+      _deliverWaiting();
       unawaited(fillLocation());
       await refreshAll();
     } on ApiException catch (e) {
@@ -1284,27 +1297,203 @@ class GrigriStore extends ChangeNotifier {
   /// My Premium and its prices again (the profile, and coming back from
   /// Stripe's pages in the browser).
   Future<void> refreshPremium() async {
-    await _refresh(api.premium, (offer) {
-      _premium = offer.premium;
-      _premiumPrices = offer.prices;
-    });
-    // Just subscribed: the Ads tab appears, with my ads.
+    await _refresh(api.premium, _applyOffer);
+    await _premiumChanged();
+  }
+
+  void _applyOffer(PremiumOffer offer) {
+    _premium = offer.premium;
+    _premiumPrices = offer.prices;
+    _appleAccountToken = offer.appleAccountToken;
+  }
+
+  /// Just subscribed: the Ads tab appears, with my ads.
+  Future<void> _premiumChanged() async {
     if (_premium.active && !_loaded.contains(Section.ads)) {
       await refreshMyAds();
     }
   }
 
   /// Opens Stripe Checkout for [plan] in the browser; true when it opened.
-  /// Premium shows once Stripe tells the API (a refresh).
+  /// Premium shows once Stripe tells the API (a refresh). Not on iOS: the
+  /// App Store sells it there ([buyInAppStore]).
   Future<bool> subscribe(PremiumPlan plan) async {
     final url = await _act(() => api.premiumCheckout(plan));
     return url != null && await _openOrSay(url);
   }
 
-  /// Opens Stripe's billing portal (cancel, card, invoices).
+  /// Where my subscription is managed: the App Store's subscriptions for
+  /// one bought there, Stripe's billing portal (cancel, card, invoices)
+  /// for one bought through Stripe.
   Future<bool> managePremium() async {
+    if (_premium.source == PremiumSource.apple) {
+      return _openOrSay(appStoreSubscriptionsUrl);
+    }
     final url = await _act(api.premiumPortal);
     return url != null && await _openOrSay(url);
+  }
+
+  // --- Premium through the App Store (iOS) ---------------------------------
+
+  /// Whether Premium is sold here through the App Store (iOS).
+  bool get sellsInAppStore => appStore != null;
+
+  StreamSubscription<List<StorePurchase>>? _storePurchases;
+  Map<PremiumPlan, StoreProduct> _storeProducts = const {};
+  bool _storeProductsLoaded = false;
+  Future<void>? _loadingStoreProducts;
+  String? _appleAccountToken;
+  bool _buying = false;
+  bool _restoring = false;
+
+  /// Purchases StoreKit reported before I was signed in and loaded.
+  final _waitingPurchases = <StorePurchase>[];
+
+  /// Purchases on their way to the API.
+  final _deliveries = <Future<void>>{};
+
+  /// The App Store's products with their localized prices; empty until
+  /// loaded, or when the App Store can't sell them.
+  Map<PremiumPlan, StoreProduct> get storeProducts => _storeProducts;
+
+  /// Whether the App Store's products have been asked for.
+  bool get storeProductsLoaded => _storeProductsLoaded;
+
+  /// A purchase is under way (the App Store's sheet, then the API).
+  bool get buying => _buying;
+
+  /// Restoring purchases.
+  bool get restoring => _restoring;
+
+  /// Asks the App Store for its products (once; again after a failure).
+  Future<void> loadStoreProducts() {
+    final store = appStore;
+    if (store == null || (_storeProductsLoaded && _storeProducts.isNotEmpty)) {
+      return Future.value();
+    }
+    return _loadingStoreProducts ??= () async {
+      try {
+        _storeProducts = await store.products();
+      } finally {
+        _storeProductsLoaded = true;
+        _loadingStoreProducts = null;
+        notifyListeners();
+      }
+    }();
+  }
+
+  /// Buys [plan] through the App Store, for my account (the API's
+  /// appAccountToken). Premium shows once the API has the transaction.
+  Future<void> buyInAppStore(PremiumPlan plan) async {
+    final store = appStore;
+    final product = _storeProducts[plan];
+    if (store == null || product == null || _buying) return;
+    if (_appleAccountToken == null) await refreshPremium();
+    final token = _appleAccountToken;
+    if (token == null) {
+      _errors.add(l10n.premiumUnavailable);
+      return;
+    }
+    _buying = true;
+    notifyListeners();
+    try {
+      if (!await store.buy(product, accountToken: token)) _buying = false;
+    } on Object catch (e) {
+      log.warn('premium', 'App Store purchase failed: $e');
+      _buying = false;
+      _errors.add(l10n.premiumPurchaseFailed);
+    }
+    notifyListeners();
+  }
+
+  /// Restore purchases (Apple requires it): my App Store subscription,
+  /// sent to the API again, say on a new phone.
+  Future<void> restoreAppStorePurchases() async {
+    final store = appStore;
+    if (store == null || _restoring) return;
+    _restoring = true;
+    notifyListeners();
+    try {
+      await store.restore();
+      await Future.wait([..._deliveries]);
+      if (!_premium.active) _errors.add(l10n.premiumNothingToRestore);
+    } on Object catch (e) {
+      log.warn('premium', 'App Store restore failed: $e');
+      _errors.add(l10n.premiumStoreUnavailable);
+    } finally {
+      _restoring = false;
+      notifyListeners();
+    }
+  }
+
+  void _onStorePurchases(List<StorePurchase> purchases) {
+    for (final p in purchases) {
+      switch (p.status) {
+        case StorePurchaseStatus.pending:
+          // Waiting (Ask to Buy, a card to confirm): it comes back later.
+          _buying = false;
+        case StorePurchaseStatus.canceled:
+          _buying = false;
+          unawaited(_complete(p));
+        case StorePurchaseStatus.error:
+          _buying = false;
+          _errors.add(l10n.premiumPurchaseFailed);
+          unawaited(_complete(p));
+        case StorePurchaseStatus.purchased || StorePurchaseStatus.restored:
+          if (_phase == Phase.ready) {
+            _deliver(p);
+          } else {
+            _waitingPurchases.add(p);
+          }
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Sends the purchases StoreKit reported before I was loaded.
+  void _deliverWaiting() {
+    final waiting = [..._waitingPurchases];
+    _waitingPurchases.clear();
+    waiting.forEach(_deliver);
+  }
+
+  /// Sends a purchase's signed transaction to the API, then finishes it.
+  /// A purchase the API can never take (another account's, not Grigri's)
+  /// is finished too; one that failed on the way (offline, the server) is
+  /// left for StoreKit to hand over again.
+  void _deliver(StorePurchase p) {
+    late final Future<void> delivery;
+    delivery = () async {
+      try {
+        final offer = await _call(() => api.premiumApple(p.signedTransaction));
+        _applyOffer(offer);
+        await _complete(p);
+        await _premiumChanged();
+      } on ApiException catch (e) {
+        final retry =
+            e.status == 0 ||
+            e.status == 401 ||
+            e.status == _stale ||
+            e.status >= 500 ||
+            e.client != null;
+        if (e.status != _stale && e.status != 401) _errors.add(_describe(e));
+        if (!retry) await _complete(p);
+      } finally {
+        _buying = false;
+        _deliveries.remove(delivery);
+        notifyListeners();
+      }
+    }();
+    _deliveries.add(delivery);
+  }
+
+  Future<void> _complete(StorePurchase p) async {
+    if (!p.needsCompleting) return;
+    try {
+      await appStore?.complete(p);
+    } on Object catch (e) {
+      log.warn('premium', 'App Store completePurchase failed: $e');
+    }
   }
 
   Future<bool> _openOrSay(Uri url) async {
@@ -1333,6 +1522,7 @@ class GrigriStore extends ChangeNotifier {
 
   @override
   void dispose() {
+    _storePurchases?.cancel();
     _live?.dispose();
     auth.removeListener(_authChanged);
     _errors.close();

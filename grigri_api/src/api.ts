@@ -36,6 +36,18 @@ import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileIn
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { PREMIUM_PRICES, type PremiumPlan, type Subscription, isPaid, premiumOf, premiumUntil, premiumView } from './premium.js';
 import { BadSignature, type Billing, subscriptionIdOf } from './stripe.js';
+import {
+  type AppleStatus,
+  type AppleTransaction,
+  type AppleVerify,
+  APPLE_BUNDLE_ID,
+  BadAppleSignature,
+  NotGrigriPremium,
+  appleAccountToken,
+  appleRenewal,
+  appleSubscription,
+  appleTransaction,
+} from './apple.js';
 import { matchFacts } from './match/facts.js';
 import { openByPlan, othersWaiting } from './match/run.js';
 import { BLOCKED_ROLE, PREMIUM_ROLE, type RoleGrants, type RolesLookup } from './rbacr.js';
@@ -120,8 +132,10 @@ export interface Deps {
   grants?: RoleGrants;
   /** Match scores from aityx (match/aityx.ts), on admins' decks; none: off. */
   matchScorer?: MatchScorer;
-  /** Stripe, for Premium (stripe.ts); none: no Premium (no keys). */
+  /** Stripe, for Premium (stripe.ts); none: no Premium through Stripe (no keys). */
   billing?: Billing;
+  /** The App Store's JWS verifier, for Premium on iOS (apple.ts); none: no App Store purchases. */
+  apple?: AppleVerify;
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
@@ -228,6 +242,9 @@ export class Api {
     r('GET /api/premium', 'profile', (_req, s) => this.premium(s));
     r('POST /api/premium/checkout', 'profile', (req, s) => this.checkout(req, s));
     r('POST /api/premium/portal', 'profile', (_req, s) => this.portal(s));
+    r('POST /api/premium/apple', 'profile', (req, s) => this.appleTransaction(req, s));
+    // The App Store's notifications: public, Apple's signature is the gate.
+    r('POST /api/apple/notifications', 'public', (req) => this.appleNotification(req));
 
     r('GET /api/ads', 'profile', (_req, s) => this.myAds(s));
     r('POST /api/ads/media', 'profile', (req, s) => this.presignAdMedia(req, s));
@@ -624,12 +641,20 @@ export class Api {
 
   // --- Premium (specs/premium.md) --------------------------------------------
 
-  /** GET /api/premium: mine, and the prices (null when Premium can't be bought here: no Stripe keys). */
+  /**
+   * GET /api/premium: mine, Stripe's prices (null when Premium can't be
+   * bought through Stripe here: no keys), and the appAccountToken the iOS
+   * app buys with (null without App Store purchases).
+   */
   private async premium(s: Session) {
     // Fresh from rbacr: the app asks right after paying.
     const [roles, sub] = await Promise.all([this.rolesOf(s.caller.email, true), this.store.getSubscription(s.me.id)]);
     const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
-    return { premium, prices: this.deps.billing ? PREMIUM_PRICES : null };
+    return {
+      premium,
+      prices: this.deps.billing ? PREMIUM_PRICES : null,
+      appleAccountToken: this.deps.apple ? appleAccountToken(s.me.id) : null,
+    };
   }
 
   /** POST /api/premium/checkout {plan}: Stripe Checkout's page for it, to open in a browser. */
@@ -651,8 +676,123 @@ export class Api {
     const billing = this.deps.billing;
     if (!billing) throw unavailable("Premium isn't available yet");
     const current = await this.store.getSubscription(s.me.id);
+    if (current?.source === 'apple') throw notFound('no Stripe subscription: manage it in the App Store');
     if (!current?.customerId) throw notFound('no subscription');
     return { url: await billing.portal(current.customerId) };
+  }
+
+  /**
+   * POST /api/premium/apple {transaction}: a StoreKit 2 transaction the
+   * iOS app bought or restored (its signed JWS). Verified offline
+   * (apple.ts); it must be Grigri's, one of the two products, bought with
+   * my appAccountToken, and its subscription not tied to another account.
+   * Saved as my subscription, and rbacr's role follows. → GET /api/premium.
+   */
+  private async appleTransaction(req: Request, s: Session) {
+    const verify = this.deps.apple;
+    if (!verify) throw unavailable("Premium isn't available yet");
+    let tx: AppleTransaction;
+    try {
+      tx = appleTransaction(verify(asObject(req.body).transaction));
+    } catch (e) {
+      if (e instanceof BadAppleSignature) throw badRequest('bad signature');
+      if (e instanceof NotGrigriPremium) throw badRequest(e.message);
+      throw e;
+    }
+    if (tx.appAccountToken !== appleAccountToken(s.me.id)) {
+      throw conflict('this App Store purchase was made from another Grigri account');
+    }
+    const owner = await this.store.claimAppleSubscription(tx.originalTransactionId, s.me.id, s.now);
+    if (owner !== s.me.id) throw conflict('this App Store subscription belongs to another Grigri account');
+    const current = await this.store.getSubscription(s.me.id);
+    const same = current?.source === 'apple' && current.subscriptionId === tx.originalTransactionId;
+    const sub = appleSubscription(s.me.id, tx, {
+      now: s.now,
+      signedDate: tx.signedDate,
+      // A transaction doesn't say whether it renews; the last notification did.
+      cancelAtPeriodEnd: same ? current.cancelAtPeriodEnd : false,
+      email: s.caller.email ?? (same ? current.email : undefined),
+    });
+    await this.saveApple(sub, current, s.now);
+    return this.premium(s);
+  }
+
+  /**
+   * POST /api/apple/notifications {signedPayload}: App Store Server
+   * Notifications V2. Public: Apple's signature, checked offline, is the
+   * only gate. The subscription's state comes from the signed transaction
+   * and renewal info inside; an older notification never overwrites a
+   * newer one (Apple's signedDate), and the same one twice changes
+   * nothing. One about a subscription Grigri doesn't know yet is
+   * acknowledged and left: the app sends the transaction itself.
+   */
+  private async appleNotification(req: Request) {
+    const verify = this.deps.apple;
+    if (!verify) throw unavailable('no App Store purchases');
+    const now = this.clock();
+    let type = '';
+    let subtype = '';
+    const ignore = (reason: string) => {
+      console.error(JSON.stringify({ level: 'info', msg: 'apple notification ignored', type, subtype, reason }));
+      return { received: true };
+    };
+    let notification: Record<string, unknown>;
+    let tx: AppleTransaction;
+    let renewal;
+    try {
+      notification = verify(asObject(req.body).signedPayload);
+      type = String(notification.notificationType ?? '');
+      subtype = String(notification.subtype ?? '');
+      const data = (notification.data ?? {}) as Record<string, unknown>;
+      if (data.bundleId !== APPLE_BUNDLE_ID) return ignore('another app');
+      // TEST, and notifications about no transaction.
+      if (typeof data.signedTransactionInfo !== 'string') return ignore('no transaction');
+      tx = appleTransaction(verify(data.signedTransactionInfo));
+      renewal = typeof data.signedRenewalInfo === 'string' ? appleRenewal(verify(data.signedRenewalInfo)) : undefined;
+    } catch (e) {
+      if (e instanceof BadAppleSignature) throw badRequest('bad signature');
+      if (e instanceof NotGrigriPremium) return ignore(e.message);
+      throw e;
+    }
+    if (renewal && renewal.originalTransactionId !== tx.originalTransactionId) throw badRequest('renewal info for another subscription');
+    const climberId = await this.store.appleOwner(tx.originalTransactionId);
+    if (!climberId) return ignore('unknown subscription');
+    // Bought for another account than the one it's tied to: never theirs.
+    if (tx.appAccountToken && tx.appAccountToken !== appleAccountToken(climberId)) return ignore('account token mismatch');
+    const data = notification.data as Record<string, unknown>;
+    const status = [1, 2, 3, 4, 5].includes(Number(data.status)) ? (Number(data.status) as AppleStatus) : undefined;
+    const forced =
+      type === 'REFUND' || type === 'REVOKE' ? 'canceled' : type === 'EXPIRED' || type === 'GRACE_PERIOD_EXPIRED' ? 'expired' : undefined;
+    const signedDate = typeof notification.signedDate === 'number' ? notification.signedDate : tx.signedDate;
+    const current = await this.store.getSubscription(climberId);
+    const same = current?.source === 'apple' && current.subscriptionId === tx.originalTransactionId;
+    const sub = appleSubscription(climberId, tx, {
+      now,
+      signedDate,
+      status,
+      renewal,
+      forced,
+      cancelAtPeriodEnd: same ? current.cancelAtPeriodEnd : false,
+      email: same ? current.email : undefined,
+    });
+    await this.saveApple(sub, current, now);
+    return { received: true };
+  }
+
+  /**
+   * Saves an App Store subscription unless what's saved is newer: the same
+   * subscription signed later by Apple, or another one still paid while
+   * this one isn't. Then rbacr's role follows (an error answers 500, so
+   * Apple sends the notification again).
+   */
+  private async saveApple(sub: Subscription, current: Subscription | undefined, now: Date): Promise<void> {
+    const same = current?.source === 'apple' && current.subscriptionId === sub.subscriptionId;
+    if (same && current.appleSignedAt && Date.parse(current.appleSignedAt) > Date.parse(sub.appleSignedAt!)) return;
+    // Paid now, not merely a paying status: an old grace period long over
+    // never displaces a live subscription.
+    if (current && !same && premiumOf(current, now).active && !premiumOf(sub, now).active) return;
+    await this.store.putSubscription(sub);
+    await this.syncPremium(sub, now);
   }
 
   /**

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'app_version.dart';
 import 'config.dart';
+import 'data/app_store.dart';
 import 'data/auth.dart';
 import 'data/device_location.dart';
 import 'data/grigri_store.dart';
@@ -62,6 +63,11 @@ Future<void> main() async {
     preferences: await Preferences.open(),
     realtime: const MqttRealtimeTransport(),
     deviceLocation: const GeolocatorDeviceLocation(),
+    // Premium on iOS is the App Store's in-app purchase (guideline
+    // 3.1.1); Android and the web pay through Stripe.
+    appStore: !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+        ? InAppPurchaseAppStore()
+        : null,
   );
   runApp(GrigriApp(store: store));
   unawaited(store.start());

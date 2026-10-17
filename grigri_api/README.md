@@ -24,10 +24,11 @@ are in [specs/backend.md](../specs/backend.md).
 | [src/publishers.ts](src/publishers.ts) | How hints leave: `iot-data:Publish` in AWS; locally a minimal MQTT 3.1.1 client over WebSocket to Floci's broker |
 | [src/realtime-auth.ts](src/realtime-auth.ts), [src/authorizer.ts](src/authorizer.ts) | The IoT custom authorizer: the session token (from the WebSocket URL's query or the MQTT password) to a policy allowing only `<climberId>-*` client ids and that climber's own topics; denies on anything else |
 | [src/google.ts](src/google.ts) | Google ID token verification (jose: Google's JWKS, cached; RS256, issuer, audience, expiry) |
+| [src/premium.ts](src/premium.ts), [src/stripe.ts](src/stripe.ts), [src/apple.ts](src/apple.ts), [src/apple-root.ts](src/apple-root.ts) | Premium: the subscription and who is paid; Stripe (Checkout, portal, webhook); the App Store (StoreKit 2 transactions and Server Notifications V2, verified offline against Apple Root CA - G3) |
 | [src/domain/](src/domain) | Pure, unit-tested rules: the shapes (`model.ts`), input validation (`validate.ts`), and matchmaking (`rules.ts`: deck sorting, unanimous yes, one no, leave and organizer handover, notices, chat notes, admin accept/reject, nudges) |
 | [src/store/](src/store) | DynamoDB access (`store.ts`) and the table's keys (`keys.ts`) |
 | [seed/](seed) | The made-up test data for RC and local (`data.ts`) and its idempotent loader (`seed.ts`), which refuses prod |
-| [test/](test) | vitest: rules, validation, token verification (locally made keys, never real tokens), sessions and routing, the seed, every route against an in-memory store (`fake-store.ts`), and live updates (authorizer policies, hint fan-out, publish failures, MQTT packets) |
+| [test/](test) | vitest: rules, validation, token verification (locally made keys, never real tokens), App Store JWS verification (certificate chains made with openssl at test time), sessions and routing, the seed, every route against an in-memory store (`fake-store.ts`), and live updates (authorizer policies, hint fan-out, publish failures, MQTT packets) |
 | [build.mjs](build.mjs) | esbuild: `src/handler.ts` to `dist/index.mjs` and `src/authorizer.ts` to `dist/authorizer.mjs`, with the AWS SDK bundled (pinned by `package-lock.json`) |
 
 ## Commands
@@ -65,6 +66,8 @@ indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
 | Join request | `PLAN#<id>` | `REQ#<climberId>` | gsi2: `ASKED#<climberId>`, `<time>#<planId>`; gsi1 while open: `OPENREQ`, `<time>#<planId>#<climberId>` | the JoinRequest (with `nudgedAt` once nudged), plus `joined` and `dismissed` |
 | Message | `PLAN#<id>` | `MSG#<time>#<messageId>` | | the Message |
 | Plan photo (Your Pics) | `PLAN#<id>` | `PIC#<picId>` | | the PlanPic, plus `ttl` (400 days after it's added) |
+| Premium subscription | `CLIMBER#<id>` | `PREMIUM` | | the Subscription (`src/premium.ts`): Stripe's, or the App Store's (`source: "apple"`, its environment and Apple's `appleSignedAt`) |
+| App Store subscription | `APPLE#<originalTransactionId>` | `APPLE` | | `climberId`: the account it's tied to, written once (conditional put) |
 
 Access patterns: every authenticated request gets its session (an
 eventually consistent read, retried consistently on a miss, so a session

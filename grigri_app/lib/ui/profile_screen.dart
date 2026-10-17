@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../app_version.dart';
+import '../data/app_store.dart';
 import '../model/premium.dart';
 import '../theme.dart';
 import 'common.dart';
@@ -197,11 +198,14 @@ class _WhereIClimb extends StatelessWidget {
   }
 }
 
-/// Premium (specs/premium.md): to advertise on Grigri. Subscribing opens
-/// Stripe Checkout in the browser; once Stripe tells the API, it shows
-/// here (the app checks again when it comes back to the foreground, or on
-/// "I've paid: check again"). Subscribed: until when, and Stripe's portal
-/// to cancel or change the card.
+/// Premium (specs/premium.md): to advertise on Grigri and use the route
+/// finder. On Android and the web, subscribing opens Stripe Checkout in
+/// the browser; once Stripe tells the API, it shows here (the app checks
+/// again when it comes back to the foreground, or on "I've paid: check
+/// again"). On iOS the App Store sells it ([_AppStoreOffer]): its prices,
+/// its purchase sheet, Restore purchases, and its terms; no Stripe.
+/// Subscribed: until when, and where to manage it (Stripe's portal, or the
+/// App Store's subscriptions).
 class PremiumCard extends StatefulWidget {
   const PremiumCard({super.key});
 
@@ -213,7 +217,9 @@ class _PremiumCardState extends State<PremiumCard> {
   @override
   void initState() {
     super.initState();
-    StoreScope.read(context).refreshPremium();
+    final store = StoreScope.read(context);
+    store.refreshPremium();
+    store.loadStoreProducts();
   }
 
   @override
@@ -227,6 +233,10 @@ class _PremiumCardState extends State<PremiumCard> {
         ? ''
         : DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag())
               .format(premium.until!);
+    // On iOS, a subscription bought through Stripe (on the web) is shown,
+    // but not managed from here: no link out of the App Store's.
+    final manageable =
+        !store.sellsInAppStore || premium.source == PremiumSource.apple;
     return Card(
       key: const ValueKey('premium card'),
       child: Padding(
@@ -255,19 +265,23 @@ class _PremiumCardState extends State<PremiumCard> {
                     : l.premiumActiveUntil(date),
                 style: const TextStyle(color: Mountain.snow),
               ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.open_in_new),
-                label: Text(l.premiumManage),
-                onPressed: store.managePremium,
-              ),
+              if (manageable && premium.source != null) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(l.premiumManage),
+                  onPressed: store.managePremium,
+                ),
+              ],
             ] else ...[
               Text(
                 l.premiumPitch,
                 style: const TextStyle(color: Mountain.snow),
               ),
               const SizedBox(height: 12),
-              if (prices.isEmpty)
+              if (store.sellsInAppStore)
+                const _AppStoreOffer()
+              else if (prices.isEmpty)
                 Text(
                   l.premiumUnavailable,
                   style: text.bodySmall?.copyWith(color: Mountain.granite),
@@ -303,6 +317,107 @@ class _PremiumCardState extends State<PremiumCard> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Premium on iOS, sold by the App Store (guideline 3.1.1): its products
+/// at its localized prices, bought through its sheet; Restore purchases;
+/// and the subscription's terms Apple requires next to the buttons (title,
+/// length and price, auto-renewal, where to cancel, the privacy policy and
+/// the terms of use). No buttons when the App Store can't sell them.
+class _AppStoreOffer extends StatelessWidget {
+  const _AppStoreOffer();
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final products = store.storeProducts;
+    final text = Theme.of(context).textTheme;
+    final l = context.l10n;
+    final small = text.bodySmall?.copyWith(color: Mountain.granite);
+    if (!store.storeProductsLoaded) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: SizedBox.square(
+          dimension: 24,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    final busy = store.buying || store.restoring;
+    final restore = TextButton(
+      onPressed: busy ? null : store.restoreAppStorePurchases,
+      child: Text(l.premiumRestore),
+    );
+    if (products.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.premiumStoreUnavailable, style: small),
+          Wrap(
+            children: [
+              TextButton(
+                onPressed: store.loadStoreProducts,
+                child: Text(l.tryAgain),
+              ),
+              restore,
+            ],
+          ),
+        ],
+      );
+    }
+    final monthly = products[PremiumPlan.monthly];
+    final yearly = products[PremiumPlan.yearly];
+    final terms = [
+      if (monthly != null) l.premiumMonthly(monthly.price),
+      if (yearly != null) l.premiumYearly(yearly.price),
+    ].join(', ');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            if (monthly != null)
+              FilledButton(
+                onPressed: busy
+                    ? null
+                    : () => store.buyInAppStore(PremiumPlan.monthly),
+                child: Text(l.premiumMonthly(monthly.price)),
+              ),
+            if (yearly != null)
+              FilledButton.tonal(
+                onPressed: busy
+                    ? null
+                    : () => store.buyInAppStore(PremiumPlan.yearly),
+                child: Text(l.premiumYearly(yearly.price)),
+              ),
+            if (busy)
+              const SizedBox.square(
+                dimension: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(l.premiumAppStoreTerms(terms), style: small),
+        Wrap(
+          children: [
+            TextButton(
+              onPressed: () => store.openLink(privacyPolicyUrl),
+              child: Text(l.premiumPrivacyPolicy),
+            ),
+            TextButton(
+              onPressed: () => store.openLink(appleEulaUrl),
+              child: Text(l.premiumTermsOfUse),
+            ),
+            restore,
+          ],
+        ),
+      ],
     );
   }
 }
