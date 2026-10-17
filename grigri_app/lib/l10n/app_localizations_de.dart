@@ -1246,4 +1246,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Offen: sofort dabei';
+
+  @override
+  String get privacyPolicy => 'Datenschutzerklärung';
+
+  @override
+  String get support => 'Support';
 }

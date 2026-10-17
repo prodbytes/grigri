@@ -1732,5 +1732,13 @@
   "openJoinAtOnce": "Open: join at once",
   "@openJoinAtOnce": {
     "description": "Tag on an open plan's card: swiping right joins at once."
+  },
+  "privacyPolicy": "Privacy policy",
+  "@privacyPolicy": {
+    "description": "Link at the end of Profile: opens the privacy policy on the site in the browser."
+  },
+  "support": "Support",
+  "@support": {
+    "description": "Link at the end of Profile: opens the support page on the site in the browser."
   }
 }

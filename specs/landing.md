@@ -54,7 +54,14 @@ From top to bottom:
    photos, no card to sign up. Premium is described as optional, only for
    advertising and the route finder ([premium.md](premium.md)).
 6. **A last call** with **Join free with Google**, and a footer crediting
-   the photos' authors and OpenStreetMap for the crags' locations.
+   the photos' authors and OpenStreetMap for the crags' locations, with
+   links to the **Privacy policy** and **Support** pages.
+
+**The privacy policy and support pages**, `/privacy.html` and
+`/support.html` ([app-store](app-store.md)), are static pages in English
+in the same look (`index.css` plus their own `legal.css`), with no
+script, so the index CSP covers them as they are. The App Store listing
+and the app's Profile link to them.
 
 The look is the app's [theme](theme.md) (night, olive, pine, sand…), in
 the system font. It's laid out for phones first: one column under 820 px.

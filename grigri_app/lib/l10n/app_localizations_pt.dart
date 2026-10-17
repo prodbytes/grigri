@@ -1238,4 +1238,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Aberto: entre na hora';
+
+  @override
+  String get privacyPolicy => 'Política de privacidade';
+
+  @override
+  String get support => 'Suporte';
 }

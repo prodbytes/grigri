@@ -1242,4 +1242,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Ouvert : viens tout de suite';
+
+  @override
+  String get privacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get support => 'Assistance';
 }

@@ -347,5 +347,7 @@
   "guidedPrice": "Encadré · {price}",
   "paidToGuide": "Payé au guide, pas via Grigri.",
   "theGuideDecides": "Le guide décide",
-  "openJoinAtOnce": "Ouvert : viens tout de suite"
+  "openJoinAtOnce": "Ouvert : viens tout de suite",
+  "privacyPolicy": "Politique de confidentialité",
+  "support": "Assistance"
 }

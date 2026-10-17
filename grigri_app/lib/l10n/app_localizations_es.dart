@@ -1241,4 +1241,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Abierto: únete al momento';
+
+  @override
+  String get privacyPolicy => 'Política de privacidad';
+
+  @override
+  String get support => 'Soporte';
 }

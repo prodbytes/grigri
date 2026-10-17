@@ -1237,4 +1237,10 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Obert: uneix-te al moment';
+
+  @override
+  String get privacyPolicy => 'Política de privadesa';
+
+  @override
+  String get support => 'Suport';
 }

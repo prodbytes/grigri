@@ -1232,4 +1232,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Open: join at once';
+
+  @override
+  String get privacyPolicy => 'Privacy policy';
+
+  @override
+  String get support => 'Support';
 }

@@ -43,6 +43,8 @@ const STRINGS = {
     joinFree: 'Join free with Google',
     footPhotos: 'Crag photos are freely licensed; each card credits its author.',
     footOsm: 'Crag locations © OpenStreetMap contributors (ODbL).',
+    footPrivacy: 'Privacy policy',
+    footSupport: 'Support',
   },
   es: {
     signIn: 'Entrar',
@@ -81,6 +83,8 @@ const STRINGS = {
     joinFree: 'Únete gratis con Google',
     footPhotos: 'Las fotos de escuelas tienen licencia libre; cada tarjeta cita a su autor.',
     footOsm: 'Ubicaciones de escuelas © colaboradores de OpenStreetMap (ODbL).',
+    footPrivacy: 'Política de privacidad',
+    footSupport: 'Soporte',
   },
   de: {
     signIn: 'Anmelden',
@@ -119,6 +123,8 @@ const STRINGS = {
     joinFree: 'Kostenlos mit Google beitreten',
     footPhotos: 'Die Fotos der Gebiete sind frei lizenziert; jede Karte nennt ihre Urheber.',
     footOsm: 'Standorte der Gebiete © OpenStreetMap-Mitwirkende (ODbL).',
+    footPrivacy: 'Datenschutzerklärung',
+    footSupport: 'Support',
   },
   fr: {
     signIn: 'Connexion',
@@ -157,6 +163,8 @@ const STRINGS = {
     joinFree: 'Rejoindre gratuitement avec Google',
     footPhotos: 'Les photos des sites sont sous licence libre ; chaque carte crédite son auteur.',
     footOsm: 'Emplacements des sites © contributeurs d’OpenStreetMap (ODbL).',
+    footPrivacy: 'Politique de confidentialité',
+    footSupport: 'Assistance',
   },
   pt: {
     signIn: 'Entrar',
@@ -195,6 +203,8 @@ const STRINGS = {
     joinFree: 'Entre grátis com o Google',
     footPhotos: 'As fotos dos picos têm licença livre; cada cartão credita o autor.',
     footOsm: 'Localização dos picos © colaboradores do OpenStreetMap (ODbL).',
+    footPrivacy: 'Política de privacidade',
+    footSupport: 'Suporte',
   },
   ca: {
     signIn: 'Entra',
@@ -233,6 +243,8 @@ const STRINGS = {
     joinFree: 'Uneix-te gratis amb Google',
     footPhotos: 'Les fotos de les escoles tenen llicència lliure; cada targeta en cita l’autor.',
     footOsm: 'Ubicacions de les escoles © col·laboradors d’OpenStreetMap (ODbL).',
+    footPrivacy: 'Política de privadesa',
+    footSupport: 'Suport',
   },
 };
 
