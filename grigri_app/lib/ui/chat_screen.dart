@@ -508,15 +508,16 @@ class _RequestCard extends StatelessWidget {
                             color: Mountain.sand,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Tag(
-                          level == null
-                              ? l.noGradesYet(plan.discipline.name)
-                              : '${plan.discipline.label(l)} '
-                                    '${store.grades(level)}',
-                          icon: fits ? Icons.check : Icons.info_outline,
-                          color: fits ? Mountain.olive : Mountain.tan,
-                        ),
+                        // No grades for the plan's discipline: no tag.
+                        if (level != null) ...[
+                          const SizedBox(height: 4),
+                          Tag(
+                            '${plan.discipline.label(l)} '
+                            '${store.grades(level)}',
+                            icon: fits ? Icons.check : Icons.info_outline,
+                            color: fits ? Mountain.olive : Mountain.tan,
+                          ),
+                        ],
                       ],
                     ),
                   ),

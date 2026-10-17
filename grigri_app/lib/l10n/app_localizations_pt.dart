@@ -537,18 +537,6 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String noGradesYet(String discipline) {
-    String _temp0 = intl.Intl.selectLogic(discipline, {
-      'sport': 'Ainda sem grau em esportiva',
-      'trad': 'Ainda sem grau em tradicional',
-      'bouldering': 'Ainda sem grau em boulder',
-      'gym': 'Ainda sem grau em academia',
-      'other': 'Ainda sem grau',
-    });
-    return '$_temp0';
-  }
-
-  @override
   String get joined => 'Entrou';
 
   @override

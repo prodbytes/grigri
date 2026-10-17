@@ -114,7 +114,7 @@ counts.
 Someone asking to join a plan shows up in its **group chat** as a card
 ("Asked to join" and when): their photo, name and age (tap for their
 whole profile), their grade for the plan's discipline (marked when it
-fits), and who in the group has said yes and who it's waiting for. Until
+fits; nothing when they have none for it), and who in the group has said yes and who it's waiting for. Until
 I've answered it has **Decline** and **Accept**; then it shows "You said
 yes" and who it's still waiting for, **Joined**, **Declined** (when I said
 no), or **Closed** (turned down by someone else). The

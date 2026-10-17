@@ -533,18 +533,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String noGradesYet(String discipline) {
-    String _temp0 = intl.Intl.selectLogic(discipline, {
-      'sport': 'No sport grades yet',
-      'trad': 'No trad grades yet',
-      'bouldering': 'No bouldering grades yet',
-      'gym': 'No gym grades yet',
-      'other': 'No grades yet',
-    });
-    return '$_temp0';
-  }
-
-  @override
   String get joined => 'Joined';
 
   @override

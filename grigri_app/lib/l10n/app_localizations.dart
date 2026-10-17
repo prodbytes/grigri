@@ -1029,12 +1029,6 @@ abstract class AppLocalizations {
   /// **'Asked to join · {time}'**
   String askedToJoinAt(String time);
 
-  /// Someone asking to join has no grades for the plan discipline.
-  ///
-  /// In en, this message translates to:
-  /// **'{discipline, select, sport{No sport grades yet} trad{No trad grades yet} bouldering{No bouldering grades yet} gym{No gym grades yet} other{No grades yet}}'**
-  String noGradesYet(String discipline);
-
   /// Status tag: the person joined the plan.
   ///
   /// In en, this message translates to:
