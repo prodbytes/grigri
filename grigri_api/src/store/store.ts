@@ -15,6 +15,7 @@ import {
   type TransactWriteCommandInput,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import type { AppleTokenStore } from '../apple.js';
 import type { SessionRecord, SessionStore } from '../auth.js';
 import type { Subscription } from '../premium.js';
 import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '../domain/ads.js';
@@ -39,7 +40,7 @@ export interface LoadedPlan extends VersionedPlan {
   requests: JoinRequest[];
 }
 
-export class Store implements SessionStore {
+export class Store implements SessionStore, AppleTokenStore {
   constructor(
     readonly doc: DynamoDBDocumentClient,
     readonly table: string,
@@ -181,6 +182,30 @@ export class Store implements SessionStore {
   /** Saves a profile whole. (Blocked is rbacr's role, not the profile's.) */
   async saveProfile(climber: Climber, subject: string | undefined, now: Date): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: climberItem(climber, subject, now) }));
+  }
+
+  /** The subject a profile was created for (its sign-in account). */
+  async subjectOf(climberId: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.climber(climberId), ProjectionExpression: 'subject' }));
+    return Item?.subject as string | undefined;
+  }
+
+  // --- Apple refresh tokens (src/apple.ts) ------------------------------------
+
+  async putAppleToken(subject: string, refreshToken: string, now: Date): Promise<void> {
+    await this.doc.send(new PutCommand({
+      TableName: this.table,
+      Item: { ...key.appleToken(subject), type: 'appleToken', refreshToken, updatedAt: now.toISOString() },
+    }));
+  }
+
+  async getAppleToken(subject: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.appleToken(subject), ConsistentRead: true }));
+    return typeof Item?.refreshToken === 'string' ? Item.refreshToken : undefined;
+  }
+
+  async deleteAppleToken(subject: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.appleToken(subject) }));
   }
 
   /**
@@ -715,6 +740,58 @@ export class Store implements SessionStore {
     } catch (e) {
       throw asConflict(e);
     }
+  }
+
+  // --- Deleting an account (DELETE /api/me) ------------------------------------
+
+  /** Deletes chat messages (by their keys). */
+  async deleteMessages(messages: Pick<Message, 'planId' | 'time' | 'id'>[]): Promise<void> {
+    await this.batchWrite(messages.map((m) => ({ DeleteRequest: { Key: key.message(m.planId, m.time, m.id) } })));
+  }
+
+  /**
+   * Withdraws a join request: deletes it and moves the plan's version on,
+   * in one transaction conditioned on the version it was read with, so an
+   * answer racing it (read before) fails and reloads without it. Conflict
+   * when the plan changed meanwhile.
+   */
+  async withdrawRequest(previous: VersionedPlan, climberId: string): Promise<void> {
+    await this.transact([
+      {
+        Update: {
+          TableName: this.table,
+          Key: key.plan(previous.plan.id),
+          UpdateExpression: 'SET version = :next',
+          ConditionExpression: 'version = :v',
+          ExpressionAttributeValues: { ':v': previous.version, ':next': previous.version + 1 },
+        },
+      },
+      { Delete: { TableName: this.table, Key: key.request(previous.plan.id, climberId) } },
+    ]);
+  }
+
+  /** Deletes a request item outright (its plan is gone). */
+  async deleteRequest(planId: string, climberId: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.request(planId, climberId) }));
+  }
+
+  /**
+   * Everything in a climber's partition: the profile, memberships, passes,
+   * notices, the kept email, the Premium copy, and whatever else is ever
+   * keyed to them there.
+   */
+  async deleteClimberItems(climberId: string): Promise<void> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': prefix.climber(climberId) },
+      ProjectionExpression: 'pk, sk',
+    });
+    await this.batchWrite(items.map((i) => ({ DeleteRequest: { Key: { pk: i.pk, sk: i.sk } } })));
+  }
+
+  /** Unlinks a sign-in subject from its climber (the last step of deleting an account). */
+  async deleteSubject(subject: string): Promise<void> {
+    await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.subject(subject) }));
   }
 
   // --- Plumbing ---------------------------------------------------------------

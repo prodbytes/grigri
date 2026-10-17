@@ -103,6 +103,64 @@ void main() {
       expect(find.text('Sign in with Google'), findsOneWidget);
     });
 
+    testWidgets('deleting my account asks first, then lands on sign-in', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Me');
+      final delete = find.widgetWithText(TextButton, 'Delete account');
+      await tester.scrollUntilVisible(delete, 300);
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      // What goes, and Apple's subscriptions are cancelled in Settings.
+      expect(find.text('Delete your account?'), findsOneWidget);
+      expect(find.textContaining('your profile and photos'), findsOneWidget);
+      expect(find.textContaining("iPhone's Settings"), findsOneWidget);
+      // Cancel keeps the account.
+      await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+      await tester.pumpAndSettle();
+      expect(api.calls, isNot(contains('DELETE /api/me')));
+      expect(find.byType(NavigationBar), findsOneWidget);
+
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      // The button waits for the box to be ticked.
+      final confirm = find.widgetWithText(FilledButton, 'Delete for good');
+      expect(tester.widget<FilledButton>(confirm).onPressed, isNull);
+      await tester.tap(find.text("I understand this can't be undone"));
+      await tester.pumpAndSettle();
+      await tester.tap(confirm);
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('DELETE /api/me'));
+      expect(api.meId, isNull);
+      expect(api.sessions, isEmpty);
+      expect(find.text('Sign in with Google'), findsOneWidget);
+    });
+
+    testWidgets('a failed delete says so and keeps me signed in', (
+      tester,
+    ) async {
+      final api = sampleApi();
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Me');
+      final delete = find.widgetWithText(TextButton, 'Delete account');
+      await tester.scrollUntilVisible(delete, 300);
+      await tester.tap(delete);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text("I understand this can't be undone"));
+      await tester.pumpAndSettle();
+      api.failNext = const ApiException(503, 'Stripe is down');
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete for good'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text("Couldn't delete your account. Try again."),
+        findsOneWidget,
+      );
+      expect(find.byType(NavigationBar), findsOneWidget);
+      expect(api.meId, isNotNull);
+    });
+
     testWidgets('a 401 signs out', (tester) async {
       final api = sampleApi();
       final store = await pumpApp(tester, api);
@@ -1856,6 +1914,29 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('admin'), findsOneWidget);
     });
+  });
+
+  testWidgets('the profile ends with the privacy policy and support links', (
+    tester,
+  ) async {
+    final api = sampleApi();
+    await pumpApp(tester, api);
+    await tapTab(tester, 'Me');
+    await tester.scrollUntilVisible(find.text('Support'), 200);
+    expect(find.text('Privacy policy'), findsOneWidget);
+
+    await tester.tap(find.text('Privacy policy'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Support'));
+    await tester.pumpAndSettle();
+    expect(api.opened.map((url) => url.path), [
+      '/privacy.html',
+      '/support.html',
+    ]);
+    expect(
+      api.opened.every((url) => url.scheme == 'https' && url.host.isNotEmpty),
+      isTrue,
+    );
   });
 
   group('language', () {

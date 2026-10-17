@@ -15,6 +15,7 @@ import { Auth, type AuthConfig } from './auth.js';
 import { REFUSED, originCheck } from './origin.js';
 import { rbacrAdminCheck, rbacrGrants, rbacrRoles } from './rbacr.js';
 import { ApiError } from './domain/errors.js';
+import { AppleTokens, DEFAULT_APPLE_BUNDLE_ID, appleVerifier } from './apple.js';
 import { googleVerifier, parseClientIds } from './google.js';
 import { iotDataPublisher, mqttWebSocketPublisher } from './publishers.js';
 import { Realtime } from './realtime.js';
@@ -79,7 +80,8 @@ const photos: Photos = {
     }
   },
   async remove(keys) {
-    // At most 7 (a photo and 6 gear photos); S3 doesn't bill DELETEs.
+    // A few at a time (a profile: a photo and 6 gear photos; deleting an
+    // account: up to 20 per call); S3 doesn't bill DELETEs.
     await Promise.all(keys.map((k) => s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: `photos/${k}` }))));
   },
 };
@@ -127,7 +129,20 @@ const authConfig: AuthConfig = {
   // Admins are whoever rbacr says holds grigri's admin role.
   isAdmin: rbacrAdminCheck(rbacr),
 };
-const auth = new Auth({ store, verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? '', undefined, parseClientIds(env.GOOGLE_IOS_CLIENT_IDS)), config: authConfig });
+// Sign in with Apple (the iOS app's): tokens for the app's bundle ID; with
+// a Sign in with Apple key, refresh tokens are kept to revoke on account
+// deletion (the key never leaves the function); no key: not kept.
+const appleBundleId = env.APPLE_BUNDLE_ID || DEFAULT_APPLE_BUNDLE_ID;
+const appleTokens = new AppleTokens(
+  { clientId: appleBundleId, teamId: env.APPLE_TEAM_ID ?? '', keyId: env.APPLE_KEY_ID ?? '', privateKey: env.APPLE_PRIVATE_KEY ?? '' },
+  store,
+);
+const auth = new Auth({
+  store,
+  verify: googleVerifier(env.GOOGLE_WEB_CLIENT_ID ?? '', undefined, parseClientIds(env.GOOGLE_IOS_CLIENT_IDS)),
+  apple: { verify: appleVerifier(appleBundleId), keepRefreshToken: (subject, code) => appleTokens.keepRefreshToken(subject, code) },
+  config: authConfig,
+});
 // Live updates: hints to IoT Core in AWS; locally, over MQTT to Floci's
 // broker (its HTTP Publish doesn't reach subscribers). IOT_ENDPOINT is
 // where the app connects; empty: live updates off.
@@ -163,6 +178,7 @@ const api = new Api({
   grants: rbacrGrants(rbacr) ?? undefined,
   matchScorer,
   billing,
+  appleTokens,
   showcase,
   config: { stage, version: env.VERSION ?? 'dev', roleSuffix: env.ROLE_SUFFIX ?? '' },
 });

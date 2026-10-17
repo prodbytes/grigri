@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grigri_app/config.dart';
 import 'package:grigri_app/data/api.dart';
+import 'package:grigri_app/data/auth.dart';
 import 'package:grigri_app/data/grigri_store.dart';
 import 'package:grigri_app/data/http_api.dart';
 import 'package:grigri_app/model/climbing.dart';
@@ -342,7 +343,12 @@ void main() {
           (_) async => json({'token': 's3ssion', 'expiresAt': '2027-10-12'}),
           seen: seen,
         );
-        expect(await api.createSession(idToken: 'id-t0ken'), 's3ssion');
+        expect(
+          await api.createSession(
+            const Credential(user: AuthUser(), idToken: 'id-t0ken'),
+          ),
+          's3ssion',
+        );
         expect(seen.single.method, 'POST');
         expect(seen.single.url.toString(), 'https://grigri.test/api/session');
         expect(jsonDecode(seen.single.body), {'idToken': 'id-t0ken'});
@@ -353,7 +359,7 @@ void main() {
     test('a refused session start is a 401', () async {
       final api = apiWith((_) async => json({'error': 'signed out'}, 401));
       await expectLater(
-        api.createSession(idToken: 'bad'),
+        api.createSession(const Credential(user: AuthUser(), idToken: 'bad')),
         throwsA(isA<ApiException>().having((e) => e.status, 'status', 401)),
       );
     });
@@ -370,6 +376,35 @@ void main() {
       for (final r in seen) {
         expect(r.headers['Authorization'], 'Bearer s3ssion');
       }
+    });
+
+    test("GriGri Pics' catalog: a static file, read without a token", () async {
+      final seen = <http.Request>[];
+      final api = HttpGrigriApi(
+        origin: site,
+        headers: () async => {'Authorization': 'Bearer t0ken'},
+        client: MockClient((request) async {
+          seen.add(request);
+          return json({
+            'crags': [
+              {
+                'name': 'Peña Alta',
+                'photos': [
+                  {'key': 'crags/a/1.jpg', 'author': 'Ana Roca'},
+                  {'caption': 'no key'},
+                ],
+              },
+              {'name': 'Valle Gris'},
+            ],
+          });
+        }),
+      );
+      final pics = await api.picsCatalog();
+      expect(seen.single.url.path, '/pics/catalog.json');
+      expect(seen.single.headers.containsKey('Authorization'), isFalse);
+      expect(pics.single.key, 'crags/a/1.jpg');
+      expect(pics.single.crag, 'Peña Alta');
+      expect(pics.single.author, 'Ana Roca');
     });
 
     test('photos: a presigned POST with its fields, then the file', () async {

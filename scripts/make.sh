@@ -2,8 +2,9 @@
 # Builds the app binaries. Run through the Makefile (`make`, `make web`, ...)
 # or directly: `bash scripts/make.sh <target>...`.
 #
-# Targets: web, android, ios, all (every platform this host can build),
-# clean. Settings, from the environment or `make VAR=value`:
+# Targets: web, android, ios, ipa (a signed release archive for App Store
+# Connect; macOS only), all (every platform this host can build; never
+# ipa), clean. Settings, from the environment or `make VAR=value`:
 #   MODE          release (default), profile or debug
 #   IOS_CODESIGN  1 to sign the iOS build (needs a signing team in Xcode);
 #                 unsigned by default
@@ -34,7 +35,7 @@ BUILD_ARGS=(--build-name "$VERSION" --build-number "$BUILD_NUMBER" ${DART_DEFINE
 # can_build <target>: whether this host's OS can build the target.
 can_build() {
   case "$1" in
-    ios) [[ "$(uname -s)" == Darwin ]] ;;
+    ios | ipa) [[ "$(uname -s)" == Darwin ]] ;;
     *) return 0 ;;
   esac
 }
@@ -58,18 +59,40 @@ build() {
       echo "==> android: grigri_app/build/app/outputs/flutter-apk/app-$MODE.apk"
       ;;
     ios)
+      check_ios_version || return 1
       local sign=--no-codesign
       [[ "${IOS_CODESIGN:-}" == 1 ]] && sign=--codesign
       flutter build ios "--$MODE" "$sign" "${BUILD_ARGS[@]}"
       echo "==> ios: grigri_app/build/ios/iphoneos/Runner.app"
       ;;
+    ipa)
+      # For App Store Connect (TestFlight, then the App Store): always a
+      # release build, signed for distribution with the team in
+      # Private.xcconfig (specs/app-store.md).
+      check_ios_version || return 1
+      flutter build ipa --release "${BUILD_ARGS[@]}"
+      echo "==> ipa: grigri_app/build/ios/ipa/ (upload with Transporter or xcrun altool)"
+      ;;
   esac
+}
+
+# check_ios_version: the App Store takes a CFBundleShortVersionString and
+# a CFBundleVersion of at most three period-separated integers and 18
+# characters (Apple's TN2420; specs/app-store.md). Fails otherwise.
+check_ios_version() {
+  local v
+  for v in "$VERSION" "$BUILD_NUMBER"; do
+    if [[ ! "$v" =~ ^[0-9]+(\.[0-9]+){0,2}$ || ${#v} -gt 18 ]]; then
+      echo "error: iOS version '$v' isn't up to three integers in 18 characters" >&2
+      return 1
+    fi
+  done
 }
 
 [[ $# -gt 0 ]] || set -- all
 for arg in "$@"; do
   case "$arg" in
-    web | android | ios) build "$arg" ;;
+    web | android | ios | ipa) build "$arg" ;;
     all)
       for target in web android ios; do
         if can_build "$target"; then
@@ -80,6 +103,6 @@ for arg in "$@"; do
       done
       ;;
     clean) flutter clean ;;
-    *) echo "error: unknown target '$arg' (web, android, ios, all, clean)" >&2; exit 2 ;;
+    *) echo "error: unknown target '$arg' (web, android, ios, ipa, all, clean)" >&2; exit 2 ;;
   esac
 done

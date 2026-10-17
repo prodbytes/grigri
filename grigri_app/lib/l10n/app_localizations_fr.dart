@@ -143,6 +143,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get errorSignIn => 'Impossible de se connecter avec Google. Réessaie.';
 
   @override
+  String get errorSignInApple =>
+      'Impossible de se connecter avec Apple. Réessaie.';
+
+  @override
   String get errorSession => 'Impossible de se connecter. Réessaie.';
 
   @override
@@ -154,10 +158,13 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Trouve un plan d\'escalade : crées-en un ou swipe à droite sur un plan, et grimpez ensemble.';
+      'Crée un plan ou swipe à droite sur un plan, et grimpez ensemble.';
 
   @override
   String get signInWithGoogle => 'Se connecter avec Google';
+
+  @override
+  String get signInWithApple => 'Se connecter avec Apple';
 
   @override
   String get tabDiscover => 'Trouve';
@@ -1242,6 +1249,118 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Ouvert : viens tout de suite';
+
+  @override
+  String get signInBadge => '100 % gratuit';
+
+  @override
+  String get signInHeadline => 'Trouve un plan de grimpe.';
+
+  @override
+  String get signInFreeLine =>
+      'Gratuit pour tous les grimpeurs : sans carte, sans abonnement.';
+
+  @override
+  String get signInStampJoin => 'JE VIENS';
+
+  @override
+  String get signInDeckWhen => 'Ce samedi · Couenne · 6b–7a';
+
+  @override
+  String get signInDeckWho => 'Mara, Jonas et 1 autre';
+
+  @override
+  String get signInHowTitle => 'Comment ça marche';
+
+  @override
+  String get signInStep1Title => 'Crée un plan';
+
+  @override
+  String get signInStep1Body =>
+      'Où, quand et quelles cotations : un site, un samedi, du 6a au 7a.';
+
+  @override
+  String get signInStep2Title => 'Swipe à droite';
+
+  @override
+  String get signInStep2Body =>
+      'Un plan te plaît ? Swipe à droite. Le groupe accueille les nouveaux un par un, quand tout le monde dit oui.';
+
+  @override
+  String get signInStep3Title => 'Grimpez ensemble';
+
+  @override
+  String get signInStep3Body =>
+      'Chaque match ouvre le tchat de groupe du plan : la corde, le covoiturage et le café.';
+
+  @override
+  String get signInFreeTitle => 'Gratuit. Vraiment.';
+
+  @override
+  String get signInFree1 => 'Plans et swipes';
+
+  @override
+  String get signInFree2 => 'Matchs et tchats de groupe';
+
+  @override
+  String get signInFree3 => 'Photos des sites';
+
+  @override
+  String get signInFree4 => 'Aucune carte pour t’inscrire';
+
+  @override
+  String get signInFreePremium =>
+      'Premium est facultatif : il ne sert qu’à faire de la publicité sur Grigri et au détecteur de voies. Grimper avec Grigri ne coûte rien.';
+
+  @override
+  String get signInFinalTitle =>
+      'Le plan de grimpe de ce week-end n’est qu’à un swipe.';
+
+  @override
+  String get signInJoinFree => 'Rejoindre gratuitement avec Google';
+
+  @override
+  String signInPhotoBy(String author, String license) {
+    return 'Photo : $author, $license';
+  }
+
+  @override
+  String get signInDeckWhen2 => 'Dimanche · Grande voie · 6a–6b';
+
+  @override
+  String get signInDeckWho2 => 'Iker et Lea';
+
+  @override
+  String get signInDeckWhen3 => 'Le week-end prochain · Bloc · 6C–7A';
+
+  @override
+  String get signInDeckWho3 => 'Noor, Tomás et 2 autres';
+
+  @override
+  String get privacyPolicy => 'Politique de confidentialité';
+
+  @override
+  String get support => 'Assistance';
+
+  @override
+  String get deleteAccount => 'Supprimer le compte';
+
+  @override
+  String get deleteAccountQuestion => 'Supprimer ton compte ?';
+
+  @override
+  String get deleteAccountMessage =>
+      'Supprime ton compte Grigri pour de bon : ton profil et tes photos, tes messages et photos dans les discussions de groupe, tes demandes et tes annonces. Tu quittes tous tes plans : quelqu\'un d\'autre du plan reprend ceux que tu organises, et un plan où tu es seul prend fin. Premium payé ici par carte est résilié tout de suite, sans remboursement du temps restant. Un abonnement acheté via Apple doit être résilié dans les Réglages de ton iPhone. Tu es déconnecté sur tous tes appareils.';
+
+  @override
+  String get deleteAccountUnderstand => 'Je comprends que c\'est irréversible';
+
+  @override
+  String get deleteAccountConfirm => 'Supprimer pour de bon';
+
+  @override
+  String get errorDeleteAccount =>
+      'Impossible de supprimer ton compte. Réessaie.';
 
   @override
   String get moreActions => 'Plus';

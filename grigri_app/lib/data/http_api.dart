@@ -81,6 +81,32 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   Uri picUrl(String key) =>
       origin.replace(pathSegments: ['pics', ...key.split('/')]);
 
+  @override
+  Future<List<GrigriPic>> picsCatalog() async {
+    final url = origin.replace(pathSegments: ['pics', 'catalog.json']);
+    final http.Response response;
+    try {
+      response = await _client.get(url).timeout(timeout);
+    } on TimeoutException {
+      throw const ApiException(0, 'The catalog took too long.');
+    } on http.ClientException {
+      throw const ApiException(0, "Couldn't reach the catalog.");
+    }
+    if (response.statusCode != 200) {
+      throw ApiException(response.statusCode, "Couldn't load the catalog.");
+    }
+    final json = jsonDecode(utf8.decode(response.bodyBytes));
+    final crags = json is Map ? json['crags'] : null;
+    return [
+      if (crags is List)
+        for (final crag in crags.whereType<Map<String, Object?>>())
+          if (crag['photos'] case final List photos)
+            for (final photo in photos.whereType<Map<String, Object?>>())
+              if (photo['key'] is String)
+                GrigriPic.fromJson({...photo, 'crag': crag['name']}),
+    ];
+  }
+
   Future<Map<String, Object?>> _send(
     String method,
     List<String> segments, {
@@ -160,11 +186,11 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   };
 
   @override
-  Future<String> createSession({required String idToken}) async {
+  Future<String> createSession(Credential credential) async {
     final json = await _send(
       'POST',
       ['session'],
-      body: {'idToken': idToken},
+      body: credential.sessionBody,
       auth: const {},
     );
     final token = json['token'];
@@ -192,6 +218,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   @override
   Future<Climber> saveMe(Climber profile) async =>
       ApiJson.climber(await _put(['me'], profile.toJson()));
+
+  @override
+  Future<void> deleteAccount() =>
+      _send('DELETE', ['me'], body: const {'confirm': true});
 
   @override
   Future<PlanList> discover() async =>

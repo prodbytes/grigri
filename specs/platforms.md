@@ -4,11 +4,24 @@ The app is built with Flutter 3.47 for Android, iOS and the web.
 
 | | Android | iOS | Web |
 |---|---|---|---|
-| Built by | `make android` (release APK) | `make ios` (unsigned unless `IOS_CODESIGN=1`) | `make web` |
-| Released as | `grigri-<tag>-android.apk` | `grigri-<tag>-ios-unsigned.zip` | `grigri-<tag>-web.zip`, and [deployed](deploy.md) |
+| Built by | `make android` (release APK) | `make ios` (unsigned unless `IOS_CODESIGN=1`); `make ipa` for App Store Connect | `make web` |
+| Released as | `grigri-<tag>-android.apk` | `grigri-<tag>-ios-unsigned.zip`; the App Store ([app-store.md](app-store.md)) | `grigri-<tag>-web.zip`, and [deployed](deploy.md) |
 
 App IDs: `com.nu01.grigri` (Android application ID and iOS bundle ID).
 The app is named **Grigri** everywhere.
+
+**iOS for the App Store** ([app-store.md](app-store.md)):
+
+- **iPhone only**: `TARGETED_DEVICE_FAMILY = 1` (project and Runner
+  target), and `Info.plist` lists only the iPhone's orientations; iPads
+  run it as an iPhone app.
+- **Encryption**: `ITSAppUsesNonExemptEncryption` is `false` in
+  `Info.plist` (HTTPS/TLS and the system's crypto only).
+- **Privacy manifest**: `ios/Runner/PrivacyInfo.xcprivacy`, in the
+  Runner target's resources: no tracking; the data Grigri collects
+  (linked to the user, for the app's functionality only); `UserDefaults`
+  with reason CA92.1. Change it, the App Privacy answers and the
+  [privacy policy](../grigri_index/site/privacy.html) together.
 
 **Icon**: an orange grigri (the belay device) over sage and slate
 mountains, on the night of the [theme](theme.md). The source art is
@@ -28,7 +41,7 @@ project; undo that change before committing. Finally, copy
 favicon of the site root's redirect page.
 
 **iOS signing**: automatic, with each developer's own team:
-`IOS_DEVELOPMENT_TEAM` in `.env` (a free Personal Team works) is written by
+`IOS_DEVELOPMENT_TEAM` in `.env` (a paid team: a free Personal Team can't sign the Sign in with Apple capability, below) is written by
 `scripts/dart-defines.sh` to the git-ignored
 `grigri_app/ios/Flutter/Private.xcconfig`, which `Debug.xcconfig` and
 `Release.xcconfig` include; no team is committed. Without it, iOS builds
@@ -37,6 +50,16 @@ are unsigned (CI's are). `bash scripts/flutter-run.sh -d <iPhone id>
 
 The Android release APK is signed with the debug key until a release key
 is set up.
+
+**Sign in with Apple** ([sign-in](sign-in.md#apple)), iOS only: the
+Runner target's `CODE_SIGN_ENTITLEMENTS` is
+[Runner.entitlements](../grigri_app/ios/Runner/Runner.entitlements), with
+`com.apple.developer.applesignin` = `[Default]`, in every configuration.
+Automatic signing adds the capability to the App ID `com.nu01.grigri`
+(or enable it in the Apple Developer portal); a free Personal Team can't
+sign an app with it, so a developer without the paid program builds
+unsigned or removes the entitlement locally (never committed). Android and
+the web don't offer it.
 
 **Google sign-in** ([sign-in](sign-in.md#per-platform)): Android needs no
 app setting (the Google Cloud project's Android OAuth client for

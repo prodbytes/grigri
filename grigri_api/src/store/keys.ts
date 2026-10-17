@@ -9,6 +9,11 @@
 
 export const key = {
   subject: (subject: string) => ({ pk: `SUB#${subject}`, sk: 'SUB' }),
+  /**
+   * An Apple account's refresh token (src/apple.ts), private (never
+   * returned or logged): to revoke it when the account is deleted.
+   */
+  appleToken: (subject: string) => ({ pk: `SUB#${subject}`, sk: 'APPLE' }),
   session: (sessionId: string) => ({ pk: `SESSION#${sessionId}`, sk: 'SESSION' }),
   climber: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'PROFILE' }),
   plan: (planId: string) => ({ pk: `PLAN#${planId}`, sk: 'PLAN' }),

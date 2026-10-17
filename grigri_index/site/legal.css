@@ -1,0 +1,46 @@
+/* The privacy policy and support pages, over index.css's colors. */
+.legal .bar { position: static; }
+
+.doc {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 16px 48px;
+}
+.doc h1 { font-size: clamp(2rem, 7vw, 2.8rem); margin: 16px 0 8px; }
+.doc h2 { font-size: 1.35rem; margin: 36px 0 10px; }
+.doc h3 { font-size: 1.05rem; margin: 20px 0 6px; letter-spacing: 0; }
+.doc p, .doc li { color: var(--snow); }
+.doc ul { padding-left: 1.2em; }
+.doc li { margin: 6px 0; }
+.doc strong { color: var(--sand); }
+.doc .dated { color: var(--granite); margin: 0 0 24px; }
+.doc .callout {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  margin: 20px 0;
+}
+.doc .callout p { margin: 6px 0; }
+.doc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 0.95rem;
+}
+.doc th, .doc td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.doc th { color: var(--sand); font-weight: 700; }
+.doc .toc { columns: 2 220px; padding-left: 1.2em; }
+
+@media (max-width: 560px) {
+  .doc table, .doc thead, .doc tbody, .doc tr, .doc th, .doc td { display: block; }
+  .doc thead { display: none; }
+  .doc tr { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .doc td { border: 0; padding: 4px 0; }
+  .doc td:first-child { color: var(--sand); font-weight: 700; }
+}
