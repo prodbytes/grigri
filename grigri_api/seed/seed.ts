@@ -136,7 +136,7 @@ async function writePlans(store: Store, plans: Plan[], now: Date): Promise<void>
 
 const SHOWCASE_EVERY_MS = 12 * 3_600_000;
 /** Bumped when showcase.ts changes, so stages rewrite it at once, not up to 12 hours later. */
-export const SHOWCASE_VERSION = 3;
+export const SHOWCASE_VERSION = 4;
 
 /**
  * The demo showcase (seed/showcase.ts), on every stage: its climbers and
