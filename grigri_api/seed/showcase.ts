@@ -29,7 +29,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 31,
       bio: 'Pockets, small edges and early starts. A fingerboard in the garage.',
       levels: { sport: routes('7a', '8a'), gym: routes('7a', '8a') },
-      gear: ['rope', 'quickdraws', 'car'],
+      gear: ['rope', 'quickdraws', 'car', 'belayDevice', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-patrice',
@@ -37,7 +37,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 29,
       bio: 'Grey limestone and flowing moves. Rest days by the river.',
       levels: { sport: routes('6c', '7c') },
-      gear: ['rope', 'quickdraws'],
+      gear: ['rope', 'quickdraws', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-kurt',
@@ -45,7 +45,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 35,
       bio: 'A red dot at the base means I am going for it.',
       levels: { sport: routes('6b', '7b'), trad: routes('6a', '6c') },
-      gear: ['rope', 'quickdraws', 'rack'],
+      gear: ['rope', 'quickdraws', 'rack', 'belayDevice', 'harness', 'helmet', 'shoes'],
     }),
     climber({
       id: 'seed-roy',
@@ -53,7 +53,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 40,
       bio: 'Clean cracks, long days, no hammer. Spring in the big valleys.',
       levels: { trad: routes('5c', '6c') },
-      gear: ['rope', 'rack', 'car'],
+      gear: ['rope', 'rack', 'car', 'shoes'],
     }),
     climber({
       id: 'seed-uli',
@@ -61,7 +61,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 33,
       bio: 'Fast and light: jog to the crag, then multipitch till sunset.',
       levels: { trad: routes('6a', '6c'), sport: routes('6b', '7a') },
-      gear: ['rope', 'rack'],
+      gear: ['rope', 'rack', 'belayDevice', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-dean',
@@ -77,7 +77,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 28,
       bio: 'Grew up below the Siurana cliffs. Knows every bolt on El Pati.',
       levels: { sport: routes('6b', '7b+'), gym: routes('6b', '7b') },
-      gear: ['rope', 'quickdraws', 'car'],
+      gear: ['rope', 'quickdraws', 'car', 'belayDevice', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-teo',
@@ -85,7 +85,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 34,
       bio: 'Overhangs, kneebars and a long-term project in the Margalef caves.',
       levels: { sport: routes('7b', '8b') },
-      gear: ['rope', 'quickdraws'],
+      gear: ['rope', 'quickdraws', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-anouk',
@@ -93,7 +93,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 26,
       bio: 'Moved from the flatlands for the limestone. Slow mornings, long afternoons.',
       levels: { sport: routes('6a', '6c+'), gym: routes('6a', '7a') },
-      gear: ['quickdraws', 'car'],
+      gear: ['quickdraws', 'car', 'belayDevice', 'harness', 'helmet', 'shoes'],
     }),
     climber({
       id: 'seed-lars',
@@ -101,7 +101,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 41,
       bio: 'Winter in Catalonia every year. Pockets by day, boulders at dusk.',
       levels: { sport: routes('6c', '7c'), bouldering: boulders('V4', 'V8') },
-      gear: ['rope', 'quickdraws', 'crashPad', 'car'],
+      gear: ['rope', 'quickdraws', 'crashPad', 'car', 'shoes'],
     }),
     climber({
       id: 'seed-mei',
@@ -109,7 +109,7 @@ export function showcaseData(now: Date): ShowcaseData {
       age: 30,
       bio: 'Boulderer learning to clip. Bring snacks and I will belay forever.',
       levels: { bouldering: boulders('V2', 'V6'), sport: routes('6a+', '7a') },
-      gear: ['crashPad'],
+      gear: ['crashPad', 'shoes'],
     }),
   ];
 

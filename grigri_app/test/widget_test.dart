@@ -20,6 +20,7 @@ import 'package:grigri_app/ui/admin_screen.dart';
 import 'package:grigri_app/ui/chat_media.dart';
 import 'package:grigri_app/ui/chat_screen.dart';
 import 'package:grigri_app/ui/common.dart';
+import 'package:grigri_app/ui/gear_editor.dart';
 import 'package:grigri_app/ui/plan_screen.dart';
 import 'package:grigri_app/ui/profile_editor.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
@@ -941,6 +942,33 @@ void main() {
       return (api, store);
     }
 
+    testWidgets('the gear section checks the group\'s gear against what the '
+        'plan needs, and says discreetly what\'s missing', (tester) async {
+      await openPlan(tester);
+      final gear = find.byKey(const ValueKey('plan gear'));
+      await tester.scrollUntilVisible(
+        gear,
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      // Sport, for two: I have a rope and quickdraws; Robin listed none.
+      expect(
+        find.descendant(of: gear, matching: find.text('No gear listed')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: gear, matching: find.text('Rope · Quickdraws')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Some gear is missing: Belay device, Harness, Climbing shoes',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Crash pad'), findsNothing);
+    });
+
     testWidgets('members add a photo; it shows in Your Pics, and whoever '
         'added it deletes it', (tester) async {
       final (api, _) = await openPlan(
@@ -1220,6 +1248,11 @@ void main() {
       await tapTab(tester, 'Plans');
       await tester.tap(find.text('Grey Cliffs'));
       await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Cancel the plan'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.tap(find.text('Cancel the plan'));
       await tester.pumpAndSettle();
       expect(find.textContaining('the others keep it.'), findsOneWidget);
@@ -1777,7 +1810,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Margalef, Catalonia, Spain'), findsOneWidget);
 
-      await tester.tap(find.text('Save').first);
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
       await tester.pumpAndSettle();
       final saved = api.climbers['me']!;
       expect(saved.location?.name, 'Boulder gym, Barcelona, Spain');
@@ -1823,12 +1856,61 @@ void main() {
       await tester.tap(find.text('Choose a photo'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Change your photo'), findsOneWidget);
+      // Gear has its own editor now.
+      expect(find.byTooltip('Add a gear photo'), findsNothing);
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
+      await tester.pumpAndSettle();
 
-      await tester.scrollUntilVisible(
-        find.byTooltip('Add a gear photo'),
-        200,
-        scrollable: find.byType(Scrollable).first,
+      expect(asked, [640]);
+      expect(
+        api.calls
+            .where(
+              (c) =>
+                  c.contains('photos') ||
+                  c.contains('bucket') ||
+                  c == 'PUT /api/me',
+            )
+            .toList(),
+        [
+          'POST /api/photos',
+          'POST https://bucket.test/ (me/profile-3)',
+          'PUT /api/me',
+        ],
       );
+      expect(store.me.photo, 'me/profile-3');
+      expect(store.me.gear, me.gear);
+    });
+
+    testWidgets('the gear editor: gear the group shares and my own, and '
+        'photos, uploaded then saved with the profile', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 2.6;
+      addTearDown(tester.view.reset);
+      final api = sampleApi();
+      api.climbers['me'] = me.copyWith(photo: 'me/profile-0');
+      final store = storeFor(api);
+      await store.start();
+      final asked = <double>[];
+      await tester.pumpWidget(
+        StoreScope(
+          store: store,
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: GearEditor(
+              pick: (source, maxSide) async {
+                asked.add(maxSide);
+                return png;
+              },
+            ),
+          ),
+        ),
+      );
+      expect(find.text('FOR THE GROUP'), findsOneWidget);
+      expect(find.text('YOUR OWN'), findsOneWidget);
+      await tester.tap(find.text('Harness'));
+      await tester.tap(find.text('Quickdraws'));
+      await tester.pumpAndSettle();
       for (var i = 0; i < 2; i++) {
         await tester.ensureVisible(find.byTooltip('Add a gear photo'));
         await tester.pumpAndSettle();
@@ -1839,12 +1921,13 @@ void main() {
       }
       await tester.tap(find.byTooltip('Remove gear photo 1'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Save').first);
+      await tester.tap(find.widgetWithText(TextButton, 'Save'));
       await tester.pumpAndSettle();
 
-      expect(asked, [640, 1080, 1080]);
-      // Two photos: each a POST /api/photos, then the upload; then the
-      // profile with their keys.
+      expect(asked, [1080, 1080]);
+      // Two photos picked, the first removed: the other's POST
+      // /api/photos and upload, then the profile with its key, keeping my
+      // photo.
       final photoCalls = api.calls
           .where(
             (c) =>
@@ -1855,14 +1938,13 @@ void main() {
           .toList();
       expect(photoCalls, [
         'POST /api/photos',
-        'POST https://bucket.test/ (me/profile-3)',
-        'POST /api/photos',
-        'POST https://bucket.test/ (me/gear-4)',
+        'POST https://bucket.test/ (me/gear-3)',
         'PUT /api/me',
       ]);
-      expect(store.me.photo, 'me/profile-3');
-      expect(store.me.gearPhotos, ['me/gear-4']);
-      expect(api.uploads['me/gear-4'], png);
+      expect(store.me.photo, 'me/profile-0');
+      expect(store.me.gear, {Gear.rope, Gear.harness});
+      expect(store.me.gearPhotos, ['me/gear-3']);
+      expect(api.uploads['me/gear-3'], png);
     });
 
     testWidgets('gear photos stop at the most a profile keeps', (tester) async {
@@ -1878,7 +1960,7 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: ProfileEditor(),
+            home: GearEditor(),
           ),
         ),
       );
@@ -1915,6 +1997,27 @@ void main() {
     });
   });
 
+  testWidgets('the Profile tab has a gear card that opens the gear editor', (
+    tester,
+  ) async {
+    final api = sampleApi();
+    api.climbers['me'] = me.copyWith(gear: {});
+    await pumpApp(tester, api);
+    await tapTab(tester, 'Me');
+    await tester.scrollUntilVisible(find.text('Add your gear'), 200);
+    expect(find.textContaining('Add the gear you own'), findsOneWidget);
+    await tester.tap(find.text('Add your gear'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Crash pad'));
+    await tester.tap(find.text('Climbing shoes'));
+    await tester.tap(find.widgetWithText(TextButton, 'Save'));
+    await tester.pumpAndSettle();
+    expect(api.climbers['me']!.gear, {Gear.crashPad, Gear.shoes});
+    expect(find.text('Edit gear'), findsOneWidget);
+    expect(find.text('Crash pad'), findsOneWidget);
+    expect(find.text('Climbing shoes'), findsOneWidget);
+  });
+
   testWidgets('the profile ends with the privacy policy and support links', (
     tester,
   ) async {
@@ -1922,6 +2025,8 @@ void main() {
     await pumpApp(tester, api);
     await tapTab(tester, 'Me');
     await tester.scrollUntilVisible(find.text('Support'), 200);
+    await tester.ensureVisible(find.text('Support'));
+    await tester.pumpAndSettle();
     expect(find.text('Privacy policy'), findsOneWidget);
 
     await tester.tap(find.text('Privacy policy'));
@@ -1976,6 +2081,8 @@ void main() {
 
       await tapTab(tester, 'Yo');
       await tester.scrollUntilVisible(find.text('Español'), 200);
+      await tester.ensureVisible(find.text('Español'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Español'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Idioma del sistema').last);

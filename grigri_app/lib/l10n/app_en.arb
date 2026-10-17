@@ -44,6 +44,84 @@
   "@gearCar": {
     "description": "Gear someone can bring: a car, for a lift."
   },
+  "gearBelayDevice": "Belay device",
+  "@gearBelayDevice": {
+    "description": "Gear someone can bring: a belay device."
+  },
+  "gearHarness": "Harness",
+  "@gearHarness": {
+    "description": "Gear someone can bring: a climbing harness."
+  },
+  "gearHelmet": "Helmet",
+  "@gearHelmet": {
+    "description": "Gear someone can bring: a climbing helmet."
+  },
+  "gearShoes": "Climbing shoes",
+  "@gearShoes": {
+    "description": "Gear someone can bring: climbing shoes."
+  },
+  "yourGear": "Your gear",
+  "@yourGear": {
+    "description": "Title of the gear editor: the gear I own."
+  },
+  "editGear": "Edit gear",
+  "@editGear": {
+    "description": "Button on the Profile tab's gear card: open the gear editor."
+  },
+  "addGear": "Add your gear",
+  "@addGear": {
+    "description": "Button on the Profile tab's gear card when I have listed none."
+  },
+  "gearEmpty": "Add the gear you own, with photos: your plans' groups see it, and check they have what they need.",
+  "@gearEmpty": {
+    "description": "The Profile tab's gear card when I have listed none."
+  },
+  "gearShared": "For the group",
+  "@gearShared": {
+    "description": "Gear editor section heading (shown uppercased): gear the group shares, like a rope."
+  },
+  "gearSharedHint": "The group shares these: a rope does for two.",
+  "@gearSharedHint": {
+    "description": "Hint under the \"For the group\" heading."
+  },
+  "gearPersonal": "Your own",
+  "@gearPersonal": {
+    "description": "Gear editor section heading (shown uppercased): gear each climber needs their own of, like a harness."
+  },
+  "gearPersonalHint": "Every climber needs their own.",
+  "@gearPersonalHint": {
+    "description": "Hint under the \"Your own\" heading."
+  },
+  "gearPhotos": "Photos",
+  "@gearPhotos": {
+    "description": "Gear editor section heading (shown uppercased): photos of my gear."
+  },
+  "planGearAllSet": "The group has all it needs.",
+  "@planGearAllSet": {
+    "description": "Plan screen, gear section: the group's listed gear covers what the plan needs."
+  },
+  "planGearMissing": "Some gear is missing: {items}",
+  "@planGearMissing": {
+    "description": "Plan screen, gear section: a discreet warning naming the gear the group lacks.",
+    "placeholders": {
+      "items": {
+        "type": "String",
+        "example": "Rope, Harness"
+      }
+    }
+  },
+  "planGearGym": "The gym has ropes and mats, and rents the rest.",
+  "@planGearGym": {
+    "description": "Plan screen, gear section of a gym plan: nothing to check."
+  },
+  "planGearGuided": "The guide brings the group's gear: check you have your own.",
+  "@planGearGuided": {
+    "description": "Plan screen, gear section of a guided plan: only personal gear is checked."
+  },
+  "noGearListed": "No gear listed",
+  "@noGearListed": {
+    "description": "Plan screen, gear section: a member who has listed no gear."
+  },
   "save": "Save",
   "@save": {
     "description": "Button: save the form."
@@ -377,10 +455,6 @@
   "whatYouClimbHint": "Pick your disciplines and the grades you climb.",
   "@whatYouClimbHint": {
     "description": "Hint under the \"What you climb\" heading."
-  },
-  "gearYouCanBring": "Gear you can bring",
-  "@gearYouCanBring": {
-    "description": "Profile editor section heading (shown uppercased)."
   },
   "gearHint": "Add photos of it, too.",
   "@gearHint": {

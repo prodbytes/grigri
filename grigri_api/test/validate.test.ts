@@ -47,6 +47,11 @@ describe('profileInput', () => {
     expect(out.areas).toEqual([{ name: 'Crag', lat: -33.12, lon: 151.99 }]);
   });
 
+  it('takes personal gear as well as the group\'s', () => {
+    const gear = ['belayDevice', 'harness', 'helmet', 'shoes'];
+    expect(profileInput({ ...valid, gear }, [owner]).gear).toEqual(gear);
+  });
+
   it('age is optional', () => {
     expect(profileInput({ ...valid, age: null }, [owner])).not.toHaveProperty('age');
   });

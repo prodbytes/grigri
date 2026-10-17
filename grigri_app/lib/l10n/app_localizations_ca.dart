@@ -43,6 +43,66 @@ class AppLocalizationsCa extends AppLocalizations {
   String get gearCar => 'Cotxe';
 
   @override
+  String get gearBelayDevice => 'Assegurador';
+
+  @override
+  String get gearHarness => 'Arnès';
+
+  @override
+  String get gearHelmet => 'Casc';
+
+  @override
+  String get gearShoes => 'Peus de gat';
+
+  @override
+  String get yourGear => 'El teu material';
+
+  @override
+  String get editGear => 'Edita el material';
+
+  @override
+  String get addGear => 'Afegeix el teu material';
+
+  @override
+  String get gearEmpty =>
+      'Afegeix el material que tens, amb fotos: els grups dels teus plans el veuen i comproven que tenen el que cal.';
+
+  @override
+  String get gearShared => 'Per al grup';
+
+  @override
+  String get gearSharedHint =>
+      'El grup el comparteix: una corda serveix per a dos.';
+
+  @override
+  String get gearPersonal => 'El teu';
+
+  @override
+  String get gearPersonalHint => 'Cada persona necessita el seu.';
+
+  @override
+  String get gearPhotos => 'Fotos';
+
+  @override
+  String get planGearAllSet => 'El grup té tot el que necessita.';
+
+  @override
+  String planGearMissing(String items) {
+    return 'Falta material: $items';
+  }
+
+  @override
+  String get planGearGym =>
+      'El rocòdrom té cordes i matalassos, i lloga la resta.';
+
+  @override
+  String get planGearGuided =>
+      'El guia porta el material del grup: comprova que tens el teu.';
+
+  @override
+  String get noGearListed => 'Sense material';
+
+  @override
   String get save => 'Desa';
 
   @override
@@ -276,9 +336,6 @@ class AppLocalizationsCa extends AppLocalizations {
   @override
   String get whatYouClimbHint =>
       'Tria les teves disciplines i els graus que escales.';
-
-  @override
-  String get gearYouCanBring => 'Material que pots portar';
 
   @override
   String get gearHint => 'Afegeix-hi fotos, també.';

@@ -19,8 +19,10 @@ person, and a plan can take a whole group.
     grades read everywhere in the app, never the grades themselves (the
     API stores them as `routes` / `boulders` indices); the choice is kept
     on the device, like the app's [language](i18n.md);
-  - **gear** they can bring: rope, quickdraws, trad rack, crash pad, car,
-    and up to 6 **photos of their gear**.
+  - **gear** they own, for the group (rope, quickdraws, trad rack, belay
+    device, crash pad, car) and their own (harness, helmet, climbing
+    shoes), and up to 6 **photos of their gear**, edited from the Profile
+    tab's Gear card and checked on each plan ([gear](gear.md)).
 
   - **where I climb**: my **location** and up to 5 other **areas** I'd
     climb near, each a place picked from the [sector index](sectors.md)

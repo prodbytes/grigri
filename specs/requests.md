@@ -1196,3 +1196,26 @@ spec.
       card no longer shows the reason pill when the reason is that I
       don't climb the plan's discipline; other reasons still show.
     - Cost: none.
+
+82. **In the profile view add a "gear" section where users can add what
+    they own, including pictures, and in the plan view a "gear" section
+    with everybody's equipment, so people can check they have all that's
+    needed: a simple but smart check (no ropes for bouldering), with a
+    discreet warning when something's missing.**
+    - [Gear](gear.md) (new): gear now has two kinds, for the group (rope,
+      quickdraws, trad rack, and new: belay device; crash pad, car) and
+      each climber's own (new: harness, helmet, climbing shoes), in the
+      app and the API. The Profile tab has a Gear card with its own gear
+      editor (chips and up to 6 photos); the profile editor no longer
+      edits gear. A plan's screen has a Gear section: what its discipline
+      needs (sport and trad: a rope, draws or a rack and a belay device
+      per pair, everyone's harness and shoes, helmets on trad;
+      bouldering: a crash pad and shoes; the gym: nothing; guided: only
+      each climber's own), ticked against the members' gear, a discreet
+      tan line naming what's missing, and each member's gear.
+    - [Matching](matching.md), [screens](screens.md), [api](api.md): the
+      new gear names and where gear is edited and shown. The seed's
+      made-up climbers list some personal gear too.
+    - Cost: none. No new resource or API call: gear is a few more names
+      in the profile item, and members' profiles already come with the
+      plan.

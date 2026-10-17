@@ -50,7 +50,7 @@ export function seedData(now: Date): SeedData {
       age: 30,
       bio: 'Weekend sport climber, weeknight boulderer. Always up for a road trip.',
       levels: { sport: routes('6a', '6c+'), trad: routes('5c', '6a'), bouldering: boulders('V2', 'V5'), gym: routes('6a', '7a') },
-      gear: ['rope', 'quickdraws'],
+      gear: ['rope', 'quickdraws', 'belayDevice', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-marta',
@@ -58,7 +58,7 @@ export function seedData(now: Date): SeedData {
       age: 29,
       bio: 'Limestone lover. I like long days, early starts and a good bocata.',
       levels: { sport: routes('6b', '7a+') },
-      gear: ['rope', 'quickdraws', 'car'],
+      gear: ['rope', 'quickdraws', 'car', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-tomas',
@@ -66,7 +66,7 @@ export function seedData(now: Date): SeedData {
       age: 34,
       bio: 'Multipitch and conglomerate. Happy to lead the trad pitches.',
       levels: { trad: routes('5c', '6c'), sport: routes('6a', '6c') },
-      gear: ['rope', 'rack', 'car'],
+      gear: ['rope', 'rack', 'car', 'belayDevice', 'harness', 'helmet', 'shoes'],
     }),
     climber({
       id: 'seed-ravi',
@@ -74,7 +74,7 @@ export function seedData(now: Date): SeedData {
       age: 38,
       bio: 'Slow and steady. Belays with snacks.',
       levels: { trad: routes('5b', '6b') },
-      gear: ['rack'],
+      gear: ['rack', 'shoes'],
     }),
     climber({
       id: 'seed-kofi',
@@ -82,7 +82,7 @@ export function seedData(now: Date): SeedData {
       age: 31,
       bio: 'Projecting season. Looking for patient belayers.',
       levels: { sport: routes('7a', '7c+') },
-      gear: ['rope', 'quickdraws', 'car'],
+      gear: ['rope', 'quickdraws', 'car', 'belayDevice', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-lena',
@@ -105,14 +105,14 @@ export function seedData(now: Date): SeedData {
       age: 27,
       bio: 'Coming back after a finger injury, so moderate routes please.',
       levels: { sport: routes('5c', '6b'), gym: routes('5c', '6b+') },
-      gear: ['quickdraws'],
+      gear: ['quickdraws', 'belayDevice', 'harness', 'shoes'],
     }),
     climber({
       id: 'seed-bruno',
       name: 'Bruno Costa',
       bio: 'After-work leads and weekend sport trips.',
       levels: { sport: routes('6a+', '6c+'), gym: routes('6a+', '7a') },
-      gear: ['rope', 'car'],
+      gear: ['rope', 'car', 'harness', 'shoes'],
     }),
   ];
 

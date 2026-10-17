@@ -43,6 +43,66 @@ class AppLocalizationsEs extends AppLocalizations {
   String get gearCar => 'Coche';
 
   @override
+  String get gearBelayDevice => 'Aseguador';
+
+  @override
+  String get gearHarness => 'Arnés';
+
+  @override
+  String get gearHelmet => 'Casco';
+
+  @override
+  String get gearShoes => 'Pies de gato';
+
+  @override
+  String get yourGear => 'Tu material';
+
+  @override
+  String get editGear => 'Editar material';
+
+  @override
+  String get addGear => 'Añade tu material';
+
+  @override
+  String get gearEmpty =>
+      'Añade el material que tienes, con fotos: los grupos de tus planes lo ven y comprueban que tienen lo necesario.';
+
+  @override
+  String get gearShared => 'Para el grupo';
+
+  @override
+  String get gearSharedHint =>
+      'El grupo lo comparte: una cuerda vale para dos.';
+
+  @override
+  String get gearPersonal => 'Tuyo';
+
+  @override
+  String get gearPersonalHint => 'Cada persona necesita el suyo.';
+
+  @override
+  String get gearPhotos => 'Fotos';
+
+  @override
+  String get planGearAllSet => 'El grupo tiene todo lo que necesita.';
+
+  @override
+  String planGearMissing(String items) {
+    return 'Falta material: $items';
+  }
+
+  @override
+  String get planGearGym =>
+      'El rocódromo tiene cuerdas y colchonetas, y alquila el resto.';
+
+  @override
+  String get planGearGuided =>
+      'El guía lleva el material del grupo: comprueba que tienes el tuyo.';
+
+  @override
+  String get noGearListed => 'Sin material';
+
+  @override
   String get save => 'Guardar';
 
   @override
@@ -276,9 +336,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get whatYouClimbHint =>
       'Elige tus disciplinas y los grados que escalas.';
-
-  @override
-  String get gearYouCanBring => 'Material que puedes llevar';
 
   @override
   String get gearHint => 'Añade también fotos.';

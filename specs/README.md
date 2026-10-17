@@ -48,6 +48,10 @@ always in the plural, "partners" (a plan's group), in every language.
   and every photo sent in its chat) and **GriGri Pics** (Grigri's own
   credited photos of the plan's crag, in their own S3 bucket with their
   metadata as S3 annotations); the loader and its data.
+- [Gear](gear.md): the gear climbers own (for the group, and their
+  own), with photos, in a Gear card on the Profile tab and its editor;
+  each plan's Gear section, checked against what its discipline needs,
+  with a discreet warning when something's missing.
 - [Sectors](sectors.md): the searchable index of climbing sectors, crags
   and gyms that a plan's "where" picks from, built from OpenStreetMap.
 - [Roles](roles.md): my roles in Grigri, from rbacr, at the end of the

@@ -6,12 +6,14 @@ import 'chat_screen.dart';
 import 'common.dart';
 import 'chat_media.dart';
 import 'plan_editor.dart';
+import 'plan_gear.dart';
 import 'plan_pics.dart';
 import 'route_finder_screen.dart';
 
 /// One plan I'm in, or asked to join: the plan, its photos ("Your Pics"
-/// and GriGri Pics), its group, who's asking to join (answered in the group
-/// chat), and what I can do with it.
+/// and GriGri Pics), its group, the group's gear against what the plan
+/// needs, who's asking to join (answered in the group chat), and what I
+/// can do with it.
 class PlanScreen extends StatefulWidget {
   const PlanScreen({
     super.key,
@@ -124,6 +126,8 @@ class _PlanScreenState extends State<PlanScreen> {
               ),
               onTap: () => showProfileSheet(context, store.climber(id)),
             ),
+          const SizedBox(height: 16),
+          PlanGearSection(plan),
           if (member && pending.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(

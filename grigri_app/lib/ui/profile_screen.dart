@@ -5,6 +5,7 @@ import '../app_version.dart';
 import '../model/premium.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'gear_editor.dart';
 import 'location_picker.dart';
 import 'profile_editor.dart';
 import 'roles_card.dart';
@@ -98,9 +99,11 @@ class ProfileScreen extends StatelessWidget {
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: ProfileDetails(me),
+              child: ProfileDetails(me, gear: false),
             ),
           ),
+          const SizedBox(height: 8),
+          const _MyGear(),
           const SizedBox(height: 8),
           const _WhereIClimb(),
           const SizedBox(height: 8),
@@ -142,6 +145,60 @@ class ProfileScreen extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+/// My gear, in a card of its own: what I own and its photos, as my plans'
+/// groups see it, with the gear editor a tap away.
+class _MyGear extends StatelessWidget {
+  const _MyGear();
+
+  @override
+  Widget build(BuildContext context) {
+    final me = StoreScope.of(context).me;
+    final text = Theme.of(context).textTheme;
+    final l = context.l10n;
+    final empty = me.gear.isEmpty && me.gearPhotos.isEmpty;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 8, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l.profileGear.toUpperCase(),
+                    style: text.labelSmall?.copyWith(
+                      color: Mountain.granite,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  icon: Icon(empty ? Icons.add : Icons.edit_outlined),
+                  label: Text(empty ? l.addGear : l.editGear),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(builder: (_) => const GearEditor()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: empty
+                  ? Text(
+                      l.gearEmpty,
+                      style: text.bodySmall?.copyWith(color: Mountain.granite),
+                    )
+                  : GearDetails(me),
+            ),
+          ],
+        ),
       ),
     );
   }

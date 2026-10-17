@@ -339,12 +339,21 @@ class _Line extends StatelessWidget {
 /// A climber's profile: who they are, their grades, when and where they
 /// climb, and their gear.
 class ProfileDetails extends StatelessWidget {
-  const ProfileDetails(this.climber, {super.key, this.compact = false});
+  const ProfileDetails(
+    this.climber, {
+    super.key,
+    this.compact = false,
+    this.gear = true,
+  });
 
   final Climber climber;
 
   /// Leaves out the gear, and cuts the bio to three lines ("…").
   final bool compact;
+
+  /// Whether to show the gear (my Profile tab shows it in a card of its
+  /// own).
+  final bool gear;
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +370,9 @@ class ProfileDetails extends StatelessWidget {
       ),
     );
     final showGear =
-        !compact && (climber.gear.isNotEmpty || climber.gearPhotos.isNotEmpty);
+        gear &&
+        !compact &&
+        (climber.gear.isNotEmpty || climber.gearPhotos.isNotEmpty);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -386,27 +397,46 @@ class ProfileDetails extends StatelessWidget {
             ],
           ),
         ],
-        if (showGear) ...[
-          heading(l.profileGear),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [for (final g in climber.gear) Tag(g.label(l))],
-          ),
-          if (climber.gearPhotos.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final (i, key) in climber.gearPhotos.indexed)
-                  PhotoThumb(
-                    StoreScope.of(context).photo(key),
-                    label: l.gearPhotoOf(climber.name, i + 1),
-                  ),
-              ],
-            ),
+        if (showGear) ...[heading(l.profileGear), GearDetails(climber)],
+      ],
+    );
+  }
+}
+
+/// A climber's gear: what they own, in the editor's order, and its photos
+/// (tap one to see it whole).
+class GearDetails extends StatelessWidget {
+  const GearDetails(this.climber, {super.key});
+
+  final Climber climber;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final g in Gear.values)
+              if (climber.gear.contains(g)) Tag(g.label(l)),
           ],
+        ),
+        if (climber.gearPhotos.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final (i, key) in climber.gearPhotos.indexed)
+                PhotoThumb(
+                  StoreScope.of(context).photo(key),
+                  label: l.gearPhotoOf(climber.name, i + 1),
+                ),
+            ],
+          ),
         ],
       ],
     );

@@ -30,9 +30,67 @@ Future<Uint8List?> pickPhoto(ImageSource source, double maxSide) async {
   return file?.readAsBytes();
 }
 
+/// Asks camera or library (and, given [onRemove], offers to remove the
+/// photo), then picks with [pick]. Null when cancelled.
+Future<Uint8List?> choosePhoto(
+  BuildContext context,
+  PhotoPicker pick,
+  double maxSide, {
+  VoidCallback? onRemove,
+}) async {
+  final camera = ImagePicker().supportsImageSource(ImageSource.camera);
+  final l = context.l10n;
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    backgroundColor: Mountain.surface,
+    showDragHandle: true,
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (camera)
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: Text(l.takePhoto),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_outlined),
+            title: Text(l.choosePhoto),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          if (onRemove != null)
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Mountain.clay),
+              title: Text(
+                l.removePhoto,
+                style: const TextStyle(color: Mountain.clay),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                onRemove();
+              },
+            ),
+        ],
+      ),
+    ),
+  );
+  if (source == null) return null;
+  try {
+    return await pick(source, maxSide);
+  } on Exception {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l.photoFailed)));
+    }
+    return null;
+  }
+}
+
 /// Edits my profile: my photo, about me, the grades I climb per
-/// discipline, my gear with its photos, and where I climb (my location and
-/// other areas, private, which rank the Discover deck). When is for plans.
+/// discipline, and where I climb (my location and other areas, private,
+/// which rank the Discover deck). When is for plans; my gear has its own
+/// editor, from the Profile tab's gear card.
 /// My profile is made from my Google account at the first sign-in; this is
 /// where I fill in the rest.
 class ProfileEditor extends StatefulWidget {
@@ -58,10 +116,6 @@ class _ProfileEditorState extends State<ProfileEditor> {
     for (final e in _me.levels.entries)
       e.key: RangeValues(e.value.min.toDouble(), e.value.max.toDouble()),
   };
-  late final Set<Gear> _gear = {..._me.gear};
-  late final List<EditablePhoto> _gearPhotos = [
-    for (final key in _me.gearPhotos) EditablePhoto.saved(key),
-  ];
   late Location? _location = _me.location;
   late final List<Location> _areas = [..._me.areas];
 
@@ -73,71 +127,14 @@ class _ProfileEditorState extends State<ProfileEditor> {
     super.dispose();
   }
 
-  /// Asks camera or library (and, for my photo, offers to remove it), then
-  /// picks. Null when cancelled.
-  Future<Uint8List?> _choose(double maxSide, {VoidCallback? onRemove}) async {
-    final camera = ImagePicker().supportsImageSource(ImageSource.camera);
-    final l = context.l10n;
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      backgroundColor: Mountain.surface,
-      showDragHandle: true,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (camera)
-              ListTile(
-                leading: const Icon(Icons.photo_camera_outlined),
-                title: Text(l.takePhoto),
-                onTap: () => Navigator.pop(context, ImageSource.camera),
-              ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: Text(l.choosePhoto),
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            if (onRemove != null)
-              ListTile(
-                leading: const Icon(Icons.delete_outline, color: Mountain.clay),
-                title: Text(
-                  l.removePhoto,
-                  style: const TextStyle(color: Mountain.clay),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  onRemove();
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-    if (source == null) return null;
-    try {
-      return await widget.pick(source, maxSide);
-    } on Exception {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l.photoFailed)));
-      }
-      return null;
-    }
-  }
-
   Future<void> _changePhoto() async {
-    final photo = await _choose(
+    final photo = await choosePhoto(
+      context,
+      widget.pick,
       640,
       onRemove: _photo == null ? null : () => setState(() => _photo = null),
     );
     if (photo != null) setState(() => _photo = EditablePhoto.picked(photo));
-  }
-
-  Future<void> _addGearPhoto() async {
-    final photo = await _choose(1080);
-    if (photo != null) {
-      setState(() => _gearPhotos.add(EditablePhoto.picked(photo)));
-    }
   }
 
   Future<void> _pickLocation() async {
@@ -177,12 +174,11 @@ class _ProfileEditorState extends State<ProfileEditor> {
               e.value.end.round(),
             ),
         },
-        gear: _gear,
         location: _location,
         areas: _areas,
       ),
       photo: _photo,
-      gearPhotos: _gearPhotos,
+      gearPhotos: [for (final key in _me.gearPhotos) EditablePhoto.saved(key)],
     );
     if (!mounted) return;
     setState(() => _saving = false);
@@ -311,48 +307,6 @@ class _ProfileEditorState extends State<ProfileEditor> {
             label(l.whatYouClimb, l.whatYouClimbHint),
             const GradeSystemToggle(),
             for (final d in Discipline.values) _levelEditor(d),
-            label(l.gearYouCanBring, l.gearHint),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final g in Gear.values)
-                  FilterChip(
-                    label: Text(g.label(l)),
-                    selected: _gear.contains(g),
-                    onSelected: (on) =>
-                        setState(() => on ? _gear.add(g) : _gear.remove(g)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final (i, photo) in _gearPhotos.indexed)
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      PhotoThumb(_image(photo), label: l.gearPhoto(i + 1)),
-                      Positioned(
-                        top: -10,
-                        right: -10,
-                        child: IconButton.filledTonal(
-                          tooltip: l.removeGearPhoto(i + 1),
-                          iconSize: 16,
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.close),
-                          onPressed: () =>
-                              setState(() => _gearPhotos.removeAt(i)),
-                        ),
-                      ),
-                    ],
-                  ),
-                if (_gearPhotos.length < Climber.maxGearPhotos)
-                  _AddPhotoTile(onPressed: _addGearPhoto),
-              ],
-            ),
             label(l.language),
             const LanguagePicker(),
             const SizedBox(height: 28),
@@ -456,31 +410,6 @@ class _PhotoButton extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    ),
-  );
-}
-
-/// The empty tile that adds a gear photo.
-class _AddPhotoTile extends StatelessWidget {
-  const _AddPhotoTile({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) => Tooltip(
-    message: context.l10n.addGearPhoto,
-    child: Material(
-      color: Mountain.surfaceHigh,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onPressed,
-        child: const SizedBox(
-          width: 84,
-          height: 84,
-          child: Icon(Icons.add_a_photo_outlined, color: Mountain.granite),
         ),
       ),
     ),
