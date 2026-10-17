@@ -57,7 +57,7 @@ TestFlight comes first, then review for the App Store.
   one to three; neither page gives a size limit for an integer. Apple's
   [TN2420](https://developer.apple.com/library/archive/technotes/tn2420/_index.html)
   adds that each may be **at most 18 characters**. Grigri's
-  ([release](release.md#versioning)) fit: the version `0.1.202610171230`
+  ([release](release.md#versioning)) fit: the version `0.2.202610171230`
   is 16 characters, the build number (Unix seconds, ten digits) 10, and
   both only grow (a version must be higher than the last one, a build
   number higher than the last one of its version). So iOS builds keep the
@@ -76,13 +76,14 @@ Premium** (3.1.1).
 
 ## In App Store Connect
 
-Set up on 2026-10-17. What's left before **Add for Review**: an
-uploaded build picked on the version's page, and each subscription's
-review screenshot (the Premium card with the App Store's prices, which
-only an iOS build shows). Until a build is processed, App Store Connect
-shows a grid placeholder for the app's icon: the icon comes from the
-build (`AppIcon` in the asset catalog, the 1024 px `ios-marketing` one
-included); there's no separate icon upload.
+Set up on 2026-10-17. The GA build **0.1.202610171131** (build
+`1792236692`) is uploaded, processed and picked on the version's page;
+its icon replaced App Store Connect's grid placeholder (the icon comes
+from the build's `AppIcon`, the 1024 px `ios-marketing` one included;
+there's no separate icon upload). Both subscriptions have their review
+screenshot. What's left is the owner's: **Add for Review** on the
+version's page and on each subscription (the first subscriptions go to
+review with the app version), then **Submit for Review**.
 
 ### Apple accounts and signing
 
@@ -124,8 +125,11 @@ included); there's no separate icon upload.
   Apple's converted prices, with English display names ("Grigri Premium
   (monthly)" / "(yearly)": "Advertise and find routes with the camera.")
   and review notes ([premium](premium.md)). They go to review with the
-  first app version; each still needs its review screenshot of the
-  Premium card.
+  first app version. Their review screenshot is the iOS Premium card
+  (both App Store prices, the renewal terms, the policy and EULA links,
+  Restore purchases), rendered offscreen with the app's fake App Store,
+  since the sandbox doesn't sell products before their metadata is
+  complete.
 - **App Store Server Notifications**: the production and sandbox URLs
   are both `https://grigri.nu01.com/api/apple/notifications`.
 

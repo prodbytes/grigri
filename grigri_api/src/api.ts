@@ -1087,7 +1087,7 @@ export class Api {
   /** POST /api/ads {text, link, media?}: a Premium climber's new ad, waiting for an admin. */
   private async createAd(req: Request, s: Session) {
     const input = adInput(req.body, s.me.id);
-    assertClean({ text: input.text });
+    assertClean({ text: input.text, regions: input.regions?.map((r) => r.name).join('\n') });
     if (!(await this.isPremium(s.caller.email))) throw forbidden('ads are for Premium');
     if ((await this.store.adsBy(s.me.id)).length >= MAX_ADS_PER_OWNER) {
       throw conflict(`you can keep at most ${MAX_ADS_PER_OWNER} ads; delete one first`);

@@ -56,7 +56,8 @@ never reach it. A place found is a short name ("Siurana, España"; a
 country by its name alone), in the app's language where it can be, and
 its bounding box.
 
-An ad keeps each region's name and box. The deck widens each box on
+An ad keeps each region's name and box (names go through the
+[filter](moderation.md#the-filter), as its text does). The deck widens each box on
 every side by **50 km, or a tenth of its size when that's more**, so it
 reaches a bit further, to be sure: Siurana's reaches Cornudella, Reus and
 Tarragona (not Barcelona, about 100 km away), and Spain's reaches just

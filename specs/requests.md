@@ -1415,8 +1415,11 @@ spec.
     - The icon: App Store Connect shows a grid placeholder until a build
       is processed. The GA archive already has the logo, so uploading it
       is the fix; nothing needs generating.
-    - Not submitted yet: the GA build (0.1.202610171131) still has to be
-      uploaded, and each subscription needs its review screenshot.
+    - The GA build (0.1.202610171131, build 1792236692) is uploaded with
+      `xcodebuild -exportArchive` (destination upload, Xcode's signed-in
+      account), processed and picked on the version's page; the icon now
+      shows. Both subscriptions have their review screenshot. Left for the
+      owner: Add for Review and Submit for Review.
     - Cost: none beyond the Apple Developer Program ($99 a year). App
       Store Connect, TestFlight and the notifications are free.
 
@@ -1464,7 +1467,15 @@ spec.
       top pill.
     - Cost: none (app only).
 
-95. **On the new ad screen, let advertisers add the regions where the ad
+95. **Increment the Y version, merge all changes, and submit for review
+    on the App Store.**
+    - [Release](release.md): `version.Y.txt` is now 2, so releases are
+      `0.2.<Z>`; the App Store's first version is 0.2. The example
+      versions in [release](release.md) and [app store](app-store.md)
+      follow.
+    - Cost: none.
+
+96. **On the new ad screen, let advertisers add the regions where the ad
     shows: a whole country (Spain) or just a town (Siurana). Make the ad
     cover that region and a bit further, to be sure: Siurana's ads should
     show where I am.**
