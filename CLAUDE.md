@@ -6,7 +6,7 @@ People in Grigri match with a **plan**, not with a partner. In anything
 users read (the app's text in every language, the site, store listings,
 seeds and demo data, the match model's reasons):
 
-- Grigri's line is **"Find a climbing plan"**, never "find a partner".
+- Grigri's line is **"Join a climbing plan"**, never "find a partner".
 - When partners are worth mentioning, always in the plural:
   **"partners"** (a plan's group), never "a partner".
 

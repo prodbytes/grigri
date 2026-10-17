@@ -312,7 +312,7 @@ void main() {
           GrigriPic(key: 'crags/b/1.jpg', crag: 'Valle Gris'),
         ]);
       final store = await pumpApp(tester, storeFor(api, signedIn: false));
-      expect(find.text('Find a climbing plan.'), findsOneWidget);
+      expect(find.text('Join a climbing plan.'), findsOneWidget);
       expect(find.text('100% free'), findsOneWidget);
       expect(find.text('Sign in with Google'), findsOneWidget);
       expect(find.text('Photo: Ana Roca, CC BY 4.0'), findsOneWidget);
