@@ -1415,8 +1415,11 @@ spec.
     - The icon: App Store Connect shows a grid placeholder until a build
       is processed. The GA archive already has the logo, so uploading it
       is the fix; nothing needs generating.
-    - Not submitted yet: the GA build (0.1.202610171131) still has to be
-      uploaded, and each subscription needs its review screenshot.
+    - The GA build (0.1.202610171131, build 1792236692) is uploaded with
+      `xcodebuild -exportArchive` (destination upload, Xcode's signed-in
+      account), processed and picked on the version's page; the icon now
+      shows. Both subscriptions have their review screenshot. Left for the
+      owner: Add for Review and Submit for Review.
     - Cost: none beyond the Apple Developer Program ($99 a year). App
       Store Connect, TestFlight and the notifications are free.
 
