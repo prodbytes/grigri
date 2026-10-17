@@ -1091,3 +1091,20 @@ spec.
       decides").
     - [Backend](backend.md): the seed's Montserrat plan is guided and
       the after-work gym plan is open.
+
+75. **Still seeing the old login page locally, though it was replaced by
+    a more modern one: rebuild, restart, and make sure the new page is on
+    every platform, the web included.**
+    - [Sign-in](sign-in.md): the app's sign-in screen (at `/app/`, and on
+      Android and iOS, where the landing page never showed) now has the
+      landing page's look: a GriGri Pics photo edge to edge, "100% free",
+      **Find a climbing plan.**, Google's sign-in, the swiping demo card,
+      how it works, what's free and a last call, in the six languages.
+      The app reads GriGri Pics' catalog (`/pics/catalog.json`, no
+      token) for the photos.
+    - [Landing page](landing.md): the headline and the last call follow
+      "Find a climbing plan" (they said "partner"), in every language, as
+      do the page's title and description.
+    - Cost: none added. The catalog and photos are files CloudFront
+      already serves from its cache.
+

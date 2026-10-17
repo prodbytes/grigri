@@ -206,9 +206,9 @@
   "@loadFailedTitle": {
     "description": "Title of the screen shown when the profile could not be loaded."
   },
-  "signInTagline": "Find a climbing plan: make one, or swipe right on one, and climb together.",
+  "signInTagline": "Make a plan, or swipe right on one, and climb together.",
   "@signInTagline": {
-    "description": "Sign-in screen, under the app name."
+    "description": "Sign-in screen: under the headline."
   },
   "signInWithGoogle": "Sign in with Google",
   "@signInWithGoogle": {
@@ -1732,5 +1732,101 @@
   "openJoinAtOnce": "Open: join at once",
   "@openJoinAtOnce": {
     "description": "Tag on an open plan's card: swiping right joins at once."
+  },
+  "signInBadge": "100% free",
+  "@signInBadge": {
+    "description": "Sign-in screen: badge over the headline."
+  },
+  "signInHeadline": "Find a climbing plan.",
+  "@signInHeadline": {
+    "description": "Sign-in screen: the headline, Grigri's line."
+  },
+  "signInFreeLine": "Free for every climber: no card, no subscription.",
+  "@signInFreeLine": {
+    "description": "Sign-in screen: under the sign-in button."
+  },
+  "signInStampJoin": "JOIN",
+  "@signInStampJoin": {
+    "description": "Sign-in screen: the stamp on the demo card as it's swiped right."
+  },
+  "signInDeckWhen": "This Saturday · Sport · 6b–7a",
+  "@signInDeckWhen": {
+    "description": "Sign-in screen: the demo card's day, style and grades."
+  },
+  "signInDeckWho": "Mara, Jonas and 1 more",
+  "@signInDeckWho": {
+    "description": "Sign-in screen: the demo card's made-up climbers."
+  },
+  "signInHowTitle": "How it works",
+  "@signInHowTitle": {
+    "description": "Sign-in screen: heading of the three steps."
+  },
+  "signInStep1Title": "Make a plan",
+  "@signInStep1Title": {
+    "description": "Sign-in screen: step 1."
+  },
+  "signInStep1Body": "Where, when and which grades: a crag, a Saturday, 6a to 7a.",
+  "@signInStep1Body": {
+    "description": "Sign-in screen: step 1, explained."
+  },
+  "signInStep2Title": "Swipe right",
+  "@signInStep2Title": {
+    "description": "Sign-in screen: step 2."
+  },
+  "signInStep2Body": "Like someone's plan? Swipe right. The group lets newcomers in one at a time, when everyone says yes.",
+  "@signInStep2Body": {
+    "description": "Sign-in screen: step 2, explained."
+  },
+  "signInStep3Title": "Climb together",
+  "@signInStep3Title": {
+    "description": "Sign-in screen: step 3."
+  },
+  "signInStep3Body": "Every match opens the plan's group chat: sort out the rope, the ride and the coffee.",
+  "@signInStep3Body": {
+    "description": "Sign-in screen: step 3, explained."
+  },
+  "signInFreeTitle": "Free. Really.",
+  "@signInFreeTitle": {
+    "description": "Sign-in screen: heading of what's free."
+  },
+  "signInFree1": "Plans and swiping",
+  "@signInFree1": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFree2": "Matches and group chats",
+  "@signInFree2": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFree3": "Crag photos",
+  "@signInFree3": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFree4": "No card to sign up",
+  "@signInFree4": {
+    "description": "Sign-in screen: a free feature."
+  },
+  "signInFreePremium": "Premium is optional: it's only for advertising on Grigri and for the route finder. Climbing with Grigri costs nothing.",
+  "@signInFreePremium": {
+    "description": "Sign-in screen: what Premium is for."
+  },
+  "signInFinalTitle": "This weekend's climbing plan is one swipe away.",
+  "@signInFinalTitle": {
+    "description": "Sign-in screen: the last call, at the bottom."
+  },
+  "signInJoinFree": "Join free with Google",
+  "@signInJoinFree": {
+    "description": "Sign-in screen: the last button."
+  },
+  "signInPhotoBy": "Photo: {author}, {license}",
+  "@signInPhotoBy": {
+    "description": "Sign-in screen: the hero photo's credit.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "license": {
+        "type": "String"
+      }
+    }
   }
 }

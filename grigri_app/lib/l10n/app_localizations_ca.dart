@@ -156,7 +156,7 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get signInTagline =>
-      'Troba un pla d\'escalada: fes-ne un o llisca a la dreta en un, i escaleu junts.';
+      'Fes un pla o llisca a la dreta en un, i escaleu junts.';
 
   @override
   String get signInWithGoogle => 'Inicia la sessió amb Google';
@@ -1237,4 +1237,78 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get openJoinAtOnce => 'Obert: uneix-te al moment';
+
+  @override
+  String get signInBadge => '100% gratuït';
+
+  @override
+  String get signInHeadline => 'Troba un pla d’escalada.';
+
+  @override
+  String get signInFreeLine =>
+      'Gratuït per a tothom: sense targeta, sense subscripció.';
+
+  @override
+  String get signInStampJoin => 'M’HI APUNTO';
+
+  @override
+  String get signInDeckWhen => 'Aquest dissabte · Esportiva · 6b–7a';
+
+  @override
+  String get signInDeckWho => 'Mara, Jonas i 1 més';
+
+  @override
+  String get signInHowTitle => 'Com funciona';
+
+  @override
+  String get signInStep1Title => 'Fes un pla';
+
+  @override
+  String get signInStep1Body =>
+      'On, quan i quins graus: una escola, un dissabte, de 6a a 7a.';
+
+  @override
+  String get signInStep2Title => 'Llisca a la dreta';
+
+  @override
+  String get signInStep2Body =>
+      'T’agrada un pla? Llisca a la dreta. El grup admet els nous d’un en un, quan tothom diu que sí.';
+
+  @override
+  String get signInStep3Title => 'Escaleu junts';
+
+  @override
+  String get signInStep3Body =>
+      'Cada match obre el xat de grup del pla: la corda, el cotxe i el cafè.';
+
+  @override
+  String get signInFreeTitle => 'Gratuït. De debò.';
+
+  @override
+  String get signInFree1 => 'Plans i lliscar';
+
+  @override
+  String get signInFree2 => 'Matches i xats de grup';
+
+  @override
+  String get signInFree3 => 'Fotos de les escoles';
+
+  @override
+  String get signInFree4 => 'Sense targeta per registrar-te';
+
+  @override
+  String get signInFreePremium =>
+      'Premium és opcional: només serveix per anunciar-se a Grigri i per al cercador de vies. Escalar amb Grigri no costa res.';
+
+  @override
+  String get signInFinalTitle =>
+      'El pla d’escalada d’aquest cap de setmana és a un lliscament.';
+
+  @override
+  String get signInJoinFree => 'Uneix-te gratis amb Google';
+
+  @override
+  String signInPhotoBy(String author, String license) {
+    return 'Foto: $author, $license';
+  }
 }
