@@ -21,6 +21,12 @@ once, to start it.
 - A session lasts **until sign-out, or 365 days without use**. It slides:
   each day it's used pushes the 365 days forward; there's no absolute
   limit.
+- The session also keeps the account's climber id once it has a profile
+  (from sign-in, or the first request that finds it), so requests skip
+  looking up the sign-in link ([api.md](api.md#sessions)). Deleting the
+  account ends every session, so none keeps a deleted climber; signing in
+  again starts a session without one, and the new profile's id is kept
+  once it's made.
 - The same session token opens the app's [live updates](live-updates.md)
   connection, checked by the MQTT broker's authorizer, which refuses an
   ended session and drops a connection within the hour of its sign-out.

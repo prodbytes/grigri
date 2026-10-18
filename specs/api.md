@@ -34,7 +34,8 @@ themselves, and the API filters objectionable words
   `Authorization: Bearer <session token>` on every call. A session lasts
   until sign-out, or 365 days without use. The HTTP API has no
   authorizer: the function authenticates every request (one DynamoDB
-  read).
+  read of the session; see [Sessions](#sessions) for what else a request
+  reads).
 - Live updates: after a change the function publishes a hint to each
   affected climber's MQTT topic on AWS IoT Core; the app subscribes with
   its session token through an IoT custom authorizer (see
@@ -65,7 +66,10 @@ themselves, and the API filters objectionable words
   transactions and notifications; admins hold it through
   rbacr's implication) and `blocked` (`premium-rc` and `blocked-rc` on
   the RC).
-- **Admin**: decided by [rbacr](roles.md) on every request: the
+- **Admin**: decided by [rbacr](roles.md), asked only by the requests
+  that need it (the admin routes, `GET /api/me`, the deck's match scores,
+  and deleting someone else's plan photo, route or ad), at most once per
+  request: the
   session's verified email (`email_verified` true when the session was
   made) holds the `admin` role of rbacr's `grigri` system (rbacr's roots
   hold every role, so they're admins too). The API asks
@@ -141,8 +145,26 @@ the web, so the API issues its own sessions:
   picks the app. Never logged ([sign-in.md](sign-in.md#apple)).
 - The token: 32 random bytes, base64url (43 characters). Stored only as
   its SHA-256 hash: item `SESSION#<hash>` with the subject, the email (only
-  if verified), `emailVerified`, the account's name (when given), `createdAt`, `lastUsedAt` and `ttl`
+  if verified), `emailVerified`, the account's name (when given), the
+  account's `climberId` (once it has a profile), `createdAt`, `lastUsedAt` and `ttl`
   (DynamoDB's TTL attribute, epoch seconds) = lastUsedAt + **365 days**.
+- The session keeps its account's **climber id**, so a request needs no
+  lookup of the sign-in link: `POST /api/session` reads the link once
+  (an account with a profile starts with it; a failed read just leaves
+  it out), and a session without one (a new account's first, or one
+  made before) looks the link up on each request until it finds a
+  profile, then keeps it (one conditional write: only while the session
+  exists and only for its own subject). Only the API writes it, from the
+  subject's own link, which never changes while the account exists
+  (deleting the account deletes every session). A kept climber whose
+  profile is gone falls back to the link.
+- **A signed-in request reads**: the session; then, at the same time,
+  rbacr's `blocked` holders (and, on an admin route, the admin check; on
+  a Premium route, my roles) and my profile (by the kept climber id: one
+  read; without it, the link and then the profile). The checks are
+  applied in the same order as ever: no profile (409), blocked (403),
+  admins only, Premium only. rbacr's answers are kept a minute per
+  function instance.
 - It slides: a request more than a day after `lastUsedAt` moves both
   forward (at most one write per session per day). No absolute limit: a
   session lasts until sign-out, or 365 days without use. The function
@@ -284,7 +306,7 @@ All need a session token except `GET /api/health`, `POST /api/session`,
 | `POST /api/walls/{id}/views` | premium; the app learns the wall: body `{"key" (mine, uploaded), "width", "height", "h": [9 numbers]}` (this view's pixels → the first view's) → `{"wall"}`. Past 12 views the oldest learned one goes (its photo deleted) |
 | `GET /api/pics?lat=&lon=&sector=&place=&area=` | GriGri Pics for a place (any of them; `lat` and `lon` both or neither, 400 otherwise) → `{"pics": [GrigriPic]}` |
 | `POST /api/photos` | body `{"kind": "profile"|"gear", "contentType": "image/jpeg"|"image/png"|"image/webp"}` → `{"key", "url", "fields"}`: a presigned S3 POST, ≤ 2 MB, valid 15 minutes (room for a chat video on a slow line). The app POSTs the file there (multipart form with every returned field, then the file, as the last field named `file`; no Authorization header) and saves the key in its profile. The fields include `tagging` (`grigri-pending=true`): the bucket expires pending photos after a day, so a photo never saved to a profile goes away. Keys are `<subject hash>/<kind>/<random>.<jpg|png|webp>`; the S3 object is `photos/<key>`, served at `/photos/<key>`. In AWS `url` is the bucket's own (`https://<bucket>.s3.us-east-1.amazonaws.com/`, allowed by the web app's CSP `connect-src` and the bucket's CORS for the stage's site origin); locally it's Floci's S3, `https://localhost:2543/grigri-local-photos`. |
-| `GET /api/premium` | my [Premium](premium.md), Stripe's prices and the App Store's appAccountToken for me: `{"premium", "prices": {"monthly": {"amount": 2000, "currency": "usd"}, "yearly": {"amount": 20000, …}} \| null, "appleAccountToken": "<uuid>"}` (`prices` null: the stage has no Stripe keys) |
+| `GET /api/premium` | my [Premium](premium.md), Stripe's prices and the App Store's appAccountToken for me: `{"premium", "prices": {"monthly": {"amount": 2000, "currency": "usd"}, "yearly": {"amount": 20000, …}} \| null, "appleAccountToken": "<uuid>"}` (`prices` null: the stage has no Stripe keys). `?fresh=1` asks rbacr afresh; without it, rbacr's kept answer (at most a minute old), unless my subscription disagrees with it (paid but no role, or the role held after it ended), which asks afresh too ([premium.md](premium.md#who-is-premium)) |
 | `POST /api/premium/checkout` | body `{"plan": "monthly"\|"yearly"}` → `{"url"}`, Stripe Checkout's page for it (409 when I'm already Premium; 503 without Stripe keys) |
 | `POST /api/premium/portal` | → `{"url"}`, Stripe's billing portal (404 before I ever subscribed, or when my subscription is the App Store's; 503 without Stripe keys) |
 | `POST /api/premium/apple` | the iOS app's App Store purchase: body `{"transaction": "<StoreKit 2 signed transaction, a JWS>"}`, verified offline against Apple's root ([premium.md](premium.md#verifying-apples-signatures)). 400 for a bad signature or a transaction that isn't Grigri Premium (another bundle or product); 409 when it was bought with another account's appAccountToken (or none), or its subscription is already another account's. Saved as my subscription (unless an older copy than the one kept), and rbacr's role follows. → as `GET /api/premium` |

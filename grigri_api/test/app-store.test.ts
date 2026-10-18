@@ -149,8 +149,8 @@ describe('Premium through the App Store', () => {
   let store: FakeStore;
   let rbacr: FakeRbacr;
   let api: Api;
-  const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', admin: false };
-  const bob: Caller = { subject: 'test#bob', email: 'bob@example.com', admin: false };
+  const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', isAdmin: async () => false };
+  const bob: Caller = { subject: 'test#bob', email: 'bob@example.com', isAdmin: async () => false };
 
   const call = async (caller: Caller | null, method: string, path: string, body?: unknown) =>
     (await api.handle(method, path, { caller, body, query: {} })) as Record<string, any>;

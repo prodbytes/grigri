@@ -312,9 +312,10 @@ and the app also polls, only what's on screen, as a safety net:
   live connection is up. While another screen covers the tabs (a chat, a
   plan, a dialog), the open tab's part waits; if it was due meanwhile, it
   runs once when that screen closes;
-- on coming back to the foreground, the same at once (and my Premium if
-  the app opened Stripe's Checkout or portal, or the App Store's
-  subscriptions, since, or the profile is on screen);
+- on coming back to the foreground, the same at once; and my Premium
+  the first time back after the app opened Stripe's Checkout or portal,
+  or the App Store's subscriptions (afresh, [premium.md](premium.md)), or
+  whenever the profile is on screen;
 - an open **chat every 3 seconds**, asking only for messages after the
   last one it has; every **minute** instead while the live connection is
   up; at once on coming back to the foreground; and when something else

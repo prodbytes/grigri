@@ -330,9 +330,8 @@ class GrigriStore extends ChangeNotifier {
     _me = null;
     _admin = false;
     _premium = const Premium.none();
+    _billing = null;
     _premiumPrices = const {};
-    _premiumOffered = false;
-    _awayToPay = false;
     _messagePolls.clear();
     _appleAccountToken = null;
     _buying = false;
@@ -436,12 +435,6 @@ class GrigriStore extends ChangeNotifier {
 
   /// What Premium costs; empty until loaded, or when it can't be bought.
   Map<PremiumPlan, PremiumPrice> get premiumPrices => _premiumPrices;
-
-  /// Whether `GET /api/premium` has been asked this session, and answered
-  /// or failed (the profile asks when it opens; until then [premium]
-  /// comes from `GET /api/me` and [premiumPrices] is empty).
-  bool get premiumOffered => _premiumOffered;
-  bool _premiumOffered = false;
 
   /// My roles in Grigri, from rbacr through the API, sorted; null when
   /// rbacr couldn't say.
@@ -1416,28 +1409,42 @@ class GrigriStore extends ChangeNotifier {
   // --- Premium -----------------------------------------------------------
 
   /// My Premium and its prices again (the profile, and coming back from
-  /// Stripe's pages in the browser).
-  Future<void> refreshPremium() async {
-    final session = _session;
-    await _refresh(api.premium, _applyOffer);
-    if (session == _session && _phase == Phase.ready && !_premiumOffered) {
-      // Asked, even if it failed: the card says what it has.
-      _premiumOffered = true;
-      notifyListeners();
+  /// Stripe's pages in the browser). [fresh] ("check again"): the API asks
+  /// rbacr afresh; so does every refresh after Stripe's pages (or the App
+  /// Store's subscriptions) were opened, until my Premium changes from
+  /// what it was then.
+  Future<void> refreshPremium({bool fresh = false}) async {
+    final ask = fresh || _billing != null;
+    final refreshed = await _refresh(
+      () => api.premium(fresh: ask),
+      _applyOffer,
+    );
+    final billing = _billing;
+    if (refreshed && billing != null && _premium != billing.premium) {
+      _billing = null;
     }
     await _premiumChanged();
   }
 
-  /// The app opened Stripe's Checkout or portal, or the App Store's
-  /// subscriptions, and hasn't checked my Premium since.
-  bool _awayToPay = false;
+  /// Since Stripe's pages (checkout, the portal) or the App Store's
+  /// subscriptions were last opened: my Premium then, and whether the app
+  /// has come back to the foreground since; null: not opened since my
+  /// Premium changed.
+  ({Premium premium, bool back})? _billing;
 
-  /// Back in the foreground: my Premium again if I went to pay for or
-  /// manage it ([subscribe], [managePremium]), or if [visible] (the
-  /// profile is on screen); nothing otherwise.
+  /// Opened a page where my Premium may change: the next return to the
+  /// foreground checks it, and every check asks afresh until it changes.
+  void _openedBilling() => _billing = (premium: _premium, back: false);
+
+  /// Back in the foreground: my Premium again (afresh) the first time
+  /// after a page where it may change opened ([subscribe],
+  /// [managePremium]), or whenever [visible] (the profile is on screen);
+  /// nothing otherwise.
   Future<void> refreshPremiumOnReturn({bool visible = false}) async {
-    if (!_awayToPay && !visible) return;
-    _awayToPay = false;
+    final billing = _billing;
+    final due = billing != null && !billing.back;
+    if (!due && !visible) return;
+    if (due) _billing = (premium: billing.premium, back: true);
     await refreshPremium();
   }
 
@@ -1459,7 +1466,9 @@ class GrigriStore extends ChangeNotifier {
   /// App Store sells it there ([buyInAppStore]).
   Future<bool> subscribe(PremiumPlan plan) async {
     final url = await _act(() => api.premiumCheckout(plan));
-    return url != null && await _openToPay(url);
+    if (url == null || !await _openOrSay(url)) return false;
+    _openedBilling();
+    return true;
   }
 
   /// Where my subscription is managed: the App Store's subscriptions for
@@ -1467,17 +1476,14 @@ class GrigriStore extends ChangeNotifier {
   /// for one bought through Stripe.
   Future<bool> managePremium() async {
     if (_premium.source == PremiumSource.apple) {
-      return _openToPay(appStoreSubscriptionsUrl);
+      if (!await _openOrSay(appStoreSubscriptionsUrl)) return false;
+      _openedBilling();
+      return true;
     }
     final url = await _act(api.premiumPortal);
-    return url != null && await _openToPay(url);
-  }
-
-  /// Opens a page where my Premium may change: checked again on return.
-  Future<bool> _openToPay(Uri url) async {
-    final opened = await _openOrSay(url);
-    if (opened) _awayToPay = true;
-    return opened;
+    if (url == null || !await _openOrSay(url)) return false;
+    _openedBilling();
+    return true;
   }
 
   // --- Premium through the App Store (iOS) ---------------------------------

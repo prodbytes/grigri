@@ -385,10 +385,9 @@ class _PremiumCardState extends State<PremiumCard> {
   @override
   void initState() {
     super.initState();
-    // Built at launch with every tab: `GET /api/premium` (the prices)
-    // waits until the profile is opened (HomeShell asks then); until
-    // then my Premium is the one `GET /api/me` said.
-    StoreScope.read(context).loadStoreProducts();
+    final store = StoreScope.read(context);
+    store.refreshPremium();
+    store.loadStoreProducts();
   }
 
   @override
@@ -450,11 +449,6 @@ class _PremiumCardState extends State<PremiumCard> {
               const SizedBox(height: 12),
               if (store.sellsInAppStore)
                 const _AppStoreOffer()
-              else if (!store.premiumOffered)
-                // The prices are on their way (the profile just opened):
-                // room for them, not "unavailable" (and nothing animating
-                // in the tab built offstage at launch).
-                const SizedBox(key: ValueKey('premium loading'), height: 40)
               else if (prices.isEmpty)
                 Text(
                   l.premiumUnavailable,
@@ -483,7 +477,7 @@ class _PremiumCardState extends State<PremiumCard> {
                   style: text.bodySmall?.copyWith(color: Mountain.granite),
                 ),
                 TextButton(
-                  onPressed: store.refreshPremium,
+                  onPressed: () => store.refreshPremium(fresh: true),
                   child: Text(l.premiumCheckRefresh),
                 ),
               ],

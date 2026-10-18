@@ -487,13 +487,11 @@ void main() {
       store.dispose();
     });
 
-    testWidgets('Premium is checked on return only after its pages opened', (
-      tester,
-    ) async {
+    testWidgets('Premium is checked on return once after its pages opened, '
+        'afresh', (tester) async {
       final (api, store, _) = await pumpShell(tester);
-      // Launch: Premium from GET /api/me; the prices wait for the profile.
-      expect(count(api, 'GET /api/premium'), 0);
-      expect(store.premiumOffered, isFalse);
+      int premiumCalls() =>
+          api.calls.where((c) => c.startsWith('GET /api/premium')).length;
       Future<void> awayAndBack() async {
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
         await tester.pump();
@@ -503,15 +501,42 @@ void main() {
         await tester.pump();
       }
 
+      // The profile's card asks at launch, as ever.
+      expect(premiumCalls(), 1);
+      api.calls.clear();
       await awayAndBack();
-      expect(count(api, 'GET /api/premium'), 0);
+      expect(premiumCalls(), 0);
       expect(count(api, 'GET /api/plans'), greaterThan(0));
       await tester.runAsync(() => store.subscribe(PremiumPlan.monthly));
       expect(api.opened, isNotEmpty);
+      api.calls.clear();
       await awayAndBack();
-      expect(count(api, 'GET /api/premium'), 1);
+      expect(api.calls.where((c) => c.startsWith('GET /api/premium')), [
+        'GET /api/premium?fresh=1',
+      ]);
       await awayAndBack();
-      expect(count(api, 'GET /api/premium'), 1);
+      expect(premiumCalls(), 1);
+      await tester.pumpWidget(const SizedBox());
+      store.dispose();
+    });
+
+    testWidgets('with the profile on screen, a return checks Premium', (
+      tester,
+    ) async {
+      final (api, store, _) = await pumpShell(tester);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.byIcon(Icons.person_outline),
+        ),
+      );
+      await tester.pump();
+      api.calls.clear();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(api.calls, contains('GET /api/premium'));
       await tester.pumpWidget(const SizedBox());
       store.dispose();
     });

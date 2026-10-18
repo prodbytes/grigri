@@ -1619,6 +1619,8 @@ spec.
      - Cost: none: the check is the same cached rbacr lookup Premium's
        other routes make, only when a plan is made guided.
 
+## 2026-10-18
+
 104. **Fix the cost review's findings, without changing the user experience
      or features.**
      - [Live updates](live-updates.md#the-app): the connection that opens
@@ -1633,22 +1635,96 @@ spec.
        often) isn't refetched while a chat or plan covers it, and catches
        up once when it closes; an open chat polls at once on resume, and
        a hint's fetch of it starts its poll count over.
-     - [Premium](premium.md): `GET /api/premium` at launch is gone (Premium
-       comes from `GET /api/me`); it's asked when the Profile tab opens,
-       and on resume only after the app opened Stripe's (or the App
-       Store's subscription) pages, or with the profile on screen. The
-       card leaves room for the prices while they load instead of saying
-       "unavailable".
+     - [Premium](premium.md): a return to the foreground reads Premium
+       only the first time after the app opened Stripe's Checkout or
+       portal, or the App Store's subscriptions (afresh, as #106's reads
+       after those pages), or with the profile on screen; not on every
+       resume. The launch's read and the Profile tab's stay as they were.
      - Tests: the backoff keeps growing for connections that drop at once
        and resets after a minute up; where to connect is asked once; a
        restart isn't a reconnect; the deck waits under a pushed screen
-       and refreshes once on pop; Premium is checked on return only after
-       its pages opened, and not at launch; a hint's fetch puts off the
-       open chat's next poll.
+       and refreshes once on pop; Premium is checked on return once after
+       its pages opened (afresh), and with the profile on screen; a
+       hint's fetch puts off the open chat's next poll.
      - Cost: fewer API Gateway requests and Lambda invocations (and their
        DynamoDB reads), no new resources: per resume, no duplicate
        catch-up (3 calls plus one per loaded chat), no `GET /api/realtime`
-       and no `GET /api/premium` (nor its uncached rbacr lookup); per
-       launch, no `GET /api/premium`; no deck fetch every 15 s while a
+       and usually no `GET /api/premium`; no deck fetch every 15 s while a
        chat or plan is open; one chat poll fewer per hint; and no
        reconnect loop of IoT Core connections and authorizer Lambda runs.
+
+106. **Fix the cost review's findings, without changing the user
+     experience or features (per-request lookups).**
+     - [API](api.md#sessions), [backend](backend.md) and
+       [sign-in](sign-in.md): the session item keeps the account's
+       `climberId`, from `POST /api/session` (one read of the sign-in
+       link at sign-in) or, for sessions made before and new accounts,
+       from the first request that finds a profile (one conditional
+       write, only for the session's own subject). Requests then read the
+       session and the profile, not the link; a kept climber whose
+       profile is gone falls back to the link. Account deletion still
+       ends every session, so no session keeps a deleted climber.
+     - [Live updates](live-updates.md): the authorizer uses the climber
+       the session keeps, and looks the link up only without one.
+     - [API](api.md) and [roles](roles.md): the admin check is asked only
+       by the requests that need it (admin routes, `GET /api/me`, the
+       deck's match scores, deleting someone else's plan photo, route or
+       ad), once per request, no longer on every request; the blocked
+       check, the admin route's and Premium route's checks run alongside
+       the profile read, and are applied in the same order as before
+       (no profile, blocked, admins only, Premium only).
+     - [Premium](premium.md#who-is-premium): `GET /api/premium` uses
+       rbacr's kept answer (at most a minute old) unless asked
+       `?fresh=1`, or my subscription disagrees with it (paid but no
+       role, or the role held after it ended). The app asks afresh on
+       **I've paid: check again**, and on Premium refreshes after it
+       opened Stripe's Checkout or billing portal until Premium changes,
+       so a payment still shows at once; foreground resumes otherwise use
+       the kept answer. `POST /api/premium/apple` still asks afresh.
+     - Tests: sessions keep the climber (and later requests skip the
+       link), a stale one falls back, the blocked and admin checks still
+       apply with it, account deletion leaves no stale climber, admin is
+       asked only where needed and once, the authorizer uses the kept
+       climber; `GET /api/premium`'s fresh rules; the app asks afresh
+       after Checkout and on "check again", and not otherwise.
+     - Cost: no new resource. Per signed-in request one DynamoDB read
+       fewer (the sign-in link: about $0.06 per million requests) and one
+       rbacr call fewer on most routes (the admin check), with the
+       remaining lookups in parallel, so requests are also shorter
+       (Lambda bills by duration). Each older session pays one write
+       ($0.625 per million) once; sign-in pays one more read. `GET
+       /api/premium` on resumes no longer calls rbacr each time.
+
+109. **Fix the cost review's findings, without changing the user
+     experience or features (infrastructure).**
+     - [Backend](backend.md#cost): profile photo, chat media, plan photo, wall
+       view and ad media uploads are stored as S3 Intelligent-Tiering,
+       set by the presigned POST (`x-amz-storage-class`, fixed by its
+       policy; in AWS only, Floci keeps its default). Pending uploads
+       still expire after a day (the tag rule doesn't care about the
+       class, and Intelligent-Tiering has no minimum duration), and
+       keeping one still just clears its tag.
+     - [Deploy](deploy.md#caching): `/` and `/app*` use the site's own
+       cache policy (`SiteFilesCachePolicy`, MinTTL and DefaultTTL a
+       day) instead of Managed-CachingOptimized (MinTTL 1 s). Browsers
+       still revalidate every file (`no-cache`), now against the edge
+       instead of S3; every deploy already invalidated `/*` and waited
+       for it, so a new release is still live at once.
+     - The three functions log as JSON with Lambda's own lines at WARN
+       (no more START/END/REPORT per invocation) and the app's at INFO,
+       so every line the app writes stays.
+     - Specs' and comments' cost figures made true: the IoT keep-alive
+       pings (most of live updates' cost: about 6.5 cents per thousand
+       person-hours, not half a cent; 12–24× cheaper than polling, not
+       20–30×), CloudFront's per-request charge, how many API calls a
+       user makes with and without live updates (~4.8 million a month
+       per 1,000 users at 15 s polling), the sample ads' photos cached
+       for a day (not a year), and the IoT authorizer's comment (under a
+       tenth of a cent per thousand people-hours, not a few cents).
+     - Cost: Intelligent-Tiering brings chat media's and plan photos'
+       steady-state storage from ~$0.80/~$8 to ~$0.25/~$2.40 a month
+       (100/1,000 plans a month), plus $0.0025 per 1,000 objects
+       monitored; no transition fee, no retrieval fee. The cache policy
+       is free and saves the S3 GETs of every app open (~$0.014 per
+       1,000 opens). JSON logs without Lambda's own lines save ~$0.17
+       per million invocations of ingestion.
