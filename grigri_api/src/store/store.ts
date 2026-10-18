@@ -741,21 +741,65 @@ export class Store implements SessionStore, AppleTokenStore {
     await this.deliver(effects.notices);
   }
 
-  /** Puts notices (best effort after the change itself committed). */
+  /**
+   * Puts notices (best effort after the change itself committed), then
+   * each recipient's notices stamp: after them, so whoever reads a new
+   * stamp then finds the notices it stands for.
+   */
   async deliver(deliveries: Delivery[]): Promise<void> {
     await this.batchWrite(deliveries.map((d) => ({
       PutRequest: { Item: { ...key.notice(d.to, d.notice.id), type: 'notice', ...d.notice } },
     })));
+    await this.stampNotices(deliveries.map((d) => d.to));
   }
 
   // --- Notices ----------------------------------------------------------------
 
-  async notices(climberId: string): Promise<Notice[]> {
+  /** Mine, newest first; `consistent`: a strongly consistent query (after reading a stamp). */
+  async notices(climberId: string, consistent = false): Promise<Notice[]> {
     const items = await this.query({
       KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
       ExpressionAttributeValues: { ':pk': prefix.climber(climberId), ':sk': prefix.notice },
+      ...(consistent ? { ConsistentRead: true } : {}),
     });
     return items.map(toNotice).sort((a, b) => (a.time > b.time ? -1 : a.time < b.time ? 1 : 0));
+  }
+
+  /** When my notices last changed (undefined: never stamped yet). One small read. */
+  async noticesStamp(climberId: string): Promise<string | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({
+      TableName: this.table,
+      Key: key.noticesStamp(climberId),
+      ProjectionExpression: 'stamp',
+    }));
+    return typeof Item?.stamp === 'string' ? Item.stamp : undefined;
+  }
+
+  /**
+   * A first stamp for notices that never had one (read just before): only
+   * if none was written meanwhile, else undefined (a delivery's stamp won,
+   * which may stand for a notice that read missed).
+   */
+  async startNoticesStamp(climberId: string): Promise<string | undefined> {
+    const stamp = newStamp();
+    try {
+      await this.doc.send(new PutCommand({
+        TableName: this.table,
+        Item: { ...key.noticesStamp(climberId), type: 'noticesStamp', stamp },
+        ConditionExpression: 'attribute_not_exists(pk)',
+      }));
+      return stamp;
+    } catch (e) {
+      if (isConditionFailure(e)) return undefined;
+      throw e;
+    }
+  }
+
+  /** New notices stamps: these climbers' notices changed. */
+  private async stampNotices(climberIds: string[]): Promise<void> {
+    await this.batchWrite([...new Set(climberIds)].map((id) => ({
+      PutRequest: { Item: { ...key.noticesStamp(id), type: 'noticesStamp', stamp: newStamp() } },
+    })));
   }
 
   /** Marks my notifications read: all of them but the team chat's (opening that chat reads it). */
@@ -764,22 +808,25 @@ export class Store implements SessionStore, AppleTokenStore {
     await this.markRead(climberId, unread.map((n) => n.id));
   }
 
-  /** Marks one notice read (none there: nothing). */
+  /** Marks one notice read (none there, or read already: nothing). */
   async markNoticeRead(climberId: string, noticeId: string): Promise<void> {
     await this.markRead(climberId, [noticeId]);
   }
 
+  /** Marks notices read; any that changed, then a new stamp. */
   private async markRead(climberId: string, noticeIds: string[]): Promise<void> {
-    await Promise.all(noticeIds.map((noticeId) => this.doc.send(new UpdateCommand({
+    const changed = await Promise.all(noticeIds.map((noticeId) => this.doc.send(new UpdateCommand({
       TableName: this.table,
       Key: key.notice(climberId, noticeId),
       UpdateExpression: 'SET #read = :true',
-      ConditionExpression: 'attribute_exists(pk)',
+      ConditionExpression: 'attribute_exists(pk) AND (attribute_not_exists(#read) OR #read <> :true)',
       ExpressionAttributeNames: { '#read': 'read' },
       ExpressionAttributeValues: { ':true': true },
-    })).catch((e: unknown) => {
+    })).then(() => true, (e: unknown) => {
       if (!isConditionFailure(e)) throw e;
+      return false;
     })));
+    if (changed.some(Boolean)) await this.stampNotices([climberId]);
   }
 
   // --- Messages ---------------------------------------------------------------
@@ -1069,6 +1116,11 @@ export class Store implements SessionStore, AppleTokenStore {
       throw asConflict(e);
     }
   }
+}
+
+/** A notices stamp: unique, so no two changes share one. */
+function newStamp(): string {
+  return `${new Date().toISOString()}#${randomBytes(6).toString('hex')}`;
 }
 
 function backoff(attempt: number): Promise<void> {

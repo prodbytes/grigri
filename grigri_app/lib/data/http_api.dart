@@ -277,8 +277,13 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
       _post(['requests', planId, climberId, 'dismiss']);
 
   @override
-  Future<NoticeList> notices() async =>
-      ApiJson.noticeList(await _get(['notices']));
+  Future<NoticeList> notices({String? stamp}) async => ApiJson.noticeList(
+    await _get(['notices'], stamp == null ? null : {'stamp': stamp}),
+  );
+
+  @override
+  Future<Updates> updates({String noticesStamp = '0'}) async =>
+      ApiJson.updates(await _get(['updates'], {'notices': noticesStamp}));
 
   @override
   Future<void> readNotices() => _post(['notices', 'read']);
@@ -330,6 +335,20 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
           planId,
           'messages',
         ], after == null ? null : {'after': apiTime(after)}),
+      );
+
+  @override
+  Future<ChatsMessages> chatsMessages(Map<String, DateTime?> chats) async =>
+      ApiJson.chatsMessages(
+        await _get(
+          ['chats', 'messages'],
+          {
+            'chats': [
+              for (final MapEntry(key: id, value: after) in chats.entries)
+                after == null ? id : '$id~${apiTime(after)}',
+            ].join(','),
+          },
+        ),
       );
 
   @override

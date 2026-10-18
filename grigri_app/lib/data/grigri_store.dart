@@ -274,6 +274,13 @@ class GrigriStore extends ChangeNotifier {
   final _open = <String, List<JoinRequest>>{};
   final _declinedHere = <String>{};
   List<Notice> _notices = [];
+
+  /// The stamp my notices came with: the next poll sends it, and hears
+  /// "unchanged" while they are (null: read them all next time).
+  String? _noticesStamp;
+
+  /// The server has no batched routes (an older API): the single ones.
+  bool _unbatched = false;
   final _messages = <String, List<Message>>{};
 
   /// My Grigri team chat; null until loaded (specs/team-chat.md).
@@ -370,6 +377,7 @@ class GrigriStore extends ChangeNotifier {
     _open.clear();
     _declinedHere.clear();
     _notices = [];
+    _noticesStamp = null;
     _messages.clear();
     _team = null;
     _teamOf.clear();
@@ -780,11 +788,7 @@ class GrigriStore extends ChangeNotifier {
             for (final id in _teamOf.keys.toList()) pollTeamOf(id),
         ]);
       case HintKind.match || HintKind.unknown:
-        await Future.wait([
-          refreshPlans(),
-          refreshRequests(),
-          refreshNotices(),
-        ]);
+        await refreshUpdates();
     }
   }
 
@@ -792,9 +796,7 @@ class GrigriStore extends ChangeNotifier {
   Future<void> _catchUp() async {
     if (_phase != Phase.ready) return;
     await Future.wait([
-      refreshPlans(),
-      refreshRequests(),
-      refreshNotices(),
+      refreshUpdates(),
       for (final id in _messages.keys.toList()) pollMessages(id),
       if (_team != null) pollTeam(),
     ]);
@@ -842,7 +844,47 @@ class GrigriStore extends ChangeNotifier {
     _loaded.add(Section.discover);
   });
 
-  Future<void> refreshPlans() => _refresh(api.myPlans, (mine) {
+  /// The regular refresh: my plans, the requests waiting for me and my
+  /// notifications, in one request (`GET /api/updates`).
+  Future<void> refreshUpdates() async {
+    if (_phase != Phase.ready) return;
+    if (!_unbatched) {
+      var fresh = <Notice>[];
+      final done = await _batched(
+        () => api.updates(noticesStamp: _noticesStamp ?? '0'),
+        (updates) {
+          _applyPlans(updates.plans);
+          _applyRequests(updates.requests);
+          fresh = _applyNotices(updates.notices);
+        },
+      );
+      if (done) return _announce(fresh);
+    }
+    await Future.wait([refreshPlans(), refreshRequests(), refreshNotices()]);
+  }
+
+  /// Runs a batched refresh like [_refresh]; false only when the server
+  /// has no such route (an older API: the single routes from now on).
+  Future<bool> _batched<T>(
+    Future<T> Function() fetch,
+    void Function(T answer) apply,
+  ) async {
+    if (_phase != Phase.ready) return true;
+    try {
+      apply(await _call(fetch));
+      notifyListeners();
+    } on ApiException catch (e) {
+      if (e.status == 404) {
+        _unbatched = true;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  Future<void> refreshPlans() => _refresh(api.myPlans, _applyPlans);
+
+  void _applyPlans(MyPlans mine) {
     _learn(mine.climbers);
     for (final p in mine.plans) {
       _plans[p.id] = p;
@@ -854,33 +896,50 @@ class GrigriStore extends ChangeNotifier {
     _mine = [for (final p in mine.plans) p.id];
     _asked = [for (final a in mine.asked) a.request];
     _loaded.add(Section.plans);
-  });
+  }
 
-  Future<void> refreshRequests() => _refresh(api.requests, (list) {
+  Future<void> refreshRequests() => _refresh(api.requests, _applyRequests);
+
+  void _applyRequests(RequestList list) {
     _learn(list.climbers);
     _plans.addAll(list.plans);
     _toReview = list.requests;
     _loaded.add(Section.requests);
-  });
+  }
 
   /// Notifications; a group's yes I haven't seen yet opens the match
   /// screen.
   Future<void> refreshNotices() async {
-    final fresh = <Notice>[];
-    final ok = await _refresh(api.notices, (list) {
-      _learn(list.climbers);
-      _notices = [...list.notices]..sort((a, b) => b.time.compareTo(a.time));
-      _loaded.add(Section.notices);
-      fresh.addAll([
-        for (final n in _notices)
-          if (n.kind == NoticeKind.accepted &&
-              !n.read &&
-              !_announced.contains(n.id))
-            n,
-      ]);
-      _announced.addAll(fresh.map((n) => n.id));
-    });
-    if (!ok || fresh.isEmpty) return;
+    var fresh = <Notice>[];
+    final ok = await _refresh(
+      () => api.notices(stamp: _noticesStamp ?? '0'),
+      (list) => fresh = _applyNotices(list),
+    );
+    if (ok) await _announce(fresh);
+  }
+
+  /// My notifications from the API (the same ones, when [NoticeList.unchanged]);
+  /// the group's yeses not announced yet.
+  List<Notice> _applyNotices(NoticeList list) {
+    _loaded.add(Section.notices);
+    if (list.unchanged) return const [];
+    _learn(list.climbers);
+    _noticesStamp = list.stamp;
+    _notices = [...list.notices]..sort((a, b) => b.time.compareTo(a.time));
+    final fresh = [
+      for (final n in _notices)
+        if (n.kind == NoticeKind.accepted &&
+            !n.read &&
+            !_announced.contains(n.id))
+          n,
+    ];
+    _announced.addAll(fresh.map((n) => n.id));
+    return fresh;
+  }
+
+  /// A group's yes I haven't seen yet opens the match screen.
+  Future<void> _announce(List<Notice> fresh) async {
+    if (fresh.isEmpty) return;
     if (fresh.any((n) => !_mine.contains(n.planId))) await refreshPlans();
     final me = _me;
     if (me == null) return;
@@ -1002,13 +1061,40 @@ class GrigriStore extends ChangeNotifier {
     );
   }
 
-  /// Every chat's latest messages, for Chats.
+  /// Every chat's latest messages, for Chats: all of each the first time,
+  /// then what's new, in one request (`GET /api/chats/messages`; more
+  /// than [maxChatsPerPoll] chats, one per so many).
   Future<void> refreshChats() async {
+    final mine = [..._mine];
     await Future.wait([
-      for (final id in _mine) pollMessages(id),
+      for (var i = 0; i < mine.length; i += maxChatsPerPoll)
+        _pollChats(mine.sublist(i, math.min(i + maxChatsPerPoll, mine.length))),
       pollTeam(),
       if (_admin) refreshTeamChats(),
     ]);
+  }
+
+  Future<void> _pollChats(List<String> planIds) async {
+    if (!_unbatched) {
+      final have = {for (final id in planIds) id: _messages[id]};
+      final done = await _batched(
+        () => api.chatsMessages({
+          for (final MapEntry(key: id, value: list) in have.entries)
+            id: list == null || list.isEmpty ? null : list.last.time,
+        }),
+        (answer) {
+          _learn(answer.climbers);
+          for (final MapEntry(key: id, value: messages)
+              in answer.chats.entries) {
+            if (!have.containsKey(id)) continue;
+            _messagePolls[id] = messagePolls(id) + 1;
+            _addMessages(id, messages, replace: have[id] == null);
+          }
+        },
+      );
+      if (done) return;
+    }
+    await Future.wait([for (final id in planIds) pollMessages(id)]);
   }
 
   // --- The Grigri team chat (specs/team-chat.md) -------------------------
@@ -1108,6 +1194,9 @@ class GrigriStore extends ChangeNotifier {
       for (final n in _notices)
         n.kind == NoticeKind.team ? n.copyWith(read: true) : n,
     ];
+    // Changed here: the next poll reads them all (if this fails, it
+    // brings back the server's).
+    _noticesStamp = null;
     notifyListeners();
     await _ok(api.readTeam);
   }
@@ -1220,6 +1309,7 @@ class GrigriStore extends ChangeNotifier {
       for (final n in _notices)
         n.kind == NoticeKind.team ? n : n.copyWith(read: true),
     ];
+    _noticesStamp = null;
     notifyListeners();
     await _ok(api.readNotices);
   }

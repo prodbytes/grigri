@@ -773,3 +773,140 @@ describe('the demo showcase', () => {
     expect(deck).toMatchObject({ plans: [] });
   });
 });
+
+describe('batched polls (specs/backend.md#what-a-poll-reads)', () => {
+  let ids: Record<string, string>;
+  let planId: string;
+  let other: string;
+
+  beforeEach(async () => {
+    ids = {};
+    for (const [c, name] of [[ada, 'Ada'], [ben, 'Ben'], [cy, 'Cy']] as const) {
+      ids[name] = (await call(c, 'PUT', '/api/me', profile(name))).climber.id;
+    }
+    planId = (await call(ada, 'POST', '/api/plans', planBody)).plan.id;
+    // Ben is in Ada's plan; Cy asks to join it, and Ada's other one.
+    await call(ben, 'POST', `/api/plans/${planId}/join`);
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Ben}/accept`);
+    await call(cy, 'POST', `/api/plans/${planId}/join`);
+    other = (await call(ada, 'POST', '/api/plans', { ...planBody, place: 'Elsewhere' })).plan.id;
+    await call(cy, 'POST', `/api/plans/${other}/join`);
+  });
+
+  it('GET /api/updates answers what the three routes do, with one read of their climbers', async () => {
+    for (const c of [ada, ben, cy]) {
+      const plans = await call(c, 'GET', '/api/plans');
+      const requests = await call(c, 'GET', '/api/requests');
+      const notices = await call(c, 'GET', '/api/notices');
+      const before = { ...store.reads };
+      const updates = await call(c, 'GET', '/api/updates');
+      // One read of the climbers, and of my plans (the requests reuse it).
+      expect(store.reads.getClimbers - before.getClimbers).toBe(1);
+      expect(store.reads.getPlans - before.getPlans).toBe(1);
+      const { climbers: pc, ...plansBody } = plans;
+      const { climbers: rc, ...requestsBody } = requests;
+      const { climbers: nc, ...noticesBody } = notices;
+      expect(updates.plans).toEqual(plansBody);
+      expect(updates.requests).toEqual(requestsBody);
+      expect(updates.notices).toEqual(noticesBody);
+      expect(updates.climbers).toEqual({ ...pc, ...rc, ...nc });
+    }
+    expect((await call(ada, 'GET', '/api/updates')).requests.requests).toHaveLength(2);
+  });
+
+  it('GET /api/requests reads requests only on the plans I decide on, and answers the same', async () => {
+    rbacr.give('ada@example.com', 'premium');
+    const guided = (await call(ada, 'POST', '/api/plans', { ...planBody, type: 'guided', price: { amount: 45, currency: 'EUR' } })).plan.id;
+    const open = (await call(ada, 'POST', '/api/plans', { ...planBody, type: 'open' })).plan.id;
+    for (const p of [guided, open]) await call(ben, 'POST', `/api/plans/${p}/join`);
+    await call(ada, 'POST', `/api/requests/${guided}/${ids.Ben}/accept`);
+    await call(cy, 'POST', `/api/plans/${guided}/join`);
+    // Ben: in Ada's private plan (decides), her guided one (doesn't) and her open one (nobody does).
+    const before = { ...store.reads };
+    const benReview = await call(ben, 'GET', '/api/requests');
+    expect(store.reads.planRequests - before.planRequests).toBe(1);
+    expect(store.reads.getPlans - before.getPlans).toBe(1);
+    expect(store.reads.loadPlan - before.loadPlan).toBe(0);
+    expect(benReview.requests.map((r: any) => r.id)).toEqual([`${planId}/${ids.Cy}`]);
+    expect(Object.keys(benReview.plans)).toEqual([planId]);
+    expect(Object.keys(benReview.climbers).sort()).toEqual([ids.Ada, ids.Ben, ids.Cy].sort());
+    // Ada decides on all but the open one: Cy waits on three.
+    const adaReview = await call(ada, 'GET', '/api/requests');
+    expect(adaReview.requests.map((r: any) => r.planId).sort()).toEqual([planId, other, guided].sort());
+  });
+
+  it('GET /api/chats/messages answers every chat at once, as its own route would', async () => {
+    const solo = (await call(ben, 'POST', '/api/plans', { ...planBody, place: 'Solo' })).plan.id;
+    const since = now.toISOString();
+    now = new Date(now.getTime() + 1000);
+    await call(ada, 'POST', `/api/plans/${planId}/messages`, { text: 'See you at nine' });
+    const theirs = (await call(cy, 'POST', '/api/plans', { ...planBody, place: 'Not mine' })).plan.id;
+    const before = { ...store.reads };
+    const both = await call(ben, 'GET', '/api/chats/messages', undefined, { chats: `${planId}~${since},${solo},${theirs},nosuchplan` });
+    expect(store.reads.getPlans - before.getPlans).toBe(1);
+    expect(store.reads.getPlan - before.getPlan).toBe(0);
+    expect(store.reads.getClimbers - before.getClimbers).toBe(1);
+    // Not Cy's plan (Ben isn't in it), nor one that isn't there.
+    expect(Object.keys(both.chats).sort()).toEqual([planId, solo].sort());
+    const one = await call(ben, 'GET', `/api/plans/${planId}/messages`, undefined, { after: since });
+    const all = await call(ben, 'GET', `/api/plans/${solo}/messages`);
+    expect(both.chats[planId]).toEqual(one.messages);
+    expect(both.chats[planId].map((m: any) => m.text)).toEqual(['See you at nine']);
+    // Every member of each chat (Ada and Ben; Cy only asked), even when
+    // only what's new is asked for.
+    expect(Object.keys(both.climbers).sort()).toEqual([ids.Ada, ids.Ben].sort());
+    expect(Object.keys(one.climbers).sort()).toEqual([ids.Ada, ids.Ben].sort());
+    expect(both.chats[solo]).toEqual(all.messages);
+    expect(both.climbers).toEqual({ ...one.climbers, ...all.climbers });
+    expect(await call(ben, 'GET', '/api/chats/messages')).toEqual({ chats: {}, climbers: {} });
+    await fails(call(ben, 'GET', '/api/chats/messages', undefined, { chats: `${planId}~yesterday` }), 400);
+    await fails(call(ben, 'GET', '/api/chats/messages', undefined, { chats: 'bad id!' }), 400);
+    await fails(call(ben, 'GET', '/api/chats/messages', undefined, { chats: `${planId}~${since}~x` }), 400);
+    const many = Array.from({ length: 51 }, (_, i) => `plan${i}`).join(',');
+    await fails(call(ben, 'GET', '/api/chats/messages', undefined, { chats: many }), 400, /at most 50/);
+  });
+
+  it('notices: a poll with the stamp it has reads one item while nothing changed', async () => {
+    // Older apps send no stamp: every notice, as ever, and no stamp.
+    const old = await call(ada, 'GET', '/api/notices');
+    expect(old).not.toHaveProperty('stamp');
+    expect(old.notices.length).toBeGreaterThan(0);
+    const first = await call(ada, 'GET', '/api/notices', undefined, { stamp: '0' });
+    expect(first.notices).toEqual(old.notices);
+    expect(first.climbers).toEqual(old.climbers);
+    expect(first.stamp).toEqual(expect.any(String));
+    let reads = store.reads.notices;
+    expect(await call(ada, 'GET', '/api/notices', undefined, { stamp: first.stamp })).toEqual({ unchanged: true, stamp: first.stamp, climbers: {} });
+    expect((await call(ada, 'GET', '/api/updates', undefined, { notices: first.stamp })).notices).toEqual({ unchanged: true, stamp: first.stamp });
+    expect(store.reads.notices).toBe(reads);
+    // A new notice: a new stamp, and every notice again.
+    await call(cy, 'POST', `/api/plans/${planId}/nudge`);
+    const nudged = await call(ada, 'GET', '/api/updates', undefined, { notices: first.stamp });
+    expect(nudged.notices.stamp).not.toBe(first.stamp);
+    expect(nudged.notices.notices.map((n: any) => n.kind)).toContain('nudge');
+    expect(nudged.notices.notices).toEqual((await call(ada, 'GET', '/api/notices')).notices);
+    // Marking them read changes it too; marking again (nothing unread) doesn't.
+    await call(ada, 'POST', '/api/notices/read');
+    const read = await call(ada, 'GET', '/api/notices', undefined, { stamp: nudged.notices.stamp });
+    expect(read.notices.every((n: any) => n.read)).toBe(true);
+    await call(ada, 'POST', '/api/notices/read');
+    await call(ada, 'POST', '/api/team/read');
+    reads = store.reads.notices;
+    expect((await call(ada, 'GET', '/api/notices', undefined, { stamp: read.stamp })).unchanged).toBe(true);
+    expect(store.reads.notices).toBe(reads);
+    // Someone else's notice doesn't change mine.
+    await call(ada, 'POST', `/api/requests/${planId}/${ids.Cy}/reject`);
+    expect((await call(ada, 'GET', '/api/notices', undefined, { stamp: read.stamp })).unchanged).toBe(true);
+    expect((await call(cy, 'GET', '/api/notices')).notices[0]).toMatchObject({ kind: 'declined' });
+    await fails(call(ada, 'GET', '/api/notices', undefined, { stamp: 'not a stamp!' }), 400);
+  });
+
+  it('a first stamp is only kept when no delivery wrote one meanwhile', async () => {
+    // Notices from before stamps: none kept for Ben yet.
+    store.noticeStamps.delete(ids.Ben!);
+    store.startNoticesStamp = async () => undefined;
+    const first = await call(ben, 'GET', '/api/notices', undefined, { stamp: '0' });
+    expect(first).not.toHaveProperty('stamp');
+    expect(first.notices).toEqual((await call(ben, 'GET', '/api/notices')).notices);
+  });
+});

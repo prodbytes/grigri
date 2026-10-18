@@ -23,6 +23,12 @@ export const key = {
   /** An ad I skipped on the deck: it never shows to me again. */
   adSkip: (climberId: string, adId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `ADSKIP#${adId}` }),
   notice: (climberId: string, noticeId: string) => ({ pk: `CLIMBER#${climberId}`, sk: `NOTICE#${noticeId}` }),
+  /**
+   * When my notices last changed (a new stamp with every delivery and
+   * read-marking), so a poll that already has them reads one small item
+   * instead of every notice. Not NOTICE#: the notices' query skips it.
+   */
+  noticesStamp: (climberId: string) => ({ pk: `CLIMBER#${climberId}`, sk: 'NOTICES' }),
   request: (planId: string, climberId: string) => ({ pk: `PLAN#${planId}`, sk: `REQ#${climberId}` }),
   message: (planId: string, time: string, messageId: string) => ({ pk: `PLAN#${planId}`, sk: `MSG#${time}#${messageId}` }),
   /** A photo in the plan's "Your Pics". */

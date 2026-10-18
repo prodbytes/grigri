@@ -215,6 +215,7 @@ and use is billed per request. Prices are us-east-1's.
 |---|---|---|---|
 | DynamoDB, on demand | $0.625 per million writes, $0.125 per million reads, $0.25/GB-month (the first 25 GB free); point-in-time recovery $0.20/GB-month, prod only; TTL deletes free | $0 (a few cents of storage at most) | Pay per request with no minimum. **Aurora Serverless v2** costs about **$43/month** at its 0.5 ACU minimum (auto-pause to 0 ACU exists, but resuming takes seconds and storage and I/O still bill); **RDS** bills every hour (a db.t4g.micro is about $12/month plus storage) whether used or not. The access patterns (by plan, by climber, upcoming plans, open requests) fit key lookups, so a relational database buys nothing here. |
 | HTTP API | $1.00 per million requests | $0 | REST APIs cost $3.50 per million. No authorizer: the function checks sessions itself. |
+| The app's regular polls ([below](#what-a-poll-reads)) | One request per refresh of my plans, requests and notifications instead of three; one per Chats refresh instead of one per chat; a notices stamp per climber (~100 bytes, 1 write unit with each delivery or read-marking) so unchanged notices are one small read | $0 | Batching in the one function: no new resource. |
 | Sessions (in the table) | One eventually consistent read of the session per request (about $0.06 per million requests), plus the profile's (the session keeps the climber id, so no read of the sign-in link); one write per session per day of use, a read and a write to sign in, one to sign out, and one write per older session to keep its climber id; the subject index is keys-only, so the daily slide doesn't write to it | $0 | An HTTP API JWT authorizer would be free per request, but it can only check Google's one-hour tokens. A Lambda authorizer would add a second invocation per request; Cognito would add a service and its own pricing beyond its free tier. |
 | One Lambda, arm64, 256 MB | $0.20 per million requests + $0.0000133 per GB-second (1 million requests and 400,000 GB-seconds a month free) | $0 | One function with an internal router: one cold start to warm, one log group, one role. arm64 is 20% cheaper than x86. 256 MB keeps a ~50 ms request at well under a cent per thousand. |
 | S3 photos bucket, Intelligent-Tiering | Uploads stored as Intelligent-Tiering: $0.023/GB-month while fetched, $0.0125 after 30 days without a fetch, $0.004 after 90 (no retrieval fee, no minimum duration), plus $0.0025 per 1,000 objects a month for monitoring (objects under 128 KB aren't tiered nor charged it); $0.005 per 1,000 uploads (and per 1,000 tag clears, one per new photo saved or chat attachment sent); deletes and lifecycle expirations free | $0 when empty | Photos and chat media stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has: uploads cached for a year, the sample ads' photos (which the API writes itself, in Standard) for a day. So S3 rarely sees a GET, and most of the bytes sit in the cheaper tiers. The class is set by the upload itself, so there's no lifecycle transition and no transition fee ($0.01 per 1,000); Standard-IA or Glacier Instant Retrieval would add retrieval fees and 30/90-day minimums the day-old pending uploads would pay. Unsaved uploads expire after a day, so they don't pile up; chat media and plan photos after 400 days. See [chat media](#chat-media). |
@@ -238,8 +239,10 @@ $1 at CloudFront beyond its free 10 million requests a month. How many
 calls a user makes depends on live updates: with them up, the app polls
 only as a safety net (~30–90 calls per hour open), so a few thousand
 users with the app open ~5 hours a month make about a million calls;
-with them down, it polls every 15 s (~960 calls per hour open), about
-**4.8 million calls a month per 1,000 users**, ~$10 a month.
+with them down, it polls every 15 s (~480 calls per hour open: the
+regular refresh is one call, the open tab another), about **2.4 million
+calls a month per 1,000 users**, ~$5 a month ([what a poll
+reads](#what-a-poll-reads)).
 
 ### The deck's cache
 
@@ -371,6 +374,49 @@ of $0.023 per GB-month on average, so the steady state above is nearer
 **~$0.25** and **~$2.40 a month**, plus monitoring of ~7,800 and ~78,000
 objects ($0.02 and $0.20).
 
+### What a poll reads
+
+The app's regular refresh (every 15 s, every 2 minutes with live
+updates up) is one `GET /api/updates`: the request's own overhead (the
+HTTP API and Lambda, the session and profile reads, rbacr's blocked
+check) once instead of three times, my memberships and plans read once
+for both my plans and the requests to review, the requests of only the
+plans I decide on, and one read of everyone they name instead of three.
+My notices: one small read of their stamp
+(`CLIMBER#<id>`/`NOTICES`), and every notice only when it changed (they
+are kept forever, so that read grows); deliveries and read-marking
+write the stamp after the notices, so a new stamp is never read before
+its notices are there, and the notices it stands for are read strongly
+consistent. Chats' refresh is one `GET /api/chats/messages`: every
+chat's plan in one batch read, its new messages (a query each), and
+everyone the chats name (their members too, as each chat's own route
+returns them) in one read, each person once.
+
+Read units at $0.125 per million (eventually consistent: half a unit
+per 4 KB; a batch read bills each item), a request's overhead about
+$1.4 per million (HTTP API $1, Lambda ~$0.4). Example: in 5 plans of 4
+people (15 people), 2 requests to review, 30 notices:
+
+| Per refresh | Before | After |
+|---|---|---|
+| Requests | 3 (~$4.2 per million refreshes) | 1 (~$1.4) |
+| Session and profile | 3 RRU | 1 RRU |
+| My plans (3 queries, 5 plans) | 4 RRU | 4 RRU |
+| Requests to review (memberships, 5 plans one by one, 5 queries) | 5.5 RRU | ≤2.5 RRU (only plans I decide on) |
+| Notices | 1 RRU (grows with them) | 0.5 RRU (the stamp, while unchanged) |
+| Climbers | 3 batch reads, ~32 items: 16 RRU | 1, ~17 items: 8.5 RRU |
+| All told | ~$7.9 per million | ~$3.5 per million |
+
+Chats open with 10 chats of 4 people (31 people, me in each): 10
+requests (~$14) and ~40 RRU ($5) per million refreshes become 1 request
+($1.4) and ~26.5 RRU ($3.3): ~$19 to ~$4.7, about 4× cheaper. At
+15 s polling, 1,000 people with the app open 5 hours a month make 1.2
+million refreshes: about $9.5 a month before, $4.2 after, and 2.4
+million fewer API calls (so fewer CloudFront requests). The stamp adds
+one write unit ($0.000000625) per notice delivered and per read-marking
+that changed something. The single routes stay as they were for older
+apps.
+
 ### Live updates' cost
 
 Per person with the app open for an hour: 60 connection-minutes
@@ -380,8 +426,9 @@ reads included under $0.0000007), and the hints about them (a busy chat,
 100 hints an hour: $0.0002). About **6.5 cents per thousand person-hours
 online**, before hints; the pings are most of it.
 
-What it replaces: the app polled every 15 s (my plans, requests,
-notifications and the open tab: ~4 API calls) and an open chat every
+What it replaces: the app polled every 15 s (my plans, requests and
+notifications in one call, and the open tab: ~2 API calls; 4 before
+[batched polls](#what-a-poll-reads)) and an open chat every
 3 s, about **1,000–2,200 requests per person-hour**. Each request costs
 about $2 per million all told (HTTP API $1, Lambda ~$0.4, a session read
 and the route's reads in DynamoDB ~$0.6; $1 more at CloudFront beyond its

@@ -1749,6 +1749,55 @@ spec.
        ($0.625 per million) once; sign-in pays one more read. `GET
        /api/premium` on resumes no longer calls rbacr each time.
 
+107. **Fix the cost review's findings, without changing the user
+     experience or features (batched polls).**
+     - [API](api.md#routes) and [matching](matching.md#refreshing): the
+       app's regular refresh (every 15 s, 2 minutes with live updates
+       up, and on resume) is one `GET /api/updates`, the answers of `GET
+       /api/plans`, `GET /api/requests` and `GET /api/notices` in one
+       request sharing one read of their climbers and of my plans,
+       instead of three requests. A `match` hint and the catch-up after a
+       live connection's drop use it too; hints that name one of them
+       keep calling its own route.
+     - `GET /api/requests` reads my plans in one batch, then the
+       requests of only the plans I decide on (the others had nothing to
+       review): the same answer, fewer reads.
+     - Chats' refresh is one `GET /api/chats/messages?chats=<planId>[~<after>],…`
+       (at most 50 chats a request; the app splits more), each chat as
+       its own route answers it, with the same climbers (every chat's
+       members and the people its messages name, each read once); an
+       open chat keeps polling its own route, unchanged.
+     - [Notices](api.md#routes): a stamp per climber, written after each
+       delivery and each read-marking that changed something; the app
+       sends the one it has (`?stamp=`, `?notices=` on updates) and hears
+       "unchanged" (no notice read) while it holds, keeping its
+       notifications. The notices behind a new stamp are read strongly
+       consistent. A local change (marking read) drops the app's stamp,
+       so a failed mark still brings back the server's unread ones.
+       Older apps send no stamp and get every notice, as before.
+     - The old routes answer as before for older apps; against an older
+       API (404 for the new routes), the app goes back to the single
+       ones.
+     - Not changed: the badges, the match screen, the refresh timing,
+       what each screen shows, and `GET /api/plans/{id}/messages`.
+     - Tests: the API's batched answers equal the single routes' (and
+       read the climbers and plans once), requests read only the plans I
+       decide on, the chats' route (membership, every member's
+       profile, limits, bad input), the stamp's rules (unchanged,
+       new notice, marking read, older apps, a first stamp lost to a
+       delivery); the app's tick is one request with the same data,
+       unchanged notices kept, a failed mark corrected, Chats in one
+       request, and the fallback to an older API.
+     - Cost ([backend](backend.md#what-a-poll-reads)): no new resource;
+       one small item per climber (the stamp, 1 write unit with each
+       delivery or read-marking, $0.000000625). A refresh goes from 3
+       requests and ~30 read units to 1 request and ~16.5 (5 plans, 15
+       people, 30 notices): ~$7.9 to ~$3.5 per million refreshes; at 15 s
+       polling, 1,000 people 5 hours a month go from ~$9.5 to ~$4.2 and
+       make 2.4 million fewer calls. Chats with 10 chats: ~$19 to ~$4.7
+       per million refreshes. Unchanged notices cost half a unit however
+       many there are.
+
 108. **Fix the cost review's findings, without changing the user
      experience or features (photos).**
      - [Platforms](platforms.md): Android and iOS keep the photos they
