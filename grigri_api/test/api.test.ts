@@ -629,6 +629,11 @@ describe('the matchmaking flow', () => {
     expect(deck.covers[atPati]).toEqual({ key: 'crags/x/pati.jpg', crag: 'El Pati', author: 'A. Example', license: 'CC BY-SA 4.0' });
     expect(deck.covers[typed].crag).toBe("L'Olla");
     expect(deck.covers[planId]).toBeUndefined();
+    // With smaller copies in the catalog, the cover and the plan's photos carry them.
+    const variants = [{ key: 'crags/x/pati-w640.jpg', width: 640, height: 427 }];
+    catalog.crags[2]!.photos[0]!.variants = variants;
+    expect((await call(ben, 'GET', '/api/discover')).covers[atPati].variants).toEqual(variants);
+    expect((await call(ada, 'GET', `/api/plans/${atPati}/pics`)).grigri[0].variants).toEqual(variants);
     // Nowhere near: none. The lookup route takes a point.
     expect((await call(ada, 'GET', `/api/plans/${planId}/pics`)).grigri).toEqual([]);
     const near = await call(ada, 'GET', '/api/pics', undefined, { lat: '41.2570', lon: '0.9300' });

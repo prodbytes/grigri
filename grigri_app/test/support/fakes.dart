@@ -1541,6 +1541,7 @@ GrigriStore storeFor(
   DeviceLocation deviceLocation = const DeviceLocation.none(),
   math.Random? random,
   AppStore? appStore,
+  ImageProvider Function(Uri url)? image,
 }) {
   final auth = SessionAuth(
     method: FakeGoogle(mode: mode),
@@ -1560,7 +1561,7 @@ GrigriStore storeFor(
       return true;
     },
     auth: auth,
-    image: (_) => MemoryImage(png),
+    image: image ?? (_) => MemoryImage(png),
     preferences: preferences,
     realtime: realtime,
     deviceLocation: deviceLocation,

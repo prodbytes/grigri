@@ -408,8 +408,9 @@ aws cloudformation deploy --stack-name "$SITE_STACK" \
 bucket="$(stack_output "$SITE_STACK" SiteBucketName)"
 distribution="$(stack_output "$SITE_STACK" DistributionId)"
 echo "    bucket: $bucket, distribution: $distribution"
-# GriGri Pics: new photos of grigri_api/pics/crags.json, their annotations
-# and the catalog (the API's npm ci above installed the SDK it uses).
+# GriGri Pics: new photos of grigri_api/pics/crags.json, their smaller
+# copies, their annotations and the catalog (the API's npm ci above
+# installed the SDK and sharp, which it uses).
 echo "==> loading GriGri Pics into $PICS_BUCKET"
 PICS_BUCKET="$PICS_BUCKET" node grigri_api/pics/load.mjs
 

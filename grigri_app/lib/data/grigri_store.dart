@@ -22,6 +22,7 @@ import 'app_store.dart';
 import 'auth.dart';
 import 'device_location.dart';
 import 'links.dart';
+import 'photo_cache.dart';
 import 'preferences.dart';
 import 'realtime.dart';
 import 'sector_index.dart';
@@ -132,7 +133,7 @@ class GrigriStore extends ChangeNotifier {
     this.appStore,
     math.Random? random,
   }) : _random = random ?? math.Random(),
-       _image = image ?? ((url) => NetworkImage(url.toString())),
+       _image = image ?? defaultPhotoImage(),
        _places = places ?? SectorIndex.load,
        _preferences = preferences ?? Preferences.none() {
     _gradeSystem = _preferences.gradeSystem;

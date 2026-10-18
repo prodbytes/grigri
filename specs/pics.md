@@ -57,7 +57,8 @@ as the licenses ask.
 ### On the deck
 
 `GET /api/discover` gives each plan's first photo of that lookup as its
-**cover** (`covers`: key, crag, author, license), worked out from the
+**cover** (`covers`: key, crag, author, license, and its smaller copies
+when there are any), worked out from the
 catalog the function already keeps, so it costs no extra reads or calls.
 The Discover card shows it edge to edge, with "<crag> · Photo: <author>,
 <license>" over it ([screens](screens.md)); a plan without one shows a
@@ -70,13 +71,17 @@ backdrop instead.
   stack, private, served by the site's CloudFront at `/pics/*` (origin
   access control; only `pics/crags/*` and `pics/catalog.json` are
   readable there). Photos are at
-  `pics/crags/<crag>/<hash of their source>.jpg`: keys never change for a
-  source, so they're cached for a year.
+  `pics/crags/<crag>/<hash of their source>.jpg`, and their [smaller
+  copies](#sizes) next to them at `<hash>-w<width>.jpg`: keys never
+  change for a source, so they're cached for a year.
 - **Metadata**: each photo carries an [S3
   annotation](https://aws.amazon.com/blogs/aws/amazon-s3-annotations-attach-rich-queryable-context-directly-to-your-objects/)
   named `grigri`, JSON: the crag (`id`, `name`, `area`, `lat`, `lon`), the
   photo's `key`, `width`, `height`, `caption`, `author`, `license`,
-  `licenseUrl` and `source`. The annotations are the source of truth,
+  `licenseUrl`, `source` and, once they're made, `variants` (its
+  smaller copies: `key`, `width`, `height`, narrowest first; `[]` for a
+  photo too small to need any). The catalog carries them as they are.
+  The annotations are the source of truth,
   kept on the objects themselves.
 - **Querying**: `pics/catalog.json`, made from the annotations by the
   loader, holds every crag with its photos. The [landing page](landing.md)
@@ -126,14 +131,60 @@ backdrop instead.
   or reads it from `grigri_api/pics/` when it has a `file` instead of a
   `url` (a guide's photos; their key comes from the file, as several
   share a page for their source),
-  puts it, sets its annotation (again when `crags.json` changed it),
-  deletes photos taken out of the file, and rebuilds the catalog from the
-  annotations. A photo that fails to download is skipped and reported.
+  puts it, makes its [smaller copies](#sizes) when its annotation
+  doesn't record them yet (from the photo in the bucket, so nothing is
+  downloaded again), sets its annotation (again when `crags.json` or its
+  copies changed it), deletes photos taken out of the file with their
+  copies, and rebuilds the catalog from the annotations. A photo that
+  fails to download is skipped and reported; copies that fail are
+  reported, left out of the catalog (so screens show the photo), and
+  tried again on the next run.
 - **Where it runs**: `scripts/deploy.sh`, after the site stack, on every
   RC and GA deploy (only new photos are uploaded); locally, `6-pics`
   ([dev-environment.md](dev-environment.md)) runs it whenever Floci's
   pics bucket has no catalog (Floci keeps nothing between starts).
 
+
+### Sizes
+
+The photos are up to 1920 px wide (0.3–0.7 MB), but most screens show
+them much smaller. So the loader
+([grigri_api/pics/variants.mjs](../grigri_api/pics/variants.mjs), with
+[sharp](https://sharp.pixelplumbing.com/), a dev dependency of
+`grigri_api` only the loader uses) gives each photo wider than 640,
+1080 or 1440 px a copy that wide (only those it's wider than, and only
+when the copy is smaller in bytes): upright (its EXIF orientation
+applied), in sRGB, JPEG at quality 82 (mozjpeg), or PNG for a PNG,
+`public, max-age=31536000, immutable` like the photo. The widths: 640
+covers the plan screen's 170 x 120 thumbnails up to 3.5 device pixels
+per point (most phones), and the landing page's cards at 1x; 1080 and
+1440 the bigger cards (the deck's, the landing page's) at 2x or 3x,
+depending on the photo's shape.
+
+Every screen that shows a GriGri Pics photo cropped to a box picks the
+**narrowest copy whose pixels cover the box**: the copy's width must be
+at least the box's width, or its height times the copy's width over its
+height (the photo cropped to fill it), whichever is more, times the
+screen's device pixel ratio (and any zoom). So it's as sharp as the
+photo itself would be on that screen. Anything else gets the photo
+itself: no copies in the catalog, none big enough, the box unknown. A
+copy that fails to load gives way to the photo.
+
+- **The app** ([lib/ui/grigri_pic_image.dart](../grigri_app/lib/ui/grigri_pic_image.dart),
+  `picKeyFor` in [lib/model/pics.dart](../grigri_app/lib/model/pics.dart)):
+  the plan screen's GriGri Pics thumbnails and the Discover card's cover
+  (measured as laid out; a bigger box later, as when the phone turns,
+  keeps showing the current one until the bigger copy arrives). The
+  photo's own screen (to see it whole and zoom) and the sign-in screen
+  show the photo itself.
+- **The landing page**: its cards ([landing.md](landing.md#the-photos-the-catalog-read-on-the-device)).
+
+**Until the loader runs, nothing changes.** Photos already in the
+buckets have no copies, and their annotations don't list any, so the
+catalog has none and every screen shows the photos as before. The next
+loader run (`scripts/deploy.sh` on the next RC and GA deploys, or
+locally `6-pics`) makes the copies for every photo once (one GET of the
+photo and a PUT per copy, about 50 photos), then reuses them.
 
 ### The Costa Daurada guide's photos
 
@@ -166,17 +217,25 @@ images, 130 to 800 px wide), so they're shown as they are.
 Nothing while idle beyond storage; see [backend.md](backend.md#cost).
 
 - **GriGri Pics storage**: ~12 MB now (19 photos of 0.3–0.7 MB, and
-  the guide's 33, 0.5 MB in all): $0.0003/month. Annotations are billed as S3 Standard storage (bytes).
+  the guide's 33, 0.5 MB in all), about 20 MB with their [smaller
+  copies](#sizes) (around 45 copies, ~8 MB): $0.0005/month. Annotations are billed as S3 Standard storage (bytes).
 - **Lookups**: the catalog GET, once per warm function: about $0.0004 per
   1,000 cold starts. The plan's photos come with one extra API call per
   plan screen opened (`GET /api/plans/{id}/pics`: ~$2 per million). The
   deck's covers ride on `GET /api/discover`: no extra call; each card's
-  photo is one CloudFront request, cached by the app and the CDN.
+  photo is one CloudFront request, cached by the CDN, by the browser on
+  the web, and on Android and iOS by the app's [photo
+  cache](platforms.md) on the device's disk (so it isn't downloaded
+  again on the next launch).
 - **Serving**: through the CloudFront the site already has, cached for a
   year: inside its free tier (1 TB and 10 million requests a month).
+  Thumbnails and small cards load their copies (a 640 px copy is roughly
+  a tenth of the photo's bytes), so beyond the free tier the data
+  transfer costs a fraction of what the photos themselves would.
 - **Loading**: per deploy, one LIST, one annotation GET per photo, and a
   catalog PUT: under $0.0001. New photos: one PUT and one annotation PUT
-  each ($0.005 per 1,000).
+  each ($0.005 per 1,000), and a PUT per copy. Making the copies of the
+  photos already there, once: about 50 GETs and 45 PUTs, $0.0003.
 - **Your Pics**: as chat photos ([backend.md](backend.md#chat-media)):
   storage at $0.023/GB-month, an upload and a tag clear per photo, kept
   400 days. A DynamoDB item per photo (a write to add, a delete to

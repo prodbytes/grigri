@@ -11,6 +11,7 @@ import {
   type Climber,
   type JoinRequest,
   type PicCatalog,
+  type PicVariant,
   type Plan,
   type PlanPic,
   type PlanType,
@@ -124,6 +125,8 @@ export interface DeckCover {
   crag: string;
   author: string;
   license: string;
+  /** The photo's smaller copies, when the loader has made them (specs/pics.md, Sizes). */
+  variants?: PicVariant[];
 }
 
 /** GriGri Pics: Grigri's own crag photos (specs/pics.md). */
@@ -1244,7 +1247,15 @@ export class Api {
       const covers: Record<string, DeckCover> = {};
       for (const p of plans) {
         const best = picsFor(catalog, { sectorId: p.sectorId, lat: p.lat, lon: p.lon, place: p.place, area: p.area })[0];
-        if (best) covers[p.id] = { key: best.key, crag: best.crag, author: best.author, license: best.license };
+        if (best) {
+          covers[p.id] = {
+            key: best.key,
+            crag: best.crag,
+            author: best.author,
+            license: best.license,
+            ...(best.variants?.length ? { variants: best.variants } : {}),
+          };
+        }
       }
       return covers;
     } catch (e) {
