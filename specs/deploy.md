@@ -50,7 +50,9 @@ for that tag:
    `/pics/*` to GriGri Pics) and DNS records, then loads
    [GriGri Pics](pics.md) (`grigri_api/pics/load.mjs`: only new photos);
 4. uploads the index page and the web build (`Cache-Control: no-cache`,
-   Flutter's files aren't content-hashed) and invalidates `/*`;
+   Flutter's files aren't content-hashed), invalidates `/*` and waits for
+   the invalidation, so the new release is live at once (see
+   [Caching](#caching));
 5. checks, for up to 10 minutes, that `/app/version.json` reports the
    version, `/` is the index page, `/app/` answers, `/api/health`
    reports the stage and version, and `/api/apple/callback` sends a
@@ -156,3 +158,29 @@ three the deploy warns and Apple tokens aren't revoked). One-time setup:
 
 By hand, with admin credentials: `TAG=0.1.<Z>-GA bash scripts/deploy.sh`
 (`STAGE=rc` for the RC; `SKIP_BUILD=1` to reuse a build).
+
+## Caching
+
+The index page (`/`) and the web app (`/app*`) are uploaded with
+`Cache-Control: no-cache`: browsers revalidate every file each time the
+app opens (~35 files), so they never run a stale build. CloudFront keeps
+them anyway, with the site's own cache policy (`SiteFilesCachePolicy`:
+MinTTL and DefaultTTL a day, no cookies, headers or query strings in the
+key, gzip and Brotli). MinTTL overrides `no-cache` at the edge only;
+CloudFront passes the header on to browsers unchanged, so their
+revalidations get a 304 from the edge instead of a GET to S3 each. Every
+deploy invalidates `/*` and waits for it, so the new release, its
+`version.json` included, is what the edge serves from then on. Anything
+that changes the site bucket's files must invalidate them too.
+
+Cost: the cache policy is free. S3 sees at most one GET per file per
+edge location a day (was one per file per app open, $0.0004 per 1,000:
+~$0.014 per 1,000 opens). Invalidating `/*` is one path, inside the
+1,000 free a month. The browsers' revalidations are still CloudFront
+requests (free up to 10 million a month, then $1 per million), as they
+were.
+
+Photos (`/photos/*`) and GriGri Pics (`/pics/*`) keep
+Managed-CachingOptimized: their keys are never reused, so they follow
+their own `max-age` (people's uploads a year, the sample ads' photos a
+day). The API (`/api/*`) is never cached.
