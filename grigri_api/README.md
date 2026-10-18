@@ -63,6 +63,7 @@ indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
 | Membership | `CLIMBER#<id>` | `MEMBER#<planId>` | | "plans I'm in" |
 | Pass | `CLIMBER#<id>` | `PASS#<planId>` | | out of my deck (swiped left, left, or dismissed) |
 | Notice | `CLIMBER#<id>` | `NOTICE#<noticeId>` | | the Notice |
+| Notices stamp | `CLIMBER#<id>` | `NOTICES` | | `stamp`: new with every delivery and read-marking (unchanged notices: one small read) |
 | Plan | `PLAN#<id>` | `PLAN` | gsi1: `PLANS`, `<start>#<id>` | the Plan, and `version` (incremented by every change to its members or requests) |
 | Join request | `PLAN#<id>` | `REQ#<climberId>` | gsi2: `ASKED#<climberId>`, `<time>#<planId>`; gsi1 while open: `OPENREQ`, `<time>#<planId>#<climberId>` | the JoinRequest (with `nudgedAt` once nudged), plus `joined` and `dismissed` |
 | Message | `PLAN#<id>` | `MSG#<time>#<messageId>` | | the Message |

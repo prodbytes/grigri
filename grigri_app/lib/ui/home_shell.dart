@@ -150,9 +150,8 @@ class _HomeShellState extends State<HomeShell>
   void _tick() {
     if (!mounted) return;
     final store = StoreScope.read(context);
-    store.refreshPlans();
-    store.refreshRequests();
-    store.refreshNotices();
+    // My plans, requests and notifications: one request.
+    store.refreshUpdates();
     if (_onTop) {
       _refreshTab(_tab, regular: true);
     } else {

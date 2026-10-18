@@ -803,7 +803,9 @@ class FakeApi implements GrigriApi, SessionApi {
   });
 
   @override
-  Future<MyPlans> myPlans() => _route('GET /api/plans', () {
+  Future<MyPlans> myPlans() => _route('GET /api/plans', _myPlans);
+
+  MyPlans _myPlans() {
     final mine = plans.values.where((p) => p.memberIds.contains(meId)).toList()
       ..sort(
         (a, b) =>
@@ -822,7 +824,7 @@ class FakeApi implements GrigriApi, SessionApi {
         ...asked.expand((a) => _planPeople(a.plan)),
       }),
     );
-  });
+  }
 
   @override
   Future<PlanDetail> plan(String id) => _route('GET /api/plans/$id', () {
@@ -910,7 +912,9 @@ class FakeApi implements GrigriApi, SessionApi {
   });
 
   @override
-  Future<RequestList> requests() => _route('GET /api/requests', () {
+  Future<RequestList> requests() => _route('GET /api/requests', _requests);
+
+  RequestList _requests() {
     final list = [
       for (final r in requestsById.values)
         if (!r.rejected &&
@@ -927,7 +931,7 @@ class FakeApi implements GrigriApi, SessionApi {
         ...byPlan.values.expand(_planPeople),
       }),
     );
-  });
+  }
 
   void _member(String planId) {
     if (!(plans[planId]?.memberIds.contains(meId) ?? false)) {
@@ -963,11 +967,57 @@ class FakeApi implements GrigriApi, SessionApi {
       });
 
   @override
-  Future<NoticeList> notices() => _route('GET /api/notices', () {
+  Future<NoticeList> notices({String? stamp}) =>
+      _route('GET /api/notices', () => _notices(stamp));
+
+  /// The notices stamp: here, what they are (it changes when they do).
+  String _stamp(List<Notice> mine) =>
+      [for (final n in mine) '${n.id}:${n.read}:${n.time.toIso8601String()}']
+          .join(',')
+          .hashCode
+          .toRadixString(36);
+
+  NoticeList _notices(String? stamp) {
     final mine = [...?noticesFor[meId]]
       ..sort((a, b) => b.time.compareTo(a.time));
-    return NoticeList(mine, _mention([for (final n in mine) ?n.climberId]));
-  });
+    if (stamp == null) {
+      return NoticeList(mine, _mention([for (final n in mine) ?n.climberId]));
+    }
+    final now = _stamp(mine);
+    if (now == stamp) {
+      return NoticeList(const [], const {}, stamp: now, unchanged: true);
+    }
+    return NoticeList(
+      mine,
+      _mention([for (final n in mine) ?n.climberId]),
+      stamp: now,
+    );
+  }
+
+  @override
+  Future<Updates> updates({String noticesStamp = '0'}) =>
+      _route('GET /api/updates', () {
+        final (plans, requests, notices) = (
+          _myPlans(),
+          _requests(),
+          _notices(noticesStamp),
+        );
+        final people = {
+          ...plans.climbers,
+          ...requests.climbers,
+          ...notices.climbers,
+        };
+        return Updates(
+          MyPlans(plans: plans.plans, asked: plans.asked, climbers: people),
+          RequestList(requests.requests, requests.plans, people),
+          NoticeList(
+            notices.notices,
+            people,
+            stamp: notices.stamp,
+            unchanged: notices.unchanged,
+          ),
+        );
+      });
 
   @override
   Future<void> readNotices() => _route('POST /api/notices/read', () {
@@ -1105,6 +1155,27 @@ class FakeApi implements GrigriApi, SessionApi {
       return m;
     },
   );
+
+  @override
+  Future<ChatsMessages> chatsMessages(
+    Map<String, DateTime?> chats,
+  ) => _route('GET /api/chats/messages', () {
+    if (chats.length > maxChatsPerPoll) {
+      throw const ApiException(400, 'Too many chats at once.');
+    }
+    final out = <String, List<Message>>{};
+    final people = <String>{};
+    for (final MapEntry(key: planId, value: after) in chats.entries) {
+      final plan = plans[planId];
+      if (plan == null || !plan.memberIds.contains(meId)) continue;
+      out[planId] = [
+        for (final m in allMessages)
+          if (m.planId == planId && (after == null || m.time.isAfter(after))) m,
+      ];
+      people.addAll([for (final m in out[planId]!) ?m.authorId]);
+    }
+    return ChatsMessages(out, _mention(people));
+  });
 
   @override
   Future<MessageList> messages(String planId, {DateTime? after}) => _route(

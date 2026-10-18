@@ -16,6 +16,7 @@ import {
   type PlanType,
   type PublicClimber,
   type Message,
+  type Notice,
   deciders,
   isOpen,
   planType,
@@ -73,6 +74,9 @@ export const REPORTS_NOTICE_ID = 'reports';
 
 /** Most requests a plan keeps waiting: bounds its transactions (DynamoDB takes 100 items; each join writes 3). */
 export const MAX_OPEN_REQUESTS = 30;
+
+/** How many chats one GET /api/chats/messages asks about (the app splits more). */
+export const MAX_CHATS_PER_POLL = 50;
 
 /** A new profile's name when Google didn't give one (sessions from before names were kept). */
 export const NO_NAME = 'Climber';
@@ -311,6 +315,10 @@ export class Api {
     r('GET /api/discover', 'profile', (_req, s) => this.discover(s));
     r('POST /api/plans', 'profile', (req, s) => this.createPlan(req, s));
     r('GET /api/plans', 'profile', (_req, s) => this.myPlans(s));
+    // The app's regular refresh: my plans, requests to review and notices in one.
+    r('GET /api/updates', 'profile', (req, s) => this.updates(req, s));
+    // Chats' refresh: every chat's new messages in one.
+    r('GET /api/chats/messages', 'profile', (req, s) => this.chatsMessages(req, s));
     r('GET /api/plans/{id}', 'profile', (req, s) => this.getPlan(req, s));
     r('PUT /api/plans/{id}', 'profile', (req, s) => this.updatePlan(req, s));
     r('POST /api/plans/{id}/leave', 'profile', (req, s) => this.leave(req, s));
@@ -345,7 +353,7 @@ export class Api {
       return {};
     });
 
-    r('GET /api/notices', 'profile', (_req, s) => this.notices(s));
+    r('GET /api/notices', 'profile', (req, s) => this.notices(req, s));
     r('POST /api/notices/read', 'profile', async (_req, s) => {
       await this.store.markNoticesRead(s.me.id);
       return {};
@@ -1363,6 +1371,32 @@ export class Api {
   }
 
   private async myPlans(s: Session) {
+    const part = await this.myPlansPart(s);
+    return { ...part.body, climbers: await this.publicClimbers(part.people) };
+  }
+
+  /**
+   * GET /api/updates[?notices=<stamp>]: GET /api/plans, GET /api/requests
+   * and GET /api/notices in one request, each as its route answers it but
+   * for its climbers, which all three share (one read). The requests
+   * reuse the plans' read of my plans.
+   */
+  private async updates(req: Request, s: Session) {
+    const stamp = noticesStamp(req.query.notices);
+    const [[plans, requests], notices] = await Promise.all([
+      this.myPlansPart(s).then(async (plans) => [plans, await this.toReviewPart(s, plans.memberPlans)] as const),
+      this.noticesPart(s, stamp),
+    ]);
+    return {
+      plans: plans.body,
+      requests: requests.body,
+      notices: notices.body,
+      climbers: await this.publicClimbers([...plans.people, ...requests.people, ...notices.people]),
+    };
+  }
+
+  /** GET /api/plans' answer but its climbers, and whose they'd be. */
+  private async myPlansPart(s: Session) {
     const [memberOf, asked, passed] = await Promise.all([
       this.store.memberPlanIds(s.me.id),
       this.store.askedRequests(s.me.id),
@@ -1377,10 +1411,12 @@ export class Api {
       .filter((r) => byId.has(r.planId) && !byId.get(r.planId)!.memberIds.includes(s.me.id))
       .sort((a, b) => (a.time > b.time ? -1 : 1))
       .map((r) => ({ request: requestJson(r), plan: byId.get(r.planId)! }));
+    const memberSet = new Set(memberOf);
     return {
-      plans: mine,
-      asked: askedOut,
-      climbers: await this.climbersOf([...mine, ...askedOut.map((a) => a.plan)]),
+      body: { plans: mine, asked: askedOut },
+      people: peopleOf([...mine, ...askedOut.map((a) => a.plan)]),
+      /** The plans my memberships name (what GET /api/requests reads first). */
+      memberPlans: plans.filter((p) => memberSet.has(p.id)),
     };
   }
 
@@ -1519,16 +1555,28 @@ export class Api {
   // --- Requests -------------------------------------------------------------
 
   private async toReview(s: Session) {
-    const planIds = await this.store.memberPlanIds(s.me.id);
-    const loaded = (await Promise.all(planIds.map((p) => this.store.loadPlan(p)))).filter(
-      (l): l is LoadedPlan => l !== undefined,
-    );
-    const requests = rules.toReview(loaded, s.me.id);
-    const plans = loaded.map((l) => l.plan).filter((p) => requests.some((r) => r.planId === p.id));
+    const part = await this.toReviewPart(s);
+    return { ...part.body, climbers: await this.publicClimbers(part.people) };
+  }
+
+  /**
+   * GET /api/requests' answer but its climbers, and whose they'd be. My
+   * plans in one batch read (or [memberPlans], read already); then the
+   * requests only of those I decide on (rules.toReview has nothing from
+   * the others).
+   */
+  private async toReviewPart(s: Session, memberPlans?: Plan[]) {
+    const plansOfMine = memberPlans ?? (await this.store.getPlans(await this.store.memberPlanIds(s.me.id)));
+    const mine = plansOfMine.filter((p) => deciders(p).includes(s.me.id));
+    const states = await Promise.all(mine.map(async (plan) => ({ plan, requests: await this.store.planRequests(plan.id) })));
+    const requests = rules.toReview(states, s.me.id);
+    const plans = mine.filter((p) => requests.some((r) => r.planId === p.id));
     return {
-      requests: requests.map(requestJson),
-      plans: Object.fromEntries(plans.map((p) => [p.id, p])),
-      climbers: await this.climbersOf(plans, requests),
+      body: {
+        requests: requests.map(requestJson),
+        plans: Object.fromEntries(plans.map((p) => [p.id, p])),
+      },
+      people: peopleOf(plans, requests),
     };
   }
 
@@ -1873,12 +1921,39 @@ export class Api {
 
   // --- Notices and chat -------------------------------------------------------
 
-  private async notices(s: Session) {
-    const notices = await this.store.notices(s.me.id);
-    const ids = notices.flatMap((n) => (n.climberId ? [n.climberId] : []));
-    return { notices, climbers: await this.publicClimbers(ids) };
+  /** GET /api/notices[?stamp=]: mine, or, given the stamp they had, "unchanged" when it still holds. */
+  private async notices(req: Request, s: Session) {
+    const part = await this.noticesPart(s, noticesStamp(req.query.stamp));
+    return { ...part.body, climbers: await this.publicClimbers(part.people) };
   }
 
+  /**
+   * My notices but their climbers, and whose they'd be. Without a stamp
+   * (older apps), as ever: every notice. With one ('0': none yet), the
+   * stamp first (one small read): the same one, `{"unchanged": true}`;
+   * else every notice, read strongly consistent (so it has what a newer
+   * stamp stands for), and the stamp to send next time.
+   */
+  private async noticesPart(s: Session, stamp: string | undefined) {
+    const people = (notices: Notice[]) => notices.flatMap((n) => (n.climberId ? [n.climberId] : []));
+    if (stamp === undefined) {
+      const notices = await this.store.notices(s.me.id);
+      return { body: { notices } as NoticesBody, people: people(notices) };
+    }
+    const current = await this.store.noticesStamp(s.me.id);
+    if (current !== undefined && current === stamp) {
+      return { body: { unchanged: true, stamp: current } as NoticesBody, people: [] };
+    }
+    const notices = await this.store.notices(s.me.id, true);
+    const kept = current ?? (await this.store.startNoticesStamp(s.me.id));
+    return { body: { notices, ...(kept ? { stamp: kept } : {}) } as NoticesBody, people: people(notices) };
+  }
+
+  /**
+   * GET /api/plans/{id}/messages[?after=]: the whole chat comes with its
+   * members' and its messages' people; what's new (`after`) only with
+   * those its new messages name (the members come with GET /api/plans).
+   */
   private async messages(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
     const current = await this.store.getPlan(planId);
@@ -1886,12 +1961,36 @@ export class Api {
     if (!current.plan.memberIds.includes(s.me.id)) throw forbidden("you're not in this plan");
     const after = req.query.after ? parseDate(req.query.after, 'after').toISOString() : undefined;
     const messages = await this.store.messages(planId, after);
-    const ids = new Set<string>(current.plan.memberIds);
-    for (const m of messages) {
-      if (m.authorId) ids.add(m.authorId);
-      if (m.requestId) ids.add(m.requestId.split('/')[1]!);
-    }
+    const ids = new Set<string>(after ? [] : current.plan.memberIds);
+    addMessagePeople(ids, messages);
     return { messages, climbers: await this.publicClimbers(ids) };
+  }
+
+  /**
+   * GET /api/chats/messages?chats=<planId>[~<after>],...: several chats'
+   * messages in one request, each as GET /api/plans/{id}/messages answers
+   * it (its whole chat, or after `after`); the plans in one batch read,
+   * their people in another. Plans I'm not in (or gone) are left out.
+   */
+  private async chatsMessages(req: Request, s: Session) {
+    const asked = new Map<string, string | undefined>();
+    for (const part of (req.query.chats ?? '').split(',').filter((p) => p !== '')) {
+      const [rawId, rawAfter, ...rest] = part.split('~');
+      if (rest.length > 0) throw badRequest('chats must be <planId>[~<after>],...');
+      asked.set(id(rawId, 'plan id'), rawAfter ? parseDate(rawAfter, 'after').toISOString() : undefined);
+    }
+    if (asked.size > MAX_CHATS_PER_POLL) throw badRequest(`at most ${MAX_CHATS_PER_POLL} chats at once`);
+    const plans = (await this.store.getPlans(asked.keys())).filter((p) => p.memberIds.includes(s.me.id));
+    const ids = new Set<string>();
+    const chats: Record<string, Message[]> = {};
+    await Promise.all(plans.map(async (plan) => {
+      const after = asked.get(plan.id);
+      const messages = await this.store.messages(plan.id, after);
+      chats[plan.id] = messages;
+      if (!after) for (const m of plan.memberIds) ids.add(m);
+      addMessagePeople(ids, messages);
+    }));
+    return { chats, climbers: await this.publicClimbers(ids) };
   }
 
   private async send(req: Request, s: Session) {
@@ -2028,16 +2127,7 @@ export class Api {
 
   /** Every climber the plans and requests mention. */
   private climbersOf(plans: Plan[], requests: JoinRequest[] = []): Promise<Record<string, PublicClimber>> {
-    const ids = new Set<string>();
-    for (const p of plans) {
-      ids.add(p.organizerId);
-      for (const m of p.memberIds) ids.add(m);
-    }
-    for (const r of requests) {
-      ids.add(r.climberId);
-      for (const a of r.acceptedBy) ids.add(a);
-    }
-    return this.publicClimbers(ids);
+    return this.publicClimbers(peopleOf(plans, requests));
   }
 
   /** Other people's profiles, without where they are (location and areas are only mine to see). */
@@ -2065,6 +2155,38 @@ export class Api {
  * and the members a plan change; a partial yes is a request change for
  * the members; a no tells the requester (a notice) and the members.
  */
+/** Every climber the plans and requests mention. */
+function peopleOf(plans: Plan[], requests: JoinRequest[] = []): Set<string> {
+  const ids = new Set<string>();
+  for (const p of plans) {
+    ids.add(p.organizerId);
+    for (const m of p.memberIds) ids.add(m);
+  }
+  for (const r of requests) {
+    ids.add(r.climberId);
+    for (const a of r.acceptedBy) ids.add(a);
+  }
+  return ids;
+}
+
+/** Whom chat messages name: their authors, and the requesters of request notes. */
+function addMessagePeople(ids: Set<string>, messages: Message[]): void {
+  for (const m of messages) {
+    if (m.authorId) ids.add(m.authorId);
+    if (m.requestId) ids.add(m.requestId.split('/')[1]!);
+  }
+}
+
+/** GET /api/notices' answer, but its climbers. */
+type NoticesBody = { notices: Notice[]; stamp?: string } | { unchanged: true; stamp: string };
+
+/** The notices stamp a poll sends (undefined: an older app's poll, which sends none). */
+function noticesStamp(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  if (!/^[A-Za-z0-9:.#_-]{1,64}$/.test(value)) throw badRequest("the notices stamp isn't valid");
+  return value;
+}
+
 export function answerHints(
   before: { plan: Plan },
   effects: rules.Effects,

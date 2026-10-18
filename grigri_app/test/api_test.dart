@@ -336,6 +336,98 @@ void main() {
       expect(list.notices.single.climberId, 'pat');
     });
 
+    test('GET /api/updates: the three answers, sharing their climbers, '
+        'and the notices stamp', () async {
+      final seen = <http.Request>[];
+      final api = apiWith(
+        (_) async => json({
+          'plans': {
+            'plans': [planJson],
+            'asked': [],
+          },
+          'requests': {
+            'requests': [
+              {
+                'id': 'p1/robin',
+                'planId': 'p1',
+                'climberId': 'robin',
+                'acceptedBy': [],
+                'rejected': false,
+                'time': '2026-10-12T10:00:00.000Z',
+              },
+            ],
+            'plans': {'p1': planJson},
+          },
+          'notices': {'unchanged': true, 'stamp': 's1'},
+          'climbers': {'robin': robinJson},
+        }),
+        seen: seen,
+      );
+      final updates = await api.updates(noticesStamp: 's1');
+      expect(seen.single.url.path, '/api/updates');
+      expect(seen.single.url.queryParameters, {'notices': 's1'});
+      expect(updates.plans.plans.single.id, 'p1');
+      expect(updates.plans.climbers.keys, ['robin']);
+      expect(updates.requests.requests.single.climberId, 'robin');
+      expect(updates.requests.plans.keys, ['p1']);
+      expect(updates.requests.climbers.keys, ['robin']);
+      expect(updates.notices.unchanged, isTrue);
+      expect(updates.notices.stamp, 's1');
+      expect(updates.notices.notices, isEmpty);
+    });
+
+    test(
+      'GET /api/notices sends the stamp it has, and reads the new one',
+      () async {
+        final seen = <http.Request>[];
+        final api = apiWith(
+          (_) async => json({'notices': [], 'climbers': {}, 'stamp': 's2'}),
+          seen: seen,
+        );
+        final list = await api.notices(stamp: '0');
+        expect(seen.single.url.queryParameters, {'stamp': '0'});
+        expect(list.stamp, 's2');
+        expect(list.unchanged, isFalse);
+        await api.notices();
+        expect(seen.last.url.queryParameters, isEmpty);
+      },
+    );
+
+    test('GET /api/chats/messages: every chat at once, each after its last '
+        'message', () async {
+      final seen = <http.Request>[];
+      final api = apiWith(
+        (_) async => json({
+          'chats': {
+            'p1': [
+              {
+                'id': 'm1',
+                'planId': 'p1',
+                'authorId': 'robin',
+                'text': 'Rope is packed',
+                'time': '2026-10-12T10:00:01.000Z',
+              },
+            ],
+            'p2': [],
+          },
+          'climbers': {'robin': robinJson},
+        }),
+        seen: seen,
+      );
+      final answer = await api.chatsMessages({
+        'p1': DateTime.utc(2026, 10, 12, 10, 0, 0, 5),
+        'p2': null,
+      });
+      expect(seen.single.url.path, '/api/chats/messages');
+      expect(
+        seen.single.url.queryParameters['chats'],
+        'p1~2026-10-12T10:00:00.005Z,p2',
+      );
+      expect(answer.chats['p1']!.single.text, 'Rope is packed');
+      expect(answer.chats['p2'], isEmpty);
+      expect(answer.climbers.keys, ['robin']);
+    });
+
     test('polls messages after a time', () async {
       final seen = <http.Request>[];
       final api = apiWith(

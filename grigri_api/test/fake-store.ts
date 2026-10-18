@@ -34,7 +34,17 @@ export class FakeStore {
   changeLog: Change[] = [];
   wallClock: () => number = Date.now;
   /** How often the decks read things in full or in part (what the caches save). */
-  reads = { upcomingPlans: 0, getPlans: 0, approvedAds: 0, adSettings: 0, changes: 0 };
+  reads = {
+    upcomingPlans: 0, getPlans: 0, approvedAds: 0, adSettings: 0, changes: 0,
+    // What the regular polls read (specs/backend.md).
+    getPlan: 0, loadPlan: 0, planRequests: 0, getClimbers: 0, notices: 0, noticesStamp: 0, messages: 0,
+  };
+  /** Each climber's notices stamp (src/store/store.ts): new with every change to their notices. */
+  noticeStamps = new Map<string, string>();
+  private stamps = 0;
+  private stampNotices(cid: string) {
+    this.noticeStamps.set(cid, `stamp-${++this.stamps}`);
+  }
   private nonce = 0;
 
   /** Adds a change-log entry (what the real store does with every such write). */
@@ -155,6 +165,7 @@ export class FakeStore {
   async deleteAppleToken(subject: string) { this.appleTokens.delete(subject); }
   async getClimber(id: string) { return this.climbers.get(id); }
   async getClimbers(ids: Iterable<string>) {
+    this.reads.getClimbers++;
     return Object.fromEntries([...ids].flatMap((id) => (this.climbers.has(id) ? [[id, this.climbers.get(id)!]] : [])));
   }
   async createProfile(subject: string, c: Climber) {
@@ -173,15 +184,21 @@ export class FakeStore {
     return [...this.sessions.values()].find((x) => x.subject === subject && x.emailVerified)?.email;
   }
   async allClimbers() { return [...this.climbers.values()]; }
-  async getPlan(id: string) { return this.plans.get(id); }
+  async getPlan(id: string) {
+    this.reads.getPlan++;
+    return this.plans.get(id);
+  }
   async getPlans(ids: Iterable<string>) {
     this.reads.getPlans++;
     return [...new Set(ids)].flatMap((id) => (this.plans.has(id) ? [this.plans.get(id)!.plan] : [])); }
   async loadPlan(id: string): Promise<LoadedPlan | undefined> {
+    this.reads.loadPlan++;
     const p = this.plans.get(id);
     return p ? { ...p, requests: [...this.requests.values()].filter((r) => r.planId === id) } : undefined;
   }
-  async planRequests(id: string) { return [...this.requests.values()].filter((r) => r.planId === id); }
+  async planRequests(id: string) {
+    this.reads.planRequests++;
+    return [...this.requests.values()].filter((r) => r.planId === id); }
   async getRequest(planId: string, climberId: string) { return this.requests.get(`${planId}/${climberId}`); }
   /** As the by-start index gives them: in its order, a copy each (a lagging index: override it). */
   async upcomingPlans(after: string) {
@@ -243,16 +260,35 @@ export class FakeStore {
       if (!this.noticeMap.has(d.to)) this.noticeMap.set(d.to, new Map());
       this.noticeMap.get(d.to)!.set(d.notice.id, d.notice);
     }
+    for (const to of new Set(ds.map((d) => d.to))) this.stampNotices(to);
   }
-  async notices(cid: string) {
+  async notices(cid: string, _consistent = false) {
+    this.reads.notices++;
     return [...(this.noticeMap.get(cid)?.values() ?? [])].sort((a, b) => (a.time > b.time ? -1 : 1));
   }
+  async noticesStamp(cid: string) {
+    this.reads.noticesStamp++;
+    return this.noticeStamps.get(cid);
+  }
+  async startNoticesStamp(cid: string) {
+    if (this.noticeStamps.has(cid)) return undefined;
+    this.stampNotices(cid);
+    return this.noticeStamps.get(cid);
+  }
   async markNoticesRead(cid: string) {
-    for (const [k, n] of this.noticeMap.get(cid) ?? []) if (k !== 'team') this.noticeMap.get(cid)!.set(k, { ...n, read: true });
+    let changed = false;
+    for (const [k, n] of this.noticeMap.get(cid) ?? []) {
+      if (k === 'team' || n.read) continue;
+      this.noticeMap.get(cid)!.set(k, { ...n, read: true });
+      changed = true;
+    }
+    if (changed) this.stampNotices(cid);
   }
   async markNoticeRead(cid: string, noticeId: string) {
     const n = this.noticeMap.get(cid)?.get(noticeId);
-    if (n) this.noticeMap.get(cid)!.set(noticeId, { ...n, read: true });
+    if (!n || n.read) return;
+    this.noticeMap.get(cid)!.set(noticeId, { ...n, read: true });
+    this.stampNotices(cid);
   }
   /** Team chat messages (specs/team-chat.md), and each chat's last one. */
   teamMsgs: TeamMessage[] = [];
@@ -272,6 +308,7 @@ export class FakeStore {
     this.teamChatMap.delete(cid);
   }
   async messages(planId: string, after?: string) {
+    this.reads.messages++;
     return this.msgs.filter((m) => m.planId === planId && (!after || m.time > after));
   }
   async putMessage(m: Message) { this.msgs.push(m); }
@@ -344,6 +381,7 @@ export class FakeStore {
     for (const k of [...this.passes]) if (k.startsWith(`${climberId}|`)) this.passes.delete(k);
     for (const k of [...this.left]) if (k.startsWith(`${climberId}|`)) this.left.delete(k);
     this.noticeMap.delete(climberId);
+    this.noticeStamps.delete(climberId);
     this.emails.delete(climberId);
     this.subscriptions.delete(climberId);
     this.note('climber', climberId);

@@ -299,14 +299,10 @@ void main() {
           await callsAfter('{"kind":"plan","planId":"crag-day"}'),
           unorderedEquals(['GET /api/plans', 'GET /api/requests']),
         );
-        expect(
-          await callsAfter('{"kind":"match","planId":"crag-day"}'),
-          unorderedEquals([
-            'GET /api/plans',
-            'GET /api/requests',
-            'GET /api/notices',
-          ]),
-        );
+        // All three: in one request.
+        expect(await callsAfter('{"kind":"match","planId":"crag-day"}'), [
+          'GET /api/updates',
+        ]);
         // Not my plan's chat: nothing to fetch.
         expect(
           await callsAfter('{"kind":"message","planId":"crag-day"}'),
@@ -346,9 +342,7 @@ void main() {
         unorderedEquals([
           // It dropped at once: where to connect may have changed.
           'GET /api/realtime',
-          'GET /api/plans',
-          'GET /api/requests',
-          'GET /api/notices',
+          'GET /api/updates',
         ]),
       );
     });
@@ -396,7 +390,7 @@ void main() {
       await tester.pump();
       expect(store.live, isTrue);
 
-      int planPolls() => api.calls.where((c) => c == 'GET /api/plans').length;
+      int planPolls() => api.calls.where((c) => c == 'GET /api/updates').length;
       Future<int> pollsOver(int seconds) async {
         final before = planPolls();
         for (var i = 0; i < seconds; i++) {
@@ -462,7 +456,8 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
       }
       // The badges' refreshes go on; the deck under the screen waits.
-      expect(count(api, 'GET /api/plans'), 3);
+      expect(count(api, 'GET /api/updates'), 3);
+      expect(count(api, 'GET /api/plans'), 0);
       expect(count(api, 'GET /api/discover'), 0);
       navigator.currentState!.pop();
       await tester.pump();
@@ -506,7 +501,7 @@ void main() {
       api.calls.clear();
       await awayAndBack();
       expect(premiumCalls(), 0);
-      expect(count(api, 'GET /api/plans'), greaterThan(0));
+      expect(count(api, 'GET /api/updates'), greaterThan(0));
       await tester.runAsync(() => store.subscribe(PremiumPlan.monthly));
       expect(api.opened, isNotEmpty);
       api.calls.clear();

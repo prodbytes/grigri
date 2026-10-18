@@ -21,7 +21,7 @@ A hint says *what kind of thing changed*, never the thing itself:
 | `message` | the plan's members | a chat message | that chat's new messages (if it's one of my plans) |
 | `request` | the plan's members | someone asks to join; a member says yes but not everyone has; a member says no (the members) | requests to review, notifications; the plan's chat and open requests if loaded |
 | `notice` | the requester; the members who haven't answered a nudge; every admin | their request was declined; the requester nudged them; someone reported something ([moderation](moderation.md#answering-reports-admins)) | notifications, my plans |
-| `match` | the newcomer | everyone said yes | my plans, requests, notifications (the match screen opens as before) |
+| `match` | the newcomer | everyone said yes | my plans, requests, notifications, in one request (`GET /api/updates`; the match screen opens as before) |
 | `plan` | the plan's members | someone joined or left; the organizer edited the plan | my plans, requests; the plan's chat and open requests if loaded |
 | `team` | every admin Grigri knows; the climber and the other admins | someone wrote to the [Grigri team](team-chat.md); an admin answered them | notifications (the team chat's badge), my team chat if loaded; for admins, the team chats' list and the ones opened |
 
@@ -90,8 +90,9 @@ connection:
   out); back to 1 s only once a connection has stayed up for **a
   minute**, so one the broker accepts and drops at once keeps backing off
   instead of reconnecting every second. After a reconnect from a drop in
-  the foreground it refetches my plans, requests, notifications and
-  loaded chats (the team chat too), for hints missed meanwhile; the
+  the foreground it refetches my plans, requests and notifications (one
+  `GET /api/updates`) and loaded chats (the team chat too), for hints
+  missed meanwhile; the
   connection that opens on resume doesn't (the resume refresh already
   covers that, and an open chat, a team chat too, polls on resume). A 401
   from `GET /api/realtime` is a sign-out, as anywhere.

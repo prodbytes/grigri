@@ -96,8 +96,15 @@ abstract interface class GrigriApi {
   /// clears a declined request.
   Future<void> dismiss(String planId, String climberId);
 
-  /// `GET /api/notices`: mine, newest first.
-  Future<NoticeList> notices();
+  /// `GET /api/notices`: mine, newest first. With the [stamp] my last
+  /// answer had (`0`: none yet), [NoticeList.unchanged] when they still
+  /// are as they were.
+  Future<NoticeList> notices({String? stamp});
+
+  /// `GET /api/updates`: [myPlans], [requests] and [notices] (with the
+  /// [noticesStamp] my last answer had, `0` for none) in one request, the
+  /// app's regular refresh.
+  Future<Updates> updates({String noticesStamp = '0'});
 
   /// `POST /api/notices/read`.
   Future<void> readNotices();
@@ -129,6 +136,11 @@ abstract interface class GrigriApi {
 
   /// `GET /api/plans/{id}/messages[?after=]`: oldest first.
   Future<MessageList> messages(String planId, {DateTime? after});
+
+  /// `GET /api/chats/messages?chats=`: several chats' messages in one
+  /// request (at most [maxChatsPerPoll]), each as [messages] answers it:
+  /// planId → after (null: all of it). Chats I'm not in are left out.
+  Future<ChatsMessages> chatsMessages(Map<String, DateTime?> chats);
 
   /// `POST /api/plans/{id}/messages`: text, an [attachment] (a key from
   /// [newChatMedia]), or both.
@@ -489,9 +501,43 @@ class RequestList {
 }
 
 class NoticeList {
-  const NoticeList(this.notices, this.climbers);
+  const NoticeList(
+    this.notices,
+    this.climbers, {
+    this.stamp,
+    this.unchanged = false,
+  });
 
+  /// Mine, newest first; empty when [unchanged].
   final List<Notice> notices;
+  final Climbers climbers;
+
+  /// What to send next time, to hear [unchanged] if they still are (null:
+  /// the server kept none, or the call sent no stamp).
+  final String? stamp;
+
+  /// Nothing changed since the stamp sent: keep the ones I have.
+  final bool unchanged;
+}
+
+/// `GET /api/updates`: my plans, the requests waiting for me and my
+/// notices, sharing one set of climbers.
+class Updates {
+  const Updates(this.plans, this.requests, this.notices);
+
+  final MyPlans plans;
+  final RequestList requests;
+  final NoticeList notices;
+}
+
+/// How many chats one [GrigriApi.chatsMessages] asks about.
+const maxChatsPerPoll = 50;
+
+/// `GET /api/chats/messages`: each chat's messages, by plan id.
+class ChatsMessages {
+  const ChatsMessages(this.chats, this.climbers);
+
+  final Map<String, List<Message>> chats;
   final Climbers climbers;
 }
 
@@ -739,9 +785,34 @@ abstract final class ApiJson {
     );
   }
 
-  static NoticeList noticeList(Map<String, Object?> json) => NoticeList([
-    for (final n in _list(json['notices'])) ?Notice.fromJson(n),
-  ], climbers(json));
+  static NoticeList noticeList(Map<String, Object?> json, [Climbers? shared]) =>
+      NoticeList(
+        [for (final n in _list(json['notices'])) ?Notice.fromJson(n)],
+        shared ?? climbers(json),
+        stamp: json['stamp'] as String?,
+        unchanged: json['unchanged'] == true,
+      );
+
+  static Updates updates(Map<String, Object?> json) {
+    final people = climbers(json);
+    final plans = _map(json['plans']);
+    final requests = _map(json['requests']);
+    return Updates(
+      myPlans({...plans, 'climbers': json['climbers']}),
+      RequestList(
+        _list(requests['requests']).map(JoinRequest.fromJson).toList(),
+        _plansById(requests['plans']),
+        people,
+      ),
+      noticeList(_map(json['notices']), people),
+    );
+  }
+
+  static ChatsMessages chatsMessages(Map<String, Object?> json) =>
+      ChatsMessages({
+        for (final e in ((json['chats'] as Map?) ?? const {}).entries)
+          e.key as String: _list(e.value).map(Message.fromJson).toList(),
+      }, climbers(json));
 
   static MessageList messageList(Map<String, Object?> json) => MessageList(
     _list(json['messages']).map(Message.fromJson).toList(),

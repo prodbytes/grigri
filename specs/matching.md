@@ -321,6 +321,14 @@ and the app also polls, only what's on screen, as a safety net:
   connection is up. While another screen covers the tabs (a chat, a
   plan, a dialog), the open tab's part waits; if it was due meanwhile, it
   runs once when that screen closes;
+- in as few requests as the data allows, with the same data and timing:
+  my plans, requests and notifications are one request (`GET
+  /api/updates`); my notifications come back "unchanged" (nothing read
+  but one small item) while they are, and the app keeps the ones it
+  has; Chats' refresh asks for every chat's new messages in one request
+  (`GET /api/chats/messages`, at most 50 chats each); a single hint, an
+  open chat and the team chats keep their own routes. Against an older
+  API without these routes (404), the app goes back to the single ones;
 - on coming back to the foreground, the same at once; and my Premium
   the first time back after the app opened Stripe's Checkout or portal,
   or the App Store's subscriptions (afresh, [premium.md](premium.md)), or
