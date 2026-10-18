@@ -1,7 +1,10 @@
 // DynamoDB access: the single table's items to and from the domain's
 // shapes. Writes that race (membership, answers, a double join) are
 // transactions conditioned on the plan's version, which every change to a
-// plan's members or requests increments.
+// plan's members or requests increments. Every write of a plan, an ad,
+// the ads' setting or a profile also adds an entry to the change log
+// (CHANGES), which the decks' caches read (src/deck-cache.ts).
+import { randomBytes } from 'node:crypto';
 import {
   BatchGetCommand,
   BatchWriteCommand,
@@ -22,11 +25,26 @@ import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '..
 import type { Report } from '../domain/moderation.js';
 import type { Delivery, Effects } from '../domain/rules.js';
 import { type Attachment, type Climber, type DayWindow, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, type Price, isOpen } from '../domain/model.js';
+import type { TeamChat, TeamMessage } from '../domain/team.js';
 import type { Wall } from '../domain/walls.js';
+import { TEAM_NOTICE_ID, TEAM_PREVIEW } from '../domain/team.js';
 import { index, key, prefix } from './keys.js';
 
 type Item = Record<string, unknown>;
 type TransactItem = NonNullable<TransactWriteCommandInput['TransactItems']>[number];
+
+/** What a change-log entry says changed: a plan, an ad, the ads' setting, or a profile (or its kept email). */
+export type ChangeKind = 'plan' | 'ad' | 'adSettings' | 'climber';
+
+/** An entry in the change log: `key` is its sort key (its time first). */
+export interface Change {
+  key: string;
+  kind: ChangeKind;
+  id: string;
+}
+
+/** How long the log keeps an entry (TTL): the caches only look a few minutes back. */
+export const CHANGE_TTL_S = 86_400;
 
 /** A conditional write lost a race: reload and try again. */
 export class Conflict extends Error {}
@@ -58,6 +76,7 @@ export class Store implements SessionStore, AppleTokenStore {
         ...(s.email ? { email: s.email } : {}),
         emailVerified: s.emailVerified,
         ...(s.name ? { name: s.name } : {}),
+        ...(s.climberId ? { climberId: s.climberId } : {}),
         createdAt: s.createdAt,
         lastUsedAt: s.lastUsedAt,
         // The table's TTL attribute: DynamoDB deletes the item after it.
@@ -83,6 +102,7 @@ export class Store implements SessionStore, AppleTokenStore {
       ...(typeof Item.email === 'string' ? { email: Item.email } : {}),
       emailVerified: Item.emailVerified === true,
       ...(typeof Item.name === 'string' ? { name: Item.name } : {}),
+      ...(typeof Item.climberId === 'string' ? { climberId: Item.climberId } : {}),
       createdAt: Item.createdAt as string,
       lastUsedAt: Item.lastUsedAt as string,
       ttl: Item.ttl as number,
@@ -99,6 +119,21 @@ export class Store implements SessionStore, AppleTokenStore {
         ConditionExpression: 'attribute_exists(pk) AND lastUsedAt = :previous',
         ExpressionAttributeNames: { '#ttl': 'ttl' },
         ExpressionAttributeValues: { ':now': lastUsedAt, ':ttl': ttl, ':previous': previous },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  async rememberClimberId(id: string, subject: string, climberId: string): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.session(id),
+        UpdateExpression: 'SET climberId = :climberId',
+        // Not if it was revoked meanwhile; only ever the session's own account's.
+        ConditionExpression: 'attribute_exists(pk) AND subject = :subject',
+        ExpressionAttributeValues: { ':climberId': climberId, ':subject': subject },
       }));
     } catch (e) {
       if (!isConditionFailure(e)) throw e;
@@ -131,8 +166,8 @@ export class Store implements SessionStore, AppleTokenStore {
   }
 
   /** Profiles by id (missing ones left out). */
-  async getClimbers(ids: Iterable<string>): Promise<Record<string, Climber>> {
-    const items = await this.batchGet([...new Set(ids)].map((id) => key.climber(id)));
+  async getClimbers(ids: Iterable<string>, consistent = false): Promise<Record<string, Climber>> {
+    const items = await this.batchGet([...new Set(ids)].map((id) => key.climber(id)), consistent);
     return Object.fromEntries(items.map((i) => {
       const c = toClimber(i);
       return [c.id, c];
@@ -172,6 +207,7 @@ export class Store implements SessionStore, AppleTokenStore {
               ConditionExpression: 'attribute_not_exists(pk)',
             },
           },
+          this.logged('climber', climber.id),
         ],
       }));
     } catch (e) {
@@ -182,6 +218,7 @@ export class Store implements SessionStore, AppleTokenStore {
   /** Saves a profile whole. (Blocked is rbacr's role, not the profile's.) */
   async saveProfile(climber: Climber, subject: string | undefined, now: Date): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: climberItem(climber, subject, now) }));
+    await this.noteChanges([{ kind: 'climber', id: climber.id }]);
   }
 
   /** The subject a profile was created for (its sign-in account). */
@@ -240,13 +277,14 @@ export class Store implements SessionStore, AppleTokenStore {
   }
 
   /** Climbers' verified emails (for rbacr), by climber id; missing ones left out. */
-  async getEmails(climberIds: Iterable<string>): Promise<Record<string, string>> {
-    const items = await this.batchGet([...new Set(climberIds)].map((id) => key.email(id)));
+  async getEmails(climberIds: Iterable<string>, consistent = false): Promise<Record<string, string>> {
+    const items = await this.batchGet([...new Set(climberIds)].map((id) => key.email(id)), consistent);
     return Object.fromEntries(items.map((i) => [(i.pk as string).slice('CLIMBER#'.length), i.email as string]));
   }
 
   async putEmail(climberId: string, email: string): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.email(climberId), type: 'email', email } }));
+    await this.noteChanges([{ kind: 'climber', id: climberId }]);
   }
 
   /** Several climbers' subscriptions (missing ones left out). */
@@ -306,17 +344,19 @@ export class Store implements SessionStore, AppleTokenStore {
 
   // --- Ads --------------------------------------------------------------------
 
-  async getAd(adId: string): Promise<Ad | undefined> {
-    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.ad(adId) }));
+  async getAd(adId: string, consistent = false): Promise<Ad | undefined> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.ad(adId), ConsistentRead: consistent }));
     return Item ? toAd(Item) : undefined;
   }
 
   async putAd(ad: Ad): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: adItem(ad) }));
+    await this.noteChanges([{ kind: 'ad', id: ad.id }]);
   }
 
   async deleteAd(adId: string): Promise<void> {
     await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.ad(adId) }));
+    await this.noteChanges([{ kind: 'ad', id: adId }]);
   }
 
   /** A climber's ads, newest first. */
@@ -351,13 +391,14 @@ export class Store implements SessionStore, AppleTokenStore {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.adSkip(climberId, adId), type: 'adSkip', adId, time: now.toISOString() } }));
   }
 
-  async getAdSettings(): Promise<AdSettings> {
-    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.adSettings() }));
+  async getAdSettings(consistent = false): Promise<AdSettings> {
+    const { Item } = await this.doc.send(new GetCommand({ TableName: this.table, Key: key.adSettings(), ConsistentRead: consistent }));
     return typeof Item?.every === 'number' ? { every: Item.every } : DEFAULT_AD_SETTINGS;
   }
 
   async putAdSettings(settings: AdSettings): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: { ...key.adSettings(), type: 'adSettings', ...settings } }));
+    await this.noteChanges([{ kind: 'adSettings', id: 'ads' }]);
   }
 
   // --- Moderation: reports, blocks (specs/moderation.md) ----------------------
@@ -458,21 +499,31 @@ export class Store implements SessionStore, AppleTokenStore {
       }));
     } catch (e) {
       if (!isConditionFailure(e)) throw e;
+      return;
     }
+    await this.noteChanges([{ kind: 'climber', id: climberId }]);
   }
 
   /** An admin clears a plan's notes (a new version, so a concurrent change reloads). */
   async clearPlanNotes(planId: string): Promise<void> {
     try {
-      await this.doc.send(new UpdateCommand({
-        TableName: this.table,
-        Key: key.plan(planId),
-        UpdateExpression: 'SET notes = :empty, version = version + :one',
-        ConditionExpression: 'attribute_exists(pk)',
-        ExpressionAttributeValues: { ':empty': '', ':one': 1 },
+      await this.doc.send(new TransactWriteCommand({
+        TransactItems: [
+          {
+            Update: {
+              TableName: this.table,
+              Key: key.plan(planId),
+              UpdateExpression: 'SET notes = :empty, version = version + :one',
+              ConditionExpression: 'attribute_exists(pk)',
+              ExpressionAttributeValues: { ':empty': '', ':one': 1 },
+            },
+          },
+          this.logged('plan', planId),
+        ],
       }));
     } catch (e) {
-      if (!isConditionFailure(e)) throw e;
+      // The plan is gone: nothing to clear.
+      if (!isCheckFailure(e)) throw e;
     }
   }
 
@@ -487,8 +538,9 @@ export class Store implements SessionStore, AppleTokenStore {
     return Item ? { plan: toPlan(Item), version: Item.version as number } : undefined;
   }
 
-  async getPlans(ids: Iterable<string>): Promise<Plan[]> {
-    const items = await this.batchGet([...new Set(ids)].map((id) => key.plan(id)));
+  /** Plans by id (missing ones left out); `consistent`: strongly consistent reads. */
+  async getPlans(ids: Iterable<string>, consistent = false): Promise<Plan[]> {
+    const items = await this.batchGet([...new Set(ids)].map((id) => key.plan(id)), consistent);
     return items.map(toPlan);
   }
 
@@ -660,6 +712,8 @@ export class Store implements SessionStore, AppleTokenStore {
       for (const r of effects.requests) items.push({ Put: { TableName: this.table, Item: requestItem(r) } });
       for (const m of effects.messages) items.push({ Put: { TableName: this.table, Item: messageItem(m) } });
     }
+    // The plan item changed (or went): the decks' caches read it again.
+    items.push(this.logged('plan', planId));
     await this.transact(items);
     if (!effects.plan) await this.deletePlanItems(planId);
     await this.deliver(effects.notices);
@@ -704,11 +758,21 @@ export class Store implements SessionStore, AppleTokenStore {
     return items.map(toNotice).sort((a, b) => (a.time > b.time ? -1 : a.time < b.time ? 1 : 0));
   }
 
+  /** Marks my notifications read: all of them but the team chat's (opening that chat reads it). */
   async markNoticesRead(climberId: string): Promise<void> {
-    const unread = (await this.notices(climberId)).filter((n) => !n.read);
-    await Promise.all(unread.map((n) => this.doc.send(new UpdateCommand({
+    const unread = (await this.notices(climberId)).filter((n) => !n.read && n.id !== TEAM_NOTICE_ID);
+    await this.markRead(climberId, unread.map((n) => n.id));
+  }
+
+  /** Marks one notice read (none there: nothing). */
+  async markNoticeRead(climberId: string, noticeId: string): Promise<void> {
+    await this.markRead(climberId, [noticeId]);
+  }
+
+  private async markRead(climberId: string, noticeIds: string[]): Promise<void> {
+    await Promise.all(noticeIds.map((noticeId) => this.doc.send(new UpdateCommand({
       TableName: this.table,
-      Key: key.notice(climberId, n.id),
+      Key: key.notice(climberId, noticeId),
       UpdateExpression: 'SET #read = :true',
       ConditionExpression: 'attribute_exists(pk)',
       ExpressionAttributeNames: { '#read': 'read' },
@@ -740,6 +804,66 @@ export class Store implements SessionStore, AppleTokenStore {
 
   async putMessage(message: Message): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: messageItem(message) }));
+  }
+
+  // --- The Grigri team chat (specs/team-chat.md) -----------------------------
+
+  /** A climber's team chat, oldest first; only those after `afterIso` when given. */
+  async teamMessages(climberId: string, afterIso?: string): Promise<TeamMessage[]> {
+    const pk = prefix.team(climberId);
+    const input: Omit<QueryCommandInput, 'TableName'> = afterIso
+      ? {
+          KeyConditionExpression: 'pk = :pk AND sk BETWEEN :from AND :to',
+          ExpressionAttributeValues: { ':pk': pk, ':from': `${prefix.message}${afterIso}#\uffff`, ':to': `${prefix.message}\uffff` },
+        }
+      : {
+          KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+          ExpressionAttributeValues: { ':pk': pk, ':sk': prefix.message },
+        };
+    return (await this.query(input)).map(toTeamMessage);
+  }
+
+  /** Puts a team message and its chat's last message (the admins' list), in one batch: two writes. */
+  async putTeamMessage(m: TeamMessage): Promise<void> {
+    const chat = {
+      ...key.teamChat(m.climberId),
+      type: 'teamChat',
+      climberId: m.climberId,
+      lastTime: m.time,
+      lastText: [...m.text].slice(0, TEAM_PREVIEW).join(''),
+      lastFromTeam: m.fromTeam,
+      gsi1pk: index.teamChats.pk,
+      gsi1sk: `${m.time}#${m.climberId}`,
+    };
+    await this.batchWrite([{ PutRequest: { Item: teamMessageItem(m) } }, { PutRequest: { Item: chat } }]);
+  }
+
+  /** The team chats with a message, the latest first: one page of the index, at most `limit`. */
+  async teamChats(limit: number): Promise<TeamChat[]> {
+    const page = await this.doc.send(new QueryCommand({
+      TableName: this.table,
+      IndexName: index.teamChats.name,
+      KeyConditionExpression: 'gsi1pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.teamChats.pk },
+      ScanIndexForward: false,
+      Limit: limit,
+    }));
+    return ((page.Items ?? []) as Item[]).map((i) => ({
+      climberId: i.climberId as string,
+      lastTime: i.lastTime as string,
+      lastText: i.lastText as string,
+      lastFromTeam: i.lastFromTeam === true,
+    }));
+  }
+
+  /** Deletes a climber's whole team chat: its messages and its place in the admins' list. */
+  async deleteTeamChat(climberId: string): Promise<void> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': prefix.team(climberId) },
+      ProjectionExpression: 'pk, sk',
+    });
+    await this.batchWrite(items.map((i) => ({ DeleteRequest: { Key: { pk: i.pk, sk: i.sk } } })));
   }
 
   // --- Plan pics ("Your Pics") ------------------------------------------------
@@ -822,6 +946,7 @@ export class Store implements SessionStore, AppleTokenStore {
         },
       },
       { Delete: { TableName: this.table, Key: key.request(previous.plan.id, climberId) } },
+      this.logged('plan', previous.plan.id),
     ]);
   }
 
@@ -842,11 +967,39 @@ export class Store implements SessionStore, AppleTokenStore {
       ProjectionExpression: 'pk, sk',
     });
     await this.batchWrite(items.map((i) => ({ DeleteRequest: { Key: { pk: i.pk, sk: i.sk } } })));
+    // Their profile and email are gone (an ad owner's, perhaps).
+    await this.noteChanges([{ kind: 'climber', id: climberId }]);
   }
 
   /** Unlinks a sign-in subject from its climber (the last step of deleting an account). */
   async deleteSubject(subject: string): Promise<void> {
     await this.doc.send(new DeleteCommand({ TableName: this.table, Key: key.subject(subject) }));
+  }
+
+  // --- The change log (src/deck-cache.ts) --------------------------------------
+
+  /**
+   * The log's entries after `afterIso` (a time), oldest first: one
+   * strongly consistent query of its partition, so an entry is there as
+   * soon as its write is.
+   */
+  async changesSince(afterIso: string): Promise<Change[]> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk AND sk > :after',
+      ExpressionAttributeValues: { ':pk': prefix.changes, ':after': afterIso },
+      ConsistentRead: true,
+    });
+    return items.map((i) => ({ key: i.sk as string, kind: i.kind as ChangeKind, id: i.id as string }));
+  }
+
+  /** Adds entries to the log, after their writes (outside a transaction). */
+  async noteChanges(changes: { kind: ChangeKind; id: string }[]): Promise<void> {
+    await this.batchWrite(changes.map((c) => ({ PutRequest: { Item: changeItem(c.kind, c.id) } })));
+  }
+
+  /** A log entry, as part of a transaction. */
+  private logged(kind: ChangeKind, id: string): TransactItem {
+    return { Put: { TableName: this.table, Item: changeItem(kind, id) } };
   }
 
   // --- Plumbing ---------------------------------------------------------------
@@ -881,13 +1034,13 @@ export class Store implements SessionStore, AppleTokenStore {
     return out;
   }
 
-  private async batchGet(keys: Item[]): Promise<Item[]> {
+  private async batchGet(keys: Item[], consistent = false): Promise<Item[]> {
     const out: Item[] = [];
     for (let i = 0; i < keys.length; i += 100) {
       let pending: Item[] | undefined = keys.slice(i, i + 100);
       for (let attempt = 0; pending?.length; attempt++) {
         if (attempt > 0) await backoff(attempt);
-        const res = await this.doc.send(new BatchGetCommand({ RequestItems: { [this.table]: { Keys: pending } } }));
+        const res = await this.doc.send(new BatchGetCommand({ RequestItems: { [this.table]: { Keys: pending, ...(consistent ? { ConsistentRead: true } : {}) } } }));
         out.push(...((res.Responses?.[this.table] ?? []) as Item[]));
         pending = res.UnprocessedKeys?.[this.table]?.Keys as Item[] | undefined;
         if (attempt > 8 && pending?.length) throw new Error('DynamoDB kept keys unprocessed');
@@ -933,11 +1086,31 @@ function isConditionFailure(e: unknown): boolean {
   return false;
 }
 
+/** A write's own condition failed (not a race with another transaction). */
+function isCheckFailure(e: unknown): boolean {
+  const name = (e as { name?: string })?.name;
+  if (name === 'ConditionalCheckFailedException') return true;
+  if (name !== 'TransactionCanceledException') return false;
+  const reasons = (e as { CancellationReasons?: { Code?: string }[] }).CancellationReasons ?? [];
+  return reasons.length === 0 || reasons.some((r) => r.Code === 'ConditionalCheckFailed');
+}
+
 function asConflict(e: unknown): unknown {
   return isConditionFailure(e) ? new Conflict('changed meanwhile') : e;
 }
 
 // --- Items <-> shapes -----------------------------------------------------------
+
+/** A change-log entry, stamped now; expires (TTL) a day later. */
+export function changeItem(kind: ChangeKind, id: string, now = new Date()): Item {
+  return {
+    ...key.change(now.toISOString(), kind, id, randomBytes(4).toString('hex')),
+    type: 'change',
+    kind,
+    id,
+    ttl: Math.floor(now.getTime() / 1000) + CHANGE_TTL_S,
+  };
+}
 
 export function climberItem(c: Climber, subject: string | undefined, now: Date): Item {
   return {
@@ -1100,6 +1273,30 @@ function toMessage(i: Item): Message {
     time: i.time as string,
     ...(i.requestId ? { requestId: i.requestId as string } : {}),
     ...(i.attachment ? { attachment: i.attachment as Attachment } : {}),
+  };
+}
+
+export function teamMessageItem(m: TeamMessage): Item {
+  return {
+    ...key.teamMessage(m.climberId, m.time, m.id),
+    type: 'teamMessage',
+    id: m.id,
+    climberId: m.climberId,
+    fromTeam: m.fromTeam,
+    text: m.text,
+    time: m.time,
+    ...(m.adminId ? { adminId: m.adminId } : {}),
+  };
+}
+
+function toTeamMessage(i: Item): TeamMessage {
+  return {
+    id: i.id as string,
+    climberId: i.climberId as string,
+    fromTeam: i.fromTeam === true,
+    text: i.text as string,
+    time: i.time as string,
+    ...(typeof i.adminId === 'string' ? { adminId: i.adminId } : {}),
   };
 }
 

@@ -102,7 +102,11 @@ person, and a plan can take a whole group.
   (one after every *n* plans swiped, as admins set it): right opens its
   link in the browser, left skips it.
 
-  The server picks and orders the deck. With nothing to show (GA starts
+  The server picks and orders the deck. A plan created, edited, joined,
+  left or deleted is on (or off) everyone's next deck at once: the server
+  keeps the upcoming plans in memory but checks the table's change log
+  on every deck ([the deck's cache](backend.md#the-decks-cache)), and a
+  plan leaves the deck once it starts. With nothing to show (GA starts
   empty), Discover says so and offers **New plan**.
 
 Cards are dragged (they tilt, and stamp JOIN / PASS),
@@ -223,6 +227,9 @@ newest first, with when it happened:
 - **"You're in: <plan>"** when a group accepted me (tap for the chat);
 - **"Not this time: <plan>"** when one declined me (tap for the plan).
 
+The [Grigri team chat](team-chat.md)'s news is a badge on Chats instead,
+not a notification here.
+
 Opening the tab marks them read; the ones that were new stay highlighted
 ("New") until I come back to it, and so do ones that arrive while it's
 open.
@@ -232,7 +239,8 @@ open.
 Each plan has one chat for its whole group, with the plan pinned on top.
 It notes who joined and who left, and holds the
 [join requests](#join-requests-in-the-group-chat) for the group to
-answer. Chats lists them, most recent first.
+answer. Chats lists them, most recent first, under the
+[Grigri team chat](team-chat.md), which is always on top.
 
 A message is text, **one photo or one video**, or both. The attach button
 offers only photos and videos: take a photo or record a video (where the
@@ -306,15 +314,25 @@ and the app also polls, only what's on screen, as a safety net:
 - after signing in: my profile, then my plans, my requests, the requests
   waiting for me, the deck, notifications (and, for admins, everyone);
 - a tab, when I open it (Discover its deck, Chats every chat's latest
-  messages, Admin its list of everyone), and every **15 seconds** my plans,
-  requests to review and notifications, plus the open tab; every
-  **2 minutes** instead while the live connection is up;
-- an open **chat every 3 seconds**, asking only for messages after the
+  messages and my [team chat](team-chat.md), and admins' team chats list,
+  Admin its list of everyone, Profile my Premium and its prices), and
+  every **15 seconds** my plans, requests to review and notifications,
+  plus the open tab; every **2 minutes** instead while the live
+  connection is up. While another screen covers the tabs (a chat, a
+  plan, a dialog), the open tab's part waits; if it was due meanwhile, it
+  runs once when that screen closes;
+- on coming back to the foreground, the same at once; and my Premium
+  the first time back after the app opened Stripe's Checkout or portal,
+  or the App Store's subscriptions (afresh, [premium.md](premium.md)), or
+  whenever the profile is on screen;
+- an open **chat every 3 seconds** (a team chat too), asking only for messages after the
   last one it has; every **minute** instead while the live connection is
-  up;
+  up; at once on coming back to the foreground; and when something else
+  (a hint, Chats) fetched it meanwhile, its count starts over;
 - on a live update's hint, just what it names (a chat, requests,
   notifications, my plans), and after the live connection comes back from
-  a drop, my plans, requests, notifications and loaded chats;
+  a drop in the foreground, my plans, requests, notifications and loaded
+  chats;
 - a plan's screen and chat load the plan (and its open requests) when
   they open.
 

@@ -1389,6 +1389,9 @@ void main() {
       final api = sampleApi();
       await pumpApp(tester, api);
       await openProfile(tester);
+      // Opening the profile uses rbacr's kept answer.
+      expect(api.calls, contains('GET /api/premium'));
+      expect(api.calls, isNot(contains('GET /api/premium?fresh=1')));
       expect(find.text('\$20 a month'), findsOneWidget);
       expect(find.text('\$200 a year'), findsOneWidget);
       await tester.ensureVisible(find.text('\$200 a year'));
@@ -1396,6 +1399,14 @@ void main() {
       await tester.tap(find.text('\$200 a year'));
       await tester.pumpAndSettle();
       expect(api.opened, [Uri.parse('https://checkout.stripe.test/yearly')]);
+
+      // Back from Checkout: asked afresh, not paid yet.
+      api.calls.clear();
+      await StoreScope.read(
+        tester.element(find.byKey(const ValueKey('premium card'))),
+      ).refreshPremium();
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('GET /api/premium?fresh=1'));
 
       // Stripe told the API: checking again shows it.
       api.myPremium = Premium(
@@ -1406,9 +1417,19 @@ void main() {
       );
       await tester.ensureVisible(find.text("I've paid: check again"));
       await tester.pumpAndSettle();
+      api.calls.clear();
       await tester.tap(find.text("I've paid: check again"));
       await tester.pumpAndSettle();
+      expect(api.calls.first, 'GET /api/premium?fresh=1');
       expect(find.text('Premium: renews on May 1, 2031'), findsOneWidget);
+      // Premium showed: later refreshes use the kept answer again.
+      api.calls.clear();
+      await StoreScope.read(
+        tester.element(find.byKey(const ValueKey('premium card'))),
+      ).refreshPremium();
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('GET /api/premium'));
+      expect(api.calls, isNot(contains('GET /api/premium?fresh=1')));
       await tester.ensureVisible(find.text('Manage subscription'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Manage subscription'));
@@ -2829,6 +2850,135 @@ void main() {
       expect(api.resolved.last, 'r3 block');
       expect(api.blocked, {'sasha'});
       expect(find.text('No reports to review.'), findsOneWidget);
+    });
+  });
+
+  group('the Grigri team chat', () {
+    const welcome =
+        "Thanks for climbing with Grigri! We'd love to hear what you think: "
+        "what works, what doesn't, what you'd like next. Write to us here "
+        'anytime.';
+
+    testWidgets('is on top of Chats, with its welcome, even with no plans', (
+      tester,
+    ) async {
+      final api = FakeApi()
+        ..meId = 'me'
+        ..addClimber(me);
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Chats');
+      final tile = find.byKey(const ValueKey('team chat'));
+      expect(
+        find.descendant(of: tile, matching: find.text('Grigri team')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: tile, matching: find.text(welcome)),
+        findsOneWidget,
+      );
+      // The plans' empty state stays below it.
+      expect(find.text('No chats yet'), findsOneWidget);
+      expect(
+        tester.getTopLeft(tile).dy,
+        lessThan(tester.getTopLeft(find.text('No chats yet')).dy),
+      );
+
+      // Opening it: the welcome first; nothing was stored for it.
+      await tester.tap(tile);
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('team welcome')), findsOneWidget);
+      expect(find.text(welcome), findsOneWidget);
+      expect(api.allTeamMessages, isEmpty);
+      expect(api.calls, isNot(contains('POST /api/team/messages')));
+
+      await tester.enterText(
+        find.byKey(const ValueKey('team input')),
+        'Love it, could you add a map?',
+      );
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/team/messages'));
+      expect(api.allTeamMessages.single.text, 'Love it, could you add a map?');
+      expect(find.text('Love it, could you add a map?'), findsOneWidget);
+    });
+
+    testWidgets("the team's answer shows as Grigri team, and badges Chats", (
+      tester,
+    ) async {
+      final api = sampleApi();
+      api.teamWrites('me', 'Is there a dark mode?');
+      api.teamWrites('me', 'Not yet, but soon!', adminId: 'robin');
+      await pumpApp(tester, api);
+      // A badge on Chats for the answer.
+      final chats = find.ancestor(
+        of: find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text('Chats'),
+        ),
+        matching: find.byType(NavigationDestination),
+      );
+      expect(
+        tester
+            .widgetList<Badge>(
+              find.descendant(of: chats, matching: find.byType(Badge)),
+            )
+            .any((b) => b.isLabelVisible),
+        isTrue,
+      );
+      await tapTab(tester, 'Chats');
+      await tester.tap(find.byKey(const ValueKey('team chat')));
+      await tester.pumpAndSettle();
+      expect(find.text('Not yet, but soon!'), findsOneWidget);
+      // Never which admin: Robin's name isn't anywhere.
+      expect(find.textContaining('Robin'), findsNothing);
+      expect(find.text('Grigri team'), findsWidgets);
+      // Opening it read it.
+      expect(api.calls, contains('POST /api/team/read'));
+    });
+
+    testWidgets("admins see each climber's team chat and answer as the team", (
+      tester,
+    ) async {
+      final api = sampleApi(admin: true);
+      api.teamWrites('kit', 'The deck is great!');
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Chats');
+      final kitChat = find.byKey(const ValueKey('team chat kit'));
+      await tester.scrollUntilVisible(kitChat, 200);
+      expect(find.text('TEAM CHATS'), findsOneWidget);
+      expect(
+        find.descendant(of: kitChat, matching: find.text('The deck is great!')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: kitChat, matching: find.text('To answer')),
+        findsOneWidget,
+      );
+      await tester.tap(kitChat);
+      await tester.pumpAndSettle();
+      expect(find.text('The deck is great!'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('team input')),
+        'Thanks, Kit!',
+      );
+      await tester.tap(find.byTooltip('Send'));
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('POST /api/admin/team/kit/messages'));
+      final answer = api.allTeamMessages.last;
+      expect(answer.fromTeam, isTrue);
+      expect(answer.adminId, 'me');
+      // The admins see who answered.
+      expect(find.text('You for the team'), findsOneWidget);
+    });
+
+    testWidgets("nobody but admins sees others' team chats", (tester) async {
+      final api = sampleApi();
+      api.teamWrites('kit', 'Just for the team');
+      await pumpApp(tester, api);
+      await tapTab(tester, 'Chats');
+      expect(find.text('TEAM CHATS'), findsNothing);
+      expect(find.text('Just for the team'), findsNothing);
+      expect(api.calls, isNot(contains('GET /api/admin/team')));
     });
   });
 }

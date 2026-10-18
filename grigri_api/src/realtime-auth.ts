@@ -118,7 +118,9 @@ export async function authorize(event: AuthorizerEvent, deps: AuthorizerDeps, sc
     const token = tokenOf(event);
     if (!token) return deny();
     const caller = await deps.caller(token);
-    const climberId = await deps.climberIdFor(caller.subject);
+    // The session keeps its account's climber once known (auth.ts); older
+    // ones, and new accounts' first, look the link up.
+    const climberId = caller.climberId ?? (await deps.climberIdFor(caller.subject));
     if (!climberId || !CLIMBER_ID.test(climberId)) return deny();
     // The policy enforces it too; refusing here saves a policy evaluation.
     const clientId = event.protocolData?.mqtt?.clientId;

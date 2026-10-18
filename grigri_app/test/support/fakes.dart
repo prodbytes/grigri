@@ -23,6 +23,7 @@ import 'package:grigri_app/model/plan.dart';
 import 'package:grigri_app/model/premium.dart';
 import 'package:grigri_app/model/report.dart';
 import 'package:grigri_app/model/sector.dart';
+import 'package:grigri_app/model/team.dart';
 
 /// A tiny valid PNG, standing in for photos.
 final png = base64Decode(
@@ -99,6 +100,12 @@ class FakeApi implements GrigriApi, SessionApi {
   final requestsById = <String, JoinRequest>{};
   final noticesFor = <String, List<Notice>>{};
   final allMessages = <Message>[];
+
+  /// Every Grigri team chat's messages (specs/team-chat.md), oldest first.
+  final _teamMessages = <TeamMessage>[];
+
+  /// Every team chat's messages, as stored.
+  List<TeamMessage> get allTeamMessages => _teamMessages;
 
   /// Every plan's "Your Pics", oldest first.
   final allPics = <PlanPic>[];
@@ -593,8 +600,8 @@ class FakeApi implements GrigriApi, SessionApi {
   });
 
   @override
-  Future<PremiumOffer> premium() => _route(
-    'GET /api/premium',
+  Future<PremiumOffer> premium({bool fresh = false}) => _route(
+    fresh ? 'GET /api/premium?fresh=1' : 'GET /api/premium',
     () => PremiumOffer(
       myPremium,
       premiumPrices,
@@ -970,6 +977,134 @@ class FakeApi implements GrigriApi, SessionApi {
       mine[i] = n.copyWith(read: true);
     }
   });
+
+  /// A team chat message, as someone (or, [fromTeam], an admin) writes it.
+  TeamMessage addTeamMessage(
+    String climberId,
+    String text, {
+    bool fromTeam = false,
+    String? adminId,
+  }) {
+    final m = TeamMessage(
+      id: _id('t'),
+      climberId: climberId,
+      fromTeam: fromTeam,
+      text: text,
+      time: _now(),
+      adminId: adminId,
+    );
+    _teamMessages.add(m);
+    return m;
+  }
+
+  /// The team chat's notice, as the server puts it.
+  void _teamNotice(String to) {
+    final list = noticesFor.putIfAbsent(to, () => []);
+    list.removeWhere((n) => n.id == 'team');
+    list.add(
+      Notice(
+        id: 'team',
+        kind: NoticeKind.team,
+        planId: '',
+        planTitle: '',
+        time: _now(),
+      ),
+    );
+  }
+
+  /// Someone writes to the team (admins get the badge), or an admin
+  /// answers them (they get it).
+  void teamWrites(String climberId, String text, {String? adminId}) {
+    addTeamMessage(
+      climberId,
+      text,
+      fromTeam: adminId != null,
+      adminId: adminId,
+    );
+    if (adminId != null) {
+      _teamNotice(climberId);
+    } else if (admin && meId != null) {
+      _teamNotice(meId!);
+    }
+  }
+
+  @override
+  Future<List<TeamMessage>> teamMessages({DateTime? after}) =>
+      _route('GET /api/team/messages${after == null ? '' : '?after'}', () {
+        return [
+          for (final m in _teamMessages)
+            if (m.climberId == meId && (after == null || m.time.isAfter(after)))
+              TeamMessage(
+                id: m.id,
+                climberId: m.climberId,
+                fromTeam: m.fromTeam,
+                text: m.text,
+                time: m.time,
+              ),
+        ];
+      });
+
+  @override
+  Future<TeamMessage> sendToTeam(String text) =>
+      _route('POST /api/team/messages', () => addTeamMessage(meId!, text));
+
+  @override
+  Future<void> readTeam() => _route('POST /api/team/read', () {
+    final mine = noticesFor[meId];
+    if (mine == null) return;
+    for (final (i, n) in mine.indexed) {
+      if (n.id == 'team') mine[i] = n.copyWith(read: true);
+    }
+  });
+
+  @override
+  Future<TeamChatList> adminTeamChats() => _route('GET /api/admin/team', () {
+    _admin();
+    final last = <String, TeamMessage>{
+      for (final m in _teamMessages) m.climberId: m,
+    };
+    final chats = [
+      for (final m in last.values)
+        TeamChat(
+          climberId: m.climberId,
+          lastTime: m.time,
+          lastText: m.text,
+          lastFromTeam: m.fromTeam,
+        ),
+    ]..sort((a, b) => b.lastTime.compareTo(a.lastTime));
+    return TeamChatList(chats, _mention([for (final c in chats) c.climberId]));
+  });
+
+  @override
+  Future<TeamMessageList> adminTeamMessages(
+    String climberId, {
+    DateTime? after,
+  }) => _route(
+    'GET /api/admin/team/$climberId/messages${after == null ? '' : '?after'}',
+    () {
+      _admin();
+      final list = [
+        for (final m in _teamMessages)
+          if (m.climberId == climberId &&
+              (after == null || m.time.isAfter(after)))
+            m,
+      ];
+      return TeamMessageList(
+        list,
+        _mention([climberId, for (final m in list) ?m.adminId]),
+      );
+    },
+  );
+
+  @override
+  Future<TeamMessage> answerAsTeam(String climberId, String text) => _route(
+    'POST /api/admin/team/$climberId/messages',
+    () {
+      _admin();
+      final m = addTeamMessage(climberId, text, fromTeam: true, adminId: meId);
+      return m;
+    },
+  );
 
   @override
   Future<MessageList> messages(String planId, {DateTime? after}) => _route(

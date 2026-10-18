@@ -122,7 +122,10 @@ Resources:
       # POSTs); saving a profile clears the tag of its photos, and deletes
       # the ones it drops; sending a chat message clears its attachment's,
       # and adding a photo to a plan its own. Uploads never saved, sent or
-      # added expire after a day. Saved photos stay until their owner
+      # added expire after a day. Uploads are stored as Intelligent-Tiering
+      # (the presigned POST sets it; no minimum duration, so a pending one
+      # expiring after a day costs no more than in Standard, and no
+      # transition rule or fee). Saved photos stay until their owner
       # replaces them. Chat media and plan photos ("Your Pics") expire 400
       # days after their upload: a plan starts at most a year after it's
       # made, so that's at least a month after the plan is over. Failed
@@ -414,6 +417,34 @@ Resources:
               Value: camera=(), microphone=(), geolocation=(self)
               Override: true
 
+  # The site's own files (/ and /app*): uploaded with Cache-Control
+  # no-cache, so browsers revalidate them on every open. MinTTL makes the
+  # edge keep them a day anyway (MinTTL overrides no-cache at the edge only;
+  # CloudFront passes the header on to browsers unchanged), so those
+  # revalidations get a 304 from the edge instead of a round trip to S3.
+  # Every deploy invalidates /* and waits for it (scripts/deploy.sh), so a
+  # new release, version.json included, is live at once. Otherwise
+  # Managed-CachingOptimized's: no cookies, headers or query strings in the
+  # key, gzip and Brotli.
+  SiteFilesCachePolicy:
+    Type: AWS::CloudFront::CachePolicy
+    Properties:
+      CachePolicyConfig:
+        Name: !Sub ${AWS::StackName}-site-files
+        Comment: Grigri site and web app files, kept at the edge until a deploy invalidates them
+        MinTTL: 86400
+        DefaultTTL: 86400
+        MaxTTL: 31536000
+        ParametersInCacheKeyAndForwardedToOrigin:
+          EnableAcceptEncodingGzip: true
+          EnableAcceptEncodingBrotli: true
+          CookiesConfig:
+            CookieBehavior: none
+          HeadersConfig:
+            HeaderBehavior: none
+          QueryStringsConfig:
+            QueryStringBehavior: none
+
   Distribution:
     Type: AWS::CloudFront::Distribution
     Properties:
@@ -472,7 +503,7 @@ Resources:
           Compress: true
           AllowedMethods: [GET, HEAD, OPTIONS]
           CachedMethods: [GET, HEAD]
-          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+          CachePolicyId: !Ref SiteFilesCachePolicy
           ResponseHeadersPolicyId: !Ref IndexHeadersPolicy
         CacheBehaviors:
           # The Flutter web app, built with --base-href /app/
@@ -482,7 +513,7 @@ Resources:
             Compress: true
             AllowedMethods: [GET, HEAD, OPTIONS]
             CachedMethods: [GET, HEAD]
-            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # Managed-CachingOptimized
+            CachePolicyId: !Ref SiteFilesCachePolicy
             ResponseHeadersPolicyId: !Ref AppHeadersPolicy
             FunctionAssociations:
               - EventType: viewer-request

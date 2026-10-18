@@ -369,8 +369,8 @@ class _WhereIClimb extends StatelessWidget {
 /// Premium (specs/premium.md): to advertise on Grigri and use the route
 /// finder. On Android and the web, subscribing opens Stripe Checkout in
 /// the browser; once Stripe tells the API, it shows here (the app checks
-/// again when it comes back to the foreground, or on "I've paid: check
-/// again"). On iOS the App Store sells it ([_AppStoreOffer]): its prices,
+/// again when it comes back to the foreground from Stripe's pages, or on
+/// "I've paid: check again"). On iOS the App Store sells it ([_AppStoreOffer]): its prices,
 /// its purchase sheet, Restore purchases, and its terms; no Stripe.
 /// Subscribed: until when, and where to manage it (Stripe's portal, or the
 /// App Store's subscriptions).
@@ -477,7 +477,7 @@ class _PremiumCardState extends State<PremiumCard> {
                   style: text.bodySmall?.copyWith(color: Mountain.granite),
                 ),
                 TextButton(
-                  onPressed: store.refreshPremium,
+                  onPressed: () => store.refreshPremium(fresh: true),
                   child: Text(l.premiumCheckRefresh),
                 ),
               ],

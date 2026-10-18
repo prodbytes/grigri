@@ -47,7 +47,7 @@ class RealtimeInfo {
 }
 
 /// What a hint names: the app refetches just that, through the API.
-enum HintKind { message, request, notice, plan, match, pics, unknown }
+enum HintKind { message, request, notice, plan, match, pics, team, unknown }
 
 /// A live update: "something about [kind] changed" (and on which plan),
 /// never the data itself.
@@ -111,10 +111,11 @@ abstract interface class RealtimeTransport {
 /// Starts a timer: [Timer.new], or a fake in tests.
 typedef Schedule = Timer Function(Duration delay, void Function() callback);
 
-/// Keeps one live connection while [start]ed: fetches where to connect,
-/// connects with the session token, hands each hint to [onHint], and
-/// reconnects with backoff when it drops. [stop] (the app went to the
-/// background, or signed out) closes it.
+/// Keeps one live connection while [start]ed: fetches where to connect
+/// (once, then again only after a failed or short-lived connection, or
+/// [forget]), connects with the session token, hands each hint to
+/// [onHint], and reconnects with backoff when it drops. [stop] (the app
+/// went to the background, or signed out) closes it.
 class Realtime extends ChangeNotifier {
   Realtime({
     required this.transport,
@@ -124,8 +125,10 @@ class Realtime extends ChangeNotifier {
     this.onReconnected,
     Schedule? schedule,
     Random? random,
+    DateTime Function()? now,
   }) : _schedule = schedule ?? Timer.new,
-       _random = random ?? Random.secure();
+       _random = random ?? Random.secure(),
+       _now = now ?? DateTime.now;
 
   final RealtimeTransport transport;
 
@@ -137,11 +140,26 @@ class Realtime extends ChangeNotifier {
 
   final void Function(Hint hint) onHint;
 
-  /// Connected again after a drop: hints may have been missed meanwhile.
+  /// Connected again after a drop while running: hints may have been
+  /// missed meanwhile. Not on the first connection after [start] (the app
+  /// coming back to the foreground refreshes by itself).
   final VoidCallback? onReconnected;
+
+  /// How long a connection must stay up for the backoff to start over
+  /// from 1 s: one the broker accepts and then drops at once keeps
+  /// backing off instead of reconnecting every second.
+  static const stableAfter = Duration(seconds: 60);
 
   final Schedule _schedule;
   final Random _random;
+  final DateTime Function() _now;
+
+  /// Where to connect, kept while it works ([info] is asked again after a
+  /// failed or short-lived connection, and after [forget]).
+  RealtimeInfo? _where;
+
+  /// When the current connection opened.
+  DateTime? _since;
 
   bool _running = false;
   bool _connected = false;
@@ -169,6 +187,7 @@ class Realtime extends ChangeNotifier {
     if (_running) return;
     _running = true;
     _attempt = 0;
+    _connects = 0;
     _connect(++_generation);
   }
 
@@ -180,6 +199,9 @@ class Realtime extends ChangeNotifier {
     _retry = null;
     _drop();
   }
+
+  /// Asks [info] again before the next connection (a new session).
+  void forget() => _where = null;
 
   void _drop() {
     _messages?.cancel();
@@ -196,10 +218,11 @@ class Realtime extends ChangeNotifier {
 
   Future<void> _connect(int generation) async {
     try {
-      final where = await info();
+      final where = _where ?? await info();
       if (!_current(generation)) return;
       // Live updates are off here: polling only, until the next start.
       if (where == null) return;
+      _where = where;
       final session = await token();
       if (!_current(generation) || session == null) return;
       final channel = await transport.connect(
@@ -212,7 +235,7 @@ class Realtime extends ChangeNotifier {
         return;
       }
       _channel = channel;
-      _attempt = 0;
+      _since = _now();
       _messages = channel.messages.listen((payload) {
         if (Hint.parse(payload) case final hint?) onHint(hint);
       });
@@ -223,14 +246,23 @@ class Realtime extends ChangeNotifier {
         channel.closed.then((_) {
           if (!_current(generation) || _channel != channel) return;
           _drop();
+          if (_now().difference(_since!) >= stableAfter) {
+            // A long-lived connection: back quickly.
+            _attempt = 0;
+          } else {
+            // Dropped at once: maybe where to connect changed.
+            _where = null;
+          }
           _later(generation);
         }),
       );
     } on ApiException catch (e) {
+      _where = null;
       // Signed out: the app goes back to the sign-in screen.
       if (e.status == 401) return;
       if (_current(generation)) _later(generation);
     } catch (_) {
+      _where = null;
       // Never logged: the error may quote the URL, which has the token.
       if (_current(generation)) _later(generation);
     }

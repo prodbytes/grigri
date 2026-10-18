@@ -1637,4 +1637,28 @@ class AppLocalizationsCa extends AppLocalizations {
 
   @override
   String get adShowsEverywhere => 'Es mostra a tot arreu';
+
+  @override
+  String get teamChatTitle => 'Equip Grigri';
+
+  @override
+  String get teamChatWelcome =>
+      'Gràcies per escalar amb Grigri! Ens encantaria saber què en penses: què funciona, què no i què t\'agradaria veure després. Escriu-nos aquí quan vulguis.';
+
+  @override
+  String get teamChatsSection => 'Xats de l\'equip';
+
+  @override
+  String teamAnswerBy(String name) {
+    return '$name per l\'equip';
+  }
+
+  @override
+  String get teamMessageHint => 'Escriu a l\'equip Grigri';
+
+  @override
+  String get teamAnswerHint => 'Respon com a equip Grigri';
+
+  @override
+  String get teamAwaitingAnswer => 'Per respondre';
 }

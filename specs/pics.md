@@ -237,6 +237,7 @@ Nothing while idle beyond storage; see [backend.md](backend.md#cost).
   each ($0.005 per 1,000), and a PUT per copy. Making the copies of the
   photos already there, once: about 50 GETs and 45 PUTs, $0.0003.
 - **Your Pics**: as chat photos ([backend.md](backend.md#chat-media)):
-  storage at $0.023/GB-month, an upload and a tag clear per photo, kept
+  storage as Intelligent-Tiering ($0.023/GB-month at first, less once
+  unfetched for 30 and 90 days), an upload and a tag clear per photo, kept
   400 days. A DynamoDB item per photo (a write to add, a delete to
   remove, the list a query).

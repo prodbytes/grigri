@@ -12,6 +12,7 @@ import '../model/walls.dart';
 import '../model/plan.dart';
 import '../model/premium.dart';
 import '../model/report.dart';
+import '../model/team.dart';
 import '../log.dart';
 import 'api.dart';
 import 'auth.dart';
@@ -283,6 +284,45 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   Future<void> readNotices() => _post(['notices', 'read']);
 
   @override
+  Future<List<TeamMessage>> teamMessages({DateTime? after}) async =>
+      ApiJson.teamMessages(
+        await _get([
+          'team',
+          'messages',
+        ], after == null ? null : {'after': apiTime(after)}),
+      );
+
+  @override
+  Future<TeamMessage> sendToTeam(String text) async =>
+      ApiJson.teamMessage(await _post(['team', 'messages'], {'text': text}));
+
+  @override
+  Future<void> readTeam() => _post(['team', 'read']);
+
+  @override
+  Future<TeamChatList> adminTeamChats() async =>
+      ApiJson.teamChats(await _get(['admin', 'team']));
+
+  @override
+  Future<TeamMessageList> adminTeamMessages(
+    String climberId, {
+    DateTime? after,
+  }) async => ApiJson.teamMessageList(
+    await _get([
+      'admin',
+      'team',
+      climberId,
+      'messages',
+    ], after == null ? null : {'after': apiTime(after)}),
+  );
+
+  @override
+  Future<TeamMessage> answerAsTeam(String climberId, String text) async =>
+      ApiJson.teamMessage(
+        await _post(['admin', 'team', climberId, 'messages'], {'text': text}),
+      );
+
+  @override
   Future<MessageList> messages(String planId, {DateTime? after}) async =>
       ApiJson.messageList(
         await _get([
@@ -473,8 +513,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   }
 
   @override
-  Future<PremiumOffer> premium() async =>
-      ApiJson.premiumOffer(await _get(['premium']));
+  Future<PremiumOffer> premium({bool fresh = false}) async =>
+      ApiJson.premiumOffer(
+        await _get(['premium'], fresh ? const {'fresh': '1'} : null),
+      );
 
   @override
   Future<Uri> premiumCheckout(PremiumPlan plan) async =>

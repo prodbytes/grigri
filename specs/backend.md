@@ -33,11 +33,18 @@ who are members, or by an admin.
   under `/photos/*`, so the web app calls its own origin: no CORS for the
   API.
 - **DynamoDB**, one table, on demand, single-table design.
+- **The deck's cache** ([below](#the-decks-cache)): each warm function
+  keeps the upcoming plans and the approved ads (with the ads' setting and
+  their owners' profiles and emails) in memory, and every deck reads only
+  the table's **change log** to patch them, so a deck is as current as
+  reading everything every time.
 - **Photos** in a private S3 bucket in the site stack
   (`<site stack>-photos-<account>`), uploaded straight from the app with
   presigned POSTs (≤ 2 MB, JPEG/PNG/WebP, 15 minutes) that the API issues
   for the caller's own folder, and read through CloudFront with origin
-  access control. The chat's photos and videos live there too
+  access control. In AWS the POST stores them as S3 Intelligent-Tiering
+  (`x-amz-storage-class`, fixed by the policy); locally Floci keeps its
+  default class. The chat's photos and videos live there too
   ([chat media](#chat-media)). Keys are random and never reused, so photos are cached
   at the edge and in browsers for a year. The bucket allows POST uploads
   from the stage's site origin (CORS); the web app's CSP allows the
@@ -66,7 +73,9 @@ who are members, or by an admin.
   [sign-in.md](sign-in.md#token-checks)) and returns an opaque session token (32
   random bytes), stored only as its SHA-256 hash. Every other route but
   `GET /api/health` sends it as a bearer token, and the function reads
-  the session (one DynamoDB read) before routing; a missing, unknown or
+  the session (one DynamoDB read; it keeps the account's climber id, so
+  the profile is one more, read alongside rbacr's checks:
+  [api.md](api.md#sessions)) before routing; a missing, unknown or
   expired one is 401 `signed out`. A session slides: used more than a day
   after its last use, it moves forward (at most one write a day), and it
   expires after **365 days without use** (DynamoDB's TTL deletes it). No
@@ -179,13 +188,23 @@ the photos bucket. On **every stage, production included**; all marked
 `demo`, with `seed-` ids.
 
 The API keeps it upcoming itself: before building a deck
-(`GET /api/discover`), it reads one marker item (`META#SHOWCASE`) and, when
+(`GET /api/discover`), it checks one marker item (`META#SHOWCASE`) and, when
 it's over 12 hours old or was written by an older showcase
 (`SHOWCASE_VERSION` in [seed.ts](../grigri_api/seed/seed.ts), bumped with
 every change to the showcase, so a deploy shows it at once), rewrites the
 showcase's climbers and plans with fresh dates (as the seed does: real members stay), and its sample ads (their photos copied only once). A failure is logged and
-never fails the deck. No scheduler or new resource: one extra read per
-deck and about 50 writes twice a day, well under a cent a month.
+never fails the deck, and the next deck tries again. The warm function
+remembers until when the marker it read (or wrote) keeps the showcase
+fresh, and reads the marker again only from then: before that the
+showcase can't be stale whatever another instance does (a rewrite only
+moves the marker later), so the first deck after the 12 hours, on any
+instance, re-dates it, as when every deck read the marker. Each plan
+it re-dates adds an entry to the [change log](#the-decks-cache), so
+every warm deck has the new dates at once. No scheduler or new resource:
+one read per warm instance every 12 hours (and one when it starts),
+instead of one per deck, and about 50 writes twice a day plus their
+log entries (one per climber, plan and ad, about 55), well under a cent
+a month.
 
 ## Cost
 
@@ -196,24 +215,99 @@ and use is billed per request. Prices are us-east-1's.
 |---|---|---|---|
 | DynamoDB, on demand | $0.625 per million writes, $0.125 per million reads, $0.25/GB-month (the first 25 GB free); point-in-time recovery $0.20/GB-month, prod only; TTL deletes free | $0 (a few cents of storage at most) | Pay per request with no minimum. **Aurora Serverless v2** costs about **$43/month** at its 0.5 ACU minimum (auto-pause to 0 ACU exists, but resuming takes seconds and storage and I/O still bill); **RDS** bills every hour (a db.t4g.micro is about $12/month plus storage) whether used or not. The access patterns (by plan, by climber, upcoming plans, open requests) fit key lookups, so a relational database buys nothing here. |
 | HTTP API | $1.00 per million requests | $0 | REST APIs cost $3.50 per million. No authorizer: the function checks sessions itself. |
-| Sessions (in the table) | One eventually consistent read per request (about $0.06 per million requests), one write per session per day of use, a write to sign in or out; the subject index is keys-only, so the daily slide doesn't write to it | $0 | An HTTP API JWT authorizer would be free per request, but it can only check Google's one-hour tokens. A Lambda authorizer would add a second invocation per request; Cognito would add a service and its own pricing beyond its free tier. |
+| Sessions (in the table) | One eventually consistent read of the session per request (about $0.06 per million requests), plus the profile's (the session keeps the climber id, so no read of the sign-in link); one write per session per day of use, a read and a write to sign in, one to sign out, and one write per older session to keep its climber id; the subject index is keys-only, so the daily slide doesn't write to it | $0 | An HTTP API JWT authorizer would be free per request, but it can only check Google's one-hour tokens. A Lambda authorizer would add a second invocation per request; Cognito would add a service and its own pricing beyond its free tier. |
 | One Lambda, arm64, 256 MB | $0.20 per million requests + $0.0000133 per GB-second (1 million requests and 400,000 GB-seconds a month free) | $0 | One function with an internal router: one cold start to warm, one log group, one role. arm64 is 20% cheaper than x86. 256 MB keeps a ~50 ms request at well under a cent per thousand. |
-| S3 photos bucket | $0.023/GB-month, $0.005 per 1,000 uploads (and per 1,000 tag clears, one per new photo saved or chat attachment sent); deletes and lifecycle expirations free | $0 when empty | Photos and chat media stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has, cached for a year. Unsaved uploads expire after a day, so they don't pile up; chat media after 400 days. See [chat media](#chat-media). |
+| S3 photos bucket, Intelligent-Tiering | Uploads stored as Intelligent-Tiering: $0.023/GB-month while fetched, $0.0125 after 30 days without a fetch, $0.004 after 90 (no retrieval fee, no minimum duration), plus $0.0025 per 1,000 objects a month for monitoring (objects under 128 KB aren't tiered nor charged it); $0.005 per 1,000 uploads (and per 1,000 tag clears, one per new photo saved or chat attachment sent); deletes and lifecycle expirations free | $0 when empty | Photos and chat media stay out of DynamoDB (400 KB item limit, and storage there costs 10× more). Served by the CloudFront distribution the site already has: uploads cached for a year, the sample ads' photos (which the API writes itself, in Standard) for a day. So S3 rarely sees a GET, and most of the bytes sit in the cheaper tiers. The class is set by the upload itself, so there's no lifecycle transition and no transition fee ($0.01 per 1,000); Standard-IA or Glacier Instant Retrieval would add retrieval fees and 30/90-day minimums the day-old pending uploads would pay. Unsaved uploads expire after a day, so they don't pile up; chat media and plan photos after 400 days. See [chat media](#chat-media). |
 | GriGri Pics bucket ([pics.md](pics.md#cost)) | $0.023/GB-month (now ~11 MB: $0.0003); one catalog GET per warm function ($0.0004 per 1,000); loading on deploy, under $0.0001 | ~$0 | Its own bucket keeps app content apart from people's data. A catalog made from the photos' S3 annotations, read once and kept in memory, beats querying: S3 Select is closed to new accounts, and annotation tables with Athena lag up to an hour, take seconds and bill per query. |
 | Route finder ([route-finder.md](route-finder.md#cost)) | Walls as DynamoDB items (a few KB each), their views in the photos bucket (~0.3 MB each, 12 a wall at most): ~$0.0001 a wall a month; a query per lookup, a write per route or view | $0 | Recognition runs on the phone (plain Dart), so frames cost nothing; a cloud vision service would bill per image, and a model server by the hour. |
-| CloudWatch Logs | $0.50/GB ingested; 14 days kept | $0 | The function logs only errors (plus Lambda's own lines per request), and the retention keeps storage near zero. |
+| CloudWatch Logs | $0.50/GB ingested; 14 days kept | $0 | The functions log only errors, warnings and a few info lines, as JSON (`LogFormat: JSON`, application level INFO). Lambda's own START/END/REPORT lines, ~350 bytes per invocation (about $0.17 per million invocations), are left out (system level WARN); durations and errors are still in Lambda's metrics. The retention keeps storage near zero. |
+| CloudFront (the site) | Always free: 1 TB out and 10 million requests a month; then $0.085/GB and $0.0100 per 10,000 HTTPS requests ($1 per million); invalidations: the first 1,000 paths a month free (a deploy invalidates one, `/*`); cache policies free | $0 | One distribution for the site, the app, the API and photos. Every API call is a CloudFront request too, and opening the web app is ~35 more (browsers revalidate each file: `no-cache`). The site's files are kept at the edge for a day ([deploy.md](deploy.md#caching)), so those revalidations are answered there, not with an S3 GET each. |
 | Artifact bucket (per stage) | S3 storage of each deploy's ~200 KB zip, expired after 30 days | ~$0 | Where `aws cloudformation package` uploads the code. |
-| IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
+| IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe) and its keep-alive pings (one a minute, 60 s: $0.00006 an hour online, most of the IoT cost); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
 | Premium payments ([premium.md](premium.md#cost)) | Android and the web, Stripe: 2.9% + $0.30 per charge, plus 0.7% Billing. iOS, the App Store: 15% of each payment (Small Business Program; 30% otherwise). No monthly fee for either | $0 | Pay per payment; merchants of record take 5% + $0.50. The App Store is the dearest, but Apple's guideline 3.1.1 allows nothing else in the iOS app. Its signed transactions and notifications are verified in the same function, offline (no App Store Server API call, no key): no new AWS resource. One subscription item per subscriber in the table, plus one small item per App Store subscription (whose it is). |
-| Ads ([ads.md](ads.md#cost)) | Three reads and a small batch read per deck, a write per skipped ad; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
+| The deck's cache ([below](#the-decks-cache)) | One strongly consistent query of the change log per deck (1 read unit) instead of reading every upcoming plan and the ads; an entry (~150 bytes, expiring after a day) per write of a plan (2 write units, in its transaction), an ad, the ads' setting or a profile (1 write unit) | $0 | Memory the warm function already has: no cache service (ElastiCache and DAX bill by the hour), no stream or second function. |
+| Ads ([ads.md](ads.md#cost)) | Per deck, one query of the ads I skipped (the rest comes from the deck's cache); a write per skipped ad; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
 | Moderation ([moderation.md](moderation.md#data-and-cost)) | A report: a write, a read or two, a notice write per admin; a block: two writes; one small query more per deck and per join request | $0 | No new resources: items in the table, in-app notices (no email or push service), the word filter in the function (no moderation service), and blocked people's messages hidden in the app (no extra read per chat poll). |
 | Match scores ([match-scores.md](match-scores.md#cost)) | aityx System One: $0.042 per million input tokens (about $0.00007 a call, ~1,600 tokens); the scores table on demand; the scoring function only when run by hand | $0 | A decision API keeps the score's weights as data, each rule with its reason; it's called only for admins' decks and on-demand runs. |
 | Authorizer Lambda, arm64, 128 MB | $0.20 per million invocations + GB-seconds: one at each connect and one an hour per open connection (`refreshAfterInSeconds` 3600), ~30 ms each | $0 | A separate tiny function: the API's 256 MB bundle and role would be more than it needs. Hourly refresh, not every few minutes: sign-out reaches open connections within the hour at a twelfth of the invocations of a 5-minute refresh. |
 
 No NAT gateways, VPCs, provisioned capacity, KMS keys (AWS-owned keys
-encrypt the table and buckets) or always-on compute. A month with a few
-thousand users' worth of requests (say a million API calls) costs about a
-dollar for the API and a little more for DynamoDB.
+encrypt the table and buckets) or always-on compute. A million API calls
+cost about $2 all told (HTTP API $1, Lambda ~$0.4, DynamoDB ~$0.6), plus
+$1 at CloudFront beyond its free 10 million requests a month. How many
+calls a user makes depends on live updates: with them up, the app polls
+only as a safety net (~30–90 calls per hour open), so a few thousand
+users with the app open ~5 hours a month make about a million calls;
+with them down, it polls every 15 s (~960 calls per hour open), about
+**4.8 million calls a month per 1,000 users**, ~$10 a month.
+
+### The deck's cache
+
+`GET /api/discover` is the most read route: the app asks for the deck
+every 15 s while Discover is open (every 2 minutes while the live
+connection is up). Every deck needs every upcoming plan worldwide (the
+deck ranks them all) and the approved ads, and those are the same for
+everyone, so each warm function keeps them in memory
+([deck-cache.ts](../grigri_api/src/deck-cache.ts)):
+
+- **The change log**: every write of a plan item adds an entry
+  (`CHANGES` / `<time>#<kind>#<id>#<random>`, with `kind` and `id`,
+  expiring after a day) **in the same transaction** (create, edit, a join,
+  accept, reject or admin answer that changes the members, leave and
+  delete, a withdrawn request, an admin clearing notes), and so does
+  the seed and showcase's re-dating of each plan. Every write of an ad
+  (created, edited, approved, rejected, deleted), of the ads' setting,
+  and of a profile or its kept email (saved, created, an admin
+  clearing it, the account deleted) adds one right after it.
+- **Every deck** queries the log's last minute or so (since its
+  instance's previous deck, less a minute, for entries stamped just
+  before a slow commit), **strongly consistent**: an entry is there as
+  soon as its write is. Entries the instance hasn't applied yet are read
+  again, strongly consistent (a plan, an ad, the setting, an owner's
+  profile and email), and patched into its copy: a plan created or
+  changed comes in, one deleted or no longer upcoming goes. Nothing new:
+  the copy is the table as it is. The deck then keeps the plans that
+  start after now (so a plan leaves it once it starts, with no write)
+  and goes on as before (my passes, requests and blocks, the people in
+  the deck's plans, my skipped ads are read for each deck, as they were).
+  So a change made on any instance is on every deck at once, as when
+  every deck read everything; the deck is the same, in the same order.
+- **Read in full**: when an instance starts, when its last deck was over
+  5 minutes ago, and at least every 5 minutes (a safety net, should a
+  write ever skip the log). The plans come from the `PLANS` index, which
+  lags the table a little, so the log's last minute is read again on top.
+- **Why a log, not a version counter** bumped by every write: a deck that
+  saw the counter move would re-read the index, which may not have the
+  change yet, and keep that stale copy until the next write; and one
+  counter item in every plan transaction would make concurrent
+  transactions fail each other. The log's entries are new items, never
+  contended, and the changed items are read from the table itself.
+
+Cost, at $0.125 per million read units and $0.625 per million write
+units (a plan item is about 1 KB; an index query reads 0.5 units per
+4 KB, a strongly consistent read 1):
+
+| Per deck | Before | Now |
+|---|---|---|
+| Upcoming plans (N of them) | N/8 units: 5 at 40 plans (today's showcase), 125 at 1,000, 1,250 at 10,000 | **1 unit** for the log (up to ~25 entries in its window), plus 1 per plan changed since, once per instance |
+| Ads' setting, approved ads, owners' profiles and emails | ~2.5 units (one owner) | in the same log query |
+| The showcase's marker | 0.5 unit | none (one read per instance every 12 hours) |
+
+With my skipped ads' query (0.5 unit, both before and now), at 40 plans
+a deck goes from about 8.5 units to about 1.5; at 1,000 plans from
+about 128.5 to about 1.5: an hour with Discover open (240 decks) from
+30,840 units ($0.0039) to about 360 ($0.00005), plus a full read per busy instance every 5 minutes (12 an
+hour, shared by everyone that instance serves). What it adds: 2 write
+units per plan write (its log entry, in the transaction: $0.00000125)
+and 1 per ad, setting or profile write ($0.000000625); a thousand of each
+a day is about $0.06 a month. A plan write's 2 write units cost what 10
+read units do, so the log pays for itself when there are more than about
+two decks per plan write. The log's items expire (TTL deletes are free)
+and hold a day's writes at most, a few KB. The worst case, a cold
+instance for every deck, reads what a deck read before plus the log's
+1 unit. The log is one partition, as the `PLANS` index already is: 3,000
+strongly consistent reads a second (about 3,000 decks a second) and
+1,000 writes a second, far beyond Grigri's load.
 
 ### Chat media
 
@@ -270,21 +364,31 @@ Idle it costs only the storage already there. Pending uploads cost a
 day's storage at most. A member flooding a chat with 50 MB videos costs
 $0.00115 a month per video kept (the API's throttle caps the rate).
 
+Those figures are Standard's. Stored as Intelligent-Tiering, media
+nobody has fetched from S3 for 30 days (CloudFront caches it) costs 46%
+less, and after 90 days 83% less: over 400 days, about $0.0067 instead
+of $0.023 per GB-month on average, so the steady state above is nearer
+**~$0.25** and **~$2.40 a month**, plus monitoring of ~7,800 and ~78,000
+objects ($0.02 and $0.20).
+
 ### Live updates' cost
 
 Per person with the app open for an hour: 60 connection-minutes
-($0.0000048), one or two authorizer invocations (~$0.0000003), and the
-hints about them (a busy chat, 100 hints an hour: $0.0002). About **half
-a cent per thousand person-hours online**, before hints.
+($0.0000048), 60 keep-alive pings (MQTT `PINGREQ`, billed as messages:
+$0.00006), one or two authorizer invocations (~$0.0000003, its table
+reads included under $0.0000007), and the hints about them (a busy chat,
+100 hints an hour: $0.0002). About **6.5 cents per thousand person-hours
+online**, before hints; the pings are most of it.
 
 What it replaces: the app polled every 15 s (my plans, requests,
 notifications and the open tab: ~4 API calls) and an open chat every
 3 s, about **1,000–2,200 requests per person-hour**. Each request costs
 about $2 per million all told (HTTP API $1, Lambda ~$0.4, a session read
-and the route's reads in DynamoDB ~$0.6), so **$0.002–0.004 per
-person-hour**. With live updates the safety-net polling (2 minutes; a
-chat every minute) is ~30–90 requests an hour (~$0.0001), plus the IoT
-cost above: roughly **20–30× cheaper per open hour**, and changes show in
+and the route's reads in DynamoDB ~$0.6; $1 more at CloudFront beyond its
+free tier), so **$0.002–0.004 per person-hour**. With live updates the
+safety-net polling (2 minutes; a chat every minute) is ~30–90 requests an
+hour (~$0.0001), plus the IoT cost above (~$0.000065): roughly **12–24×
+cheaper per open hour**, and changes show in
 well under a second instead of up to 15 s. Idle (nobody online), it's $0,
 like everything else here.
 

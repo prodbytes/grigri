@@ -5,8 +5,8 @@ request, an answer, a plan edit) instead of asking every few seconds. It
 keeps one **MQTT over WebSocket** connection to **AWS IoT Core** while
 it's in the foreground; the API publishes a tiny **hint** to each affected
 climber's topic after a change, and the app refetches what the hint names
-through the API. Polling stays as a slow safety net. Costs:
-[backend.md](backend.md#cost).
+through the API. Polling stays as a slow safety net. Costs, keep-alive
+pings included: [backend.md](backend.md#live-updates-cost).
 
 ## Hints, not data
 
@@ -23,6 +23,7 @@ A hint says *what kind of thing changed*, never the thing itself:
 | `notice` | the requester; the members who haven't answered a nudge; every admin | their request was declined; the requester nudged them; someone reported something ([moderation](moderation.md#answering-reports-admins)) | notifications, my plans |
 | `match` | the newcomer | everyone said yes | my plans, requests, notifications (the match screen opens as before) |
 | `plan` | the plan's members | someone joined or left; the organizer edited the plan | my plans, requests; the plan's chat and open requests if loaded |
+| `team` | every admin Grigri knows; the climber and the other admins | someone wrote to the [Grigri team](team-chat.md); an admin answered them | notifications (the team chat's badge), my team chat if loaded; for admins, the team chats' list and the ones opened |
 
 - The one who made the change gets no hint (their own app already shows
   it).
@@ -36,7 +37,10 @@ A hint says *what kind of thing changed*, never the thing itself:
 
 - Each climber has one topic subtree, `grigri/<stage>/climbers/<climberId>/`;
   the API publishes on `…/hint`. Stages are `prod`, `rc` and `local`.
-- `GET /api/realtime` ([api.md](api.md#routes)) says where to connect:
+- `GET /api/realtime` ([api.md](api.md#routes)) says where to connect
+  (the app asks once per session and keeps the answer while connecting
+  with it works; it asks again after a failed connection, one that
+  dropped within a minute, or a sign-in):
   `{"url": "wss://<IoT Data-ATS endpoint>/mqtt", "authorizer":
   "<prefix>-api-realtime", "topic": "grigri/<stage>/climbers/<me>/#",
   "clientIdPrefix": "<me>-"}`, or `{"url": null}` when live updates are
@@ -59,7 +63,9 @@ connection:
 - It takes the token from the URL's query (or the MQTT password), looks
   up the session by its hash exactly as the API does (an unknown, expired
   or signed-out session is refused; a use slides it, as any request
-  does), then the climber id of its account.
+  does), then the climber id of its account: the one the session keeps
+  ([api.md](api.md#sessions)), or, for a session that has none yet, the
+  sign-in link's.
 - It answers a policy that allows **only**: `iot:Connect` as a client id
   starting with `<climberId>-`; `iot:Subscribe` to topic filters under
   `grigri/<stage>/climbers/<climberId>/`; `iot:Receive` from topics under
@@ -81,13 +87,20 @@ connection:
   closes in the background, on sign-out and when the tabs go.
 - Reconnects after a drop with backoff: 1 s, 2 s, 4 s … up to a minute,
   each times a random 0.5–1 (so clients that dropped together spread
-  out); back to 1 s once connected. After a reconnect it refetches my
-  plans, requests, notifications and loaded chats, for hints missed
-  meanwhile. A 401 from `GET /api/realtime` is a sign-out, as anywhere.
+  out); back to 1 s only once a connection has stayed up for **a
+  minute**, so one the broker accepts and drops at once keeps backing off
+  instead of reconnecting every second. After a reconnect from a drop in
+  the foreground it refetches my plans, requests, notifications and
+  loaded chats (the team chat too), for hints missed meanwhile; the
+  connection that opens on resume doesn't (the resume refresh already
+  covers that, and an open chat, a team chat too, polls on resume). A 401
+  from `GET /api/realtime` is a sign-out, as anywhere.
 - **Polling as a safety net** ([matching.md](matching.md#refreshing)):
   while connected, the regular refresh runs every **2 minutes** instead
   of 15 seconds, and an open chat every **minute** instead of 3 seconds;
   when the connection drops, both go back to their usual pace at once.
+  An open chat that a hint (or Chats) has just fetched starts its round
+  over, so its next poll doesn't fetch the same again.
   With live updates off (`{"url": null}`), the app just polls as before.
 - `mqtt_client` (pinned, 10.11.11) with the browser's WebSocket on the web
   and `dart:io`'s on Android and iOS.

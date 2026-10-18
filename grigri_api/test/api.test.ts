@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Api, NO_NAME } from '../src/api.js';
-import { Auth, type Caller, subjectHash } from '../src/auth.js';
+import { Auth, type Caller, hashToken, subjectHash } from '../src/auth.js';
 import { ApiError } from '../src/domain/errors.js';
 import type { PicCatalog } from '../src/domain/model.js';
 import { FakeRbacr } from './fake-rbacr.js';
@@ -19,7 +19,7 @@ let rbacr: FakeRbacr;
 /** GriGri Pics' catalog, as the fake bucket has it. */
 let catalog: PicCatalog;
 
-const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
+const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, isAdmin: async () => admin });
 const ada = who('ada');
 const ben = who('ben');
 const cy = who('cy');
@@ -677,6 +677,85 @@ describe('sessions through the API', () => {
 
   it('health needs no token', async () => {
     expect((await request('GET', '/api/health')).ok).toBe(true);
+  });
+
+  it('keeps my climber in the session once known, so requests skip the lookup', async () => {
+    const { token } = await request('POST', '/api/session', {}, { idToken: 'a.b.c' });
+    const bearer = { authorization: `Bearer ${token}` };
+    const id = hashToken(token);
+    // No profile yet: looked up on each request, nothing kept.
+    await fails(request('GET', '/api/plans', bearer), 409, /no profile/);
+    const { climber } = await request('GET', '/api/me', bearer);
+    expect(store.sessions.get(id)).not.toHaveProperty('climberId');
+    // The next request finds it, and keeps it; later ones don't look it up.
+    await request('GET', '/api/plans', bearer);
+    expect(store.sessions.get(id)!.climberId).toBe(climber.id);
+    const reads = store.subjectReads;
+    expect((await request('GET', '/api/me', bearer)).climber.id).toBe(climber.id);
+    await request('GET', '/api/plans', bearer);
+    expect(store.subjectReads).toBe(reads);
+    // A session made later starts with it.
+    const second = (await request('POST', '/api/session', {}, { idToken: 'a.b.c' })).token;
+    expect(store.sessions.get(hashToken(second))!.climberId).toBe(climber.id);
+  });
+
+  it('a kept climber that is gone falls back to the account\'s link', async () => {
+    const { token } = await request('POST', '/api/session', {}, { idToken: 'a.b.c' });
+    const bearer = { authorization: `Bearer ${token}` };
+    const { climber } = await request('GET', '/api/me', bearer);
+    // A session whose kept climber no longer exists (made up).
+    store.sessions.set(hashToken(token), { ...store.sessions.get(hashToken(token))!, climberId: 'gone-climber-001' });
+    expect((await request('GET', '/api/me', bearer)).climber.id).toBe(climber.id);
+    expect(store.sessions.get(hashToken(token))!.climberId).toBe(climber.id);
+  });
+
+  it('a kept climber never skips the blocked or admin checks', async () => {
+    const { token } = await request('POST', '/api/session', {}, { idToken: 'a.b.c' });
+    const bearer = { authorization: `Bearer ${token}` };
+    await request('GET', '/api/me', bearer);
+    await request('GET', '/api/plans', bearer);
+    expect(store.sessions.get(hashToken(token))!.climberId).toBeDefined();
+    await fails(request('GET', '/api/admin/climbers', bearer), 403, /admins only/);
+    rbacr.give('ada@example.com', 'blocked');
+    await fails(request('GET', '/api/plans', bearer), 403, /blocked/);
+    await fails(request('GET', '/api/me', bearer), 403, /blocked/);
+    await fails(request('GET', '/api/admin/climbers', bearer), 403, /blocked/);
+    // Signing out still works.
+    expect(await request('DELETE', '/api/session', bearer)).toEqual({});
+  });
+
+  it('deleting my account leaves no session with my old climber; signing in again starts afresh', async () => {
+    const { token } = await request('POST', '/api/session', {}, { idToken: 'a.b.c' });
+    const bearer = { authorization: `Bearer ${token}` };
+    const { climber } = await request('GET', '/api/me', bearer);
+    await request('GET', '/api/plans', bearer);
+    await request('DELETE', '/api/me', bearer, { confirm: true });
+    expect(store.sessions.size).toBe(0);
+    const again = (await request('POST', '/api/session', {}, { idToken: 'a.b.c' })).token;
+    expect(store.sessions.get(hashToken(again))).not.toHaveProperty('climberId');
+    const fresh = (await request('GET', '/api/me', { authorization: `Bearer ${again}` })).climber;
+    expect(fresh.id).not.toBe(climber.id);
+  });
+
+  it('asks rbacr about admin only on the routes that need it', async () => {
+    const asked: string[] = [];
+    const counting = new Auth({
+      store: store.asStore(),
+      verify: async () => ({ subject: 'https://accounts.google.com#42', email: 'ada@example.com', emailVerified: true }),
+      config: { devMode: false, isAdmin: async (email) => (asked.push(email), false) },
+      clock: () => now,
+    });
+    const { token } = await counting.signIn({ idToken: 'a.b.c' });
+    const send = async (method: string, path: string, body?: unknown) =>
+      api.handle(method, path, { caller: await counting.caller({ authorization: `Bearer ${token}` }), body, query: {} });
+    await send('PUT', '/api/me', profile('Ada'));
+    await send('GET', '/api/plans');
+    await send('GET', '/api/requests');
+    expect(asked).toEqual([]);
+    await send('GET', '/api/me');
+    expect(asked).toEqual(['ada@example.com']);
+    await expect(send('GET', '/api/admin/climbers')).rejects.toMatchObject({ status: 403 });
+    expect(asked).toEqual(['ada@example.com', 'ada@example.com']);
   });
 });
 

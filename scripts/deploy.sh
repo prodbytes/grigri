@@ -415,7 +415,10 @@ echo "==> loading GriGri Pics into $PICS_BUCKET"
 PICS_BUCKET="$PICS_BUCKET" node grigri_api/pics/load.mjs
 
 # 4. The content. Flutter's web files aren't content-hashed, so browsers
-# revalidate everything (no-cache); CloudFront is invalidated below.
+# revalidate everything (no-cache). The edge keeps them a day regardless
+# (site.yaml's SiteFilesCachePolicy), so the invalidation of /* below,
+# waited for, is what makes the new release (version.json too) live at
+# once: keep it on every deploy.
 echo "==> uploading"
 # The site's own pages (grigri_index/site) at the root; never under app/,
 # which is the app's.
