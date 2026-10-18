@@ -178,6 +178,7 @@ Nothing while idle beyond storage; see [backend.md](backend.md#cost).
   catalog PUT: under $0.0001. New photos: one PUT and one annotation PUT
   each ($0.005 per 1,000).
 - **Your Pics**: as chat photos ([backend.md](backend.md#chat-media)):
-  storage at $0.023/GB-month, an upload and a tag clear per photo, kept
+  storage as Intelligent-Tiering ($0.023/GB-month at first, less once
+  unfetched for 30 and 90 days), an upload and a tag clear per photo, kept
   400 days. A DynamoDB item per photo (a write to add, a delete to
   remove, the list a query).
