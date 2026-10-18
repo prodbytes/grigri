@@ -24,7 +24,7 @@ import { nominatim } from './places.js';
 import { stripeBilling } from './stripe.js';
 import { appStoreVerifier } from './app-store.js';
 import { Store } from './store/store.js';
-import { assertSeedable, seed, seedShowcase, showcaseIsStale } from '../seed/seed.js';
+import { assertSeedable, seed, seedShowcase, showcaseFreshUntil, showcaseKeeper } from '../seed/seed.js';
 
 const MAX_BODY = 64 * 1024;
 /** Stripe's events are bigger than the app's requests (a subscription with its items). */
@@ -161,10 +161,15 @@ const putSeedPhoto = async (key: string, body: Uint8Array, contentType: string) 
   await s3.send(new PutObjectCommand({ Bucket: bucket, Key: `photos/${key}`, Body: body, ContentType: contentType, CacheControl: 'public, max-age=86400' }));
 };
 // The demo showcase and sample ads, on every stage: re-dated when over
-// 12 h old (one read per deck; a few dozen writes twice a day).
-const showcase = async (now: Date) => {
-  if (await showcaseIsStale(store, now)) await seedShowcase(store, now, putSeedPhoto);
-};
+// 12 h old (a few dozen writes twice a day). Its marker is read only once
+// it could be stale: one read per warm instance every 12 hours, not one
+// per deck.
+const showcase = showcaseKeeper(
+  () => showcaseFreshUntil(store),
+  async (now) => {
+    await seedShowcase(store, now, putSeedPhoto);
+  },
+);
 // Match scores from aityx on admins' decks (the key never leaves the
 // function); no key: none.
 const matchScorer = aityxScorer({ url: env.AITYX_URL ?? '', key: env.AITYX_API_KEY ?? '' }) ?? undefined;

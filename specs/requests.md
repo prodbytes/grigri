@@ -1618,3 +1618,59 @@ spec.
        Guided off without Premium.
      - Cost: none: the check is the same cached rbacr lookup Premium's
        other routes make, only when a plan is made guided.
+
+## 2026-10-18
+
+105. **Fix the cost review's findings, without changing the user
+     experience or features (the deck).**
+     - [Backend](backend.md#the-decks-cache): `GET /api/discover` read
+       every upcoming plan worldwide, in full, from the `PLANS` index on
+       every deck (every 15 s while Discover is open), plus the ads'
+       setting, every approved ad and their owners' emails and profiles,
+       and the showcase's marker. Now each warm function keeps the
+       upcoming plans and the ads (setting, approved ads, owners) in
+       memory, and each deck reads only the table's new **change log**
+       (`CHANGES`: one strongly consistent query of its last minute or so)
+       and re-reads, strongly consistent, whatever changed since. Every
+       write of a plan item adds an entry in its own transaction (create,
+       edit, join, accept, reject, admin answers, leave, delete, a
+       withdrawn request, an admin clearing notes), the seed's and
+       showcase's re-dating one per plan, and every write of an ad, the
+       ads' setting, a profile or its email one right after it. A plan
+       that starts leaves the deck with no write (the deck still keeps
+       only plans that start after now). Each cache is read in full when
+       an instance starts, after 5 idle minutes and at least every 5
+       minutes, a safety net. A version counter was considered and not
+       used: re-reading the lagging index when it moves could keep a
+       stale copy, and one counter item in every plan transaction would
+       make them conflict.
+     - The showcase's marker is read once per warm instance every 12
+       hours (when it could next be stale) instead of on every deck; it's
+       still re-dated by the first deck after 12 hours, on any instance.
+     - Nothing changes for anyone: the same deck, in the same order, with
+       the same `climbers` (every organizer and member of every deck
+       plan), and a plan created, changed or deleted on any instance is
+       on the next deck everywhere, as before. [API](api.md),
+       [matching](matching.md#the-deck) and [ads](ads.md#cost) say so;
+       the API's README lists the change log's item.
+     - Tests: a warm deck reads the plans in full once and then only the
+       log; a plan created, edited, joined, left or deleted, on this
+       instance or another, is on the next deck; a lagging index is
+       corrected by the log; a plan leaves once it starts; a write that
+       skipped the log shows after the max age; an entry stamped behind
+       the last poll is still seen; a warm deck equals a cold one after a
+       run of changes; ads approved, rejected, deleted, the setting and an
+       owner's new name show at once; the real store writes the entries
+       (in the plans' transactions); the showcase logs its plans; the
+       showcase's marker is read only when it could be stale.
+     - Cost: adds the log's entries, ~150 bytes each, expiring after a
+       day: 2 write units per plan write (in its transaction,
+       $0.00000125), 1 per ad, setting or profile write ($0.000000625), a
+       few dozen twice a day for the showcase; a thousand of each a day
+       is about $0.06 a month. Saves, per deck, the full read of the
+       upcoming plans (N/8 read units: 5 at today's 40 plans, 125 at
+       1,000), about 2.5 units of ads and 0.5 of the showcase's marker,
+       for 1 unit of log: at 1,000 plans an hour with Discover open goes
+       from about $0.0039 to $0.00005 (plus a full read per busy instance
+       every 5 minutes, shared). No new resource: the table and the
+       function's memory.

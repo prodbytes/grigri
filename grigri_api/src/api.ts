@@ -24,6 +24,7 @@ import {
   requestJson,
 } from './domain/model.js';
 import { type Ad, AD_STATUSES, type AdStatus, MAX_ADS_PER_OWNER, adInput, adSettingsInput, deckAds } from './domain/ads.js';
+import { AdCache, ChangeFeed, PlanCache, type Poll } from './deck-cache.js';
 import { assertClean } from './domain/filter.js';
 import { type Report, type ReportContent, reportId, reportInput } from './domain/moderation.js';
 import { type PicWithCrag, type Where, picsFor } from './domain/pics.js';
@@ -178,6 +179,8 @@ export interface Deps {
   /** Keeps the demo showcase upcoming (seed/seed.ts); runs before the deck. */
   showcase?: (now: Date) => Promise<void>;
   clock?: () => Date;
+  /** The real time (epoch ms) for the decks' caches (deck-cache.ts); default Date.now. */
+  wallClock?: () => number;
   /** In [0, 1): picks a new organizer when one leaves; default Math.random. */
   random?: () => number;
 }
@@ -241,9 +244,16 @@ export class Api {
   private readonly random: () => number;
   private readonly premiumRole: string;
   private readonly blockedRole: string;
+  /** What every deck shares, kept while the function stays warm (deck-cache.ts). */
+  private readonly changes: ChangeFeed;
+  private readonly planCache: PlanCache;
+  private readonly adCache: AdCache;
 
   constructor(private readonly deps: Deps) {
     this.store = deps.store;
+    this.changes = new ChangeFeed(deps.store, deps.wallClock);
+    this.planCache = new PlanCache(deps.store, deps.wallClock);
+    this.adCache = new AdCache(deps.store, deps.wallClock);
     this.clock = deps.clock ?? (() => new Date());
     this.random = deps.random ?? Math.random;
     this.premiumRole = PREMIUM_ROLE + (deps.config.roleSuffix ?? '');
@@ -1162,15 +1172,17 @@ export class Api {
    * The deck's ads: approved, not mine, not one I skipped, their owner
    * Premium (or the seed's made-up advertiser) and not blocked, reaching
    * my location or areas when they're limited to regions; and how
-   * often to show one. Never fails the deck.
+   * often to show one. Never fails the deck. The setting, the approved
+   * ads and their owners' profiles and emails come from the warm
+   * function's copy, patched from the change log (deck-cache.ts); what's
+   * mine (my skips, my blocks) is read on every deck.
    */
-  private async deckAds(s: Session, apart: Set<string>): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
+  private async deckAds(s: Session, apart: Set<string>, changes: Promise<Poll>): Promise<{ ads: Ad[]; adEvery: number; adOwners: Record<string, PublicClimber> }> {
     try {
-      const settings = await this.store.getAdSettings();
+      const { settings, approved, climbers, emails } = await this.adCache.get(await changes);
       if (settings.every === 0) return { ads: [], adEvery: 0, adOwners: {} };
-      const [approved, skipped] = await Promise.all([this.store.adsByStatus('approved'), this.store.skippedAdIds(s.me.id)]);
       const owners = [...new Set(approved.map((a) => a.ownerId))];
-      const [emails, climbers, blocked] = await Promise.all([this.store.getEmails(owners), this.store.getClimbers(owners), this.blockedEmails()]);
+      const [skipped, blocked] = await Promise.all([this.store.skippedAdIds(s.me.id), this.blockedEmails()]);
       // Owners still Premium in rbacr (each answer kept a minute).
       const premium = new Set<string>();
       await Promise.all(owners.map(async (o) => {
@@ -1198,8 +1210,12 @@ export class Api {
     await this.deps.showcase?.(s.now).catch((e: unknown) => {
       console.error(JSON.stringify({ level: 'warn', msg: 'showcase refresh failed', error: String(e) }));
     });
+    // The log of what changed since the last deck (one small consistent
+    // query); the upcoming plans and the ads come from the warm function's
+    // copy, patched with it (deck-cache.ts).
+    const changes = this.changes.poll();
     const [upcoming, passed, asked, apart] = await Promise.all([
-      this.store.upcomingPlans(s.now.toISOString()),
+      changes.then((poll) => this.planCache.upcoming(s.now.toISOString(), poll)),
       this.store.passedPlanIds(s.me.id),
       this.store.askedRequests(s.me.id),
       this.apart(s.me.id),
@@ -1219,7 +1235,7 @@ export class Api {
     const [covers, scores, ads] = await Promise.all([
       this.deckCovers(plans),
       s.caller.admin ? this.deckScores(plans, s) : Promise.resolve(undefined),
-      this.deckAds(s, apart),
+      this.deckAds(s, apart, changes),
     ]);
     return {
       plans,
