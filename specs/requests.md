@@ -1621,6 +1621,38 @@ spec.
 
 ## 2026-10-18
 
+104. **Fix the cost review's findings, without changing the user experience
+     or features.**
+     - [Live updates](live-updates.md#the-app): the connection that opens
+       on resume no longer counts as a reconnect, so it doesn't refetch
+       plans, requests, notifications and chats on top of the resume
+       refresh (a drop in the foreground still catches up); the backoff
+       starts over at 1 s only after a connection stayed up a minute (no
+       reconnecting every second to a broker that accepts and drops);
+       `GET /api/realtime` is asked once per session while connecting
+       with it works.
+     - [Matching](matching.md#refreshing): the open tab (the deck, most
+       often) isn't refetched while a chat or plan covers it, and catches
+       up once when it closes; an open chat polls at once on resume, and
+       a hint's fetch of it starts its poll count over.
+     - [Premium](premium.md): a return to the foreground reads Premium
+       only the first time after the app opened Stripe's Checkout or
+       portal, or the App Store's subscriptions (afresh, as #106's reads
+       after those pages), or with the profile on screen; not on every
+       resume. The launch's read and the Profile tab's stay as they were.
+     - Tests: the backoff keeps growing for connections that drop at once
+       and resets after a minute up; where to connect is asked once; a
+       restart isn't a reconnect; the deck waits under a pushed screen
+       and refreshes once on pop; Premium is checked on return once after
+       its pages opened (afresh), and with the profile on screen; a
+       hint's fetch puts off the open chat's next poll.
+     - Cost: fewer API Gateway requests and Lambda invocations (and their
+       DynamoDB reads), no new resources: per resume, no duplicate
+       catch-up (3 calls plus one per loaded chat), no `GET /api/realtime`
+       and usually no `GET /api/premium`; no deck fetch every 15 s while a
+       chat or plan is open; one chat poll fewer per hint; and no
+       reconnect loop of IoT Core connections and authorizer Lambda runs.
+
 105. **Fix the cost review's findings, without changing the user
      experience or features (the deck).**
      - [Backend](backend.md#the-decks-cache): `GET /api/discover` read

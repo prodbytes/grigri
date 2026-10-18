@@ -333,12 +333,14 @@ class GrigriStore extends ChangeNotifier {
 
   void _clear() {
     _live?.stop();
+    _live?.forget();
     _session++;
     _me = null;
     _admin = false;
     _premium = const Premium.none();
-    _billingPremium = null;
+    _billing = null;
     _premiumPrices = const {};
+    _messagePolls.clear();
     _appleAccountToken = null;
     _buying = false;
     _deckAds = [];
@@ -977,6 +979,12 @@ class GrigriStore extends ChangeNotifier {
       _plans[pic.planId]?.organizerId == me.id ||
       _admin;
 
+  /// How many times a plan's chat has been fetched this session (by
+  /// anyone: its screen, a hint, Chats), so the open chat can tell its
+  /// next poll can wait.
+  int messagePolls(String planId) => _messagePolls[planId] ?? 0;
+  final _messagePolls = <String, int>{};
+
   /// A plan's chat: all of it the first time, then what's new.
   Future<void> pollMessages(String planId) {
     final have = _messages[planId];
@@ -986,6 +994,7 @@ class GrigriStore extends ChangeNotifier {
         after: have == null || have.isEmpty ? null : have.last.time,
       ),
       (list) {
+        _messagePolls[planId] = messagePolls(planId) + 1;
         _learn(list.climbers);
         _addMessages(planId, list.messages, replace: have == null);
       },
@@ -1531,23 +1540,43 @@ class GrigriStore extends ChangeNotifier {
 
   /// My Premium and its prices again (the profile, and coming back from
   /// Stripe's pages in the browser). [fresh] ("check again"): the API asks
-  /// rbacr afresh; so does every refresh after Stripe's pages were opened,
-  /// until my Premium changes from what it was then.
+  /// rbacr afresh; so does every refresh after Stripe's pages (or the App
+  /// Store's subscriptions) were opened, until my Premium changes from
+  /// what it was then.
   Future<void> refreshPremium({bool fresh = false}) async {
-    final ask = fresh || _billingPremium != null;
+    final ask = fresh || _billing != null;
     final refreshed = await _refresh(
       () => api.premium(fresh: ask),
       _applyOffer,
     );
-    if (refreshed && _billingPremium != null && _premium != _billingPremium) {
-      _billingPremium = null;
+    final billing = _billing;
+    if (refreshed && billing != null && _premium != billing.premium) {
+      _billing = null;
     }
     await _premiumChanged();
   }
 
-  /// My Premium when Stripe's pages were last opened (checkout, the
-  /// portal); null: not since it changed.
-  Premium? _billingPremium;
+  /// Since Stripe's pages (checkout, the portal) or the App Store's
+  /// subscriptions were last opened: my Premium then, and whether the app
+  /// has come back to the foreground since; null: not opened since my
+  /// Premium changed.
+  ({Premium premium, bool back})? _billing;
+
+  /// Opened a page where my Premium may change: the next return to the
+  /// foreground checks it, and every check asks afresh until it changes.
+  void _openedBilling() => _billing = (premium: _premium, back: false);
+
+  /// Back in the foreground: my Premium again (afresh) the first time
+  /// after a page where it may change opened ([subscribe],
+  /// [managePremium]), or whenever [visible] (the profile is on screen);
+  /// nothing otherwise.
+  Future<void> refreshPremiumOnReturn({bool visible = false}) async {
+    final billing = _billing;
+    final due = billing != null && !billing.back;
+    if (!due && !visible) return;
+    if (due) _billing = (premium: billing.premium, back: true);
+    await refreshPremium();
+  }
 
   void _applyOffer(PremiumOffer offer) {
     _premium = offer.premium;
@@ -1568,7 +1597,7 @@ class GrigriStore extends ChangeNotifier {
   Future<bool> subscribe(PremiumPlan plan) async {
     final url = await _act(() => api.premiumCheckout(plan));
     if (url == null || !await _openOrSay(url)) return false;
-    _billingPremium = _premium;
+    _openedBilling();
     return true;
   }
 
@@ -1577,11 +1606,13 @@ class GrigriStore extends ChangeNotifier {
   /// for one bought through Stripe.
   Future<bool> managePremium() async {
     if (_premium.source == PremiumSource.apple) {
-      return _openOrSay(appStoreSubscriptionsUrl);
+      if (!await _openOrSay(appStoreSubscriptionsUrl)) return false;
+      _openedBilling();
+      return true;
     }
     final url = await _act(api.premiumPortal);
     if (url == null || !await _openOrSay(url)) return false;
-    _billingPremium = _premium;
+    _openedBilling();
     return true;
   }
 

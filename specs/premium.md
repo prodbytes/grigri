@@ -67,11 +67,13 @@ SDK).
    older subscription's late event never overwrites a newer paid one.
    Subscriptions without Grigri's metadata (other products on the
    account) are ignored.
-4. The app reads Premium again when it comes back to the foreground, when
-   the Profile tab opens, and on **I've paid: check again**, which asks
-   the API to check rbacr afresh (`?fresh=1`); so do the reads after
-   Checkout or the billing portal opened, until Premium changes
-   ([below](#who-is-premium)).
+4. The app reads Premium (`GET /api/premium`, with the prices) at launch,
+   when the Profile tab opens, on **I've paid: check again**, which asks
+   the API to check rbacr afresh (`?fresh=1`), and on coming back to the
+   foreground the first time after Checkout, the billing portal or the
+   App Store's subscriptions opened, or whenever the profile is on
+   screen. Every read after those pages opened asks afresh too, until
+   Premium changes ([below](#who-is-premium)).
 
 Subscribed, the card says "Premium: renews on <date>" (or "ends on <date>"
 once cancelled) and offers **Manage subscription**: Stripe's billing
@@ -241,9 +243,9 @@ role, it's [rbacr's](roles.md); Grigri keeps only the billing.
   per function instance). `GET /api/premium` uses the kept answer unless
   it may have just changed: it asks afresh with `?fresh=1`, which the app
   sends for **I've paid: check again** and on every Premium refresh after
-  it opened Stripe's Checkout or billing portal (until my Premium
-  changes from what it was then), so coming back from paying shows it at
-  once; and whenever my subscription disagrees with the kept answer (paid
+  it opened Stripe's Checkout or billing portal, or the App Store's
+  subscriptions (until my Premium changes from what it was then), so
+  coming back from paying shows it at once; and whenever my subscription disagrees with the kept answer (paid
   but no role yet, or the role still held after it ended). The iOS app's
   `POST /api/premium/apple` always asks afresh. Free climbers with no
   subscription get the kept answer. Ad owners in the deck are checked by their

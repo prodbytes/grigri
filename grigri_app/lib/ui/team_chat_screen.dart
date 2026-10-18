@@ -59,7 +59,8 @@ class TeamChatScreen extends StatefulWidget {
   State<TeamChatScreen> createState() => _TeamChatScreenState();
 }
 
-class _TeamChatScreenState extends State<TeamChatScreen> {
+class _TeamChatScreenState extends State<TeamChatScreen>
+    with WidgetsBindingObserver {
   final _input = TextEditingController();
   Timer? _poll;
   bool _sending = false;
@@ -83,6 +84,7 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final store = StoreScope.read(context);
@@ -99,8 +101,26 @@ class _TeamChatScreenState extends State<TeamChatScreen> {
     });
   }
 
+  /// The app went to the background (live updates stopped).
+  bool _away = false;
+
+  // Back in the foreground: polls at once, as a plan's chat does (the
+  // connection that opens on resume doesn't catch up).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _away = true;
+    } else if (state == AppLifecycleState.resumed && _away && mounted) {
+      _away = false;
+      _cadence.reset();
+      _load(StoreScope.read(context));
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _input.dispose();
     super.dispose();

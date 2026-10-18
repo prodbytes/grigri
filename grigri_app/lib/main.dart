@@ -148,6 +148,8 @@ class _GrigriAppState extends State<GrigriApp> {
         },
         scaffoldMessengerKey: _messenger,
         navigatorKey: _navigator,
+        // HomeShell refreshes its open tab once a screen over it closes.
+        navigatorObservers: [HomeShell.routes],
         home: const Root(),
       ),
     );
