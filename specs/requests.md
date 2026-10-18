@@ -1798,6 +1798,44 @@ spec.
        per million refreshes. Unchanged notices cost half a unit however
        many there are.
 
+108. **Fix the cost review's findings, without changing the user
+     experience or features (photos).**
+     - [Platforms](platforms.md): Android and iOS keep the photos they
+       show (avatars, chat and plan photos, ads', GriGri Pics) in a disk
+       cache of the app's own (no new package), so they aren't
+       downloaded again on every launch: one file per URL in the app's
+       cache directory, at most 100 MB (least recently shown first),
+       none kept past 30 days unused; saved only once they decode. The
+       web keeps the browser's cache. Avatars stay 640 px uploads (a
+       smaller copy would need a server change); the cache is what
+       saves their downloads.
+     - [GriGri Pics](pics.md#sizes): the loader also makes smaller
+       copies of each photo (640, 1080 and 1440 px wide, only those it's
+       wider than), immutable like the photos, recorded in the photos'
+       annotations and so in the catalog (`variants`), with
+       [sharp](https://sharp.pixelplumbing.com/) as a dev dependency of
+       `grigri_api`. The API passes them on (`GrigriPic`, the deck's
+       `covers`; [API](api.md)). The app's plan thumbnails and Discover
+       covers, and the [landing page](landing.md)'s cards, load the
+       narrowest copy whose pixels cover what they show at the screen's
+       pixel ratio, else the photo itself (no copies yet, none big
+       enough), and fall back to the photo if a copy fails. Until the
+       owner's next loader run (the next RC and GA deploys run it)
+       there are no copies and nothing changes.
+     - Tests: the loader's copies (sizes, orientation, PNG, reuse), the
+       API passing them on, the app's choice of copy and its fallback,
+       and the disk cache (saving, reading back, size and age limits,
+       damaged files, no disk).
+     - Cost: storage grows from ~12 MB to ~20 MB of GriGri Pics
+       ($0.0005/month); making the copies once costs about 50 GETs and
+       45 PUTs ($0.0003). In return phones stop downloading the same
+       photos on every launch, and thumbnails and small cards load
+       copies of roughly a tenth of the bytes: less CloudFront data
+       transfer once past its free tier, and less of the people's data
+       plans. Both are the cheapest options: no new service, the
+       existing bucket and CDN, and a cache of the app's own instead of
+       a package.
+
 109. **Fix the cost review's findings, without changing the user
      experience or features (infrastructure).**
      - [Backend](backend.md#cost): profile photo, chat media, plan photo, wall

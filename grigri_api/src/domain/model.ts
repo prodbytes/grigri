@@ -256,6 +256,19 @@ export interface GrigriPic {
   licenseUrl: string;
   /** Where it comes from (its page, e.g. on Wikimedia Commons). */
   source: string;
+  /**
+   * Its smaller copies, narrowest first (pics/load.mjs): screens show the
+   * smallest that covers them, else the photo. None until the loader has
+   * made them, and none for photos too small to need them.
+   */
+  variants?: PicVariant[];
+}
+
+/** A smaller copy of a GriGri Pics photo: served at /pics/<key>, `width` x `height` pixels. */
+export interface PicVariant {
+  key: string;
+  width: number;
+  height: number;
 }
 
 /** A crag (or a whole climbing area: ids `area:<name>`) and its photos, in GriGri Pics' catalog. */

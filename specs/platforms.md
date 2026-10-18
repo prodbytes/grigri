@@ -81,6 +81,27 @@ and a file chooser on the web (the site's CSP already allows `data:` and
 `blob:` images). They're uploaded to the backend's photo store
 ([matching](matching.md#data-the-backend-api)).
 
+**Photo cache**: on Android and iOS the app keeps the photos it shows
+(avatars, chat and plan photos, ads', GriGri Pics) on the device's disk
+([lib/data/photo_cache_io.dart](../grigri_app/lib/data/photo_cache_io.dart)),
+so a photo is downloaded once rather than on every launch (Flutter's own
+`NetworkImage` keeps them in memory only). It's a small image provider
+of the app's own (no new package): one file per photo URL, named after
+its SHA-1, in `photos/` under the app's cache directory (path_provider).
+Photos' URLs never change what they serve (keys are new for every
+upload; GriGri Pics' follow their source, and are cached for a year), so
+a saved photo is never checked again. A photo is saved only once it
+decodes, written aside and moved in; one that's damaged is downloaded
+again. It's bounded: at most 100 MB, the least recently shown going
+first, and photos not shown for 30 days are deleted (checked when the
+app first loads a photo, and whenever it's over its size); the OS may
+also clear it. With no disk to use, photos load from the network as
+before. Downloads report their progress, as before (the chat's
+spinner). The web keeps using the browser's cache, which already keeps
+them by their `Cache-Control`. The cache isn't cleared on signing out: it
+holds only photos the app showed, in its own sandbox, as a browser's
+cache would.
+
 **The route finder's camera** ([route-finder.md](route-finder.md)) is
 the [camera](https://pub.dev/packages/camera) plugin (Flutter's own:
 CameraX on Android, which declares the camera permission itself;

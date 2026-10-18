@@ -90,6 +90,16 @@ at `/pics/catalog.json`, through the site's CloudFront. The bucket policy
 lets CloudFront read that one object as well as `pics/crags/*`. The
 photos are at `/pics/<key>` and load lazily.
 
+The strip's cards and the demo card load the smallest of the photo's
+[smaller copies](pics.md#sizes) whose pixels cover the card as laid out
+(its width, or its height times the photo's shape, cropped to fill it,
+times the screen's `devicePixelRatio`, and 5% more for the cards' hover
+zoom), else the photo itself: when the catalog lists no copies, or none
+is big enough. A wider window later loads a bigger one (never a
+smaller), and a copy that fails to load gives way to the photo. The
+hero, which fills the window and drifts, always shows the photo
+itself.
+
 ## Security
 
 The index's CSP ([grigri_infra/site.yaml](../grigri_infra/site.yaml),
@@ -109,7 +119,8 @@ as HTML, and only `https:` source links become links.
   it). The photos are cached for a year. All of this is inside
   CloudFront's free tier (1 TB and 10 million requests a month). Beyond
   the free tier, a visit that loads the hero and the first cards (about
-  2–3 MB) costs about $0.0002 in data transfer.
+  2–3 MB; less once the loader has made the photos' smaller copies,
+  which the cards load) costs about $0.0002 in data transfer.
 - **Why this way**: a "photos near me" API call would be a Lambda and
   HTTP API request per visit, plus an unauthenticated route to defend.
   Sorting about 50 crags in the browser costs nothing and keeps the

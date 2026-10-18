@@ -311,6 +311,58 @@ function safeUrl(url) {
 
 const picUrl = (photo) => '/pics/' + String(photo.key).replace(/^\/+/, '');
 
+// The crag cards' photos grow 5% on hover (.crag:hover in index.css).
+const CARD_ZOOM = 1.05;
+
+// What to load for a photo filling a box of w x h CSS pixels, cropped to
+// cover it (object-fit: cover), at this screen's density and zoomed in by
+// `zoom`: the narrowest of its smaller copies (`variants`, from the
+// loader) whose pixels cover the box, else the photo itself, as it is when
+// there are none or the box isn't known. Its `width` is Infinity for the
+// photo itself.
+function picFor(photo, w, h, zoom = 1) {
+  const full = { url: picUrl(photo), width: Infinity };
+  const ratio = window.devicePixelRatio || 1;
+  if (!(w > 0 && h > 0) || !Array.isArray(photo.variants)) return full;
+  let best = null;
+  for (const v of photo.variants) {
+    if (!v || typeof v.key !== 'string' || !(v.width > 0) || !(v.height > 0)) continue;
+    const needed = Math.max(w, (h * v.width) / v.height) * ratio * zoom;
+    if (v.width >= needed && (!best || v.width < best.width)) best = v;
+  }
+  return best ? { url: picUrl(best), width: best.width } : full;
+}
+
+// Loads the photo that covers the image's box (its parent's, which it
+// fills) as it's laid out now. Only ever a bigger one than it has (a
+// window made wider), and a copy that fails gives way to the photo.
+function fitImage(img, photo, zoom = 1) {
+  const box = img.parentElement;
+  const pick = picFor(photo, box?.clientWidth, box?.clientHeight, zoom);
+  if (img.dataset.photo === photo.key && Number(img.dataset.width) >= pick.width) return;
+  img.dataset.photo = photo.key;
+  img.dataset.width = String(pick.width);
+  img.onerror = pick.width === Infinity ? null : () => {
+    img.onerror = null;
+    img.dataset.width = 'Infinity';
+    img.src = picUrl(photo);
+  };
+  img.src = pick.url;
+}
+
+// The images whose box can change with the window, and their photos.
+const fitted = new Map();
+let refit = 0;
+window.addEventListener('resize', () => {
+  clearTimeout(refit);
+  refit = setTimeout(() => {
+    for (const [img, [photo, zoom]] of fitted) {
+      if (img.isConnected) fitImage(img, photo, zoom);
+      else fitted.delete(img);
+    }
+  }, 200);
+});
+
 // Crags with photos, nearest first when we know where the visitor is.
 function picks() {
   const crags = (catalog?.crags ?? [])
@@ -324,9 +376,16 @@ function picks() {
   return { nearest: crags[0]?.dist ?? null, cards: cards.slice(0, MAX_CARDS) };
 }
 
-function showImage(img, photo) {
+// The hero's photo is the photo itself (it fills the window, and drifts);
+// the demo card's, the smallest copy that covers it (`fit`).
+function showImage(img, photo, fit = false) {
   if (!img || !photo) return;
-  img.src = picUrl(photo);
+  if (fit) {
+    fitImage(img, photo);
+    fitted.set(img, [photo, 1]);
+  } else {
+    img.src = picUrl(photo);
+  }
   img.hidden = false;
 }
 
@@ -339,7 +398,7 @@ function card({ crag, photo }) {
   const img = document.createElement('img');
   img.loading = 'lazy';
   img.decoding = 'async';
-  img.src = picUrl(photo);
+  // Its src once it's laid out (render): the copy that covers it.
   img.alt = photo.caption || crag.name;
   if (photo.width && photo.height) {
     img.width = photo.width;
@@ -399,6 +458,11 @@ function render(note) {
   noteEl.textContent = note || t('nearPrivacy');
 
   $('strip').replaceChildren(...cards.map(card));
+  for (const img of fitted.keys()) if (!img.isConnected) fitted.delete(img);
+  $('strip').querySelectorAll('.crag-photo img').forEach((img, i) => {
+    fitImage(img, cards[i].photo, CARD_ZOOM);
+    fitted.set(img, [cards[i].photo, CARD_ZOOM]);
+  });
   // The nearest crag behind the pitch, and on the demo card.
   showImage($('hero-bg'), cards[0]?.photo);
   // The demo card's plans: up to three other crags (the hero's last).
@@ -424,7 +488,7 @@ function showDemo() {
   const plan = DEMO[demoAt % DEMO.length];
   const pick = demo.length ? demo[demoAt % demo.length] : null;
   const img = $('deck-photo');
-  if (pick) showImage(img, pick.photo);
+  if (pick) showImage(img, pick.photo, true);
   else if (img) img.hidden = true;
   $('deck-crag').textContent = pick ? pick.crag.name : plan.crag;
   for (const [id, key] of [['deck-when', plan.when], ['deck-who', plan.who]]) {

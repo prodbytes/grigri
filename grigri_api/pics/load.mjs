@@ -8,8 +8,12 @@
 //   2. each photo carries its metadata as an S3 annotation named "grigri"
 //      (the crag, its point, the caption, the author and the license):
 //      the source of truth, kept on the object itself;
-//   3. photos no longer in crags.json are deleted;
-//   4. pics/catalog.json is rebuilt from the annotations: the one object
+//   3. each photo wider than 640, 1080 or 1440 px gets a copy that wide
+//      (variants.mjs), at pics/crags/<crag>/<hash>-w<width>.<ext>,
+//      immutable too, recorded in its annotation (`variants`): made once,
+//      from the photo in the bucket;
+//   4. photos no longer in crags.json are deleted, with their copies;
+//   5. pics/catalog.json is rebuilt from the annotations: the one object
 //      the API reads (once per warm function) to look photos up.
 // Idempotent: a second run downloads and uploads nothing.
 //
@@ -28,11 +32,13 @@ import { fileURLToPath } from 'node:url';
 import {
   DeleteObjectCommand,
   GetObjectAnnotationCommand,
+  GetObjectCommand,
   ListObjectsV2Command,
   PutObjectAnnotationCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
+import { isVariantKey, makeVariants, originalOf, recordedVariants, variantKey } from './variants.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bucket = process.env.PICS_BUCKET ?? '';
@@ -100,7 +106,10 @@ async function fetchPhoto(photo, file) {
 
 const existing = new Set(await listKeys());
 const wanted = new Set();
+// Photos that failed this run: kept as they were, copies too.
+const kept = new Set();
 let uploaded = 0;
+let copies = 0;
 let failed = 0;
 for (const crag of dataset.crags) {
   for (const photo of crag.photos) {
@@ -108,20 +117,10 @@ for (const crag of dataset.crags) {
     const key = keyOf(crag, photo, ext);
     const object = `pics/${key}`;
     wanted.add(object);
-    const annotation = JSON.stringify({
-      crag: { id: crag.id, name: crag.name, area: crag.area, lat: crag.lat, lon: crag.lon },
-      key,
-      width: photo.width,
-      height: photo.height,
-      caption: photo.caption,
-      author: photo.author,
-      license: photo.license,
-      licenseUrl: photo.licenseUrl,
-      source: photo.source,
-    });
     try {
+      let bytes;
       if (!existing.has(object)) {
-        const bytes = await fetchPhoto(photo, join(cache, key));
+        bytes = await fetchPhoto(photo, join(cache, key));
         await s3.send(new PutObjectCommand({
           Bucket: bucket,
           Key: object,
@@ -132,8 +131,32 @@ for (const crag of dataset.crags) {
         }));
         uploaded++;
       }
-      // The metadata, replaced when crags.json changed it.
       const current = await getAnnotation(object);
+      // Its smaller copies: the ones recorded, else made now. Without them
+      // (they failed) the catalog has none, and screens use the photo.
+      let variants = recordedVariants(current, existing);
+      if (!variants) {
+        try {
+          variants = await putVariants(key, ext, bytes ?? (await storedBytes(object)));
+          copies += variants.length;
+        } catch (e) {
+          console.error(`warning: ${crag.name}: ${photo.source}: no smaller copies: ${e.message ?? e}`);
+        }
+      }
+      for (const v of variants ?? []) wanted.add(`pics/${v.key}`);
+      const annotation = JSON.stringify({
+        crag: { id: crag.id, name: crag.name, area: crag.area, lat: crag.lat, lon: crag.lon },
+        key,
+        width: photo.width,
+        height: photo.height,
+        caption: photo.caption,
+        author: photo.author,
+        license: photo.license,
+        licenseUrl: photo.licenseUrl,
+        source: photo.source,
+        ...(variants ? { variants } : {}),
+      });
+      // The metadata, replaced when crags.json (or its copies) changed it.
       if (current !== annotation) {
         await s3.send(new PutObjectAnnotationCommand({
           Bucket: bucket,
@@ -146,15 +169,18 @@ for (const crag of dataset.crags) {
       // One photo failing (the source moved, a network blip) skips it.
       failed++;
       wanted.delete(object);
+      kept.add(object);
       console.error(`warning: ${crag.name}: ${photo.source}: ${e.message ?? e}`);
     }
   }
 }
 
-// Photos taken out of crags.json go (a failed one stays, as it was).
+// Photos taken out of crags.json go, with their copies (a failed one
+// stays, as it was), and copies no longer made.
 let deleted = 0;
 for (const object of existing) {
   if (wanted.has(object)) continue;
+  if (isVariantKey(object) && kept.has(originalOf(object))) continue;
   if (dataset.crags.some((c) => c.photos.some((p) => `pics/${keyOf(c, p, extOf(p))}` === object))) continue;
   await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: object }));
   deleted++;
@@ -163,6 +189,8 @@ for (const object of existing) {
 // The catalog, from the annotations (what's in the bucket, not the file).
 const crags = new Map();
 for (const object of await listKeys()) {
+  // Copies carry no annotation: their photo's records them.
+  if (isVariantKey(object)) continue;
   const raw = await getAnnotation(object);
   if (!raw) continue;
   const a = JSON.parse(raw);
@@ -188,7 +216,31 @@ await s3.send(new PutObjectCommand({
   CacheControl: 'public, max-age=3600',
 }));
 const photos = catalog.crags.reduce((n, c) => n + c.photos.length, 0);
-console.log(`pics: ${catalog.crags.length} crags, ${photos} photos in ${bucket} (${uploaded} uploaded, ${deleted} deleted, ${failed} failed)`);
+console.log(`pics: ${catalog.crags.length} crags, ${photos} photos in ${bucket} (${uploaded} uploaded, ${copies} copies made, ${deleted} deleted, ${failed} failed)`);
+
+/** A photo's bytes, as the bucket has them (to make its copies from). */
+async function storedBytes(object) {
+  const out = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: object }));
+  return Buffer.from(await out.Body.transformToByteArray());
+}
+
+/** Makes and puts a photo's smaller copies; what its annotation records. */
+async function putVariants(key, ext, bytes) {
+  const variants = [];
+  for (const v of await makeVariants(bytes, ext)) {
+    const vkey = variantKey(key, v.width);
+    await s3.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: `pics/${vkey}`,
+      Body: v.bytes,
+      ContentType: ext === 'png' ? 'image/png' : 'image/jpeg',
+      // Made from an immutable photo, at a fixed width: never changes.
+      CacheControl: 'public, max-age=31536000, immutable',
+    }));
+    variants.push({ key: vkey, width: v.width, height: v.height });
+  }
+  return variants;
+}
 
 async function getAnnotation(object) {
   try {
