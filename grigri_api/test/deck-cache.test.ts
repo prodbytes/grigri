@@ -21,7 +21,7 @@ let rbacr: FakeRbacr;
 let auth: Auth;
 let api: Api;
 
-const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
+const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, isAdmin: async () => admin });
 const ada = who('ada');
 const ben = who('ben');
 const cy = who('cy');

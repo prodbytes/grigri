@@ -72,7 +72,9 @@ indexes (gsi1 and gsi2 project everything, gsi3 only keys), and TTL on
 | Report | `REPORT#<id>` | `REPORT` | gsi1 while open: `REPORTS#open`, `<time>#<id>` | the Report (a copy of the content, whose, who reported, why), plus `ttl` once handled (a year later) |
 | Block | `CLIMBER#<blocker>` | `BLOCK#<blocked>` | | I blocked them ([specs/moderation.md](../specs/moderation.md)) |
 | Blocked by | `CLIMBER#<blocked>` | `BLOCKEDBY#<blocker>` | | the mirror, never returned: one `begins_with(sk, 'BLOCK')` query gives a climber's blocks either way |
-| Admins | `META#ADMINS` | `META` | | `ids`, a string set: whom to tell of new reports (checked with rbacr first) |
+| Admins | `META#ADMINS` | `META` | | `ids`, a string set: whom to tell of new reports (checked with rbacr first) and of team chat messages |
+| Team message | `TEAM#<climberId>` | `MSG#<time>#<messageId>` | | the TeamMessage ([specs/team-chat.md](../specs/team-chat.md)): `fromTeam`, and `adminId` on the team's answers |
+| Team chat | `TEAM#<climberId>` | `CHAT` | gsi1: `TEAMCHATS`, `<lastTime>#<climberId>` | the last message (`lastTime`, `lastText`, its first 160 characters, `lastFromTeam`): the admins' list |
 | Change log entry | `CHANGES` | `<time>#<kind>#<id>#<random>` | | `kind` (`plan`, `ad`, `adSettings`, `climber`) and `id`: what a write changed, for the decks' cache (`src/deck-cache.ts`, [specs/backend.md](../specs/backend.md#the-decks-cache)); plan writes add it in their transaction; `ttl` a day later |
 
 Access patterns: every authenticated request gets its session (an
@@ -84,7 +86,9 @@ requests" queries gsi2; the match scoring run lists every profile from gsi1
 (only open requests carry those keys); a plan's requests and chat are one
 partition (`begins_with` on `REQ#` / `MSG#`, `after` as a key range). A
 climber's memberships, passes, notices and blocks are one partition; open
-reports are gsi1 `REPORTS#open`.
+reports are gsi1 `REPORTS#open`. A climber's team chat is one partition
+(`TEAM#<id>`); the admins' list is one page of gsi1 `TEAMCHATS`, newest
+first, at most 100.
 
 Races: accept, reject, leave, admin answers and plan edits write the plan
 (version check), its changed requests, memberships and notes in one

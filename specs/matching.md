@@ -227,6 +227,9 @@ newest first, with when it happened:
 - **"You're in: <plan>"** when a group accepted me (tap for the chat);
 - **"Not this time: <plan>"** when one declined me (tap for the plan).
 
+The [Grigri team chat](team-chat.md)'s news is a badge on Chats instead,
+not a notification here.
+
 Opening the tab marks them read; the ones that were new stay highlighted
 ("New") until I come back to it, and so do ones that arrive while it's
 open.
@@ -236,7 +239,8 @@ open.
 Each plan has one chat for its whole group, with the plan pinned on top.
 It notes who joined and who left, and holds the
 [join requests](#join-requests-in-the-group-chat) for the group to
-answer. Chats lists them, most recent first.
+answer. Chats lists them, most recent first, under the
+[Grigri team chat](team-chat.md), which is always on top.
 
 A message is text, **one photo or one video**, or both. The attach button
 offers only photos and videos: take a photo or record a video (where the
@@ -310,10 +314,11 @@ and the app also polls, only what's on screen, as a safety net:
 - after signing in: my profile, then my plans, my requests, the requests
   waiting for me, the deck, notifications (and, for admins, everyone);
 - a tab, when I open it (Discover its deck, Chats every chat's latest
-  messages, Admin its list of everyone), and every **15 seconds** my plans,
+  messages and my [team chat](team-chat.md), and admins' team chats list,
+  Admin its list of everyone), and every **15 seconds** my plans,
   requests to review and notifications, plus the open tab; every
   **2 minutes** instead while the live connection is up;
-- an open **chat every 3 seconds**, asking only for messages after the
+- an open **chat every 3 seconds** (a team chat too), asking only for messages after the
   last one it has; every **minute** instead while the live connection is
   up;
 - on a live update's hint, just what it names (a chat, requests,

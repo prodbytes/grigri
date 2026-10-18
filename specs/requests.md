@@ -1674,3 +1674,129 @@ spec.
        from about $0.0039 to $0.00005 (plus a full read per busy instance
        every 5 minutes, shared). No new resource: the table and the
        function's memory.
+
+106. **Fix the cost review's findings, without changing the user
+     experience or features (per-request lookups).**
+     - [API](api.md#sessions), [backend](backend.md) and
+       [sign-in](sign-in.md): the session item keeps the account's
+       `climberId`, from `POST /api/session` (one read of the sign-in
+       link at sign-in) or, for sessions made before and new accounts,
+       from the first request that finds a profile (one conditional
+       write, only for the session's own subject). Requests then read the
+       session and the profile, not the link; a kept climber whose
+       profile is gone falls back to the link. Account deletion still
+       ends every session, so no session keeps a deleted climber.
+     - [Live updates](live-updates.md): the authorizer uses the climber
+       the session keeps, and looks the link up only without one.
+     - [API](api.md) and [roles](roles.md): the admin check is asked only
+       by the requests that need it (admin routes, `GET /api/me`, the
+       deck's match scores, deleting someone else's plan photo, route or
+       ad), once per request, no longer on every request; the blocked
+       check, the admin route's and Premium route's checks run alongside
+       the profile read, and are applied in the same order as before
+       (no profile, blocked, admins only, Premium only).
+     - [Premium](premium.md#who-is-premium): `GET /api/premium` uses
+       rbacr's kept answer (at most a minute old) unless asked
+       `?fresh=1`, or my subscription disagrees with it (paid but no
+       role, or the role held after it ended). The app asks afresh on
+       **I've paid: check again**, and on Premium refreshes after it
+       opened Stripe's Checkout or billing portal until Premium changes,
+       so a payment still shows at once; foreground resumes otherwise use
+       the kept answer. `POST /api/premium/apple` still asks afresh.
+     - Tests: sessions keep the climber (and later requests skip the
+       link), a stale one falls back, the blocked and admin checks still
+       apply with it, account deletion leaves no stale climber, admin is
+       asked only where needed and once, the authorizer uses the kept
+       climber; `GET /api/premium`'s fresh rules; the app asks afresh
+       after Checkout and on "check again", and not otherwise.
+     - Cost: no new resource. Per signed-in request one DynamoDB read
+       fewer (the sign-in link: about $0.06 per million requests) and one
+       rbacr call fewer on most routes (the admin check), with the
+       remaining lookups in parallel, so requests are also shorter
+       (Lambda bills by duration). Each older session pays one write
+       ($0.625 per million) once; sign-in pays one more read. `GET
+       /api/premium` on resumes no longer calls rbacr each time.
+
+109. **Fix the cost review's findings, without changing the user
+     experience or features (infrastructure).**
+     - [Backend](backend.md#cost): profile photo, chat media, plan photo, wall
+       view and ad media uploads are stored as S3 Intelligent-Tiering,
+       set by the presigned POST (`x-amz-storage-class`, fixed by its
+       policy; in AWS only, Floci keeps its default). Pending uploads
+       still expire after a day (the tag rule doesn't care about the
+       class, and Intelligent-Tiering has no minimum duration), and
+       keeping one still just clears its tag.
+     - [Deploy](deploy.md#caching): `/` and `/app*` use the site's own
+       cache policy (`SiteFilesCachePolicy`, MinTTL and DefaultTTL a
+       day) instead of Managed-CachingOptimized (MinTTL 1 s). Browsers
+       still revalidate every file (`no-cache`), now against the edge
+       instead of S3; every deploy already invalidated `/*` and waited
+       for it, so a new release is still live at once.
+     - The three functions log as JSON with Lambda's own lines at WARN
+       (no more START/END/REPORT per invocation) and the app's at INFO,
+       so every line the app writes stays.
+     - Specs' and comments' cost figures made true: the IoT keep-alive
+       pings (most of live updates' cost: about 6.5 cents per thousand
+       person-hours, not half a cent; 12–24× cheaper than polling, not
+       20–30×), CloudFront's per-request charge, how many API calls a
+       user makes with and without live updates (~4.8 million a month
+       per 1,000 users at 15 s polling), the sample ads' photos cached
+       for a day (not a year), and the IoT authorizer's comment (under a
+       tenth of a cent per thousand people-hours, not a few cents).
+     - Cost: Intelligent-Tiering brings chat media's and plan photos'
+       steady-state storage from ~$0.80/~$8 to ~$0.25/~$2.40 a month
+       (100/1,000 plans a month), plus $0.0025 per 1,000 objects
+       monitored; no transition fee, no retrieval fee. The cache policy
+       is free and saves the S3 GETs of every app open (~$0.014 per
+       1,000 opens). JSON logs without Lambda's own lines save ~$0.17
+       per million invocations of ingestion.
+
+110. **In the chat, always have a Grigri team chat available so that users
+     can send messages directly to us. Let all admin users see those
+     chats. Start every one of them with a message thanking the user and
+     asking for feedback.**
+     - New [Grigri team chat](team-chat.md): every climber's own chat with
+       Grigri, the first row of [Chats](screens.md) (the Grigri logo,
+       "Grigri team"), even with no plans (the plans' empty state stays
+       under it). It opens with the team's welcome, in the six languages:
+       "Thanks for climbing with Grigri! We'd love to hear what you think:
+       what works, what doesn't, what you'd like next. Write to us here
+       anytime." The app shows it; it's never stored.
+     - Text only, with the plan chat's limits (1–2000 characters) and the
+       [filter](moderation.md#the-filter); no photos or videos (the chat
+       media uploads are per plan). No report or block in it.
+     - Admins: a **Team chats** section in Chats, one row per climber who
+       wrote, the latest first (at most 100), "To answer" while the
+       climber wrote last. Any admin answers, shown to the climber as the
+       Grigri team; the admins see "<name> for the team".
+     - Badges and hints: a climber's message gives every known admin the
+       `team` notice and hint; an answer gives them to the climber (and a
+       hint to the other admins). The `team` notice badges Chats, not
+       Notifications; opening a team chat reads it
+       (`POST /api/team/read`), reading Notifications doesn't. Polling as
+       a plan chat (3 s open, a minute while live, `after=`).
+     - [API](api.md): `GET`/`POST /api/team/messages`,
+       `POST /api/team/read`; admin only `GET /api/admin/team`,
+       `GET`/`POST /api/admin/team/{id}/messages`. The climber's routes
+       never carry which admin answered.
+     - [Deleting my account](sign-in.md#deleting-my-account) deletes my
+       team chat, the team's answers too.
+     - Data ([grigri_api/README.md](../grigri_api/README.md)): messages
+       under `TEAM#<climberId>` (`MSG#<time>#<id>`), and one `CHAT` item
+       per chat with its last message, on gsi1 `TEAMCHATS` for the
+       admins' list.
+     - Tests: the API (writing, the filter, length and text only,
+       `after=`, admins list and answer, the climber never sees which
+       admin, non-admins can't list or read others', the badge, deletion)
+       and the app (the team chat on top with its welcome for a climber
+       with no plans, the answer as Grigri team with a badge, an admin's
+       team chats and answer, nobody else sees them).
+     - Cost: nothing for a climber who never writes (the welcome isn't
+       stored, so no item exists). A message is one request and a batch
+       write of two small items (the message and its chat's last message,
+       with its gsi1 copy): about 3 write units, $0.000004 on demand, plus
+       one write per admin for their notice and a few IoT Core hints
+       ($1 a million). The admins' list is one bounded index query, never
+       a scan. No new resource: the same table, gsi1, Lambda and IoT Core
+       as plan chats, the cheapest layout that still lists the chats
+       newest first.

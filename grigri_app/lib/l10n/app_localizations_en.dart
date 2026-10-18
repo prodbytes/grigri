@@ -1627,4 +1627,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get adShowsEverywhere => 'Shows everywhere';
+
+  @override
+  String get teamChatTitle => 'Grigri team';
+
+  @override
+  String get teamChatWelcome =>
+      'Thanks for climbing with Grigri! We\'d love to hear what you think: what works, what doesn\'t, what you\'d like next. Write to us here anytime.';
+
+  @override
+  String get teamChatsSection => 'Team chats';
+
+  @override
+  String teamAnswerBy(String name) {
+    return '$name for the team';
+  }
+
+  @override
+  String get teamMessageHint => 'Message the Grigri team';
+
+  @override
+  String get teamAnswerHint => 'Answer as the Grigri team';
+
+  @override
+  String get teamAwaitingAnswer => 'To answer';
 }

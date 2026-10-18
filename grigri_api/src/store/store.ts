@@ -25,7 +25,9 @@ import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '..
 import type { Report } from '../domain/moderation.js';
 import type { Delivery, Effects } from '../domain/rules.js';
 import { type Attachment, type Climber, type DayWindow, type JoinRequest, type Location, type Message, type Notice, type Plan, type PlanPic, type Price, isOpen } from '../domain/model.js';
+import type { TeamChat, TeamMessage } from '../domain/team.js';
 import type { Wall } from '../domain/walls.js';
+import { TEAM_NOTICE_ID, TEAM_PREVIEW } from '../domain/team.js';
 import { index, key, prefix } from './keys.js';
 
 type Item = Record<string, unknown>;
@@ -74,6 +76,7 @@ export class Store implements SessionStore, AppleTokenStore {
         ...(s.email ? { email: s.email } : {}),
         emailVerified: s.emailVerified,
         ...(s.name ? { name: s.name } : {}),
+        ...(s.climberId ? { climberId: s.climberId } : {}),
         createdAt: s.createdAt,
         lastUsedAt: s.lastUsedAt,
         // The table's TTL attribute: DynamoDB deletes the item after it.
@@ -99,6 +102,7 @@ export class Store implements SessionStore, AppleTokenStore {
       ...(typeof Item.email === 'string' ? { email: Item.email } : {}),
       emailVerified: Item.emailVerified === true,
       ...(typeof Item.name === 'string' ? { name: Item.name } : {}),
+      ...(typeof Item.climberId === 'string' ? { climberId: Item.climberId } : {}),
       createdAt: Item.createdAt as string,
       lastUsedAt: Item.lastUsedAt as string,
       ttl: Item.ttl as number,
@@ -115,6 +119,21 @@ export class Store implements SessionStore, AppleTokenStore {
         ConditionExpression: 'attribute_exists(pk) AND lastUsedAt = :previous',
         ExpressionAttributeNames: { '#ttl': 'ttl' },
         ExpressionAttributeValues: { ':now': lastUsedAt, ':ttl': ttl, ':previous': previous },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  async rememberClimberId(id: string, subject: string, climberId: string): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.session(id),
+        UpdateExpression: 'SET climberId = :climberId',
+        // Not if it was revoked meanwhile; only ever the session's own account's.
+        ConditionExpression: 'attribute_exists(pk) AND subject = :subject',
+        ExpressionAttributeValues: { ':climberId': climberId, ':subject': subject },
       }));
     } catch (e) {
       if (!isConditionFailure(e)) throw e;
@@ -739,11 +758,21 @@ export class Store implements SessionStore, AppleTokenStore {
     return items.map(toNotice).sort((a, b) => (a.time > b.time ? -1 : a.time < b.time ? 1 : 0));
   }
 
+  /** Marks my notifications read: all of them but the team chat's (opening that chat reads it). */
   async markNoticesRead(climberId: string): Promise<void> {
-    const unread = (await this.notices(climberId)).filter((n) => !n.read);
-    await Promise.all(unread.map((n) => this.doc.send(new UpdateCommand({
+    const unread = (await this.notices(climberId)).filter((n) => !n.read && n.id !== TEAM_NOTICE_ID);
+    await this.markRead(climberId, unread.map((n) => n.id));
+  }
+
+  /** Marks one notice read (none there: nothing). */
+  async markNoticeRead(climberId: string, noticeId: string): Promise<void> {
+    await this.markRead(climberId, [noticeId]);
+  }
+
+  private async markRead(climberId: string, noticeIds: string[]): Promise<void> {
+    await Promise.all(noticeIds.map((noticeId) => this.doc.send(new UpdateCommand({
       TableName: this.table,
-      Key: key.notice(climberId, n.id),
+      Key: key.notice(climberId, noticeId),
       UpdateExpression: 'SET #read = :true',
       ConditionExpression: 'attribute_exists(pk)',
       ExpressionAttributeNames: { '#read': 'read' },
@@ -775,6 +804,66 @@ export class Store implements SessionStore, AppleTokenStore {
 
   async putMessage(message: Message): Promise<void> {
     await this.doc.send(new PutCommand({ TableName: this.table, Item: messageItem(message) }));
+  }
+
+  // --- The Grigri team chat (specs/team-chat.md) -----------------------------
+
+  /** A climber's team chat, oldest first; only those after `afterIso` when given. */
+  async teamMessages(climberId: string, afterIso?: string): Promise<TeamMessage[]> {
+    const pk = prefix.team(climberId);
+    const input: Omit<QueryCommandInput, 'TableName'> = afterIso
+      ? {
+          KeyConditionExpression: 'pk = :pk AND sk BETWEEN :from AND :to',
+          ExpressionAttributeValues: { ':pk': pk, ':from': `${prefix.message}${afterIso}#\uffff`, ':to': `${prefix.message}\uffff` },
+        }
+      : {
+          KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
+          ExpressionAttributeValues: { ':pk': pk, ':sk': prefix.message },
+        };
+    return (await this.query(input)).map(toTeamMessage);
+  }
+
+  /** Puts a team message and its chat's last message (the admins' list), in one batch: two writes. */
+  async putTeamMessage(m: TeamMessage): Promise<void> {
+    const chat = {
+      ...key.teamChat(m.climberId),
+      type: 'teamChat',
+      climberId: m.climberId,
+      lastTime: m.time,
+      lastText: [...m.text].slice(0, TEAM_PREVIEW).join(''),
+      lastFromTeam: m.fromTeam,
+      gsi1pk: index.teamChats.pk,
+      gsi1sk: `${m.time}#${m.climberId}`,
+    };
+    await this.batchWrite([{ PutRequest: { Item: teamMessageItem(m) } }, { PutRequest: { Item: chat } }]);
+  }
+
+  /** The team chats with a message, the latest first: one page of the index, at most `limit`. */
+  async teamChats(limit: number): Promise<TeamChat[]> {
+    const page = await this.doc.send(new QueryCommand({
+      TableName: this.table,
+      IndexName: index.teamChats.name,
+      KeyConditionExpression: 'gsi1pk = :pk',
+      ExpressionAttributeValues: { ':pk': index.teamChats.pk },
+      ScanIndexForward: false,
+      Limit: limit,
+    }));
+    return ((page.Items ?? []) as Item[]).map((i) => ({
+      climberId: i.climberId as string,
+      lastTime: i.lastTime as string,
+      lastText: i.lastText as string,
+      lastFromTeam: i.lastFromTeam === true,
+    }));
+  }
+
+  /** Deletes a climber's whole team chat: its messages and its place in the admins' list. */
+  async deleteTeamChat(climberId: string): Promise<void> {
+    const items = await this.query({
+      KeyConditionExpression: 'pk = :pk',
+      ExpressionAttributeValues: { ':pk': prefix.team(climberId) },
+      ProjectionExpression: 'pk, sk',
+    });
+    await this.batchWrite(items.map((i) => ({ DeleteRequest: { Key: { pk: i.pk, sk: i.sk } } })));
   }
 
   // --- Plan pics ("Your Pics") ------------------------------------------------
@@ -1184,6 +1273,30 @@ function toMessage(i: Item): Message {
     time: i.time as string,
     ...(i.requestId ? { requestId: i.requestId as string } : {}),
     ...(i.attachment ? { attachment: i.attachment as Attachment } : {}),
+  };
+}
+
+export function teamMessageItem(m: TeamMessage): Item {
+  return {
+    ...key.teamMessage(m.climberId, m.time, m.id),
+    type: 'teamMessage',
+    id: m.id,
+    climberId: m.climberId,
+    fromTeam: m.fromTeam,
+    text: m.text,
+    time: m.time,
+    ...(m.adminId ? { adminId: m.adminId } : {}),
+  };
+}
+
+function toTeamMessage(i: Item): TeamMessage {
+  return {
+    id: i.id as string,
+    climberId: i.climberId as string,
+    fromTeam: i.fromTeam === true,
+    text: i.text as string,
+    time: i.time as string,
+    ...(typeof i.adminId === 'string' ? { adminId: i.adminId } : {}),
   };
 }
 

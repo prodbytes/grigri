@@ -13,7 +13,7 @@ let api: Api;
 let objects: Map<string, boolean>;
 let removed: string[];
 
-const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
+const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, isAdmin: async () => admin });
 const ada = who('ada');
 const ben = who('ben');
 const free = who('free');

@@ -17,6 +17,7 @@ import '../model/pics.dart';
 import '../model/plan.dart';
 import '../model/report.dart';
 import '../model/sector.dart';
+import '../model/team.dart';
 import 'api.dart';
 import 'app_store.dart';
 import 'auth.dart';
@@ -273,6 +274,13 @@ class GrigriStore extends ChangeNotifier {
   final _declinedHere = <String>{};
   List<Notice> _notices = [];
   final _messages = <String, List<Message>>{};
+
+  /// My Grigri team chat; null until loaded (specs/team-chat.md).
+  List<TeamMessage>? _team;
+
+  /// (Admins) the climbers' team chats opened, and the list of them.
+  final _teamOf = <String, List<TeamMessage>>{};
+  List<TeamChat> _teamChats = [];
   final _pics = <String, PlanPics>{};
   final _gone = <String>{};
   final _loaded = <Section>{};
@@ -329,6 +337,7 @@ class GrigriStore extends ChangeNotifier {
     _me = null;
     _admin = false;
     _premium = const Premium.none();
+    _billingPremium = null;
     _premiumPrices = const {};
     _appleAccountToken = null;
     _buying = false;
@@ -359,6 +368,9 @@ class GrigriStore extends ChangeNotifier {
     _declinedHere.clear();
     _notices = [];
     _messages.clear();
+    _team = null;
+    _teamOf.clear();
+    _teamChats = [];
     _pics.clear();
     _gone.clear();
     _loaded.clear();
@@ -587,9 +599,10 @@ class GrigriStore extends ChangeNotifier {
 
   /// My notifications, newest first.
   /// (Not about someone I blocked.)
+  /// (Not the team chat's: it badges Chats.)
   List<Notice> get notices => [
     for (final n in _notices)
-      if (!_blockedPeople.contains(n.climberId)) n,
+      if (!_blockedPeople.contains(n.climberId) && n.kind != NoticeKind.team) n,
   ];
 
   int get unreadNotices => notices.where((n) => !n.read).length;
@@ -755,6 +768,14 @@ class GrigriStore extends ChangeNotifier {
         if (planId != null && _pics.containsKey(planId)) {
           await loadPics(planId);
         }
+      case HintKind.team:
+        await Future.wait([
+          refreshNotices(),
+          if (_team != null) pollTeam(),
+          if (_admin) refreshTeamChats(),
+          if (_admin)
+            for (final id in _teamOf.keys.toList()) pollTeamOf(id),
+        ]);
       case HintKind.match || HintKind.unknown:
         await Future.wait([
           refreshPlans(),
@@ -772,6 +793,7 @@ class GrigriStore extends ChangeNotifier {
       refreshRequests(),
       refreshNotices(),
       for (final id in _messages.keys.toList()) pollMessages(id),
+      if (_team != null) pollTeam(),
     ]);
   }
 
@@ -972,7 +994,112 @@ class GrigriStore extends ChangeNotifier {
 
   /// Every chat's latest messages, for Chats.
   Future<void> refreshChats() async {
-    await Future.wait([for (final id in _mine) pollMessages(id)]);
+    await Future.wait([
+      for (final id in _mine) pollMessages(id),
+      pollTeam(),
+      if (_admin) refreshTeamChats(),
+    ]);
+  }
+
+  // --- The Grigri team chat (specs/team-chat.md) -------------------------
+
+  /// My team chat, oldest first (without the welcome: the app's own).
+  List<TeamMessage> get teamMessages => _team ?? const [];
+
+  /// Whether the team answered me (or, for admins, someone wrote to the
+  /// team) since I last opened a team chat: a badge on Chats.
+  bool get teamUnread =>
+      _notices.any((n) => n.kind == NoticeKind.team && !n.read);
+
+  /// (Admins) the climbers' team chats with a message, the latest first;
+  /// mine is [teamMessages].
+  List<TeamChat> get teamChats => [
+    for (final c in _teamChats)
+      if (c.climberId != _me?.id) c,
+  ];
+
+  /// (Admins) a climber's team chat, oldest first.
+  List<TeamMessage> teamMessagesOf(String climberId) =>
+      _teamOf[climberId] ?? const [];
+
+  /// My team chat: all of it the first time, then what's new.
+  Future<void> pollTeam() {
+    final have = _team;
+    return _refresh(
+      () => api.teamMessages(
+        after: have == null || have.isEmpty ? null : have.last.time,
+      ),
+      (list) => _team = _mergeTeam(have, list),
+    );
+  }
+
+  /// (Admins) a climber's team chat: all of it the first time, then
+  /// what's new.
+  Future<void> pollTeamOf(String climberId) {
+    if (!_admin) return Future.value();
+    final have = _teamOf[climberId];
+    return _refresh(
+      () => api.adminTeamMessages(
+        climberId,
+        after: have == null || have.isEmpty ? null : have.last.time,
+      ),
+      (list) {
+        _learn(list.climbers);
+        _teamOf[climberId] = _mergeTeam(have, list.messages);
+      },
+    );
+  }
+
+  /// (Admins) the team chats' list.
+  Future<void> refreshTeamChats() async {
+    if (!_admin) return;
+    await _refresh(api.adminTeamChats, (list) {
+      _learn(list.climbers);
+      _teamChats = list.chats;
+    });
+  }
+
+  static List<TeamMessage> _mergeTeam(
+    List<TeamMessage>? have,
+    List<TeamMessage> fresh,
+  ) {
+    final byId = <String, TeamMessage>{
+      for (final m in have ?? const <TeamMessage>[]) m.id: m,
+      for (final m in fresh) m.id: m,
+    };
+    return byId.values.toList()..sort((a, b) => a.time.compareTo(b.time));
+  }
+
+  /// I write to the Grigri team. False when it failed.
+  Future<bool> sendToTeam(String text) async {
+    if (text.trim().isEmpty) return false;
+    final sent = await _act(() => api.sendToTeam(text.trim()));
+    if (sent == null) return false;
+    _team = _mergeTeam(_team, [sent]);
+    notifyListeners();
+    return true;
+  }
+
+  /// (Admins) I answer a climber as the Grigri team. False when it failed.
+  Future<bool> answerAsTeam(String climberId, String text) async {
+    if (text.trim().isEmpty) return false;
+    final sent = await _act(() => api.answerAsTeam(climberId, text.trim()));
+    if (sent == null) return false;
+    _teamOf[climberId] = _mergeTeam(_teamOf[climberId], [sent]);
+    notifyListeners();
+    unawaited(refreshTeamChats());
+    return true;
+  }
+
+  /// Opening a team chat: its badge goes.
+  Future<void> readTeam() async {
+    if (!teamUnread) return;
+    _notices = [
+      for (final n in _notices)
+        n.kind == NoticeKind.team ? n.copyWith(read: true) : n,
+    ];
+    notifyListeners();
+    await _ok(api.readTeam);
   }
 
   void _addMessages(
@@ -1078,7 +1205,11 @@ class GrigriStore extends ChangeNotifier {
   /// Marks my notifications read.
   Future<void> readNotices() async {
     if (unreadNotices == 0) return;
-    _notices = [for (final n in _notices) n.copyWith(read: true)];
+    // Not the team chat's: opening it reads it.
+    _notices = [
+      for (final n in _notices)
+        n.kind == NoticeKind.team ? n : n.copyWith(read: true),
+    ];
     notifyListeners();
     await _ok(api.readNotices);
   }
@@ -1399,11 +1530,24 @@ class GrigriStore extends ChangeNotifier {
   // --- Premium -----------------------------------------------------------
 
   /// My Premium and its prices again (the profile, and coming back from
-  /// Stripe's pages in the browser).
-  Future<void> refreshPremium() async {
-    await _refresh(api.premium, _applyOffer);
+  /// Stripe's pages in the browser). [fresh] ("check again"): the API asks
+  /// rbacr afresh; so does every refresh after Stripe's pages were opened,
+  /// until my Premium changes from what it was then.
+  Future<void> refreshPremium({bool fresh = false}) async {
+    final ask = fresh || _billingPremium != null;
+    final refreshed = await _refresh(
+      () => api.premium(fresh: ask),
+      _applyOffer,
+    );
+    if (refreshed && _billingPremium != null && _premium != _billingPremium) {
+      _billingPremium = null;
+    }
     await _premiumChanged();
   }
+
+  /// My Premium when Stripe's pages were last opened (checkout, the
+  /// portal); null: not since it changed.
+  Premium? _billingPremium;
 
   void _applyOffer(PremiumOffer offer) {
     _premium = offer.premium;
@@ -1423,7 +1567,9 @@ class GrigriStore extends ChangeNotifier {
   /// App Store sells it there ([buyInAppStore]).
   Future<bool> subscribe(PremiumPlan plan) async {
     final url = await _act(() => api.premiumCheckout(plan));
-    return url != null && await _openOrSay(url);
+    if (url == null || !await _openOrSay(url)) return false;
+    _billingPremium = _premium;
+    return true;
   }
 
   /// Where my subscription is managed: the App Store's subscriptions for
@@ -1434,7 +1580,9 @@ class GrigriStore extends ChangeNotifier {
       return _openOrSay(appStoreSubscriptionsUrl);
     }
     final url = await _act(api.premiumPortal);
-    return url != null && await _openOrSay(url);
+    if (url == null || !await _openOrSay(url)) return false;
+    _billingPremium = _premium;
+    return true;
   }
 
   // --- Premium through the App Store (iOS) ---------------------------------

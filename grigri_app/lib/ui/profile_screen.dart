@@ -477,7 +477,7 @@ class _PremiumCardState extends State<PremiumCard> {
                   style: text.bodySmall?.copyWith(color: Mountain.granite),
                 ),
                 TextButton(
-                  onPressed: store.refreshPremium,
+                  onPressed: () => store.refreshPremium(fresh: true),
                   child: Text(l.premiumCheckRefresh),
                 ),
               ],

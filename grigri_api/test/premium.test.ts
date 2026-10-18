@@ -126,7 +126,7 @@ describe('Premium routes', () => {
   let store: FakeStore;
   let stripe: ReturnType<typeof fakeStripe>;
   let rbacr: FakeRbacr;
-  const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', admin: false };
+  const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', isAdmin: async () => false };
 
   const make = (billing?: Billing) => {
     const auth = new Auth({ store: store.asStore(), verify: async () => { throw new Error('unused'); }, config: { devMode: false, isAdmin: async () => false }, clock: () => now });
@@ -145,6 +145,54 @@ describe('Premium routes', () => {
     store = new FakeStore();
     stripe = fakeStripe();
     rbacr = new FakeRbacr(() => now);
+  });
+
+  it("GET /api/premium asks rbacr afresh only when it may have just changed", async () => {
+    // rbacr's kept answer (a minute old, say) next to what it says now.
+    let kept: string[] = [];
+    const asked: boolean[] = [];
+    const auth = new Auth({ store: store.asStore(), verify: async () => { throw new Error('unused'); }, config: { devMode: false, isAdmin: async () => false }, clock: () => now });
+    const photos = { presign: async () => ({ url: '', fields: {} }), keep: async () => true, remove: async () => {} };
+    const api = new Api({
+      store: store.asStore(), photos, auth, billing: stripe.billing, grants: rbacr.api, config: { stage: 'local', version: 'test' }, clock: () => now,
+      roles: async (email, options) => {
+        asked.push(options?.fresh === true);
+        return options?.fresh ? rbacr.rolesOf(email) : kept;
+      },
+    });
+    const premium = async (query: Record<string, string> = {}) =>
+      ((await api.handle('GET', '/api/premium', { caller: ada, body: undefined, query })) as Record<string, any>).premium;
+    const { climber } = (await api.handle('GET', '/api/me', { caller: ada, body: undefined, query: {} })) as Record<string, any>;
+    asked.length = 0;
+
+    // Free, no subscription: the kept answer, even when rbacr now says otherwise.
+    rbacr.give('ada@example.com', 'premium');
+    expect(await premium()).toEqual({ active: false });
+    expect(asked).toEqual([false]);
+    // Unless the app asks afresh ("check again", back from paying).
+    expect(await premium({ fresh: '1' })).toEqual({ active: true });
+    expect(asked).toEqual([false, true]);
+
+    // Paid, the role not in the kept answer yet: asked afresh.
+    asked.length = 0;
+    const sub: Subscription = {
+      climberId: climber.id, customerId: 'cus_1', subscriptionId: 'sub_1', status: 'active', plan: 'monthly',
+      periodEnd: '2030-06-01T10:00:00.000Z', cancelAtPeriodEnd: false, updatedAt: now.toISOString(),
+    };
+    await store.putSubscription(sub);
+    expect(await premium()).toMatchObject({ active: true, plan: 'monthly' });
+    expect(asked).toEqual([false, true]);
+    // Both agree: the kept answer.
+    asked.length = 0;
+    kept = ['premium'];
+    expect((await premium()).active).toBe(true);
+    expect(asked).toEqual([false]);
+    // Ended, the role still in the kept answer: asked afresh.
+    asked.length = 0;
+    await store.putSubscription({ ...sub, status: 'canceled' });
+    rbacr.grants.get('ada@example.com')!.delete('premium');
+    expect(await premium()).toEqual({ active: false });
+    expect(asked).toEqual([false, true]);
   });
 
   it('without Stripe keys: no prices, and buying is unavailable', async () => {

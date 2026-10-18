@@ -40,7 +40,8 @@ import {
   wallInput,
   wallsNear,
 } from './domain/walls.js';
-import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
+import { MAX_TEAM_CHATS, TEAM_NOTICE_ID, type TeamMessage, forClimber } from './domain/team.js';
+import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput, teamMessageInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { PREMIUM_PRICES, type PremiumPlan, type Subscription, isPaid, premiumOf, premiumUntil, premiumView } from './premium.js';
 import { MAX_PLACE_QUERY, type PlaceSearch } from './places.js';
@@ -274,17 +275,18 @@ export class Api {
 
     r('GET /api/me', 'caller', async (_req, s) => {
       const email = s.caller.email;
-      const [climber, roles] = await Promise.all([
+      const [climber, roles, admin] = await Promise.all([
         this.myProfile(s),
         email && deps.roles ? deps.roles(email) : Promise.resolve(null),
+        s.caller.isAdmin(),
       ]);
       const [sub] = await Promise.all([this.store.getSubscription(climber.id), this.rememberEmail(climber.id, email)]);
       // roles: my roles in Grigri from rbacr, or null when it can't say;
       // Premium is one of them (and its billing details are my subscription's).
       const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
       // Admins are told of new reports: remembered here (best effort).
-      if (s.caller.admin) await this.rememberAdmin(climber.id);
-      return { climber, admin: s.caller.admin, roles, premium };
+      if (admin) await this.rememberAdmin(climber.id);
+      return { climber, admin, roles, premium };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     // A session route: a blocked climber may delete their account too.
@@ -292,7 +294,7 @@ export class Api {
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
     r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });
 
-    r('GET /api/premium', 'profile', (_req, s) => this.premium(s));
+    r('GET /api/premium', 'profile', (req, s) => this.premium(s, req.query.fresh === '1'));
     r('POST /api/premium/checkout', 'profile', (req, s) => this.checkout(req, s));
     r('POST /api/premium/portal', 'profile', (_req, s) => this.portal(s));
     r('POST /api/premium/apple', 'profile', (req, s) => this.appleTransaction(req, s));
@@ -335,6 +337,14 @@ export class Api {
     r('POST /api/blocks/{id}', 'profile', (req, s) => this.blockSomeone(req, s));
     r('DELETE /api/blocks/{id}', 'profile', (req, s) => this.unblockSomeone(req, s));
 
+    // The Grigri team chat (specs/team-chat.md): mine, and, for admins, everyone's.
+    r('GET /api/team/messages', 'profile', (req, s) => this.myTeamMessages(req, s));
+    r('POST /api/team/messages', 'profile', (req, s) => this.writeToTeam(req, s));
+    r('POST /api/team/read', 'profile', async (_req, s) => {
+      await this.store.markNoticeRead(s.me.id, TEAM_NOTICE_ID);
+      return {};
+    });
+
     r('GET /api/notices', 'profile', (_req, s) => this.notices(s));
     r('POST /api/notices/read', 'profile', async (_req, s) => {
       await this.store.markNoticesRead(s.me.id);
@@ -359,6 +369,9 @@ export class Api {
     });
     r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(id(req.params.id, 'climber id'), s, true));
     r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(id(req.params.id, 'climber id'), s, false));
+    r('GET /api/admin/team', 'admin', () => this.teamChats());
+    r('GET /api/admin/team/{id}/messages', 'admin', (req) => this.teamChatOf(req));
+    r('POST /api/admin/team/{id}/messages', 'admin', (req, s) => this.answerAsTeam(req, s));
     r('GET /api/admin/reports', 'admin', () => this.adminReports());
     r('POST /api/admin/reports/{id}/dismiss', 'admin', (req, s) => this.resolveReport(req, s, 'dismissed'));
     r('POST /api/admin/reports/{id}/remove', 'admin', (req, s) => this.resolveReport(req, s, 'removed'));
@@ -382,14 +395,19 @@ export class Api {
       const ctx = { now, newId: messageIds(), name: (cid: string) => names.get(cid) ?? 'Someone', random: this.random };
       return route.handler(full, { caller: req.caller, me: undefined as never, now, ctx, names });
     }
-    const climberId = await this.store.climberIdFor(req.caller.subject);
-    const me = climberId ? await this.store.getClimber(climberId) : undefined;
+    const caller = req.caller;
+    // rbacr's answers, asked while the profile is read (each one's outcome
+    // is looked at only in the order below, so the same check answers first).
+    const blocked = settle(this.isBlocked(caller.email));
+    const admin = route.access === 'admin' ? settle(caller.isAdmin()) : undefined;
+    const premium = route.access === 'premium' ? settle(this.isPremium(caller.email)) : undefined;
+    const me = await this.profileOf(caller);
     if (!me && route.access !== 'caller') throw conflict('no profile');
     // Blocked (rbacr's role): nothing but signing out ('session' routes, above).
-    if (me && (await this.isBlocked(req.caller.email))) throw forbidden('blocked');
-    if (route.access === 'admin' && !req.caller.admin) throw forbidden('admins only');
+    if (me && (await outcome(blocked))) throw forbidden('blocked');
+    if (admin && !(await outcome(admin))) throw forbidden('admins only');
     // Premium routes: rbacr's premium role (specs/premium.md; admins hold it too).
-    if (route.access === 'premium' && !(await this.isPremium(req.caller.email))) throw forbidden('premium only');
+    if (premium && !(await outcome(premium))) throw forbidden('premium only');
     const names = new Map<string, string>();
     const session: Session = {
       caller: req.caller,
@@ -401,6 +419,29 @@ export class Api {
     };
     if (me) names.set(me.id, me.name);
     return route.handler(full, session);
+  }
+
+  /**
+   * The caller's profile, if any. The session keeps the account's climber
+   * once known, so most requests read just the profile; a session without
+   * it (or whose climber is gone) looks the account's link up, and keeps
+   * what it finds.
+   */
+  private async profileOf(caller: Caller): Promise<Climber | undefined> {
+    if (caller.climberId) {
+      const kept = await this.store.getClimber(caller.climberId);
+      if (kept) return kept;
+    }
+    const climberId = await this.store.climberIdFor(caller.subject);
+    if (!climberId || climberId === caller.climberId) return undefined;
+    const me = await this.store.getClimber(climberId);
+    if (me && caller.sessionId) {
+      // Best effort: a failure only means the next request looks it up again.
+      await this.store.rememberClimberId(caller.sessionId, caller.subject, climberId).catch((e: unknown) => {
+        console.error(JSON.stringify({ level: 'warn', msg: 'session climber not kept', error: String(e) }));
+      });
+    }
+    return me;
   }
 
   /**
@@ -580,10 +621,10 @@ export class Api {
     const current = await this.store.getPlan(planId);
     if (!current) throw notFound('no such plan');
     const { plan } = current;
-    if (!plan.memberIds.includes(s.me.id) && !s.caller.admin) throw forbidden("you're not in this plan");
+    if (!plan.memberIds.includes(s.me.id) && !(await s.caller.isAdmin())) throw forbidden("you're not in this plan");
     const pic = (await this.store.planPics(planId)).find((p) => p.id === picId);
     if (!pic) throw notFound('no such photo');
-    if (pic.uploaderId !== s.me.id && plan.organizerId !== s.me.id && !s.caller.admin) {
+    if (pic.uploaderId !== s.me.id && plan.organizerId !== s.me.id && !(await s.caller.isAdmin())) {
       throw forbidden('only whoever added it, or the organizer, can delete it');
     }
     await this.store.deletePlanPic(planId, picId);
@@ -664,10 +705,11 @@ export class Api {
   /** DELETE /api/walls/{id}/routes/{routeId}: whoever drew it, or an admin. */
   private async deleteRoute(req: Request, s: Session) {
     const routeId = id(req.params.routeId, 'route id');
+    const admin = await s.caller.isAdmin();
     return this.changeWall(req.params.id, (wall) => {
       const route = wall.routes.find((r) => r.id === routeId);
       if (!route) throw notFound('no such route');
-      if (route.addedBy !== s.me.id && !s.caller.admin) throw forbidden('only whoever drew it can delete it');
+      if (route.addedBy !== s.me.id && !admin) throw forbidden('only whoever drew it can delete it');
       return { ...wall, routes: wall.routes.filter((r) => r.id !== routeId) };
     });
   }
@@ -797,7 +839,9 @@ export class Api {
     for (const other of blocks.blocked) await this.store.removeBlock(climberId, other);
     for (const other of blocks.blockedBy) await this.store.removeBlock(other, climberId);
     await this.store.removeAdmins([climberId]);
-    // 8. My profile's photos (only ever my own folder's), then everything
+    // 8. My Grigri team chat: what I wrote and the team's answers.
+    await this.store.deleteTeamChat(climberId);
+    // 9. My profile's photos (only ever my own folder's), then everything
     // keyed to me: profile, memberships, passes, notices, email, Premium.
     if (me) {
       const owners = [subjectHash(subject), climberId];
@@ -852,13 +896,19 @@ export class Api {
   // --- Premium (specs/premium.md) --------------------------------------------
 
   /**
-   * GET /api/premium: mine, Stripe's prices (null when Premium can't be
-   * bought through Stripe here: no keys), and the appAccountToken the iOS
-   * app buys with (null without App Store purchases).
+   * GET /api/premium[?fresh=1]: mine, Stripe's prices (null when Premium
+   * can't be bought through Stripe here: no keys), and the appAccountToken
+   * the iOS app buys with (null without App Store purchases). rbacr's
+   * answer is the one kept (at most a minute old), unless it may have just
+   * changed: asked afresh with fresh=1 (the app, after paying or "check
+   * again"), or when my subscription disagrees with it (paid but no role
+   * yet, or the role still held after it ended).
    */
-  private async premium(s: Session) {
-    // Fresh from rbacr: the app asks right after paying.
-    const [roles, sub] = await Promise.all([this.rolesOf(s.caller.email, true), this.store.getSubscription(s.me.id)]);
+  private async premium(s: Session, asked = false) {
+    const [kept, sub] = await Promise.all([this.rolesOf(s.caller.email, asked), this.store.getSubscription(s.me.id)]);
+    const roles = !asked && sub !== undefined && holdsPremium(kept, this.premiumRole) !== premiumOf(sub, s.now).active
+      ? await this.rolesOf(s.caller.email, true)
+      : kept;
     const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
     return {
       premium,
@@ -924,7 +974,8 @@ export class Api {
       email: s.caller.email ?? (same ? current.email : undefined),
     });
     await this.saveApple(sub, current, s.now);
-    return this.premium(s);
+    // Fresh from rbacr: just bought.
+    return this.premium(s, true);
   }
 
   /**
@@ -1130,7 +1181,7 @@ export class Api {
   private async deleteAd(req: Request, s: Session) {
     const ad = await this.store.getAd(id(req.params.id, 'ad id'));
     if (!ad) throw notFound('no such ad');
-    if (ad.ownerId !== s.me.id && !s.caller.admin) throw forbidden('not your ad');
+    if (ad.ownerId !== s.me.id && !(await s.caller.isAdmin())) throw forbidden('not your ad');
     await this.store.deleteAd(ad.id);
     if (ad.media) {
       // Best effort: a leftover only costs storage.
@@ -1234,7 +1285,7 @@ export class Api {
     );
     const [covers, scores, ads] = await Promise.all([
       this.deckCovers(plans),
-      s.caller.admin ? this.deckScores(plans, s) : Promise.resolve(undefined),
+      s.caller.isAdmin().then((admin) => (admin ? this.deckScores(plans, s) : undefined)),
       this.deckAds(s, apart, changes),
     ]);
     return {
@@ -1862,6 +1913,87 @@ export class Api {
     return { message };
   }
 
+  // --- The Grigri team chat (specs/team-chat.md) ------------------------------
+
+  /**
+   * GET /api/team/messages[?after=]: my team chat, oldest first, never
+   * saying which admin answered. Its welcome is the app's own: none stored.
+   */
+  private async myTeamMessages(req: Request, s: Session) {
+    const after = req.query.after ? parseDate(req.query.after, 'after').toISOString() : undefined;
+    const messages = await this.store.teamMessages(s.me.id, after);
+    return { messages: messages.map(forClimber) };
+  }
+
+  /** POST /api/team/messages: I write to the Grigri team. Every known admin gets a badge and a hint. */
+  private async writeToTeam(req: Request, s: Session) {
+    const { text } = teamMessageInput(req.body);
+    assertClean({ text });
+    const message: TeamMessage = { id: s.ctx.newId(), climberId: s.me.id, fromTeam: false, text, time: s.now.toISOString() };
+    await this.store.putTeamMessage(message);
+    await this.tellTeam(s);
+    return { message };
+  }
+
+  /**
+   * The admins hear of a climber's message: the "team" notice (one each,
+   * replaced, unread again; it says nothing of whose) and a hint. The
+   * admins Grigri knows (one read), without asking rbacr about each:
+   * neither carries anything of the message. Best effort: it's saved.
+   */
+  private async tellTeam(s: Session): Promise<void> {
+    try {
+      const admins = (await this.store.adminIds()).filter((cid) => cid !== s.me.id);
+      if (admins.length === 0) return;
+      const notice = { id: TEAM_NOTICE_ID, kind: 'team' as const, planId: '', planTitle: '', time: s.now.toISOString(), read: false };
+      await this.store.deliver(admins.map((to) => ({ to, notice })));
+      await this.hint(hintsFor(admins, { kind: 'team' }, s.me.id));
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'telling the team failed', error: String(e) }));
+    }
+  }
+
+  /** GET /api/admin/team: the team chats with a message, the latest first (at most MAX_TEAM_CHATS), and whose. */
+  private async teamChats() {
+    const chats = await this.store.teamChats(MAX_TEAM_CHATS);
+    return { chats, climbers: await this.publicClimbers(chats.map((c) => c.climberId)) };
+  }
+
+  /** GET /api/admin/team/{id}/messages[?after=]: a climber's team chat, with which admin wrote each answer. */
+  private async teamChatOf(req: Request) {
+    const climberId = id(req.params.id, 'climber id');
+    const after = req.query.after ? parseDate(req.query.after, 'after').toISOString() : undefined;
+    const messages = await this.store.teamMessages(climberId, after);
+    const ids = new Set<string>([climberId]);
+    for (const m of messages) if (m.adminId) ids.add(m.adminId);
+    return { messages, climbers: await this.publicClimbers(ids) };
+  }
+
+  /**
+   * POST /api/admin/team/{id}/messages: an admin answers as the Grigri
+   * team (the climber never sees who). The climber gets the "team"
+   * notice and a hint; the other admins a hint, for their open chat.
+   */
+  private async answerAsTeam(req: Request, s: Session) {
+    const climberId = id(req.params.id, 'climber id');
+    const { text } = teamMessageInput(req.body);
+    assertClean({ text });
+    if (!(await this.store.getClimber(climberId))) throw notFound('no such climber');
+    const message: TeamMessage = {
+      id: s.ctx.newId(), climberId, fromTeam: true, text, time: s.now.toISOString(), adminId: s.me.id,
+    };
+    await this.store.putTeamMessage(message);
+    try {
+      const notice = { id: TEAM_NOTICE_ID, kind: 'team' as const, planId: '', planTitle: '', time: s.now.toISOString(), read: false };
+      if (climberId !== s.me.id) await this.store.deliver([{ to: climberId, notice }]);
+      const admins = await this.store.adminIds();
+      await this.hint(hintsFor([climberId, ...admins], { kind: 'team' }, s.me.id));
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'telling of a team answer failed', error: String(e) }));
+    }
+    return { message };
+  }
+
   /** Best effort: the message is sent either way; a full plan keeps it in the chat only. */
   private async chatPhotoToPics(planId: string, key: string, s: Session): Promise<void> {
     try {
@@ -1983,4 +2115,18 @@ export function whereFrom(query: Record<string, string | undefined>): Where {
 /** Premium: rbacr's premium role (the stage's), or root (roots hold every role). */
 export function holdsPremium(roles: string[] | null, role: string = PREMIUM_ROLE): boolean {
   return (roles ?? []).some((r) => r === role || r === 'root');
+}
+
+/** A promise's outcome, kept for later (so an unused one's failure is never an unhandled rejection). */
+type Settled<T> = Promise<{ ok: true; value: T } | { ok: false; error: unknown }>;
+
+function settle<T>(p: Promise<T>): Settled<T> {
+  return p.then((value) => ({ ok: true as const, value }), (error: unknown) => ({ ok: false as const, error }));
+}
+
+/** A settled promise's value, or its error thrown. */
+async function outcome<T>(settled: Settled<T>): Promise<T> {
+  const o = await settled;
+  if (!o.ok) throw o.error;
+  return o.value;
 }

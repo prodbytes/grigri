@@ -32,6 +32,10 @@ always in the plural, "partners" (a plan's group), in every language.
   join requests answered in the group chat, the group's unanimous yes, my requests' status (pending, accepted,
   declined), matches, notifications and group chats; the data, all from
   the backend API (GA has real data plus the demo showcase), and refreshing it.
+- [Grigri team chat](team-chat.md): every climber's own chat with
+  Grigri, always on top of Chats, opening with a thank-you that asks for
+  feedback (the app's, never stored); every admin reads them all and
+  answers as the Grigri team.
 - [Live updates](live-updates.md): push over MQTT (AWS IoT Core) while the
   app is open: the API's hints, the custom authorizer that keeps each
   climber to their own topic, reconnecting, and polling as a slow safety

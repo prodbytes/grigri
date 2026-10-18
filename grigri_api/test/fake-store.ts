@@ -11,6 +11,7 @@ import { type Change, type ChangeKind, Conflict, type LoadedPlan, type Store, ty
 import { byStart } from '../src/deck-cache.js';
 import type { Wall } from '../src/domain/walls.js';
 import type { Report } from '../src/domain/moderation.js';
+import type { TeamChat, TeamMessage } from '../src/domain/team.js';
 
 export class FakeStore {
   subjects = new Map<string, string>();
@@ -131,12 +132,23 @@ export class FakeStore {
     this.sessions.set(id, { ...s, lastUsedAt, ttl });
     this.sessionWrites++;
   }
+  async rememberClimberId(id: string, subject: string, climberId: string) {
+    const s = this.sessions.get(id);
+    if (!s || s.subject !== subject) return;
+    this.sessions.set(id, { ...s, climberId });
+    this.sessionWrites++;
+  }
   async deleteSession(id: string) { this.sessions.delete(id); }
   async deleteSessions(subject: string) {
     for (const [id, s] of this.sessions) if (s.subject === subject) this.sessions.delete(id);
   }
 
-  async climberIdFor(subject: string) { return this.subjects.get(subject); }
+  /** Subject lookups, to check sessions keep the climber. */
+  subjectReads = 0;
+  async climberIdFor(subject: string) {
+    this.subjectReads++;
+    return this.subjects.get(subject);
+  }
   async subjectOf(id: string) { return [...this.subjects].find(([, cid]) => cid === id)?.[0]; }
   async putAppleToken(subject: string, token: KeptAppleToken) { this.appleTokens.set(subject, token); }
   async getAppleToken(subject: string) { return this.appleTokens.get(subject); }
@@ -236,7 +248,28 @@ export class FakeStore {
     return [...(this.noticeMap.get(cid)?.values() ?? [])].sort((a, b) => (a.time > b.time ? -1 : 1));
   }
   async markNoticesRead(cid: string) {
-    for (const [k, n] of this.noticeMap.get(cid) ?? []) this.noticeMap.get(cid)!.set(k, { ...n, read: true });
+    for (const [k, n] of this.noticeMap.get(cid) ?? []) if (k !== 'team') this.noticeMap.get(cid)!.set(k, { ...n, read: true });
+  }
+  async markNoticeRead(cid: string, noticeId: string) {
+    const n = this.noticeMap.get(cid)?.get(noticeId);
+    if (n) this.noticeMap.get(cid)!.set(noticeId, { ...n, read: true });
+  }
+  /** Team chat messages (specs/team-chat.md), and each chat's last one. */
+  teamMsgs: TeamMessage[] = [];
+  teamChatMap = new Map<string, TeamChat>();
+  async teamMessages(cid: string, after?: string) {
+    return this.teamMsgs.filter((m) => m.climberId === cid && (!after || m.time > after)).map((m) => ({ ...m }));
+  }
+  async putTeamMessage(m: TeamMessage) {
+    this.teamMsgs.push({ ...m });
+    this.teamChatMap.set(m.climberId, { climberId: m.climberId, lastTime: m.time, lastText: m.text.slice(0, 160), lastFromTeam: m.fromTeam });
+  }
+  async teamChats(limit: number) {
+    return [...this.teamChatMap.values()].sort((a, b) => (a.lastTime > b.lastTime ? -1 : 1)).slice(0, limit);
+  }
+  async deleteTeamChat(cid: string) {
+    this.teamMsgs = this.teamMsgs.filter((m) => m.climberId !== cid);
+    this.teamChatMap.delete(cid);
   }
   async messages(planId: string, after?: string) {
     return this.msgs.filter((m) => m.planId === planId && (!after || m.time > after));

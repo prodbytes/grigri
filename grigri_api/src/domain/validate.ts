@@ -278,6 +278,15 @@ export function messageInput(body: unknown, planId: string): { text: string; att
   return { text: message, ...(attachment ? { attachment } : {}) };
 }
 
+/** A Grigri team chat message (specs/team-chat.md): text only, as long as a plan chat's. */
+export function teamMessageInput(body: unknown): { text: string } {
+  const o = asObject(body);
+  if (o.attachment !== undefined && o.attachment !== null && o.attachment !== '') {
+    throw badRequest('the team chat takes text only');
+  }
+  return { text: text(o.text, 'text', { min: 1, max: 2000 }) };
+}
+
 /** Chat media's extensions: photos as profile photos take them, and MP4 or QuickTime videos. */
 export const CHAT_MEDIA_KINDS: Record<string, Attachment['kind']> = {
   jpg: 'image',
