@@ -157,7 +157,10 @@ owner advertises without Premium; real climbers still need it.
 In the app's table: an ad is `AD#<id>` / `AD`, indexed by status (gsi1,
 `ADS#<status>`) and by owner (gsi2, `ADSBY#<ownerId>`), both sorted by
 when it was added; the setting is `META#ADS` / `META` (`every`); an ad I
-skipped is `CLIMBER#<me>` / `ADSKIP#<ad id>`, deleted with my account. Media is
+skipped is `CLIMBER#<me>` / `ADSKIP#<ad id>`, deleted with my account.
+Every write of an ad or the setting adds an entry to the table's
+[change log](backend.md#the-decks-cache), so the decks' cached copy
+reads it again. Media is
 in the photos bucket under `photos/ads/`, served at `/photos/ads/…`, and
 expires a day after upload unless an ad uses it.
 
@@ -175,9 +178,16 @@ The place search is free (Nominatim) and costs a Lambda call per search,
 only when an advertiser presses search. Regions are a few numbers in the
 ad's item; checking them is arithmetic on ads the deck already reads.
 
-Nothing while idle. Each deck adds three reads (the setting, one query of
-the approved ads, one query of the ads I skipped) plus a batch read of
-their owners' subscriptions and profiles: about $0.0000006 per deck. A
+Nothing while idle. The setting, the approved ads and their owners'
+profiles and emails are kept by the warm function with the upcoming
+plans ([the deck's cache](backend.md#the-decks-cache)): each deck reads
+them from memory, patched from the change log the plans already read
+(an approved, rejected, edited or deleted ad, a new setting, an owner's
+new name or photo show on the next deck, as before), so an ad's only
+read per deck is one query of the ads I skipped (0.5 read unit, about
+$0.00000006); owners' Premium is still asked of rbacr (each answer kept
+a minute). Each ad write, and a change of the setting, adds a log entry
+(1 write unit, $0.000000625). A
 skip is one write ($0.000000625). The skips sit in DynamoDB rather than
 on the device so they hold on every device I use; they cost a few bytes
 each. The sample ads' four photos (about 1 MB) sit in each stage's

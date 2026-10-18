@@ -102,7 +102,11 @@ person, and a plan can take a whole group.
   (one after every *n* plans swiped, as admins set it): right opens its
   link in the browser, left skips it.
 
-  The server picks and orders the deck. With nothing to show (GA starts
+  The server picks and orders the deck. A plan created, edited, joined,
+  left or deleted is on (or off) everyone's next deck at once: the server
+  keeps the upcoming plans in memory but checks the table's change log
+  on every deck ([the deck's cache](backend.md#the-decks-cache)), and a
+  plan leaves the deck once it starts. With nothing to show (GA starts
   empty), Discover says so and offers **New plan**.
 
 Cards are dragged (they tilt, and stamp JOIN / PASS),

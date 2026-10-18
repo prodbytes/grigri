@@ -56,9 +56,15 @@ export const key = {
   adSettings: () => ({ pk: 'META#ADS', sk: 'META' }),
   /** When the demo showcase was last written (seed/seed.ts). */
   showcase: () => ({ pk: 'META#SHOWCASE', sk: 'META' }),
+  /**
+   * An entry in the change log (src/deck-cache.ts): a plan, an ad, the
+   * ads' setting or a profile changed. `<time>` is the writer's ISO time.
+   */
+  change: (time: string, kind: string, id: string, nonce: string) => ({ pk: 'CHANGES', sk: `${time}#${kind}#${id}#${nonce}` }),
 };
 
 export const prefix = {
+  changes: 'CHANGES',
   climber: (climberId: string) => `CLIMBER#${climberId}`,
   plan: (planId: string) => `PLAN#${planId}`,
   team: (climberId: string) => `TEAM#${climberId}`,
