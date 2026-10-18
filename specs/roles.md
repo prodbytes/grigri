@@ -57,7 +57,10 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
   asked again next time); rbacr's error answers and outages are logged.
 - **Admin** (the Admin tab, [admin.md](admin.md)) is rbacr's too: the API asks
   rbacr whether my verified email holds the `admin` role of the `grigri`
-  system (roots do). rbacr needs the `grigri` system and its `admin` role
+  system (roots do), only on the requests that need it (admin routes,
+  `GET /api/me`, the deck's match scores, deleting someone else's plan
+  photo, route or ad), once per request; `blocked` is checked on every
+  request but signing out, alongside the profile read. rbacr needs the `grigri` system and its `admin` role
   for anyone but roots to be one. There's no admin list in Grigri.
 - **Deployed stages need `GRIGRI_RBACR_TOKEN`**: without the repository
   secret, the API can't ask rbacr: everyone's roles show the failure and

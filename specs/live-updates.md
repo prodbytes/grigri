@@ -59,7 +59,9 @@ connection:
 - It takes the token from the URL's query (or the MQTT password), looks
   up the session by its hash exactly as the API does (an unknown, expired
   or signed-out session is refused; a use slides it, as any request
-  does), then the climber id of its account.
+  does), then the climber id of its account: the one the session keeps
+  ([api.md](api.md#sessions)), or, for a session that has none yet, the
+  sign-in link's.
 - It answers a policy that allows **only**: `iot:Connect` as a client id
   starting with `<climberId>-`; `iot:Subscribe` to topic filters under
   `grigri/<stage>/climbers/<climberId>/`; `iot:Receive` from topics under

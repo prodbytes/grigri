@@ -329,6 +329,7 @@ class GrigriStore extends ChangeNotifier {
     _me = null;
     _admin = false;
     _premium = const Premium.none();
+    _billingPremium = null;
     _premiumPrices = const {};
     _appleAccountToken = null;
     _buying = false;
@@ -1399,11 +1400,24 @@ class GrigriStore extends ChangeNotifier {
   // --- Premium -----------------------------------------------------------
 
   /// My Premium and its prices again (the profile, and coming back from
-  /// Stripe's pages in the browser).
-  Future<void> refreshPremium() async {
-    await _refresh(api.premium, _applyOffer);
+  /// Stripe's pages in the browser). [fresh] ("check again"): the API asks
+  /// rbacr afresh; so does every refresh after Stripe's pages were opened,
+  /// until my Premium changes from what it was then.
+  Future<void> refreshPremium({bool fresh = false}) async {
+    final ask = fresh || _billingPremium != null;
+    final refreshed = await _refresh(
+      () => api.premium(fresh: ask),
+      _applyOffer,
+    );
+    if (refreshed && _billingPremium != null && _premium != _billingPremium) {
+      _billingPremium = null;
+    }
     await _premiumChanged();
   }
+
+  /// My Premium when Stripe's pages were last opened (checkout, the
+  /// portal); null: not since it changed.
+  Premium? _billingPremium;
 
   void _applyOffer(PremiumOffer offer) {
     _premium = offer.premium;
@@ -1423,7 +1437,9 @@ class GrigriStore extends ChangeNotifier {
   /// App Store sells it there ([buyInAppStore]).
   Future<bool> subscribe(PremiumPlan plan) async {
     final url = await _act(() => api.premiumCheckout(plan));
-    return url != null && await _openOrSay(url);
+    if (url == null || !await _openOrSay(url)) return false;
+    _billingPremium = _premium;
+    return true;
   }
 
   /// Where my subscription is managed: the App Store's subscriptions for
@@ -1434,7 +1450,9 @@ class GrigriStore extends ChangeNotifier {
       return _openOrSay(appStoreSubscriptionsUrl);
     }
     final url = await _act(api.premiumPortal);
-    return url != null && await _openOrSay(url);
+    if (url == null || !await _openOrSay(url)) return false;
+    _billingPremium = _premium;
+    return true;
   }
 
   // --- Premium through the App Store (iOS) ---------------------------------

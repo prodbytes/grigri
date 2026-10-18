@@ -18,7 +18,7 @@ let objects: Map<string, boolean>;
 let removed: string[];
 let hints: Delivery[];
 
-const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
+const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, isAdmin: async () => admin });
 const ada = who('ada');
 const ben = who('ben');
 const cy = who('cy');

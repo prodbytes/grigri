@@ -177,8 +177,9 @@ abstract interface class GrigriApi {
   });
 
   /// `GET /api/premium`: my Premium, and its prices (none when it can't be
-  /// bought here).
-  Future<PremiumOffer> premium();
+  /// bought here). [fresh]: rbacr is asked afresh (`?fresh=1`), for when
+  /// it may have just changed (back from paying, "check again").
+  Future<PremiumOffer> premium({bool fresh = false});
 
   /// `POST /api/premium/checkout`: Stripe Checkout's page for [plan], to
   /// open in the browser.
