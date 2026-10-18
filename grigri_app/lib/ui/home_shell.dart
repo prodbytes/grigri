@@ -162,7 +162,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final toReview = store.toReview.length;
+    // Chats: the requests waiting for my answer, and the Grigri team
+    // chat's news (specs/team-chat.md).
+    final toReview = store.toReview.length + (store.teamUnread ? 1 : 0);
     final unread = store.unreadNotices;
     final admin = store.admin;
     final ads = store.premium.active;

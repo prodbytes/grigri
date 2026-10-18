@@ -23,6 +23,7 @@ A hint says *what kind of thing changed*, never the thing itself:
 | `notice` | the requester; the members who haven't answered a nudge; every admin | their request was declined; the requester nudged them; someone reported something ([moderation](moderation.md#answering-reports-admins)) | notifications, my plans |
 | `match` | the newcomer | everyone said yes | my plans, requests, notifications (the match screen opens as before) |
 | `plan` | the plan's members | someone joined or left; the organizer edited the plan | my plans, requests; the plan's chat and open requests if loaded |
+| `team` | every admin Grigri knows; the climber and the other admins | someone wrote to the [Grigri team](team-chat.md); an admin answered them | notifications (the team chat's badge), my team chat if loaded; for admins, the team chats' list and the ones opened |
 
 - The one who made the change gets no hint (their own app already shows
   it).
@@ -82,8 +83,8 @@ connection:
 - Reconnects after a drop with backoff: 1 s, 2 s, 4 s … up to a minute,
   each times a random 0.5–1 (so clients that dropped together spread
   out); back to 1 s once connected. After a reconnect it refetches my
-  plans, requests, notifications and loaded chats, for hints missed
-  meanwhile. A 401 from `GET /api/realtime` is a sign-out, as anywhere.
+  plans, requests, notifications and loaded chats (the team chat
+  too), for hints missed meanwhile. A 401 from `GET /api/realtime` is a sign-out, as anywhere.
 - **Polling as a safety net** ([matching.md](matching.md#refreshing)):
   while connected, the regular refresh runs every **2 minutes** instead
   of 15 seconds, and an open chat every **minute** instead of 3 seconds;

@@ -1618,3 +1618,55 @@ spec.
        Guided off without Premium.
      - Cost: none: the check is the same cached rbacr lookup Premium's
        other routes make, only when a plan is made guided.
+
+## 2026-10-18
+
+110. **In the chat, always have a Grigri team chat available so that users
+     can send messages directly to us. Let all admin users see those
+     chats. Start every one of them with a message thanking the user and
+     asking for feedback.**
+     - New [Grigri team chat](team-chat.md): every climber's own chat with
+       Grigri, the first row of [Chats](screens.md) (the Grigri logo,
+       "Grigri team"), even with no plans (the plans' empty state stays
+       under it). It opens with the team's welcome, in the six languages:
+       "Thanks for climbing with Grigri! We'd love to hear what you think:
+       what works, what doesn't, what you'd like next. Write to us here
+       anytime." The app shows it; it's never stored.
+     - Text only, with the plan chat's limits (1–2000 characters) and the
+       [filter](moderation.md#the-filter); no photos or videos (the chat
+       media uploads are per plan). No report or block in it.
+     - Admins: a **Team chats** section in Chats, one row per climber who
+       wrote, the latest first (at most 100), "To answer" while the
+       climber wrote last. Any admin answers, shown to the climber as the
+       Grigri team; the admins see "<name> for the team".
+     - Badges and hints: a climber's message gives every known admin the
+       `team` notice and hint; an answer gives them to the climber (and a
+       hint to the other admins). The `team` notice badges Chats, not
+       Notifications; opening a team chat reads it
+       (`POST /api/team/read`), reading Notifications doesn't. Polling as
+       a plan chat (3 s open, a minute while live, `after=`).
+     - [API](api.md): `GET`/`POST /api/team/messages`,
+       `POST /api/team/read`; admin only `GET /api/admin/team`,
+       `GET`/`POST /api/admin/team/{id}/messages`. The climber's routes
+       never carry which admin answered.
+     - [Deleting my account](sign-in.md#deleting-my-account) deletes my
+       team chat, the team's answers too.
+     - Data ([grigri_api/README.md](../grigri_api/README.md)): messages
+       under `TEAM#<climberId>` (`MSG#<time>#<id>`), and one `CHAT` item
+       per chat with its last message, on gsi1 `TEAMCHATS` for the
+       admins' list.
+     - Tests: the API (writing, the filter, length and text only,
+       `after=`, admins list and answer, the climber never sees which
+       admin, non-admins can't list or read others', the badge, deletion)
+       and the app (the team chat on top with its welcome for a climber
+       with no plans, the answer as Grigri team with a badge, an admin's
+       team chats and answer, nobody else sees them).
+     - Cost: nothing for a climber who never writes (the welcome isn't
+       stored, so no item exists). A message is one request and a batch
+       write of two small items (the message and its chat's last message,
+       with its gsi1 copy): about 3 write units, $0.000004 on demand, plus
+       one write per admin for their notice and a few IoT Core hints
+       ($1 a million). The admins' list is one bounded index query, never
+       a scan. No new resource: the same table, gsi1, Lambda and IoT Core
+       as plan chats, the cheapest layout that still lists the chats
+       newest first.

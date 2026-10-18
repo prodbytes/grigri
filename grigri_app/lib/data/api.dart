@@ -9,6 +9,7 @@ import '../model/plan.dart';
 import '../model/walls.dart';
 import '../model/premium.dart';
 import '../model/report.dart';
+import '../model/team.dart';
 import 'realtime.dart';
 
 /// The Grigri backend, one method per route of its contract
@@ -100,6 +101,31 @@ abstract interface class GrigriApi {
 
   /// `POST /api/notices/read`.
   Future<void> readNotices();
+
+  /// `GET /api/team/messages[?after=]`: my Grigri team chat, oldest first
+  /// (specs/team-chat.md). Its welcome is the app's own.
+  Future<List<TeamMessage>> teamMessages({DateTime? after});
+
+  /// `POST /api/team/messages`: I write to the Grigri team (text only).
+  Future<TeamMessage> sendToTeam(String text);
+
+  /// `POST /api/team/read`: my team chat's badge goes.
+  Future<void> readTeam();
+
+  /// `GET /api/admin/team` (admins): the team chats with a message, the
+  /// latest first.
+  Future<TeamChatList> adminTeamChats();
+
+  /// `GET /api/admin/team/{id}/messages[?after=]` (admins): a climber's
+  /// team chat, with which admin wrote each answer.
+  Future<TeamMessageList> adminTeamMessages(
+    String climberId, {
+    DateTime? after,
+  });
+
+  /// `POST /api/admin/team/{id}/messages` (admins): an answer as the
+  /// Grigri team.
+  Future<TeamMessage> answerAsTeam(String climberId, String text);
 
   /// `GET /api/plans/{id}/messages[?after=]`: oldest first.
   Future<MessageList> messages(String planId, {DateTime? after});
@@ -484,6 +510,23 @@ class MessageList {
   final Climbers climbers;
 }
 
+/// The admins' list of team chats, and whose they are.
+class TeamChatList {
+  const TeamChatList(this.chats, this.climbers);
+
+  final List<TeamChat> chats;
+  final Climbers climbers;
+}
+
+/// A climber's team chat as admins see it: the climber and the admins who
+/// answered in [climbers].
+class TeamMessageList {
+  const TeamMessageList(this.messages, this.climbers);
+
+  final List<TeamMessage> messages;
+  final Climbers climbers;
+}
+
 /// Someone joined a plan: the plan as it is now, and who.
 class ApiMatch {
   const ApiMatch(this.plan, this.newcomerId);
@@ -703,6 +746,20 @@ abstract final class ApiJson {
     _list(json['messages']).map(Message.fromJson).toList(),
     climbers(json),
   );
+
+  static List<TeamMessage> teamMessages(Map<String, Object?> json) =>
+      _list(json['messages']).map(TeamMessage.fromJson).toList();
+
+  static TeamMessage teamMessage(Map<String, Object?> json) =>
+      TeamMessage.fromJson(_map(json['message']));
+
+  static TeamChatList teamChats(Map<String, Object?> json) => TeamChatList(
+    _list(json['chats']).map(TeamChat.fromJson).toList(),
+    climbers(json),
+  );
+
+  static TeamMessageList teamMessageList(Map<String, Object?> json) =>
+      TeamMessageList(teamMessages(json), climbers(json));
 
   static PlanPicsList planPics(Map<String, Object?> json) => PlanPicsList(
     PlanPics(

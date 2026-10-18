@@ -193,7 +193,8 @@ export interface JoinRequest {
  * to join a plan I'm in; nudge: they're still waiting for my answer;
  * report: (admins) there are reports to review (planId and planTitle empty).
  */
-export type NoticeKind = 'accepted' | 'declined' | 'request' | 'nudge' | 'report';
+/** team: a Grigri team chat has news (specs/team-chat.md); it badges Chats, not Notifications. */
+export type NoticeKind = 'accepted' | 'declined' | 'request' | 'nudge' | 'report' | 'team';
 
 export interface Notice {
   id: string;

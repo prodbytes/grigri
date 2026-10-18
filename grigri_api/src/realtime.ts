@@ -5,7 +5,8 @@
 // the API, where all authorization stays. Publishing is best effort: a
 // failure is logged and never fails the request.
 
-export type HintKind = 'message' | 'request' | 'notice' | 'plan' | 'match' | 'pics';
+/** team: a Grigri team chat changed (specs/team-chat.md): mine, or, for admins, anyone's. */
+export type HintKind = 'message' | 'request' | 'notice' | 'plan' | 'match' | 'pics' | 'team';
 
 export interface Hint {
   kind: HintKind;
