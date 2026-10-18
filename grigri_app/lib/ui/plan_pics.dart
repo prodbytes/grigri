@@ -7,6 +7,7 @@ import '../model/plan.dart';
 import '../theme.dart';
 import 'chat_media.dart';
 import 'common.dart';
+import 'grigri_pic_image.dart';
 
 /// The plan screen's photos (specs/pics.md): "Your Pics", what the group
 /// added or sent in its chat (members only; they add photos here), and
@@ -111,7 +112,7 @@ class _PlanPicsSectionsState extends State<PlanPicsSections> {
                 final pic = pics.grigri[i];
                 return _Thumb(
                   key: ValueKey('grigri ${pic.key}'),
-                  image: store.grigriPic(pic.key),
+                  grigriPic: pic,
                   width: 170,
                   label: pic.crag,
                   onTap: () => Navigator.of(context).push(
@@ -213,16 +214,27 @@ class _AddTile extends StatelessWidget {
 class _Thumb extends StatelessWidget {
   const _Thumb({
     super.key,
-    required this.image,
+    this.image,
+    this.grigriPic,
     required this.width,
     required this.onTap,
     this.label,
-  });
+  }) : assert((image == null) != (grigriPic == null));
 
-  final ImageProvider image;
+  /// The photo: a Your Pics one, or a GriGri Pics one (shown from its
+  /// smallest copy that covers the thumbnail).
+  final ImageProvider? image;
+  final GrigriPic? grigriPic;
   final double width;
   final VoidCallback onTap;
   final String? label;
+
+  static Widget _broken(BuildContext context, Object error, StackTrace? _) =>
+      Container(
+        color: Mountain.surface,
+        alignment: Alignment.center,
+        child: const Icon(Icons.broken_image_outlined, color: Mountain.granite),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -237,19 +249,20 @@ class _Thumb extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image(
-                image: image,
-                fit: BoxFit.cover,
-                semanticLabel: label ?? context.l10n.photoMessage,
-                errorBuilder: (context, _, _) => Container(
-                  color: Mountain.surface,
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.broken_image_outlined,
-                    color: Mountain.granite,
-                  ),
+              if (grigriPic case final pic?)
+                GrigriPicImage(
+                  picKey: pic.key,
+                  variants: pic.variants,
+                  semanticLabel: label ?? context.l10n.photoMessage,
+                  errorBuilder: _broken,
+                )
+              else
+                Image(
+                  image: image!,
+                  fit: BoxFit.cover,
+                  semanticLabel: label ?? context.l10n.photoMessage,
+                  errorBuilder: _broken,
                 ),
-              ),
               if (label != null)
                 Positioned(
                   left: 0,

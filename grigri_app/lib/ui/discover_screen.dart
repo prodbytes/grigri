@@ -10,6 +10,7 @@ import '../model/report.dart';
 import '../theme.dart';
 import 'ad_card.dart';
 import 'common.dart';
+import 'grigri_pic_image.dart';
 import 'match_score.dart';
 import 'moderation.dart';
 import 'profile_editor.dart';
@@ -507,10 +508,10 @@ class _PlanCover extends StatelessWidget {
         if (cover == null)
           backdrop
         else
-          Image(
-            key: ValueKey('cover ${plan.id}'),
-            image: store.grigriPic(cover.key),
-            fit: BoxFit.cover,
+          GrigriPicImage(
+            imageKey: ValueKey('cover ${plan.id}'),
+            picKey: cover.key,
+            variants: cover.variants,
             // Fades in when it arrives; the backdrop until then, or if
             // it fails.
             frameBuilder: (context, child, frame, sync) => sync
