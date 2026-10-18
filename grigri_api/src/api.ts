@@ -265,17 +265,18 @@ export class Api {
 
     r('GET /api/me', 'caller', async (_req, s) => {
       const email = s.caller.email;
-      const [climber, roles] = await Promise.all([
+      const [climber, roles, admin] = await Promise.all([
         this.myProfile(s),
         email && deps.roles ? deps.roles(email) : Promise.resolve(null),
+        s.caller.isAdmin(),
       ]);
       const [sub] = await Promise.all([this.store.getSubscription(climber.id), this.rememberEmail(climber.id, email)]);
       // roles: my roles in Grigri from rbacr, or null when it can't say;
       // Premium is one of them (and its billing details are my subscription's).
       const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
       // Admins are told of new reports: remembered here (best effort).
-      if (s.caller.admin) await this.rememberAdmin(climber.id);
-      return { climber, admin: s.caller.admin, roles, premium };
+      if (admin) await this.rememberAdmin(climber.id);
+      return { climber, admin, roles, premium };
     });
     r('PUT /api/me', 'caller', (req, s) => this.saveProfile(req, s));
     // A session route: a blocked climber may delete their account too.
@@ -283,7 +284,7 @@ export class Api {
     r('POST /api/photos', 'caller', (req, s) => this.presignPhoto(req, s));
     r('GET /api/realtime', 'profile', async (_req, s) => deps.realtime?.info(s.me.id) ?? { url: null });
 
-    r('GET /api/premium', 'profile', (_req, s) => this.premium(s));
+    r('GET /api/premium', 'profile', (req, s) => this.premium(s, req.query.fresh === '1'));
     r('POST /api/premium/checkout', 'profile', (req, s) => this.checkout(req, s));
     r('POST /api/premium/portal', 'profile', (_req, s) => this.portal(s));
     r('POST /api/premium/apple', 'profile', (req, s) => this.appleTransaction(req, s));
@@ -384,14 +385,19 @@ export class Api {
       const ctx = { now, newId: messageIds(), name: (cid: string) => names.get(cid) ?? 'Someone', random: this.random };
       return route.handler(full, { caller: req.caller, me: undefined as never, now, ctx, names });
     }
-    const climberId = await this.store.climberIdFor(req.caller.subject);
-    const me = climberId ? await this.store.getClimber(climberId) : undefined;
+    const caller = req.caller;
+    // rbacr's answers, asked while the profile is read (each one's outcome
+    // is looked at only in the order below, so the same check answers first).
+    const blocked = settle(this.isBlocked(caller.email));
+    const admin = route.access === 'admin' ? settle(caller.isAdmin()) : undefined;
+    const premium = route.access === 'premium' ? settle(this.isPremium(caller.email)) : undefined;
+    const me = await this.profileOf(caller);
     if (!me && route.access !== 'caller') throw conflict('no profile');
     // Blocked (rbacr's role): nothing but signing out ('session' routes, above).
-    if (me && (await this.isBlocked(req.caller.email))) throw forbidden('blocked');
-    if (route.access === 'admin' && !req.caller.admin) throw forbidden('admins only');
+    if (me && (await outcome(blocked))) throw forbidden('blocked');
+    if (admin && !(await outcome(admin))) throw forbidden('admins only');
     // Premium routes: rbacr's premium role (specs/premium.md; admins hold it too).
-    if (route.access === 'premium' && !(await this.isPremium(req.caller.email))) throw forbidden('premium only');
+    if (premium && !(await outcome(premium))) throw forbidden('premium only');
     const names = new Map<string, string>();
     const session: Session = {
       caller: req.caller,
@@ -403,6 +409,29 @@ export class Api {
     };
     if (me) names.set(me.id, me.name);
     return route.handler(full, session);
+  }
+
+  /**
+   * The caller's profile, if any. The session keeps the account's climber
+   * once known, so most requests read just the profile; a session without
+   * it (or whose climber is gone) looks the account's link up, and keeps
+   * what it finds.
+   */
+  private async profileOf(caller: Caller): Promise<Climber | undefined> {
+    if (caller.climberId) {
+      const kept = await this.store.getClimber(caller.climberId);
+      if (kept) return kept;
+    }
+    const climberId = await this.store.climberIdFor(caller.subject);
+    if (!climberId || climberId === caller.climberId) return undefined;
+    const me = await this.store.getClimber(climberId);
+    if (me && caller.sessionId) {
+      // Best effort: a failure only means the next request looks it up again.
+      await this.store.rememberClimberId(caller.sessionId, caller.subject, climberId).catch((e: unknown) => {
+        console.error(JSON.stringify({ level: 'warn', msg: 'session climber not kept', error: String(e) }));
+      });
+    }
+    return me;
   }
 
   /**
@@ -582,10 +611,10 @@ export class Api {
     const current = await this.store.getPlan(planId);
     if (!current) throw notFound('no such plan');
     const { plan } = current;
-    if (!plan.memberIds.includes(s.me.id) && !s.caller.admin) throw forbidden("you're not in this plan");
+    if (!plan.memberIds.includes(s.me.id) && !(await s.caller.isAdmin())) throw forbidden("you're not in this plan");
     const pic = (await this.store.planPics(planId)).find((p) => p.id === picId);
     if (!pic) throw notFound('no such photo');
-    if (pic.uploaderId !== s.me.id && plan.organizerId !== s.me.id && !s.caller.admin) {
+    if (pic.uploaderId !== s.me.id && plan.organizerId !== s.me.id && !(await s.caller.isAdmin())) {
       throw forbidden('only whoever added it, or the organizer, can delete it');
     }
     await this.store.deletePlanPic(planId, picId);
@@ -666,10 +695,11 @@ export class Api {
   /** DELETE /api/walls/{id}/routes/{routeId}: whoever drew it, or an admin. */
   private async deleteRoute(req: Request, s: Session) {
     const routeId = id(req.params.routeId, 'route id');
+    const admin = await s.caller.isAdmin();
     return this.changeWall(req.params.id, (wall) => {
       const route = wall.routes.find((r) => r.id === routeId);
       if (!route) throw notFound('no such route');
-      if (route.addedBy !== s.me.id && !s.caller.admin) throw forbidden('only whoever drew it can delete it');
+      if (route.addedBy !== s.me.id && !admin) throw forbidden('only whoever drew it can delete it');
       return { ...wall, routes: wall.routes.filter((r) => r.id !== routeId) };
     });
   }
@@ -856,13 +886,19 @@ export class Api {
   // --- Premium (specs/premium.md) --------------------------------------------
 
   /**
-   * GET /api/premium: mine, Stripe's prices (null when Premium can't be
-   * bought through Stripe here: no keys), and the appAccountToken the iOS
-   * app buys with (null without App Store purchases).
+   * GET /api/premium[?fresh=1]: mine, Stripe's prices (null when Premium
+   * can't be bought through Stripe here: no keys), and the appAccountToken
+   * the iOS app buys with (null without App Store purchases). rbacr's
+   * answer is the one kept (at most a minute old), unless it may have just
+   * changed: asked afresh with fresh=1 (the app, after paying or "check
+   * again"), or when my subscription disagrees with it (paid but no role
+   * yet, or the role still held after it ended).
    */
-  private async premium(s: Session) {
-    // Fresh from rbacr: the app asks right after paying.
-    const [roles, sub] = await Promise.all([this.rolesOf(s.caller.email, true), this.store.getSubscription(s.me.id)]);
+  private async premium(s: Session, asked = false) {
+    const [kept, sub] = await Promise.all([this.rolesOf(s.caller.email, asked), this.store.getSubscription(s.me.id)]);
+    const roles = !asked && sub !== undefined && holdsPremium(kept, this.premiumRole) !== premiumOf(sub, s.now).active
+      ? await this.rolesOf(s.caller.email, true)
+      : kept;
     const premium = premiumView(holdsPremium(roles, this.premiumRole), sub, s.now);
     return {
       premium,
@@ -928,7 +964,8 @@ export class Api {
       email: s.caller.email ?? (same ? current.email : undefined),
     });
     await this.saveApple(sub, current, s.now);
-    return this.premium(s);
+    // Fresh from rbacr: just bought.
+    return this.premium(s, true);
   }
 
   /**
@@ -1134,7 +1171,7 @@ export class Api {
   private async deleteAd(req: Request, s: Session) {
     const ad = await this.store.getAd(id(req.params.id, 'ad id'));
     if (!ad) throw notFound('no such ad');
-    if (ad.ownerId !== s.me.id && !s.caller.admin) throw forbidden('not your ad');
+    if (ad.ownerId !== s.me.id && !(await s.caller.isAdmin())) throw forbidden('not your ad');
     await this.store.deleteAd(ad.id);
     if (ad.media) {
       // Best effort: a leftover only costs storage.
@@ -1232,7 +1269,7 @@ export class Api {
     );
     const [covers, scores, ads] = await Promise.all([
       this.deckCovers(plans),
-      s.caller.admin ? this.deckScores(plans, s) : Promise.resolve(undefined),
+      s.caller.isAdmin().then((admin) => (admin ? this.deckScores(plans, s) : undefined)),
       this.deckAds(s, apart),
     ]);
     return {
@@ -2062,4 +2099,18 @@ export function whereFrom(query: Record<string, string | undefined>): Where {
 /** Premium: rbacr's premium role (the stage's), or root (roots hold every role). */
 export function holdsPremium(roles: string[] | null, role: string = PREMIUM_ROLE): boolean {
   return (roles ?? []).some((r) => r === role || r === 'root');
+}
+
+/** A promise's outcome, kept for later (so an unused one's failure is never an unhandled rejection). */
+type Settled<T> = Promise<{ ok: true; value: T } | { ok: false; error: unknown }>;
+
+function settle<T>(p: Promise<T>): Settled<T> {
+  return p.then((value) => ({ ok: true as const, value }), (error: unknown) => ({ ok: false as const, error }));
+}
+
+/** A settled promise's value, or its error thrown. */
+async function outcome<T>(settled: Settled<T>): Promise<T> {
+  const o = await settled;
+  if (!o.ok) throw o.error;
+  return o.value;
 }

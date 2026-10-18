@@ -50,6 +50,15 @@ const bucket = env.PHOTOS_BUCKET ?? '';
 // /api/me and POST /api/plans/{id}/messages clear the tag.
 const PENDING_TAGGING = '<Tagging><TagSet><Tag><Key>grigri-pending</Key><Value>true</Value></Tag></TagSet></Tagging>';
 
+// In AWS, uploads are stored as S3 Intelligent-Tiering from the start (no
+// lifecycle transition, so no transition fee): no minimum duration (the
+// pending ones that expire after a day cost the same as in Standard), no
+// retrieval fee, and objects under 128 KB are simply not tiered (nor
+// charged its monitoring fee). Photos CloudFront hasn't fetched for 30 days
+// cost 46% less, after 90 days 83% less (specs/backend.md, Cost). Locally
+// Floci keeps its default class.
+const STORAGE_CLASS: Record<string, string> = local ? {} : { 'x-amz-storage-class': 'INTELLIGENT_TIERING' };
+
 const photos: Photos = {
   async presign(key, contentType, maxBytes) {
     const { url, fields } = await createPresignedPost(s3, {
@@ -60,9 +69,10 @@ const photos: Photos = {
         ['eq', '$Content-Type', contentType],
         ['eq', '$Cache-Control', 'public, max-age=31536000, immutable'],
         ['eq', '$tagging', PENDING_TAGGING],
+        ...Object.entries(STORAGE_CLASS).map(([k, v]) => ['eq', `$${k}`, v] as ['eq', string, string]),
       ],
       // Keys are never reused, so the photo can be cached for good.
-      Fields: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable', tagging: PENDING_TAGGING },
+      Fields: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable', tagging: PENDING_TAGGING, ...STORAGE_CLASS },
       // 15 minutes to start: room for a 50 MB video on a slow phone line.
       Expires: 900,
     });

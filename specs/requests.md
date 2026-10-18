@@ -1621,6 +1621,82 @@ spec.
 
 ## 2026-10-18
 
+106. **Fix the cost review's findings, without changing the user
+     experience or features (per-request lookups).**
+     - [API](api.md#sessions), [backend](backend.md) and
+       [sign-in](sign-in.md): the session item keeps the account's
+       `climberId`, from `POST /api/session` (one read of the sign-in
+       link at sign-in) or, for sessions made before and new accounts,
+       from the first request that finds a profile (one conditional
+       write, only for the session's own subject). Requests then read the
+       session and the profile, not the link; a kept climber whose
+       profile is gone falls back to the link. Account deletion still
+       ends every session, so no session keeps a deleted climber.
+     - [Live updates](live-updates.md): the authorizer uses the climber
+       the session keeps, and looks the link up only without one.
+     - [API](api.md) and [roles](roles.md): the admin check is asked only
+       by the requests that need it (admin routes, `GET /api/me`, the
+       deck's match scores, deleting someone else's plan photo, route or
+       ad), once per request, no longer on every request; the blocked
+       check, the admin route's and Premium route's checks run alongside
+       the profile read, and are applied in the same order as before
+       (no profile, blocked, admins only, Premium only).
+     - [Premium](premium.md#who-is-premium): `GET /api/premium` uses
+       rbacr's kept answer (at most a minute old) unless asked
+       `?fresh=1`, or my subscription disagrees with it (paid but no
+       role, or the role held after it ended). The app asks afresh on
+       **I've paid: check again**, and on Premium refreshes after it
+       opened Stripe's Checkout or billing portal until Premium changes,
+       so a payment still shows at once; foreground resumes otherwise use
+       the kept answer. `POST /api/premium/apple` still asks afresh.
+     - Tests: sessions keep the climber (and later requests skip the
+       link), a stale one falls back, the blocked and admin checks still
+       apply with it, account deletion leaves no stale climber, admin is
+       asked only where needed and once, the authorizer uses the kept
+       climber; `GET /api/premium`'s fresh rules; the app asks afresh
+       after Checkout and on "check again", and not otherwise.
+     - Cost: no new resource. Per signed-in request one DynamoDB read
+       fewer (the sign-in link: about $0.06 per million requests) and one
+       rbacr call fewer on most routes (the admin check), with the
+       remaining lookups in parallel, so requests are also shorter
+       (Lambda bills by duration). Each older session pays one write
+       ($0.625 per million) once; sign-in pays one more read. `GET
+       /api/premium` on resumes no longer calls rbacr each time.
+
+109. **Fix the cost review's findings, without changing the user
+     experience or features (infrastructure).**
+     - [Backend](backend.md#cost): profile photo, chat media, plan photo, wall
+       view and ad media uploads are stored as S3 Intelligent-Tiering,
+       set by the presigned POST (`x-amz-storage-class`, fixed by its
+       policy; in AWS only, Floci keeps its default). Pending uploads
+       still expire after a day (the tag rule doesn't care about the
+       class, and Intelligent-Tiering has no minimum duration), and
+       keeping one still just clears its tag.
+     - [Deploy](deploy.md#caching): `/` and `/app*` use the site's own
+       cache policy (`SiteFilesCachePolicy`, MinTTL and DefaultTTL a
+       day) instead of Managed-CachingOptimized (MinTTL 1 s). Browsers
+       still revalidate every file (`no-cache`), now against the edge
+       instead of S3; every deploy already invalidated `/*` and waited
+       for it, so a new release is still live at once.
+     - The three functions log as JSON with Lambda's own lines at WARN
+       (no more START/END/REPORT per invocation) and the app's at INFO,
+       so every line the app writes stays.
+     - Specs' and comments' cost figures made true: the IoT keep-alive
+       pings (most of live updates' cost: about 6.5 cents per thousand
+       person-hours, not half a cent; 12–24× cheaper than polling, not
+       20–30×), CloudFront's per-request charge, how many API calls a
+       user makes with and without live updates (~4.8 million a month
+       per 1,000 users at 15 s polling), the sample ads' photos cached
+       for a day (not a year), and the IoT authorizer's comment (under a
+       tenth of a cent per thousand people-hours, not a few cents).
+     - Cost: Intelligent-Tiering brings chat media's and plan photos'
+       steady-state storage from ~$0.80/~$8 to ~$0.25/~$2.40 a month
+       (100/1,000 plans a month), plus $0.0025 per 1,000 objects
+       monitored; no transition fee, no retrieval fee. The cache policy
+       is free and saves the S3 GETs of every app open (~$0.014 per
+       1,000 opens). JSON logs without Lambda's own lines save ~$0.17
+       per million invocations of ingestion.
+
 110. **In the chat, always have a Grigri team chat available so that users
      can send messages directly to us. Let all admin users see those
      chats. Start every one of them with a message thanking the user and

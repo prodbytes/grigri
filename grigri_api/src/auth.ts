@@ -21,11 +21,23 @@ export interface Caller {
   subject: string;
   /** Verified email, lowercased; only for the admin check (rbacr), never returned. */
   email?: string;
-  admin: boolean;
+  /**
+   * Whether the caller is a Grigri admin (rbacr's answer for the verified
+   * email; none: never). Asked only when a route needs it, at most once
+   * per request.
+   */
+  isAdmin: () => Promise<boolean>;
   /** The account's name from Google, for the profile GET /api/me creates; never returned. */
   name?: string;
   /** The session's id (its token's hash); none for the dev header. */
   sessionId?: string;
+  /**
+   * The climber the session's account is linked to, as kept in the
+   * session (written only by the API, from the account's own link); none
+   * when not known yet. A hint that saves a read: the API checks the
+   * profile is there, and looks the link up when it isn't.
+   */
+  climberId?: string;
 }
 
 /** A stored session (item `SESSION#<id>`). */
@@ -38,6 +50,8 @@ export interface SessionRecord {
   emailVerified: boolean;
   /** The account's name, from Google at sign-in. */
   name?: string;
+  /** The account's climber, once it has a profile (kept so requests skip the lookup). */
+  climberId?: string;
   createdAt: string;
   lastUsedAt: string;
   /** Epoch seconds: lastUsedAt + SESSION_DAYS (the table's TTL attribute). */
@@ -52,6 +66,10 @@ export interface SessionStore {
   touchSession(id: string, previous: string, lastUsedAt: string, ttl: number): Promise<void>;
   deleteSession(id: string): Promise<void>;
   deleteSessions(subject: string): Promise<void>;
+  /** Keeps the account's climber in the session, if it's still there and still the subject's. */
+  rememberClimberId(id: string, subject: string, climberId: string): Promise<void>;
+  /** The climber a sign-in subject is linked to, if any. */
+  climberIdFor(subject: string): Promise<string | undefined>;
 }
 
 export interface AuthConfig {
@@ -142,6 +160,10 @@ export class Auth {
     } else {
       throw badRequest('send {"idToken"}');
     }
+    // An account that already has a profile: its climber goes in the
+    // session, so its requests skip the lookup (best effort: they look it
+    // up and keep it otherwise).
+    const climberId = await this.deps.store.climberIdFor(identity.subject).catch(() => undefined);
     const token = randomBytes(32).toString('base64url');
     const now = this.clock();
     const session: SessionRecord = {
@@ -150,6 +172,7 @@ export class Auth {
       ...(identity.emailVerified && identity.email ? { email: identity.email } : {}),
       emailVerified: identity.emailVerified,
       ...(identity.name ? { name: identity.name } : {}),
+      ...(climberId ? { climberId } : {}),
       createdAt: now.toISOString(),
       lastUsedAt: now.toISOString(),
       ttl: expiry(now),
@@ -173,7 +196,7 @@ export class Auth {
       const dev = headers['x-grigri-dev-user']?.trim().toLowerCase();
       if (dev && EMAIL.test(dev)) {
         const name = profileName(dev.split('@')[0]!);
-        return { subject: `dev#${dev}`, email: dev, admin: await this.deps.config.isAdmin(dev), ...(name ? { name } : {}) };
+        return { subject: `dev#${dev}`, email: dev, isAdmin: this.adminCheck(dev), ...(name ? { name } : {}) };
       }
     }
     throw signedOut();
@@ -214,10 +237,18 @@ export class Auth {
     return {
       subject: session.subject,
       ...(email ? { email } : {}),
-      admin: email !== undefined && (await this.deps.config.isAdmin(email)),
+      isAdmin: this.adminCheck(email),
       ...(session.name ? { name: session.name } : {}),
       sessionId: id,
+      ...(session.climberId ? { climberId: session.climberId } : {}),
     };
+  }
+
+  /** The admin check for a verified email (none: never an admin), asked on first use and kept for the request. */
+  private adminCheck(email: string | undefined): () => Promise<boolean> {
+    if (email === undefined) return async () => false;
+    let answer: Promise<boolean> | undefined;
+    return () => (answer ??= this.deps.config.isAdmin(email));
   }
 }
 

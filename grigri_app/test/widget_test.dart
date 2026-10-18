@@ -1389,6 +1389,9 @@ void main() {
       final api = sampleApi();
       await pumpApp(tester, api);
       await openProfile(tester);
+      // Opening the profile uses rbacr's kept answer.
+      expect(api.calls, contains('GET /api/premium'));
+      expect(api.calls, isNot(contains('GET /api/premium?fresh=1')));
       expect(find.text('\$20 a month'), findsOneWidget);
       expect(find.text('\$200 a year'), findsOneWidget);
       await tester.ensureVisible(find.text('\$200 a year'));
@@ -1396,6 +1399,14 @@ void main() {
       await tester.tap(find.text('\$200 a year'));
       await tester.pumpAndSettle();
       expect(api.opened, [Uri.parse('https://checkout.stripe.test/yearly')]);
+
+      // Back from Checkout: asked afresh, not paid yet.
+      api.calls.clear();
+      await StoreScope.read(
+        tester.element(find.byKey(const ValueKey('premium card'))),
+      ).refreshPremium();
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('GET /api/premium?fresh=1'));
 
       // Stripe told the API: checking again shows it.
       api.myPremium = Premium(
@@ -1406,9 +1417,19 @@ void main() {
       );
       await tester.ensureVisible(find.text("I've paid: check again"));
       await tester.pumpAndSettle();
+      api.calls.clear();
       await tester.tap(find.text("I've paid: check again"));
       await tester.pumpAndSettle();
+      expect(api.calls.first, 'GET /api/premium?fresh=1');
       expect(find.text('Premium: renews on May 1, 2031'), findsOneWidget);
+      // Premium showed: later refreshes use the kept answer again.
+      api.calls.clear();
+      await StoreScope.read(
+        tester.element(find.byKey(const ValueKey('premium card'))),
+      ).refreshPremium();
+      await tester.pumpAndSettle();
+      expect(api.calls, contains('GET /api/premium'));
+      expect(api.calls, isNot(contains('GET /api/premium?fresh=1')));
       await tester.ensureVisible(find.text('Manage subscription'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Manage subscription'));

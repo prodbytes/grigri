@@ -600,8 +600,8 @@ class FakeApi implements GrigriApi, SessionApi {
   });
 
   @override
-  Future<PremiumOffer> premium() => _route(
-    'GET /api/premium',
+  Future<PremiumOffer> premium({bool fresh = false}) => _route(
+    fresh ? 'GET /api/premium?fresh=1' : 'GET /api/premium',
     () => PremiumOffer(
       myPremium,
       premiumPrices,

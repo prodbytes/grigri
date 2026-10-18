@@ -5,8 +5,8 @@ request, an answer, a plan edit) instead of asking every few seconds. It
 keeps one **MQTT over WebSocket** connection to **AWS IoT Core** while
 it's in the foreground; the API publishes a tiny **hint** to each affected
 climber's topic after a change, and the app refetches what the hint names
-through the API. Polling stays as a slow safety net. Costs:
-[backend.md](backend.md#cost).
+through the API. Polling stays as a slow safety net. Costs, keep-alive
+pings included: [backend.md](backend.md#live-updates-cost).
 
 ## Hints, not data
 
@@ -60,7 +60,9 @@ connection:
 - It takes the token from the URL's query (or the MQTT password), looks
   up the session by its hash exactly as the API does (an unknown, expired
   or signed-out session is refused; a use slides it, as any request
-  does), then the climber id of its account.
+  does), then the climber id of its account: the one the session keeps
+  ([api.md](api.md#sessions)), or, for a session that has none yet, the
+  sign-in link's.
 - It answers a policy that allows **only**: `iot:Connect` as a client id
   starting with `<climberId>-`; `iot:Subscribe` to topic filters under
   `grigri/<stage>/climbers/<climberId>/`; `iot:Receive` from topics under

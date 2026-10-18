@@ -107,12 +107,23 @@ export class FakeStore {
     this.sessions.set(id, { ...s, lastUsedAt, ttl });
     this.sessionWrites++;
   }
+  async rememberClimberId(id: string, subject: string, climberId: string) {
+    const s = this.sessions.get(id);
+    if (!s || s.subject !== subject) return;
+    this.sessions.set(id, { ...s, climberId });
+    this.sessionWrites++;
+  }
   async deleteSession(id: string) { this.sessions.delete(id); }
   async deleteSessions(subject: string) {
     for (const [id, s] of this.sessions) if (s.subject === subject) this.sessions.delete(id);
   }
 
-  async climberIdFor(subject: string) { return this.subjects.get(subject); }
+  /** Subject lookups, to check sessions keep the climber. */
+  subjectReads = 0;
+  async climberIdFor(subject: string) {
+    this.subjectReads++;
+    return this.subjects.get(subject);
+  }
   async subjectOf(id: string) { return [...this.subjects].find(([, cid]) => cid === id)?.[0]; }
   async putAppleToken(subject: string, token: KeptAppleToken) { this.appleTokens.set(subject, token); }
   async getAppleToken(subject: string) { return this.appleTokens.get(subject); }
