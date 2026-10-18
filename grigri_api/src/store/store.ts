@@ -58,6 +58,7 @@ export class Store implements SessionStore, AppleTokenStore {
         ...(s.email ? { email: s.email } : {}),
         emailVerified: s.emailVerified,
         ...(s.name ? { name: s.name } : {}),
+        ...(s.climberId ? { climberId: s.climberId } : {}),
         createdAt: s.createdAt,
         lastUsedAt: s.lastUsedAt,
         // The table's TTL attribute: DynamoDB deletes the item after it.
@@ -83,6 +84,7 @@ export class Store implements SessionStore, AppleTokenStore {
       ...(typeof Item.email === 'string' ? { email: Item.email } : {}),
       emailVerified: Item.emailVerified === true,
       ...(typeof Item.name === 'string' ? { name: Item.name } : {}),
+      ...(typeof Item.climberId === 'string' ? { climberId: Item.climberId } : {}),
       createdAt: Item.createdAt as string,
       lastUsedAt: Item.lastUsedAt as string,
       ttl: Item.ttl as number,
@@ -99,6 +101,21 @@ export class Store implements SessionStore, AppleTokenStore {
         ConditionExpression: 'attribute_exists(pk) AND lastUsedAt = :previous',
         ExpressionAttributeNames: { '#ttl': 'ttl' },
         ExpressionAttributeValues: { ':now': lastUsedAt, ':ttl': ttl, ':previous': previous },
+      }));
+    } catch (e) {
+      if (!isConditionFailure(e)) throw e;
+    }
+  }
+
+  async rememberClimberId(id: string, subject: string, climberId: string): Promise<void> {
+    try {
+      await this.doc.send(new UpdateCommand({
+        TableName: this.table,
+        Key: key.session(id),
+        UpdateExpression: 'SET climberId = :climberId',
+        // Not if it was revoked meanwhile; only ever the session's own account's.
+        ConditionExpression: 'attribute_exists(pk) AND subject = :subject',
+        ExpressionAttributeValues: { ':climberId': climberId, ':subject': subject },
       }));
     } catch (e) {
       if (!isConditionFailure(e)) throw e;

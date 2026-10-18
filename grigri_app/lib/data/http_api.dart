@@ -473,8 +473,10 @@ class HttpGrigriApi implements GrigriApi, SessionApi {
   }
 
   @override
-  Future<PremiumOffer> premium() async =>
-      ApiJson.premiumOffer(await _get(['premium']));
+  Future<PremiumOffer> premium({bool fresh = false}) async =>
+      ApiJson.premiumOffer(
+        await _get(['premium'], fresh ? const {'fresh': '1'} : null),
+      );
 
   @override
   Future<Uri> premiumCheckout(PremiumPlan plan) async =>

@@ -260,8 +260,8 @@ describe('scoreItem', () => {
 });
 
 describe('the API', () => {
-  const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', admin: false };
-  const root: Caller = { subject: 'test#root', email: 'root@example.com', admin: true };
+  const ada: Caller = { subject: 'test#ada', email: 'ada@example.com', isAdmin: async () => false };
+  const root: Caller = { subject: 'test#root', email: 'root@example.com', isAdmin: async () => true };
 
   function setup(scorer?: MatchScorer) {
     const store = new FakeStore();
@@ -290,7 +290,7 @@ describe('the API', () => {
       asked.push(f.group_size);
       return { score: { score: 0.81, level: 'great', reason: 'in_grades' }, usage: { inputTokens: 1, outputTokens: 0 } };
     });
-    const ben: Caller = { subject: 'test#ben', email: 'ben@example.com', admin: false };
+    const ben: Caller = { subject: 'test#ben', email: 'ben@example.com', isAdmin: async () => false };
     await call(ben, 'PUT', '/api/me', profile);
     const { plan: p } = await call(ben, 'POST', '/api/plans', planBody);
     await call(ada, 'PUT', '/api/me', profile);
@@ -306,7 +306,7 @@ describe('the API', () => {
   it("leaves a plan aityx didn't score without one, and the deck as it was", async () => {
     const { call } = setup(async () => null);
     await call(root, 'PUT', '/api/me', profile);
-    const ben: Caller = { subject: 'test#ben', email: 'ben@example.com', admin: false };
+    const ben: Caller = { subject: 'test#ben', email: 'ben@example.com', isAdmin: async () => false };
     await call(ben, 'PUT', '/api/me', profile);
     await call(ben, 'POST', '/api/plans', planBody);
     const deck = await call(root, 'GET', '/api/discover');

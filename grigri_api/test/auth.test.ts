@@ -155,10 +155,44 @@ describe('Auth sessions', () => {
 
   it('looks the caller up, admin from rbacr\'s answer for the verified email', async () => {
     const { token } = await make().signIn({ idToken: 'good' });
-    const caller = await make().caller(bearer(token));
-    expect(caller).toEqual({ subject: 'https://accounts.google.com#7', email: 'admin@example.com', admin: true, sessionId: hashToken(token) });
+    const { isAdmin, ...caller } = await make().caller(bearer(token));
+    expect(caller).toEqual({ subject: 'https://accounts.google.com#7', email: 'admin@example.com', sessionId: hashToken(token) });
+    expect(await isAdmin()).toBe(true);
     // rbacr says no now: no longer admin, same session.
-    expect((await make({ isAdmin: async () => false }).caller(bearer(token))).admin).toBe(false);
+    expect(await (await make({ isAdmin: async () => false }).caller(bearer(token))).isAdmin()).toBe(false);
+  });
+
+  it('asks rbacr whether the caller is an admin only when asked, and once', async () => {
+    const asked: string[] = [];
+    const auth = make({ isAdmin: async (email) => (asked.push(email), admins.has(email)) });
+    const { token } = await auth.signIn({ idToken: 'good' });
+    const caller = await auth.caller(bearer(token));
+    expect(asked).toEqual([]);
+    expect(await caller.isAdmin()).toBe(true);
+    expect(await caller.isAdmin()).toBe(true);
+    expect(asked).toEqual(['admin@example.com']);
+  });
+
+  it('keeps an existing account\'s climber in a new session, never another account\'s', async () => {
+    store.subjects.set('https://accounts.google.com#7', 'climber-ada-0001');
+    store.subjects.set('https://accounts.google.com#9', 'climber-bob-0001');
+    const { token } = await make().signIn({ idToken: 'good' });
+    expect(store.sessions.get(hashToken(token))!.climberId).toBe('climber-ada-0001');
+    expect((await make().caller(bearer(token))).climberId).toBe('climber-ada-0001');
+    // A new account: none yet.
+    identity = { subject: 'https://accounts.google.com#8', email: 'new@example.com', emailVerified: true };
+    const second = await make().signIn({ idToken: 'good' });
+    expect(store.sessions.get(hashToken(second.token))).not.toHaveProperty('climberId');
+    expect(await make().caller(bearer(second.token))).not.toHaveProperty('climberId');
+    // Kept only for the session's own subject.
+    await store.rememberClimberId(hashToken(second.token), 'https://accounts.google.com#9', 'climber-bob-0001');
+    expect(store.sessions.get(hashToken(second.token))).not.toHaveProperty('climberId');
+  });
+
+  it('signs in even when the account\'s link can\'t be read', async () => {
+    store.climberIdFor = async () => { throw new Error('throttled'); };
+    const { token } = await make().signIn({ idToken: 'good' });
+    expect(store.sessions.get(hashToken(token))).not.toHaveProperty('climberId');
   });
 
   it('keeps the Google name with the session, for the caller', async () => {
@@ -171,7 +205,7 @@ describe('Auth sessions', () => {
     identity = { subject: 'https://accounts.google.com#8', emailVerified: false };
     const { token } = await make().signIn({ idToken: 'good' });
     const caller = await make().caller(bearer(token));
-    expect(caller.admin).toBe(false);
+    expect(await caller.isAdmin()).toBe(false);
     expect(caller.email).toBeUndefined();
   });
 
@@ -223,10 +257,14 @@ describe('Auth sessions', () => {
 
   it('dev mode: the header, and devUser sign-in; refused outside dev mode', async () => {
     const dev = make({ devMode: true });
-    expect(await dev.caller({ 'x-grigri-dev-user': 'Admin@Example.com' })).toEqual({ subject: 'dev#admin@example.com', email: 'admin@example.com', admin: true, name: 'admin' });
+    const { isAdmin, ...header } = await dev.caller({ 'x-grigri-dev-user': 'Admin@Example.com' });
+    expect(header).toEqual({ subject: 'dev#admin@example.com', email: 'admin@example.com', name: 'admin' });
+    expect(await isAdmin()).toBe(true);
     expect(await status(dev.caller({ 'x-grigri-dev-user': 'not an email' }))).toBe(401);
     const { token } = await dev.signIn({ devUser: 'Admin@Example.com' });
-    expect(await dev.caller(bearer(token))).toMatchObject({ subject: 'dev#admin@example.com', admin: true, name: 'admin' });
+    const signedIn = await dev.caller(bearer(token));
+    expect(signedIn).toMatchObject({ subject: 'dev#admin@example.com', name: 'admin' });
+    expect(await signedIn.isAdmin()).toBe(true);
     expect(await status(dev.signIn({ devUser: 'nope' }))).toBe(400);
 
     const prod = make();

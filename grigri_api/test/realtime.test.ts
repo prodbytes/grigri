@@ -98,7 +98,7 @@ describe('the authorizer', () => {
     expect((await authorize(wss('A'.repeat(43)), deps, scope)).isAuthenticated).toBe(false);
     const other = (await auth.signIn({ devUser: 'nobody@example.com' })).token;
     expect((await authorize(wss(other, 'whoever-1'), deps, scope)).isAuthenticated).toBe(false);
-    await auth.signOutEverywhere({ subject: 'dev#ada@example.com', admin: false });
+    await auth.signOutEverywhere({ subject: 'dev#ada@example.com', isAdmin: async () => false });
     const denied = await authorize(wss(token), deps, scope);
     expect(denied.isAuthenticated).toBe(false);
     expect(denied.policyDocuments).toEqual([]);
@@ -107,6 +107,16 @@ describe('the authorizer', () => {
   it("denies another climber's client id", async () => {
     expect((await authorize(wss(token, `${BEN}-web1`), deps, scope)).isAuthenticated).toBe(false);
     expect((await authorize(wss(token, ADA), deps, scope)).isAuthenticated).toBe(false);
+  });
+
+  it("uses the climber the session keeps, without the lookup, still checked", async () => {
+    const kept = (await auth.signIn({ devUser: 'ada@example.com' })).token;
+    const broken = { ...deps, climberIdFor: async () => { throw new Error('not asked'); } };
+    const answer = await authorize(wss(kept), broken, scope);
+    expect(answer.isAuthenticated).toBe(true);
+    expect(JSON.stringify(answer.policyDocuments)).toContain(`climbers/${ADA}/`);
+    // Still only my own client ids.
+    expect((await authorize(wss(kept, `${BEN}-web1`), broken, scope)).isAuthenticated).toBe(false);
   });
 
   it('fails closed when a lookup fails', async () => {
@@ -180,7 +190,7 @@ describe('hints from the API', () => {
   let store: FakeStore;
   let api: Api;
   let pub: FakePublisher;
-  const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, admin });
+  const who = (name: string, admin = false): Caller => ({ subject: `test#${name}`, email: `${name}@example.com`, isAdmin: async () => admin });
   const [ada, ben, cy, root] = [who('ada'), who('ben'), who('cy'), who('root', true)];
   const ids: Record<string, string> = {};
   let planId: string;

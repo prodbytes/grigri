@@ -68,7 +68,10 @@ SDK).
    Subscriptions without Grigri's metadata (other products on the
    account) are ignored.
 4. The app reads Premium again when it comes back to the foreground, when
-   the Profile tab opens, and on **I've paid: check again**.
+   the Profile tab opens, and on **I've paid: check again**, which asks
+   the API to check rbacr afresh (`?fresh=1`); so do the reads after
+   Checkout or the billing portal opened, until Premium changes
+   ([below](#who-is-premium)).
 
 Subscribed, the card says "Premium: renews on <date>" (or "ends on <date>"
 once cancelled) and offers **Manage subscription**: Stripe's billing
@@ -235,9 +238,15 @@ role, it's [rbacr's](roles.md); Grigri keeps only the billing.
   in rbacr by hand (a comp); a later payment by the same email replaces
   that grant's end with the paid period's.
 - **Checks**: the API asks rbacr for the caller's roles (kept a minute
-  per function instance; `GET /api/premium` asks afresh, so **I've paid:
-  check again** sees a payment at once, and so does the iOS app after
-  `POST /api/premium/apple`). Ad owners in the deck are checked by their
+  per function instance). `GET /api/premium` uses the kept answer unless
+  it may have just changed: it asks afresh with `?fresh=1`, which the app
+  sends for **I've paid: check again** and on every Premium refresh after
+  it opened Stripe's Checkout or billing portal (until my Premium
+  changes from what it was then), so coming back from paying shows it at
+  once; and whenever my subscription disagrees with the kept answer (paid
+  but no role yet, or the role still held after it ended). The iOS app's
+  `POST /api/premium/apple` always asks afresh. Free climbers with no
+  subscription get the kept answer. Ad owners in the deck are checked by their
   kept emails. Making a plan guided (`POST /api/plans`, or a `PUT` that
   changes its type to guided) checks the caller the same way: 403 "guided
   plans are for Premium climbers" without it. A plan that's guided
