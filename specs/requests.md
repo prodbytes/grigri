@@ -1762,14 +1762,11 @@ spec.
      - `GET /api/requests` reads my plans in one batch, then the
        requests of only the plans I decide on (the others had nothing to
        review): the same answer, fewer reads.
-     - `GET /api/plans/{id}/messages?after=` returns only the people its
-       new messages name (the members' profiles come with `GET
-       /api/plans` every refresh, and the app keeps every profile it was
-       given); the whole chat still comes with every member.
      - Chats' refresh is one `GET /api/chats/messages?chats=<planId>[~<after>],…`
        (at most 50 chats a request; the app splits more), each chat as
-       its own route answers it; an open chat keeps polling its own
-       route.
+       its own route answers it, with the same climbers (every chat's
+       members and the people its messages name, each read once); an
+       open chat keeps polling its own route, unchanged.
      - [Notices](api.md#routes): a stamp per climber, written after each
        delivery and each read-marking that changed something; the app
        sends the one it has (`?stamp=`, `?notices=` on updates) and hears
@@ -1781,14 +1778,12 @@ spec.
      - The old routes answer as before for older apps; against an older
        API (404 for the new routes), the app goes back to the single
        ones.
-     - Not changed: the badges, the match screen, the refresh timing and
-       what each screen shows. A profile edit now reaches an open chat
-       with the next regular refresh (as it already did everywhere
-       else), not with that chat's own poll.
+     - Not changed: the badges, the match screen, the refresh timing,
+       what each screen shows, and `GET /api/plans/{id}/messages`.
      - Tests: the API's batched answers equal the single routes' (and
        read the climbers and plans once), requests read only the plans I
-       decide on, the `after` poll's people, the chats' route
-       (membership, limits, bad input), the stamp's rules (unchanged,
+       decide on, the chats' route (membership, every member's
+       profile, limits, bad input), the stamp's rules (unchanged,
        new notice, marking read, older apps, a first stamp lost to a
        delivery); the app's tick is one request with the same data,
        unchanged notices kept, a failed mark corrected, Chats in one
@@ -1799,9 +1794,8 @@ spec.
        requests and ~30 read units to 1 request and ~16.5 (5 plans, 15
        people, 30 notices): ~$7.9 to ~$3.5 per million refreshes; at 15 s
        polling, 1,000 people 5 hours a month go from ~$9.5 to ~$4.2 and
-       make 2.4 million fewer calls. Chats with 10 chats: ~$19 to ~$2.8
-       per million refreshes. An open chat's poll with nothing new reads
-       2 units instead of 4. Unchanged notices cost half a unit however
+       make 2.4 million fewer calls. Chats with 10 chats: ~$19 to ~$4.7
+       per million refreshes. Unchanged notices cost half a unit however
        many there are.
 
 109. **Fix the cost review's findings, without changing the user

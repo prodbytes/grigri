@@ -830,18 +830,6 @@ describe('batched polls (specs/backend.md#what-a-poll-reads)', () => {
     expect(adaReview.requests.map((r: any) => r.planId).sort()).toEqual([planId, other, guided].sort());
   });
 
-  it("a chat's poll for what's new has only its new messages' people; the whole chat has its members' too", async () => {
-    const whole = await call(ada, 'GET', `/api/plans/${planId}/messages`);
-    expect(Object.keys(whole.climbers).sort()).toEqual([ids.Ada, ids.Ben, ids.Cy].sort());
-    const since = now.toISOString();
-    now = new Date(now.getTime() + 1000);
-    expect((await call(ada, 'GET', `/api/plans/${planId}/messages`, undefined, { after: since })).climbers).toEqual({});
-    await call(ben, 'POST', `/api/plans/${planId}/messages`, { text: 'Rope is packed' });
-    const fresh = await call(ada, 'GET', `/api/plans/${planId}/messages`, undefined, { after: since });
-    expect(fresh.messages.map((m: any) => m.text)).toEqual(['Rope is packed']);
-    expect(Object.keys(fresh.climbers)).toEqual([ids.Ben]);
-  });
-
   it('GET /api/chats/messages answers every chat at once, as its own route would', async () => {
     const solo = (await call(ben, 'POST', '/api/plans', { ...planBody, place: 'Solo' })).plan.id;
     const since = now.toISOString();
@@ -859,6 +847,10 @@ describe('batched polls (specs/backend.md#what-a-poll-reads)', () => {
     const all = await call(ben, 'GET', `/api/plans/${solo}/messages`);
     expect(both.chats[planId]).toEqual(one.messages);
     expect(both.chats[planId].map((m: any) => m.text)).toEqual(['See you at nine']);
+    // Every member of each chat (Ada and Ben; Cy only asked), even when
+    // only what's new is asked for.
+    expect(Object.keys(both.climbers).sort()).toEqual([ids.Ada, ids.Ben].sort());
+    expect(Object.keys(one.climbers).sort()).toEqual([ids.Ada, ids.Ben].sort());
     expect(both.chats[solo]).toEqual(all.messages);
     expect(both.climbers).toEqual({ ...one.climbers, ...all.climbers });
     expect(await call(ben, 'GET', '/api/chats/messages')).toEqual({ chats: {}, climbers: {} });

@@ -388,9 +388,9 @@ are kept forever, so that read grows); deliveries and read-marking
 write the stamp after the notices, so a new stamp is never read before
 its notices are there, and the notices it stands for are read strongly
 consistent. Chats' refresh is one `GET /api/chats/messages`: every
-chat's plan in one batch read and its new messages (a query each); an
-open chat's poll for what's new reads the people its new messages name
-only (none, most polls), not every member's profile again.
+chat's plan in one batch read, its new messages (a query each), and
+everyone the chats name (their members too, as each chat's own route
+returns them) in one read, each person once.
 
 Read units at $0.125 per million (eventually consistent: half a unit
 per 4 KB; a batch read bills each item), a request's overhead about
@@ -407,9 +407,9 @@ people (15 people), 2 requests to review, 30 notices:
 | Climbers | 3 batch reads, ~32 items: 16 RRU | 1, ~17 items: 8.5 RRU |
 | All told | ~$7.9 per million | ~$3.5 per million |
 
-Chats open with 10 chats of 4 people: 10 requests (~$14) and ~40 RRU
-($5) per million refreshes become 1 request ($1.4) and ~11 RRU ($1.4):
-about 7× cheaper. An open chat's poll with nothing new: 4 → 2 RRU. At
+Chats open with 10 chats of 4 people (31 people, me in each): 10
+requests (~$14) and ~40 RRU ($5) per million refreshes become 1 request
+($1.4) and ~26.5 RRU ($3.3): ~$19 to ~$4.7, about 4× cheaper. At
 15 s polling, 1,000 people with the app open 5 hours a month make 1.2
 million refreshes: about $9.5 a month before, $4.2 after, and 2.4
 million fewer API calls (so fewer CloudFront requests). The stamp adds

@@ -1949,11 +1949,6 @@ export class Api {
     return { body: { notices, ...(kept ? { stamp: kept } : {}) } as NoticesBody, people: people(notices) };
   }
 
-  /**
-   * GET /api/plans/{id}/messages[?after=]: the whole chat comes with its
-   * members' and its messages' people; what's new (`after`) only with
-   * those its new messages name (the members come with GET /api/plans).
-   */
   private async messages(req: Request, s: Session) {
     const planId = id(req.params.id, 'plan id');
     const current = await this.store.getPlan(planId);
@@ -1961,16 +1956,20 @@ export class Api {
     if (!current.plan.memberIds.includes(s.me.id)) throw forbidden("you're not in this plan");
     const after = req.query.after ? parseDate(req.query.after, 'after').toISOString() : undefined;
     const messages = await this.store.messages(planId, after);
-    const ids = new Set<string>(after ? [] : current.plan.memberIds);
-    addMessagePeople(ids, messages);
+    const ids = new Set<string>(current.plan.memberIds);
+    for (const m of messages) {
+      if (m.authorId) ids.add(m.authorId);
+      if (m.requestId) ids.add(m.requestId.split('/')[1]!);
+    }
     return { messages, climbers: await this.publicClimbers(ids) };
   }
 
   /**
    * GET /api/chats/messages?chats=<planId>[~<after>],...: several chats'
    * messages in one request, each as GET /api/plans/{id}/messages answers
-   * it (its whole chat, or after `after`); the plans in one batch read,
-   * their people in another. Plans I'm not in (or gone) are left out.
+   * it (its whole chat, or after `after`; its members and the people its
+   * messages name, always); the plans in one batch read, their people in
+   * another. Plans I'm not in (or gone) are left out.
    */
   private async chatsMessages(req: Request, s: Session) {
     const asked = new Map<string, string | undefined>();
@@ -1987,7 +1986,7 @@ export class Api {
       const after = asked.get(plan.id);
       const messages = await this.store.messages(plan.id, after);
       chats[plan.id] = messages;
-      if (!after) for (const m of plan.memberIds) ids.add(m);
+      for (const m of plan.memberIds) ids.add(m);
       addMessagePeople(ids, messages);
     }));
     return { chats, climbers: await this.publicClimbers(ids) };
