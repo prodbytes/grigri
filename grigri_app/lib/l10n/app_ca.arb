@@ -469,5 +469,12 @@
   "adRegionSearchLabel": "País, regió o poble",
   "adRegionSearchHelp": "Per exemple Espanya, Catalunya o Siurana. L'anunci també arriba una mica més enllà.",
   "adShowsIn": "Es mostra a {places}",
-  "adShowsEverywhere": "Es mostra a tot arreu"
+  "adShowsEverywhere": "Es mostra a tot arreu",
+  "teamChatTitle": "Equip Grigri",
+  "teamChatWelcome": "Gràcies per escalar amb Grigri! Ens encantaria saber què en penses: què funciona, què no i què t'agradaria veure després. Escriu-nos aquí quan vulguis.",
+  "teamChatsSection": "Xats de l'equip",
+  "teamAnswerBy": "{name} per l'equip",
+  "teamMessageHint": "Escriu a l'equip Grigri",
+  "teamAnswerHint": "Respon com a equip Grigri",
+  "teamAwaitingAnswer": "Per respondre"
 }

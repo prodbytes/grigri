@@ -311,6 +311,11 @@ enum NoticeKind {
 
   /// (Admins) there are reports to review; [Notice.planId] is empty.
   report,
+
+  /// A Grigri team chat has news (specs/team-chat.md): mine was answered,
+  /// or (admins) someone wrote to the team. It badges Chats, not
+  /// Notifications; [Notice.planId] is empty.
+  team,
 }
 
 /// A notification for me: a group answered my request to join its plan,

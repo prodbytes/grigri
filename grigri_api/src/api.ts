@@ -39,7 +39,8 @@ import {
   wallInput,
   wallsNear,
 } from './domain/walls.js';
-import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput } from './domain/validate.js';
+import { MAX_TEAM_CHATS, TEAM_NOTICE_ID, type TeamMessage, forClimber } from './domain/team.js';
+import { asObject, id, messageInput, parseDate, planInput, planPicKey, profileInput, teamMessageInput } from './domain/validate.js';
 import { type MatchScore, type MatchScorer, pooled } from './match/aityx.js';
 import { PREMIUM_PRICES, type PremiumPlan, type Subscription, isPaid, premiumOf, premiumUntil, premiumView } from './premium.js';
 import { MAX_PLACE_QUERY, type PlaceSearch } from './places.js';
@@ -326,6 +327,14 @@ export class Api {
     r('POST /api/blocks/{id}', 'profile', (req, s) => this.blockSomeone(req, s));
     r('DELETE /api/blocks/{id}', 'profile', (req, s) => this.unblockSomeone(req, s));
 
+    // The Grigri team chat (specs/team-chat.md): mine, and, for admins, everyone's.
+    r('GET /api/team/messages', 'profile', (req, s) => this.myTeamMessages(req, s));
+    r('POST /api/team/messages', 'profile', (req, s) => this.writeToTeam(req, s));
+    r('POST /api/team/read', 'profile', async (_req, s) => {
+      await this.store.markNoticeRead(s.me.id, TEAM_NOTICE_ID);
+      return {};
+    });
+
     r('GET /api/notices', 'profile', (_req, s) => this.notices(s));
     r('POST /api/notices/read', 'profile', async (_req, s) => {
       await this.store.markNoticesRead(s.me.id);
@@ -350,6 +359,9 @@ export class Api {
     });
     r('POST /api/admin/climbers/{id}/block', 'admin', (req, s) => this.block(id(req.params.id, 'climber id'), s, true));
     r('POST /api/admin/climbers/{id}/unblock', 'admin', (req, s) => this.block(id(req.params.id, 'climber id'), s, false));
+    r('GET /api/admin/team', 'admin', () => this.teamChats());
+    r('GET /api/admin/team/{id}/messages', 'admin', (req) => this.teamChatOf(req));
+    r('POST /api/admin/team/{id}/messages', 'admin', (req, s) => this.answerAsTeam(req, s));
     r('GET /api/admin/reports', 'admin', () => this.adminReports());
     r('POST /api/admin/reports/{id}/dismiss', 'admin', (req, s) => this.resolveReport(req, s, 'dismissed'));
     r('POST /api/admin/reports/{id}/remove', 'admin', (req, s) => this.resolveReport(req, s, 'removed'));
@@ -817,7 +829,9 @@ export class Api {
     for (const other of blocks.blocked) await this.store.removeBlock(climberId, other);
     for (const other of blocks.blockedBy) await this.store.removeBlock(other, climberId);
     await this.store.removeAdmins([climberId]);
-    // 8. My profile's photos (only ever my own folder's), then everything
+    // 8. My Grigri team chat: what I wrote and the team's answers.
+    await this.store.deleteTeamChat(climberId);
+    // 9. My profile's photos (only ever my own folder's), then everything
     // keyed to me: profile, memberships, passes, notices, email, Premium.
     if (me) {
       const owners = [subjectHash(subject), climberId];
@@ -1880,6 +1894,87 @@ export class Api {
     // A chat photo goes to the plan's "Your Pics" too.
     if (input.attachment?.kind === 'image') await this.chatPhotoToPics(planId, input.attachment.key, s);
     await this.hint(hintsFor(current.plan.memberIds, { kind: 'message', planId }, s.me.id));
+    return { message };
+  }
+
+  // --- The Grigri team chat (specs/team-chat.md) ------------------------------
+
+  /**
+   * GET /api/team/messages[?after=]: my team chat, oldest first, never
+   * saying which admin answered. Its welcome is the app's own: none stored.
+   */
+  private async myTeamMessages(req: Request, s: Session) {
+    const after = req.query.after ? parseDate(req.query.after, 'after').toISOString() : undefined;
+    const messages = await this.store.teamMessages(s.me.id, after);
+    return { messages: messages.map(forClimber) };
+  }
+
+  /** POST /api/team/messages: I write to the Grigri team. Every known admin gets a badge and a hint. */
+  private async writeToTeam(req: Request, s: Session) {
+    const { text } = teamMessageInput(req.body);
+    assertClean({ text });
+    const message: TeamMessage = { id: s.ctx.newId(), climberId: s.me.id, fromTeam: false, text, time: s.now.toISOString() };
+    await this.store.putTeamMessage(message);
+    await this.tellTeam(s);
+    return { message };
+  }
+
+  /**
+   * The admins hear of a climber's message: the "team" notice (one each,
+   * replaced, unread again; it says nothing of whose) and a hint. The
+   * admins Grigri knows (one read), without asking rbacr about each:
+   * neither carries anything of the message. Best effort: it's saved.
+   */
+  private async tellTeam(s: Session): Promise<void> {
+    try {
+      const admins = (await this.store.adminIds()).filter((cid) => cid !== s.me.id);
+      if (admins.length === 0) return;
+      const notice = { id: TEAM_NOTICE_ID, kind: 'team' as const, planId: '', planTitle: '', time: s.now.toISOString(), read: false };
+      await this.store.deliver(admins.map((to) => ({ to, notice })));
+      await this.hint(hintsFor(admins, { kind: 'team' }, s.me.id));
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'telling the team failed', error: String(e) }));
+    }
+  }
+
+  /** GET /api/admin/team: the team chats with a message, the latest first (at most MAX_TEAM_CHATS), and whose. */
+  private async teamChats() {
+    const chats = await this.store.teamChats(MAX_TEAM_CHATS);
+    return { chats, climbers: await this.publicClimbers(chats.map((c) => c.climberId)) };
+  }
+
+  /** GET /api/admin/team/{id}/messages[?after=]: a climber's team chat, with which admin wrote each answer. */
+  private async teamChatOf(req: Request) {
+    const climberId = id(req.params.id, 'climber id');
+    const after = req.query.after ? parseDate(req.query.after, 'after').toISOString() : undefined;
+    const messages = await this.store.teamMessages(climberId, after);
+    const ids = new Set<string>([climberId]);
+    for (const m of messages) if (m.adminId) ids.add(m.adminId);
+    return { messages, climbers: await this.publicClimbers(ids) };
+  }
+
+  /**
+   * POST /api/admin/team/{id}/messages: an admin answers as the Grigri
+   * team (the climber never sees who). The climber gets the "team"
+   * notice and a hint; the other admins a hint, for their open chat.
+   */
+  private async answerAsTeam(req: Request, s: Session) {
+    const climberId = id(req.params.id, 'climber id');
+    const { text } = teamMessageInput(req.body);
+    assertClean({ text });
+    if (!(await this.store.getClimber(climberId))) throw notFound('no such climber');
+    const message: TeamMessage = {
+      id: s.ctx.newId(), climberId, fromTeam: true, text, time: s.now.toISOString(), adminId: s.me.id,
+    };
+    await this.store.putTeamMessage(message);
+    try {
+      const notice = { id: TEAM_NOTICE_ID, kind: 'team' as const, planId: '', planTitle: '', time: s.now.toISOString(), read: false };
+      if (climberId !== s.me.id) await this.store.deliver([{ to: climberId, notice }]);
+      const admins = await this.store.adminIds();
+      await this.hint(hintsFor([climberId, ...admins], { kind: 'team' }, s.me.id));
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'telling of a team answer failed', error: String(e) }));
+    }
     return { message };
   }
 

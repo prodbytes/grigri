@@ -1648,4 +1648,28 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get adShowsEverywhere => 'Erscheint überall';
+
+  @override
+  String get teamChatTitle => 'Grigri-Team';
+
+  @override
+  String get teamChatWelcome =>
+      'Danke, dass du mit Grigri kletterst! Wir würden gern hören, was du denkst: was gut läuft, was nicht und was du dir als Nächstes wünschst. Schreib uns hier, wann immer du willst.';
+
+  @override
+  String get teamChatsSection => 'Team-Chats';
+
+  @override
+  String teamAnswerBy(String name) {
+    return '$name für das Team';
+  }
+
+  @override
+  String get teamMessageHint => 'Nachricht an das Grigri-Team';
+
+  @override
+  String get teamAnswerHint => 'Als Grigri-Team antworten';
+
+  @override
+  String get teamAwaitingAnswer => 'Offen';
 }

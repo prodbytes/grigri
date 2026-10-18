@@ -218,9 +218,14 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   kept to 4 decimals); absent for a place typed by hand.
 - **JoinRequest**: `{"id": "<planId>/<climberId>", "planId", "climberId", "acceptedBy": [climberIds], "rejected": bool, "time", "nudgedAt"?}`
   (`nudgedAt`: when the requester last [nudged](#routes) the group; absent until they do.)
-- **Notice**: `{"id", "kind": "accepted"|"declined"|"request"|"nudge"|"report", "planId", "planTitle" (the plan's place when the notice was made), "climberId"? (who asked, for request and nudge), "time", "read": bool}`.
+- **Notice**: `{"id", "kind": "accepted"|"declined"|"request"|"nudge"|"report"|"team", "planId", "planTitle" (the plan's place when the notice was made), "climberId"? (who asked, for request and nudge), "time", "read": bool}`.
   `report` goes to admins only, id `reports`, with `planId` and
-  `planTitle` empty: there are reports to review.
+  `planTitle` empty: there are reports to review. `team`, id `team`
+  (one per climber, replaced, unread again), with `planId` and
+  `planTitle` empty: my [Grigri team chat](team-chat.md) has an answer,
+  or (admins) someone wrote to the team; it says nothing of whose. The
+  app shows it as a badge on Chats, not in Notifications, and
+  `POST /api/notices/read` leaves it alone.
 - **Report** (admins only): `{"id", "kind": "profile"|"plan"|"message"|"pic"|"ad", "targetId", "planId"? (a message's or photo's), "subjectId" (whose content it is), "reporterId", "reason": "spam"|"harassment"|"inappropriate"|"fake"|"other", "text", "content": {"title"?, "text"?, "media"?: [{"key", "kind": "image"|"video"}], "link"?} (a copy, as it was when reported), "status": "open"|"dismissed"|"removed"|"blocked", "time", "resolvedAt"?, "resolvedBy"?}`.
   Apps skip kinds they don't know, so a new kind never breaks an older app.
 - **Message**: `{"id", "planId", "authorId": climberId|null, "text", "time", "requestId"?, "attachment"?: {"key", "kind": "image"|"video"}}`
@@ -228,6 +233,10 @@ Dates are ISO 8601 UTC strings. Photos are S3 keys; the app loads them from
   a request note carries requestId so the chat shows it as a card. A
   member's message has text, an attachment, or both; `text` is `""` for an
   attachment alone. The attachment is served at `/photos/<key>`.)
+- **TeamMessage** (the [Grigri team chat](team-chat.md)'s): `{"id", "climberId" (whose chat), "fromTeam": bool, "text", "time", "adminId"?}`.
+  `fromTeam`: an admin wrote it, as the Grigri team. `adminId` (which
+  admin) only in the admins' routes: never in the climber's.
+- **TeamChat** (admins' list): `{"climberId", "lastTime", "lastText" (its first 160 characters), "lastFromTeam": bool}`.
 - **PlanPic** (a photo of a plan's Your Pics): `{"id", "planId", "key", "uploaderId", "time", "fromChat": bool}`.
   Served at `/photos/<key>`: `plans/<planId>/<random>.<ext>`, or a chat
   photo's `chat/<planId>/...` (`fromChat`).
@@ -273,7 +282,7 @@ All need a session token except `GET /api/health`, `POST /api/session`,
 | `DELETE /api/sessions` | sign out everywhere: all my sessions end. → `{}` |
 | `GET /api/me` | `{"climber": Climber, "admin": bool, "roles": [string] \| null, "premium": {"active", "plan"?, "until"?, "ending"?, "source"?}}` (`premium`: my [Premium](premium.md); `source`, `stripe` or `apple`, says where it's managed). `roles`: my roles in Grigri from rbacr (see **Roles** above), or null when it can't say. The first time, it creates my profile from my account: the session's name (Google's, or the one Apple gave the app at the first sign-in; `Climber` when the session has none), no age, photo, bio, grades, gear or places. Two first calls at once make one profile. |
 | `GET /api/realtime` | where [live updates](#live-updates) come from: `{"url": "wss://<IoT endpoint>/mqtt", "authorizer": "<prefix>-api-realtime" (empty locally), "topic": "grigri/<stage>/climbers/<my climber id>/#", "clientIdPrefix": "<my climber id>-"}`, or `{"url": null}` when they're off |
-| `DELETE /api/me` | body `{"confirm": true}` (400 without it): deletes my account for good ([sign-in.md](sign-in.md#deleting-my-account)): Premium cancelled at Stripe at once and its rbacr role revoked, then `Deps.onDeleteAccount` (Sign in with Apple's token revocation), then my messages, their media, my request notes and my Your Pics photos in every plan I'm in, left or asked to join; I leave every plan (handed over, or ended with me as its last member; the note says "A climber left the plan"); my requests withdrawn; my ads, profile and gear photos and every item keyed to me deleted; then the sign-in link and every session (later calls: 401). A session route: blocked climbers may call it. Each step can run again: a retry after a failure (Stripe, rbacr, S3) finishes the job. → `{}` |
+| `DELETE /api/me` | body `{"confirm": true}` (400 without it): deletes my account for good ([sign-in.md](sign-in.md#deleting-my-account)): Premium cancelled at Stripe at once and its rbacr role revoked, then `Deps.onDeleteAccount` (Sign in with Apple's token revocation), then my messages, their media, my request notes and my Your Pics photos in every plan I'm in, left or asked to join, and my Grigri team chat (the team's answers too); I leave every plan (handed over, or ended with me as its last member; the note says "A climber left the plan"); my requests withdrawn; my ads, profile and gear photos and every item keyed to me deleted; then the sign-in link and every session (later calls: 401). A session route: blocked climbers may call it. Each step can run again: a retry after a failure (Stripe, rbacr, S3) finishes the job. → `{}` |
 | `PUT /api/me` | create or update my profile; body: Climber without id. Validates: name 1–60 chars (name and bio through the [filter](moderation.md#the-filter)), age null or 16–99, bio ≤ 1000, valid levels, gear from the list, ≤ 6 gearPhotos, photo keys must be mine (`<climberId or subject hash>/...` as issued by `/api/photos`), location null or a Location, ≤ 5 areas. Photos new to the profile lose their pending tag first (400 if one isn't uploaded, or already expired); photos it no longer uses are deleted. → `{"climber"}` (mine, with location and areas) |
 | `GET /api/discover` | plans to swipe on: upcoming (start > now, or undated), I'm not in, I haven't passed or asked, with nobody in the group [blocked](moderation.md#blocking-someone) either way between us; ranked by [how well they match me and how close they are](#the-decks-ranking), best first. → `{"plans": [Plan], "distanceKm": {planId: km}, "climbers"}` (organizers and members; `distanceKm`, whole km from my nearest location or area, only for plans whose distance is known); `"covers": {planId: {"key", "crag", "author", "license"}}`, each plan's best [GriGri Pics](pics.md#on-the-deck) photo (only for plans that have one; from the catalog the function keeps, never failing the deck); for admins also `"scores": {planId: {"score", "level", "reason"}}`, the best 30 plans' [match scores](match-scores.md#on-an-admins-deck); `"ads": [Ad]` and `"adEvery": n`, the [ads](ads.md#on-the-deck) to show between plans (not the ones I skipped; their owners in `climbers`; never failing the deck) |
 | `POST /api/plans` | new plan, I organize it; body: Plan without id, organizerId, memberIds. Validates: place required (≤ 80), area ≤ 120, sectorId ≤ 64 when given, start and end both or neither (neither: an **undated** plan, its day still to be decided), start in the future and at most a year away, end after start and at most 24 h later; `moreDays` (only with a start, at most 13: two weeks in all) are more days, each a start–end checked the same way and starting after the day before ends; notes ≤ 1000 (and the place and area when typed by hand) through the [filter](moderation.md#the-filter), grades on the discipline's scale; `type` private (default), open or guided (guided: [Premium](premium.md) only, 403 otherwise); a guided plan needs `price` (amount > 0 and ≤ 10000 with at most two decimals, currency EUR, USD, GBP, CHF or BRL), which other types drop. → `{"plan"}` |
@@ -290,7 +299,10 @@ All need a session token except `GET /api/health`, `POST /api/session`,
 | `POST /api/requests/{planId}/{climberId}/reject` | deciders only, as for accept, or an admin. One no is enough: rejected, Notice declined for them. → `{}` |
 | `POST /api/requests/{planId}/{climberId}/dismiss` | the requester clears a declined request from their plans (the plan stays out of their deck). → `{}` |
 | `GET /api/notices` | mine, newest first: `{"notices", "climbers"}` |
-| `POST /api/notices/read` | marks all mine read. → `{}` |
+| `POST /api/notices/read` | marks all mine read, but the `team` notice. → `{}` |
+| `GET /api/team/messages?after=<time>` | my [Grigri team chat](team-chat.md), oldest first, those after `after` when given; never `adminId`. Empty until I write (the welcome is the app's own). → `{"messages": [TeamMessage]}` |
+| `POST /api/team/messages` | I write to the Grigri team: body `{"text"}`, 1–2000 chars, through the [filter](moderation.md#the-filter); text only (400 for an attachment). Every admin Grigri knows gets the `team` notice. → `{"message"}` |
+| `POST /api/team/read` | my `team` notice read (opening a team chat). → `{}` |
 | `GET /api/plans/{id}/messages?after=<time>` | members only, oldest first, those after `after` when given. → `{"messages", "climbers"}` |
 | `POST /api/plans/{id}/messages` | members only; a photo attachment also joins the plan's Your Pics ([pics.md](pics.md)); body `{"text"?, "attachment"?: key}`: text up to 2000 chars, 1–2000 without an attachment, through the [filter](moderation.md#the-filter). The attachment must be a key `POST /api/plans/{id}/media` issued for this plan (`chat/<this planId>/<random>.<jpg\|png\|webp\|mp4\|mov>`; 400 otherwise) and uploaded: it loses its pending tag, only after the caller is known to be a member (400 if it isn't uploaded, or already expired). → `{"message"}` |
 | `POST /api/plans/{id}/media` | members only (403; 404 for no such plan); body `{"contentType"}`: `image/jpeg`, `image/png`, `image/webp`, `video/mp4` or `video/quicktime`, nothing else (400). → `{"key", "url", "fields", "maxBytes"}`: a presigned S3 POST as `POST /api/photos` gives, ≤ 2 MB for a photo and ≤ 50 MB for a video (`maxBytes`), its content type fixed by the policy. Keys are `chat/<planId>/<random>.<ext>` (object `photos/chat/...`, served at `/photos/chat/...`), tagged pending: an upload no message sends expires after a day. Sent ones expire 400 days after their upload ([backend](backend.md#chat-media)). |
@@ -320,6 +332,9 @@ All need a session token except `GET /api/health`, `POST /api/session`,
 | `POST /api/admin/climbers/{id}/block` | admin only: blocks them (400 for myself, 404 for no such climber). → `{"blocked": true}` |
 | `POST /api/admin/climbers/{id}/unblock` | admin only: unblocks them (404 for no such climber). → `{"blocked": false}` |
 | `POST /api/reports` | [report](moderation.md#reporting) something: body `{"kind", "targetId", "planId"? (a message's or photo's), "reason", "text"? (≤ 500)}`; a message or plan photo only as a member (403); 404 when there's no such thing; 400 for my own, or the chat's notes. Again by me on the same thing replaces it. Tells the admins (a `report` notice, a `notice` hint). → `{}` |
+| `GET /api/admin/team` | admin only: the team chats with a message, the latest first, at most 100 → `{"chats": [TeamChat], "climbers"}` (whose) |
+| `GET /api/admin/team/{id}/messages?after=<time>` | admin only: climber `{id}`'s team chat, oldest first, with `adminId` on the team's answers → `{"messages": [TeamMessage], "climbers"}` (the climber and the admins who answered) |
+| `POST /api/admin/team/{id}/messages` | admin only: an answer as the Grigri team, body as `POST /api/team/messages`; 404 for no such climber. The climber gets the `team` notice. → `{"message"}` |
 | `GET /api/admin/reports` | admin only: the open reports, oldest first → `{"reports": [Report], "climbers"}` (whose and who reported) |
 | `POST /api/admin/reports/{id}/dismiss` / `remove` / `block` | admin only: closes it; `remove` takes the content down (deletes a message, photo or ad with its files; clears a plan's notes, or a profile's bio and photos); `block` blocks its climber as `…/climbers/{id}/block` does. 404 for no such report, 409 when already handled. → `{"report"}` |
 | `GET /api/blocks` | the people I [blocked](moderation.md#blocking-someone) (never who blocked me) → `{"blocked": [climberId], "climbers"}` |
@@ -357,7 +372,7 @@ Details: [live-updates.md](live-updates.md).
   account with a profile and allows only connecting with that prefix and
   subscribing to and receiving that climber's own topics; anything else
   is refused. Locally (Floci) there's no authorizer.
-- **Hints** (QoS 0, JSON): `{"kind": "message"|"request"|"notice"|"plan"|"match"|"pics", "planId"?}`.
+- **Hints** (QoS 0, JSON): `{"kind": "message"|"request"|"notice"|"plan"|"match"|"pics"|"team", "planId"?}`.
   Never data: the app refetches through the routes above.
 
 | Change | Hint, to whom (never the one who made it) |
@@ -370,6 +385,8 @@ Details: [live-updates.md](live-updates.md).
 | `POST /api/plans/{id}/nudge` | `notice` to the members who haven't said yes |
 | `PUT /api/plans/{id}`, `POST /api/plans/{id}/leave` | `plan` to the (remaining) members |
 | `POST /api/reports` | `notice` (no plan) to every admin |
+| `POST /api/team/messages` | `team` (no plan) to every admin Grigri knows |
+| `POST /api/admin/team/{id}/messages` | `team` (no plan) to the climber and the other admins |
 | `POST /api/blocks/{id}` declining their requests | as reject |
 | `POST /api/admin/reports/{id}/remove` | `message`, `pics` or `plan` to the plan's members, for removed chat messages, photos or notes |
 | `POST /api/plans/{id}/pics`, `DELETE /api/plans/{id}/pics/{picId}` | `pics` to the members |

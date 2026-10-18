@@ -10,6 +10,7 @@ import { type Ad, type AdSettings, type AdStatus, DEFAULT_AD_SETTINGS } from '..
 import { Conflict, type LoadedPlan, type Store, type VersionedPlan } from '../src/store/store.js';
 import type { Wall } from '../src/domain/walls.js';
 import type { Report } from '../src/domain/moderation.js';
+import type { TeamChat, TeamMessage } from '../src/domain/team.js';
 
 export class FakeStore {
   subjects = new Map<string, string>();
@@ -211,7 +212,28 @@ export class FakeStore {
     return [...(this.noticeMap.get(cid)?.values() ?? [])].sort((a, b) => (a.time > b.time ? -1 : 1));
   }
   async markNoticesRead(cid: string) {
-    for (const [k, n] of this.noticeMap.get(cid) ?? []) this.noticeMap.get(cid)!.set(k, { ...n, read: true });
+    for (const [k, n] of this.noticeMap.get(cid) ?? []) if (k !== 'team') this.noticeMap.get(cid)!.set(k, { ...n, read: true });
+  }
+  async markNoticeRead(cid: string, noticeId: string) {
+    const n = this.noticeMap.get(cid)?.get(noticeId);
+    if (n) this.noticeMap.get(cid)!.set(noticeId, { ...n, read: true });
+  }
+  /** Team chat messages (specs/team-chat.md), and each chat's last one. */
+  teamMsgs: TeamMessage[] = [];
+  teamChatMap = new Map<string, TeamChat>();
+  async teamMessages(cid: string, after?: string) {
+    return this.teamMsgs.filter((m) => m.climberId === cid && (!after || m.time > after)).map((m) => ({ ...m }));
+  }
+  async putTeamMessage(m: TeamMessage) {
+    this.teamMsgs.push({ ...m });
+    this.teamChatMap.set(m.climberId, { climberId: m.climberId, lastTime: m.time, lastText: m.text.slice(0, 160), lastFromTeam: m.fromTeam });
+  }
+  async teamChats(limit: number) {
+    return [...this.teamChatMap.values()].sort((a, b) => (a.lastTime > b.lastTime ? -1 : 1)).slice(0, limit);
+  }
+  async deleteTeamChat(cid: string) {
+    this.teamMsgs = this.teamMsgs.filter((m) => m.climberId !== cid);
+    this.teamChatMap.delete(cid);
   }
   async messages(planId: string, after?: string) {
     return this.msgs.filter((m) => m.planId === planId && (!after || m.time > after));
