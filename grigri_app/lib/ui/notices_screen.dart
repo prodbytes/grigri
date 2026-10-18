@@ -7,6 +7,7 @@ import 'admin_screen.dart';
 import 'chat_screen.dart';
 import 'common.dart';
 import 'plan_screen.dart';
+import 'team_chat_screen.dart';
 
 /// The Notifications tab: someone asked to join a plan I'm in (or nudged
 /// me to answer), or a group accepted or declined my request, newest
@@ -88,6 +89,13 @@ class _NoticeTile extends StatelessWidget {
         l.noticeReportsTitle,
         l.noticeReportsBody,
       ),
+      // Not listed here (it badges Chats), but just in case.
+      NoticeKind.team => (
+        Icons.forum,
+        Mountain.sky,
+        l.teamChatTitle,
+        l.teamMessageHint,
+      ),
     };
     final Widget open = switch (notice.kind) {
       NoticeKind.request ||
@@ -95,6 +103,7 @@ class _NoticeTile extends StatelessWidget {
       NoticeKind.accepted => ChatScreen(planId: notice.planId),
       NoticeKind.declined => PlanScreen(planId: notice.planId),
       NoticeKind.report => const AdminScreen(initialTab: 2),
+      NoticeKind.team => const TeamChatScreen(),
     };
     return Card(
       margin: const EdgeInsets.only(bottom: 10),

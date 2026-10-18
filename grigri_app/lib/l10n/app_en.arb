@@ -2291,5 +2291,39 @@
   "adShowsEverywhere": "Shows everywhere",
   "@adShowsEverywhere": {
     "description": "An ad's tile: it has no regions."
+  },
+  "teamChatTitle": "Grigri team",
+  "@teamChatTitle": {
+    "description": "The Grigri team chat's title, and who its answers are from (specs/team-chat.md)."
+  },
+  "teamChatWelcome": "Thanks for climbing with Grigri! We'd love to hear what you think: what works, what doesn't, what you'd like next. Write to us here anytime.",
+  "@teamChatWelcome": {
+    "description": "The Grigri team chat's first message, from the team: thanks the user and asks for feedback."
+  },
+  "teamChatsSection": "Team chats",
+  "@teamChatsSection": {
+    "description": "Chats, admins only: the heading of every user's team chat."
+  },
+  "teamAnswerBy": "{name} for the team",
+  "@teamAnswerBy": {
+    "description": "Team chat, admins only: which admin wrote an answer for the Grigri team.",
+    "placeholders": {
+      "name": {
+        "type": "String",
+        "example": "Marta"
+      }
+    }
+  },
+  "teamMessageHint": "Message the Grigri team",
+  "@teamMessageHint": {
+    "description": "Hint of the team chat's input."
+  },
+  "teamAnswerHint": "Answer as the Grigri team",
+  "@teamAnswerHint": {
+    "description": "Hint of the team chat's input, for an admin answering a user."
+  },
+  "teamAwaitingAnswer": "To answer",
+  "@teamAwaitingAnswer": {
+    "description": "Chats, admins only: badge on a user's team chat waiting for the team's answer."
   }
 }

@@ -20,7 +20,8 @@ friendly: that has words Grigri doesn't allow."
 
 - **What it checks**: the profile's name and bio (`PUT /api/me`), a plan's
   notes and, when typed by hand (no `sectorId`), its place and area
-  (`POST`/`PUT /api/plans`), chat messages' text, and ads' text.
+  (`POST`/`PUT /api/plans`), chat messages' text (the
+  [Grigri team chat](team-chat.md)'s too, both ways), and ads' text.
 - **How**: a small word list in
   [filter.ts](../grigri_api/src/domain/filter.ts), a few words each in
   English, Spanish, German, French, Portuguese and Catalan. It matches

@@ -118,6 +118,8 @@ async function writePlans(store: Store, plans: Plan[], now: Date): Promise<void>
     const memberIds = [...p.memberIds, ...real];
     const plan = { ...p, memberIds, demo: true as const };
     await doc.send(new PutCommand({ TableName: table, Item: planItem(plan, ((Item?.version as number) ?? 0) + 1) }));
+    // Re-dated: the decks' caches read it again (src/deck-cache.ts).
+    await store.noteChanges([{ kind: 'plan', id: p.id }]);
     for (const m of p.memberIds) {
       await doc.send(new PutCommand({ TableName: table, Item: { ...key.member(m, p.id), type: 'member', planId: p.id, time: nowIso } }));
     }
@@ -147,7 +149,7 @@ export const SHOWCASE_VERSION = 6;
  * The demo showcase (seed/showcase.ts), on every stage: its climbers and
  * plans, re-dated, and the sample ads (seed/ads.ts) with their photos. It
  * writes only `seed-` records (and the ads' photos), so it's safe in
- * production. Records when, so [showcaseIsStale] can tell.
+ * production. Records when, so [showcaseFreshUntil] can tell.
  */
 export async function seedShowcase(store: Store, now: Date, putPhoto?: PutPhoto): Promise<{ climbers: number; plans: number; ads: number }> {
   const data = showcaseData(now);
@@ -158,9 +160,30 @@ export async function seedShowcase(store: Store, now: Date, putPhoto?: PutPhoto)
   return { climbers: data.climbers.length, plans: data.plans.length, ads };
 }
 
-/** Whether the showcase was last written over 12 hours ago, by an older showcase.ts, or never. */
-export async function showcaseIsStale(store: Store, now: Date): Promise<boolean> {
+/**
+ * Until when (epoch ms) the showcase is fresh: 12 hours after it was last
+ * written; 0 when it never was, or by an older showcase.ts.
+ */
+export async function showcaseFreshUntil(store: Store): Promise<number> {
   const { Item } = await store.doc.send(new GetCommand({ TableName: store.table, Key: key.showcase() }));
   const time = typeof Item?.time === 'string' ? Date.parse(Item.time) : NaN;
-  return Item?.version !== SHOWCASE_VERSION || !(now.getTime() - time < SHOWCASE_EVERY_MS);
+  return Item?.version === SHOWCASE_VERSION && Number.isFinite(time) ? time + SHOWCASE_EVERY_MS : 0;
+}
+
+/**
+ * Keeps the showcase fresh before each deck: re-dates it when it's stale
+ * (`rewrite`), reading its marker (`freshUntil`) only once it could be:
+ * until then it's fresh whatever any other instance does (a rewrite only
+ * moves the marker on), so the warm function remembers when that is
+ * instead of reading it on every deck.
+ */
+export function showcaseKeeper(freshUntil: () => Promise<number>, rewrite: (now: Date) => Promise<void>): (now: Date) => Promise<void> {
+  let until = 0;
+  return async (now) => {
+    if (now.getTime() < until) return;
+    until = await freshUntil();
+    if (now.getTime() < until) return;
+    await rewrite(now);
+    until = now.getTime() + SHOWCASE_EVERY_MS;
+  };
 }

@@ -2930,6 +2930,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shows everywhere'**
   String get adShowsEverywhere;
+
+  /// The Grigri team chat's title, and who its answers are from (specs/team-chat.md).
+  ///
+  /// In en, this message translates to:
+  /// **'Grigri team'**
+  String get teamChatTitle;
+
+  /// The Grigri team chat's first message, from the team: thanks the user and asks for feedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for climbing with Grigri! We\'d love to hear what you think: what works, what doesn\'t, what you\'d like next. Write to us here anytime.'**
+  String get teamChatWelcome;
+
+  /// Chats, admins only: the heading of every user's team chat.
+  ///
+  /// In en, this message translates to:
+  /// **'Team chats'**
+  String get teamChatsSection;
+
+  /// Team chat, admins only: which admin wrote an answer for the Grigri team.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} for the team'**
+  String teamAnswerBy(String name);
+
+  /// Hint of the team chat's input.
+  ///
+  /// In en, this message translates to:
+  /// **'Message the Grigri team'**
+  String get teamMessageHint;
+
+  /// Hint of the team chat's input, for an admin answering a user.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer as the Grigri team'**
+  String get teamAnswerHint;
+
+  /// Chats, admins only: badge on a user's team chat waiting for the team's answer.
+  ///
+  /// In en, this message translates to:
+  /// **'To answer'**
+  String get teamAwaitingAnswer;
 }
 
 class _AppLocalizationsDelegate

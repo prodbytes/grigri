@@ -33,6 +33,11 @@ who are members, or by an admin.
   under `/photos/*`, so the web app calls its own origin: no CORS for the
   API.
 - **DynamoDB**, one table, on demand, single-table design.
+- **The deck's cache** ([below](#the-decks-cache)): each warm function
+  keeps the upcoming plans and the approved ads (with the ads' setting and
+  their owners' profiles and emails) in memory, and every deck reads only
+  the table's **change log** to patch them, so a deck is as current as
+  reading everything every time.
 - **Photos** in a private S3 bucket in the site stack
   (`<site stack>-photos-<account>`), uploaded straight from the app with
   presigned POSTs (≤ 2 MB, JPEG/PNG/WebP, 15 minutes) that the API issues
@@ -183,13 +188,23 @@ the photos bucket. On **every stage, production included**; all marked
 `demo`, with `seed-` ids.
 
 The API keeps it upcoming itself: before building a deck
-(`GET /api/discover`), it reads one marker item (`META#SHOWCASE`) and, when
+(`GET /api/discover`), it checks one marker item (`META#SHOWCASE`) and, when
 it's over 12 hours old or was written by an older showcase
 (`SHOWCASE_VERSION` in [seed.ts](../grigri_api/seed/seed.ts), bumped with
 every change to the showcase, so a deploy shows it at once), rewrites the
 showcase's climbers and plans with fresh dates (as the seed does: real members stay), and its sample ads (their photos copied only once). A failure is logged and
-never fails the deck. No scheduler or new resource: one extra read per
-deck and about 50 writes twice a day, well under a cent a month.
+never fails the deck, and the next deck tries again. The warm function
+remembers until when the marker it read (or wrote) keeps the showcase
+fresh, and reads the marker again only from then: before that the
+showcase can't be stale whatever another instance does (a rewrite only
+moves the marker later), so the first deck after the 12 hours, on any
+instance, re-dates it, as when every deck read the marker. Each plan
+it re-dates adds an entry to the [change log](#the-decks-cache), so
+every warm deck has the new dates at once. No scheduler or new resource:
+one read per warm instance every 12 hours (and one when it starts),
+instead of one per deck, and about 50 writes twice a day plus their
+log entries (one per climber, plan and ad, about 55), well under a cent
+a month.
 
 ## Cost
 
@@ -210,7 +225,8 @@ and use is billed per request. Prices are us-east-1's.
 | Artifact bucket (per stage) | S3 storage of each deploy's ~200 KB zip, expired after 30 days | ~$0 | Where `aws cloudformation package` uploads the code. |
 | IoT Core (live updates) | Connectivity $0.08 per million connection-minutes; messaging $1.00 per million messages (metered in 5 KB units; a hint is under 100 bytes, so 1 unit), counted once when the API publishes and once per delivery (so about $2 per million hints), plus a few messages per connection (connect, subscribe) and its keep-alive pings (one a minute, 60 s: $0.00006 an hour online, most of the IoT cost); no charge for the custom authorizer itself; no endpoint or broker fee | $0 | See [Live updates' cost](#live-updates-cost). |
 | Premium payments ([premium.md](premium.md#cost)) | Android and the web, Stripe: 2.9% + $0.30 per charge, plus 0.7% Billing. iOS, the App Store: 15% of each payment (Small Business Program; 30% otherwise). No monthly fee for either | $0 | Pay per payment; merchants of record take 5% + $0.50. The App Store is the dearest, but Apple's guideline 3.1.1 allows nothing else in the iOS app. Its signed transactions and notifications are verified in the same function, offline (no App Store Server API call, no key): no new AWS resource. One subscription item per subscriber in the table, plus one small item per App Store subscription (whose it is). |
-| Ads ([ads.md](ads.md#cost)) | Three reads and a small batch read per deck, a write per skipped ad; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
+| The deck's cache ([below](#the-decks-cache)) | One strongly consistent query of the change log per deck (1 read unit) instead of reading every upcoming plan and the ads; an entry (~150 bytes, expiring after a day) per write of a plan (2 write units, in its transaction), an ad, the ads' setting or a profile (1 write unit) | $0 | Memory the warm function already has: no cache service (ElastiCache and DAX bill by the hour), no stream or second function. |
+| Ads ([ads.md](ads.md#cost)) | Per deck, one query of the ads I skipped (the rest comes from the deck's cache); a write per skipped ad; media as chat media | $0 | In the table and the photos bucket already there; videos load only when played. |
 | Moderation ([moderation.md](moderation.md#data-and-cost)) | A report: a write, a read or two, a notice write per admin; a block: two writes; one small query more per deck and per join request | $0 | No new resources: items in the table, in-app notices (no email or push service), the word filter in the function (no moderation service), and blocked people's messages hidden in the app (no extra read per chat poll). |
 | Match scores ([match-scores.md](match-scores.md#cost)) | aityx System One: $0.042 per million input tokens (about $0.00007 a call, ~1,600 tokens); the scores table on demand; the scoring function only when run by hand | $0 | A decision API keeps the score's weights as data, each rule with its reason; it's called only for admins' decks and on-demand runs. |
 | Authorizer Lambda, arm64, 128 MB | $0.20 per million invocations + GB-seconds: one at each connect and one an hour per open connection (`refreshAfterInSeconds` 3600), ~30 ms each | $0 | A separate tiny function: the API's 256 MB bundle and role would be more than it needs. Hourly refresh, not every few minutes: sign-out reaches open connections within the hour at a twelfth of the invocations of a 5-minute refresh. |
@@ -224,6 +240,74 @@ only as a safety net (~30–90 calls per hour open), so a few thousand
 users with the app open ~5 hours a month make about a million calls;
 with them down, it polls every 15 s (~960 calls per hour open), about
 **4.8 million calls a month per 1,000 users**, ~$10 a month.
+
+### The deck's cache
+
+`GET /api/discover` is the most read route: the app asks for the deck
+every 15 s while Discover is open (every 2 minutes while the live
+connection is up). Every deck needs every upcoming plan worldwide (the
+deck ranks them all) and the approved ads, and those are the same for
+everyone, so each warm function keeps them in memory
+([deck-cache.ts](../grigri_api/src/deck-cache.ts)):
+
+- **The change log**: every write of a plan item adds an entry
+  (`CHANGES` / `<time>#<kind>#<id>#<random>`, with `kind` and `id`,
+  expiring after a day) **in the same transaction** (create, edit, a join,
+  accept, reject or admin answer that changes the members, leave and
+  delete, a withdrawn request, an admin clearing notes), and so does
+  the seed and showcase's re-dating of each plan. Every write of an ad
+  (created, edited, approved, rejected, deleted), of the ads' setting,
+  and of a profile or its kept email (saved, created, an admin
+  clearing it, the account deleted) adds one right after it.
+- **Every deck** queries the log's last minute or so (since its
+  instance's previous deck, less a minute, for entries stamped just
+  before a slow commit), **strongly consistent**: an entry is there as
+  soon as its write is. Entries the instance hasn't applied yet are read
+  again, strongly consistent (a plan, an ad, the setting, an owner's
+  profile and email), and patched into its copy: a plan created or
+  changed comes in, one deleted or no longer upcoming goes. Nothing new:
+  the copy is the table as it is. The deck then keeps the plans that
+  start after now (so a plan leaves it once it starts, with no write)
+  and goes on as before (my passes, requests and blocks, the people in
+  the deck's plans, my skipped ads are read for each deck, as they were).
+  So a change made on any instance is on every deck at once, as when
+  every deck read everything; the deck is the same, in the same order.
+- **Read in full**: when an instance starts, when its last deck was over
+  5 minutes ago, and at least every 5 minutes (a safety net, should a
+  write ever skip the log). The plans come from the `PLANS` index, which
+  lags the table a little, so the log's last minute is read again on top.
+- **Why a log, not a version counter** bumped by every write: a deck that
+  saw the counter move would re-read the index, which may not have the
+  change yet, and keep that stale copy until the next write; and one
+  counter item in every plan transaction would make concurrent
+  transactions fail each other. The log's entries are new items, never
+  contended, and the changed items are read from the table itself.
+
+Cost, at $0.125 per million read units and $0.625 per million write
+units (a plan item is about 1 KB; an index query reads 0.5 units per
+4 KB, a strongly consistent read 1):
+
+| Per deck | Before | Now |
+|---|---|---|
+| Upcoming plans (N of them) | N/8 units: 5 at 40 plans (today's showcase), 125 at 1,000, 1,250 at 10,000 | **1 unit** for the log (up to ~25 entries in its window), plus 1 per plan changed since, once per instance |
+| Ads' setting, approved ads, owners' profiles and emails | ~2.5 units (one owner) | in the same log query |
+| The showcase's marker | 0.5 unit | none (one read per instance every 12 hours) |
+
+With my skipped ads' query (0.5 unit, both before and now), at 40 plans
+a deck goes from about 8.5 units to about 1.5; at 1,000 plans from
+about 128.5 to about 1.5: an hour with Discover open (240 decks) from
+30,840 units ($0.0039) to about 360 ($0.00005), plus a full read per busy instance every 5 minutes (12 an
+hour, shared by everyone that instance serves). What it adds: 2 write
+units per plan write (its log entry, in the transaction: $0.00000125)
+and 1 per ad, setting or profile write ($0.000000625); a thousand of each
+a day is about $0.06 a month. A plan write's 2 write units cost what 10
+read units do, so the log pays for itself when there are more than about
+two decks per plan write. The log's items expire (TTL deletes are free)
+and hold a day's writes at most, a few KB. The worst case, a cold
+instance for every deck, reads what a deck read before plus the log's
+1 unit. The log is one partition, as the `PLANS` index already is: 3,000
+strongly consistent reads a second (about 3,000 decks a second) and
+1,000 writes a second, far beyond Grigri's load.
 
 ### Chat media
 
