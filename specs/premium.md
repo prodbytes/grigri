@@ -67,8 +67,11 @@ SDK).
    older subscription's late event never overwrites a newer paid one.
    Subscriptions without Grigri's metadata (other products on the
    account) are ignored.
-4. The app reads Premium again when it comes back to the foreground, when
-   the Profile tab opens, and on **I've paid: check again**.
+4. The app reads Premium again when the Profile tab opens, when it comes
+   back to the foreground after opening Stripe's pages (or with the
+   profile on screen), and on **I've paid: check again**. At launch my
+   Premium comes from `GET /api/me`; `GET /api/premium` (with the prices)
+   waits until the profile opens.
 
 Subscribed, the card says "Premium: renews on <date>" (or "ends on <date>"
 once cancelled) and offers **Manage subscription**: Stripe's billing

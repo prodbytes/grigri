@@ -23,6 +23,9 @@ import 'profile_screen.dart';
 /// and refreshes from the API: the tab I open, and every [refreshEvery]
 /// my plans, requests, notifications and the open tab; only every
 /// [liveRefreshEvery] while the live connection is up (a safety net).
+/// While another screen covers the tabs (a chat, a plan), the open tab
+/// waits: it's refreshed once that screen closes, if a refresh was
+/// skipped meanwhile.
 class HomeShell extends StatefulWidget {
   const HomeShell({
     super.key,
@@ -33,11 +36,16 @@ class HomeShell extends StatefulWidget {
   final Duration refreshEvery;
   final Duration liveRefreshEvery;
 
+  /// Tells HomeShell when screens pushed over it close (the app's
+  /// navigator observes with it).
+  static final routes = RouteObserver<ModalRoute<void>>();
+
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
+class _HomeShellState extends State<HomeShell>
+    with WidgetsBindingObserver, RouteAware {
   /// The open tab, by id (not its place in the bar: Ads and Admin come
   /// and go).
   int _tab = 0;
@@ -52,6 +60,10 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
 
   /// The notifications that were unread when I opened the tab.
   Set<String> _fresh = const {};
+
+  /// The open tab's refresh was skipped while another screen covered it.
+  bool _missed = false;
+  ModalRoute<void>? _route;
 
   Timer? _timer;
   StreamSubscription<Match>? _matches;
@@ -77,7 +89,30 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != _route) {
+      HomeShell.routes.unsubscribe(this);
+      _route = route;
+      if (route != null) HomeShell.routes.subscribe(this, route);
+    }
+  }
+
+  /// The screen over the tabs closed: the open tab catches up.
+  @override
+  void didPopNext() {
+    if (!_missed) return;
+    _missed = false;
+    _refreshTab(_tab, regular: true);
+  }
+
+  /// Whether the tabs are on top (no chat, plan or dialog over them).
+  bool get _onTop => _route?.isCurrent ?? true;
+
+  @override
   void dispose() {
+    HomeShell.routes.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _matches?.cancel();
@@ -91,8 +126,9 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
       _startTimer();
       _store.goLive();
       _tick();
-      // Back from Stripe's pages in the browser, maybe.
-      _store.refreshPremium();
+      // Back from Stripe's pages (or the App Store's subscriptions), or
+      // the profile is on screen: my Premium again.
+      _store.refreshPremiumOnReturn(visible: _tab == _profile && _onTop);
     } else if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden) {
       _timer?.cancel();
@@ -109,14 +145,19 @@ class _HomeShellState extends State<HomeShell> with WidgetsBindingObserver {
     });
   }
 
-  /// The regular refresh: what every tab's badges need, and the open tab.
+  /// The regular refresh: what every tab's badges need, and the open tab
+  /// if it's on screen (else once it's back, [didPopNext]).
   void _tick() {
     if (!mounted) return;
     final store = StoreScope.read(context);
     store.refreshPlans();
     store.refreshRequests();
     store.refreshNotices();
-    _refreshTab(_tab, regular: true);
+    if (_onTop) {
+      _refreshTab(_tab, regular: true);
+    } else {
+      _missed = true;
+    }
   }
 
   /// Refreshes what a tab shows.

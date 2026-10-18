@@ -325,11 +325,15 @@ class GrigriStore extends ChangeNotifier {
 
   void _clear() {
     _live?.stop();
+    _live?.forget();
     _session++;
     _me = null;
     _admin = false;
     _premium = const Premium.none();
     _premiumPrices = const {};
+    _premiumOffered = false;
+    _awayToPay = false;
+    _messagePolls.clear();
     _appleAccountToken = null;
     _buying = false;
     _deckAds = [];
@@ -432,6 +436,12 @@ class GrigriStore extends ChangeNotifier {
 
   /// What Premium costs; empty until loaded, or when it can't be bought.
   Map<PremiumPlan, PremiumPrice> get premiumPrices => _premiumPrices;
+
+  /// Whether `GET /api/premium` has been asked this session, and answered
+  /// or failed (the profile asks when it opens; until then [premium]
+  /// comes from `GET /api/me` and [premiumPrices] is empty).
+  bool get premiumOffered => _premiumOffered;
+  bool _premiumOffered = false;
 
   /// My roles in Grigri, from rbacr through the API, sorted; null when
   /// rbacr couldn't say.
@@ -955,6 +965,12 @@ class GrigriStore extends ChangeNotifier {
       _plans[pic.planId]?.organizerId == me.id ||
       _admin;
 
+  /// How many times a plan's chat has been fetched this session (by
+  /// anyone: its screen, a hint, Chats), so the open chat can tell its
+  /// next poll can wait.
+  int messagePolls(String planId) => _messagePolls[planId] ?? 0;
+  final _messagePolls = <String, int>{};
+
   /// A plan's chat: all of it the first time, then what's new.
   Future<void> pollMessages(String planId) {
     final have = _messages[planId];
@@ -964,6 +980,7 @@ class GrigriStore extends ChangeNotifier {
         after: have == null || have.isEmpty ? null : have.last.time,
       ),
       (list) {
+        _messagePolls[planId] = messagePolls(planId) + 1;
         _learn(list.climbers);
         _addMessages(planId, list.messages, replace: have == null);
       },
@@ -1401,8 +1418,27 @@ class GrigriStore extends ChangeNotifier {
   /// My Premium and its prices again (the profile, and coming back from
   /// Stripe's pages in the browser).
   Future<void> refreshPremium() async {
+    final session = _session;
     await _refresh(api.premium, _applyOffer);
+    if (session == _session && _phase == Phase.ready && !_premiumOffered) {
+      // Asked, even if it failed: the card says what it has.
+      _premiumOffered = true;
+      notifyListeners();
+    }
     await _premiumChanged();
+  }
+
+  /// The app opened Stripe's Checkout or portal, or the App Store's
+  /// subscriptions, and hasn't checked my Premium since.
+  bool _awayToPay = false;
+
+  /// Back in the foreground: my Premium again if I went to pay for or
+  /// manage it ([subscribe], [managePremium]), or if [visible] (the
+  /// profile is on screen); nothing otherwise.
+  Future<void> refreshPremiumOnReturn({bool visible = false}) async {
+    if (!_awayToPay && !visible) return;
+    _awayToPay = false;
+    await refreshPremium();
   }
 
   void _applyOffer(PremiumOffer offer) {
@@ -1423,7 +1459,7 @@ class GrigriStore extends ChangeNotifier {
   /// App Store sells it there ([buyInAppStore]).
   Future<bool> subscribe(PremiumPlan plan) async {
     final url = await _act(() => api.premiumCheckout(plan));
-    return url != null && await _openOrSay(url);
+    return url != null && await _openToPay(url);
   }
 
   /// Where my subscription is managed: the App Store's subscriptions for
@@ -1431,10 +1467,17 @@ class GrigriStore extends ChangeNotifier {
   /// for one bought through Stripe.
   Future<bool> managePremium() async {
     if (_premium.source == PremiumSource.apple) {
-      return _openOrSay(appStoreSubscriptionsUrl);
+      return _openToPay(appStoreSubscriptionsUrl);
     }
     final url = await _act(api.premiumPortal);
-    return url != null && await _openOrSay(url);
+    return url != null && await _openToPay(url);
+  }
+
+  /// Opens a page where my Premium may change: checked again on return.
+  Future<bool> _openToPay(Uri url) async {
+    final opened = await _openOrSay(url);
+    if (opened) _awayToPay = true;
+    return opened;
   }
 
   // --- Premium through the App Store (iOS) ---------------------------------

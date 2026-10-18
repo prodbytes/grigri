@@ -44,7 +44,7 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final _input = TextEditingController();
   Timer? _poll;
   bool _sending = false;
@@ -64,12 +64,13 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // After the first frame: loading notifies, which can't happen mid-build.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final store = StoreScope.read(context);
       store.loadPlan(widget.planId);
-      store.pollMessages(widget.planId);
+      _pollNow(store);
     });
     _poll = Timer.periodic(widget.pollEvery, (_) {
       // Only while the app is in the foreground.
@@ -78,12 +79,44 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
       final store = StoreScope.read(context);
-      if (_cadence.tick(live: store.live)) store.pollMessages(widget.planId);
+      // Fetched since my last poll (a live hint, Chats): the next one can
+      // wait a full round.
+      if (store.messagePolls(widget.planId) != _polls) {
+        _polls = store.messagePolls(widget.planId);
+        _cadence.reset();
+      }
+      if (_cadence.tick(live: store.live)) _pollNow(store);
     });
   }
 
+  /// How many times the store had fetched this chat after my last poll.
+  int _polls = 0;
+
+  Future<void> _pollNow(GrigriStore store) async {
+    await store.pollMessages(widget.planId);
+    if (mounted) _polls = store.messagePolls(widget.planId);
+  }
+
+  /// Back in the foreground: what came in meanwhile, at once (the live
+  /// connection, reopening, doesn't catch up by itself after a resume).
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _away = true;
+    } else if (state == AppLifecycleState.resumed && _away && mounted) {
+      _away = false;
+      _cadence.reset();
+      _pollNow(StoreScope.read(context));
+    }
+  }
+
+  /// The app went to the background (live updates stopped).
+  bool _away = false;
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _poll?.cancel();
     _input.dispose();
     super.dispose();

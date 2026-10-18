@@ -1388,7 +1388,10 @@ void main() {
     ) async {
       final api = sampleApi();
       await pumpApp(tester, api);
+      // The prices are asked for once the profile opens, not at launch.
+      expect(api.calls, isNot(contains('GET /api/premium')));
       await openProfile(tester);
+      expect(api.calls.where((c) => c == 'GET /api/premium'), hasLength(1));
       expect(find.text('\$20 a month'), findsOneWidget);
       expect(find.text('\$200 a year'), findsOneWidget);
       await tester.ensureVisible(find.text('\$200 a year'));

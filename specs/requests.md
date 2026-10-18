@@ -1618,3 +1618,37 @@ spec.
        Guided off without Premium.
      - Cost: none: the check is the same cached rbacr lookup Premium's
        other routes make, only when a plan is made guided.
+
+104. **Fix the cost review's findings, without changing the user experience
+     or features.**
+     - [Live updates](live-updates.md#the-app): the connection that opens
+       on resume no longer counts as a reconnect, so it doesn't refetch
+       plans, requests, notifications and chats on top of the resume
+       refresh (a drop in the foreground still catches up); the backoff
+       starts over at 1 s only after a connection stayed up a minute (no
+       reconnecting every second to a broker that accepts and drops);
+       `GET /api/realtime` is asked once per session while connecting
+       with it works.
+     - [Matching](matching.md#refreshing): the open tab (the deck, most
+       often) isn't refetched while a chat or plan covers it, and catches
+       up once when it closes; an open chat polls at once on resume, and
+       a hint's fetch of it starts its poll count over.
+     - [Premium](premium.md): `GET /api/premium` at launch is gone (Premium
+       comes from `GET /api/me`); it's asked when the Profile tab opens,
+       and on resume only after the app opened Stripe's (or the App
+       Store's subscription) pages, or with the profile on screen. The
+       card leaves room for the prices while they load instead of saying
+       "unavailable".
+     - Tests: the backoff keeps growing for connections that drop at once
+       and resets after a minute up; where to connect is asked once; a
+       restart isn't a reconnect; the deck waits under a pushed screen
+       and refreshes once on pop; Premium is checked on return only after
+       its pages opened, and not at launch; a hint's fetch puts off the
+       open chat's next poll.
+     - Cost: fewer API Gateway requests and Lambda invocations (and their
+       DynamoDB reads), no new resources: per resume, no duplicate
+       catch-up (3 calls plus one per loaded chat), no `GET /api/realtime`
+       and no `GET /api/premium` (nor its uncached rbacr lookup); per
+       launch, no `GET /api/premium`; no deck fetch every 15 s while a
+       chat or plan is open; one chat poll fewer per hint; and no
+       reconnect loop of IoT Core connections and authorizer Lambda runs.

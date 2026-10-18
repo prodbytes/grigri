@@ -306,15 +306,23 @@ and the app also polls, only what's on screen, as a safety net:
 - after signing in: my profile, then my plans, my requests, the requests
   waiting for me, the deck, notifications (and, for admins, everyone);
 - a tab, when I open it (Discover its deck, Chats every chat's latest
-  messages, Admin its list of everyone), and every **15 seconds** my plans,
-  requests to review and notifications, plus the open tab; every
-  **2 minutes** instead while the live connection is up;
+  messages, Admin its list of everyone, Profile my Premium and its
+  prices), and every **15 seconds** my plans, requests to review and
+  notifications, plus the open tab; every **2 minutes** instead while the
+  live connection is up. While another screen covers the tabs (a chat, a
+  plan, a dialog), the open tab's part waits; if it was due meanwhile, it
+  runs once when that screen closes;
+- on coming back to the foreground, the same at once (and my Premium if
+  the app opened Stripe's Checkout or portal, or the App Store's
+  subscriptions, since, or the profile is on screen);
 - an open **chat every 3 seconds**, asking only for messages after the
   last one it has; every **minute** instead while the live connection is
-  up;
+  up; at once on coming back to the foreground; and when something else
+  (a hint, Chats) fetched it meanwhile, its count starts over;
 - on a live update's hint, just what it names (a chat, requests,
   notifications, my plans), and after the live connection comes back from
-  a drop, my plans, requests, notifications and loaded chats;
+  a drop in the foreground, my plans, requests, notifications and loaded
+  chats;
 - a plan's screen and chat load the plan (and its open requests) when
   they open.
 
