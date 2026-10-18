@@ -451,8 +451,14 @@ Resources:
       MemorySize: 256
       Timeout: 10
       Role: !GetAtt FunctionRole.Arn
+      # JSON logs, so Lambda's own START/END/REPORT lines (INFO) are
+      # dropped (SystemLogLevel WARN): most of what the log groups took in.
+      # The app's lines all stay (console.log is INFO, console.error ERROR).
       LoggingConfig:
         LogGroup: !Ref LogGroup
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
       Environment:
         Variables:
           STAGE: !Ref Stage
@@ -559,6 +565,9 @@ Resources:
       Role: !GetAtt ScorerRole.Arn
       LoggingConfig:
         LogGroup: !Ref ScorerLogGroup
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
       Environment:
         Variables:
           STAGE: !Ref Stage
@@ -576,8 +585,9 @@ Resources:
   # Its own small function and role: it reads sessions and the subject's
   # climber id from the table (and slides a session, as any use does), and
   # nothing else. Invoked by IoT Core when the app connects, then once an
-  # hour per connection (refreshAfterInSeconds), so it costs a few cents
-  # per thousand people-hours online at most (specs/backend.md, Cost).
+  # hour per connection (refreshAfterInSeconds), so it costs under a tenth
+  # of a cent per thousand people-hours online (its Lambda time and table
+  # reads, before the free tier; specs/backend.md, Cost).
   AuthorizerLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
@@ -650,6 +660,9 @@ Resources:
       Role: !GetAtt AuthorizerRole.Arn
       LoggingConfig:
         LogGroup: !Ref AuthorizerLogGroup
+        LogFormat: JSON
+        ApplicationLogLevel: INFO
+        SystemLogLevel: WARN
       Environment:
         Variables:
           STAGE: !Ref Stage

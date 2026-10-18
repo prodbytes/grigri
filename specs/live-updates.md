@@ -5,8 +5,8 @@ request, an answer, a plan edit) instead of asking every few seconds. It
 keeps one **MQTT over WebSocket** connection to **AWS IoT Core** while
 it's in the foreground; the API publishes a tiny **hint** to each affected
 climber's topic after a change, and the app refetches what the hint names
-through the API. Polling stays as a slow safety net. Costs:
-[backend.md](backend.md#cost).
+through the API. Polling stays as a slow safety net. Costs, keep-alive
+pings included: [backend.md](backend.md#live-updates-cost).
 
 ## Hints, not data
 
