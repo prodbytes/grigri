@@ -1945,3 +1945,11 @@ spec.
        [README](README.md) point to it.
      - Cost: Play's one-time $25 registration (already paid); nothing
        running.
+
+113. **Fix App Store Connect's ITMS-90683 warning on build 0.2.202610181541:
+     missing `NSLocationAlwaysAndWhenInUseUsageDescription`.**
+     - iOS `Info.plist` adds the key with a purpose string saying the app
+       only uses location while open. geolocator references the "always"
+       location API, so Apple requires the string even though the app only
+       requests when-in-use access ([matching](matching.md)).
+     - Cost: none.

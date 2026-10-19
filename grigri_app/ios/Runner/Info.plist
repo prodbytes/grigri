@@ -10,6 +10,8 @@
 	<string>Choose a photo of yourself or your gear for your profile, or a photo or video to send to a plan's chat.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Set where you climb, to see plans near you first. Kept to about 1 km, and only you see it.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Set where you climb, to see plans near you first. Grigri only uses your location while it's open, kept to about 1 km, and only you see it.</string>
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_IOS_CLIENT_ID)</string>
 	<key>CFBundleURLTypes</key>
