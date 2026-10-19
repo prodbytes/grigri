@@ -1919,3 +1919,19 @@ spec.
        a scan. No new resource: the same table, gsi1, Lambda and IoT Core
        as plan chats, the cheapest layout that still lists the chats
        newest first.
+
+## 2026-10-19
+
+111. **Check the publication status on Apple and Google.** (While
+     checking, the 0.2.202610181541 deploys turned out to have failed.)
+     - Both Deploy runs failed at the site stack (`grigri-web`): the
+       deploy roles couldn't create the web app files' new cache policy
+       (#109's `SiteFilesCachePolicy`). The API stack had already
+       updated; the site and app stayed on 0.2.202610171650.
+     - [Deploy](deploy.md): the deploy roles
+       ([github-deploy.yaml](../grigri_infra/github-deploy.yaml)) may
+       create, update and delete cache policies, unscoped by stage like
+       response headers policies (they take no tags). An administrator
+       redeploys `grigri-github-deploy` once, then the Deploy runs are
+       re-run.
+     - Cost: none (IAM).

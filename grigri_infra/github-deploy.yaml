@@ -496,10 +496,11 @@ Resources:
                   - cloudfront:CreateFunction
                   - cloudfront:CreateOriginAccessControl
                   - cloudfront:CreateResponseHeadersPolicy
+                  - cloudfront:CreateCachePolicy
                 Resource: '*'
-              # Origin access controls and response headers policies have
-              # only IDs and take no tags: not separated by stage (see
-              # specs/deploy.md).
+              # Origin access controls, response headers policies and cache
+              # policies have only IDs and take no tags: not separated by
+              # stage (see specs/deploy.md).
               - Sid: CloudFrontUntaggable
                 Effect: Allow
                 Action:
@@ -507,9 +508,12 @@ Resources:
                   - cloudfront:DeleteOriginAccessControl
                   - cloudfront:UpdateResponseHeadersPolicy
                   - cloudfront:DeleteResponseHeadersPolicy
+                  - cloudfront:UpdateCachePolicy
+                  - cloudfront:DeleteCachePolicy
                 Resource:
                   - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:origin-access-control/*
                   - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:response-headers-policy/*
+                  - !Sub arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:cache-policy/*
               # Functions by name (${AWS::StackName}-app-index).
               - Sid: CloudFrontFunctions
                 Effect: Allow
