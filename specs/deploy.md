@@ -136,8 +136,8 @@ stage's tables' items, its function logs, photo uploads and reading
 GriGri Pics' catalog) on them, so a
 deploy can't make a role more powerful than that. It can't remove a
 boundary, change the artifact buckets' settings, or touch the photos
-buckets' objects. Origin access controls, response headers policies and
-HTTP APIs have only IDs (no names or tags to scope by), so they can't be
+buckets' objects. Origin access controls, response headers policies,
+cache policies and HTTP APIs have only IDs (no names or tags to scope by), so they can't be
 separated by stage. The RC seed is the only invoke allowed
 (`grigri-rc-api`). Repository variables: `AWS_DEPLOY_ROLE_ARN`,
 `AWS_DEPLOY_RC_ROLE_ARN`, `HOSTED_ZONE_ID`, `GOOGLE_WEB_CLIENT_ID`
