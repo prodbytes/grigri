@@ -120,6 +120,10 @@ always in the plural, "partners" (a plan's group), in every language.
   policy and support pages, the version strings, `make ipa`, and the
   owner's checklist (membership, App Store Connect, App Privacy, age
   rating, store copy, review notes, TestFlight).
+- [Google Play](play-store.md): shipping the Android app on Google
+  Play: the upload key, release signing, `make aab`, and the owner's
+  checklist (phone verification, the app, Play App Signing and Google
+  sign-in, listing, app content, the closed test before production).
 - [API](api.md): the backend's contract, which the app codes against.
 - [Deploy](deploy.md): the web app at https://grigri.nu01.com and the
   release candidate at https://rc.grigri.nu01.com.
