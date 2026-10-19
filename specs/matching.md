@@ -44,7 +44,10 @@ person, and a plan can take a whole group.
     when the device can't tell (no location service, permission refused,
     no fix within 15 s). A location I already have is never replaced.
     Android declares `ACCESS_COARSE_LOCATION`, iOS
-    `NSLocationWhenInUseUsageDescription`, and the web app's
+    `NSLocationWhenInUseUsageDescription` (and
+    `NSLocationAlwaysAndWhenInUseUsageDescription`, which App Store
+    Connect requires because geolocator links the "always" API; the app
+    only ever asks for when-in-use access), and the web app's
     `Permissions-Policy` allows `geolocation=(self)` ([deploy](deploy.md)).
     I can change my location from the **Profile** tab itself
     ([screens](screens.md)), saved at once, or in the profile editor
