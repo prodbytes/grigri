@@ -4,8 +4,8 @@ The app is built with Flutter 3.47 for Android, iOS and the web.
 
 | | Android | iOS | Web |
 |---|---|---|---|
-| Built by | `make android` (release APK) | `make ios` (unsigned unless `IOS_CODESIGN=1`); `make ipa` for App Store Connect | `make web` |
-| Released as | `grigri-<tag>-android.apk` | `grigri-<tag>-ios-unsigned.zip`; the App Store ([app-store.md](app-store.md)) | `grigri-<tag>-web.zip`, and [deployed](deploy.md) |
+| Built by | `make android` (release APK); `make aab` for Google Play | `make ios` (unsigned unless `IOS_CODESIGN=1`); `make ipa` for App Store Connect | `make web` |
+| Released as | `grigri-<tag>-android.apk`; Google Play ([play-store.md](play-store.md)) | `grigri-<tag>-ios-unsigned.zip`; the App Store ([app-store.md](app-store.md)) | `grigri-<tag>-web.zip`, and [deployed](deploy.md) |
 
 App IDs: `com.nu01.grigri` (Android application ID and iOS bundle ID).
 The app is named **Grigri** everywhere.
@@ -48,8 +48,10 @@ favicon of the site root's redirect page.
 are unsigned (CI's are). `bash scripts/flutter-run.sh -d <iPhone id>
 --release` builds, signs and installs it.
 
-The Android release APK is signed with the debug key until a release key
-is set up.
+Release builds are signed with Google Play's upload key when
+`grigri_app/android/key.properties` is there (`make aab`, the bundle for
+Play), and with the debug key otherwise (local APKs, and the Release
+workflow's APK); see [play-store.md](play-store.md).
 
 **Sign in with Apple** ([sign-in](sign-in.md#apple)), on every platform.
 On iOS, the

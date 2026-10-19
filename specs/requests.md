@@ -1935,3 +1935,13 @@ spec.
        redeploys `grigri-github-deploy` once, then the Deploy runs are
        re-run.
      - Cost: none (IAM).
+
+112. **Publish on the Apple and Google stores.**
+     - [Google Play](play-store.md), new: an upload key (in the private
+       `env.local/`, backed up in setec-astronomy), release signing with
+       it from a git-ignored `key.properties` (debug otherwise), and
+       `make aab`, the signed release bundle; the owner's checklist in
+       Play Console. [Platforms](platforms.md) and the
+       [README](README.md) point to it.
+     - Cost: Play's one-time $25 registration (already paid); nothing
+       running.

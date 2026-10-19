@@ -2,8 +2,9 @@
 # Builds the app binaries. Run through the Makefile (`make`, `make web`, ...)
 # or directly: `bash scripts/make.sh <target>...`.
 #
-# Targets: web, android, ios, ipa (a signed release archive for App Store
-# Connect; macOS only), all (every platform this host can build; never
+# Targets: web, android, aab (the release bundle for Google Play, signed
+# with the upload key in grigri_app/android/key.properties), ios, ipa (a
+# signed release archive for App Store Connect; macOS only), all (every platform this host can build; never
 # ipa), clean. Settings, from the environment or `make VAR=value`:
 #   MODE          release (default), profile or debug
 #   IOS_CODESIGN  1 to sign the iOS build (needs a signing team in Xcode);
@@ -58,6 +59,16 @@ build() {
       flutter build apk "--$MODE" "${BUILD_ARGS[@]}"
       echo "==> android: grigri_app/build/app/outputs/flutter-apk/app-$MODE.apk"
       ;;
+    aab)
+      # For Google Play: always release, and never with the debug key
+      # (specs/play-store.md).
+      if [[ ! -f android/key.properties ]]; then
+        echo "error: no android/key.properties: Play's upload key is needed (specs/play-store.md)" >&2
+        return 1
+      fi
+      flutter build appbundle --release "${BUILD_ARGS[@]}"
+      echo "==> aab: grigri_app/build/app/outputs/bundle/release/app-release.aab (upload in Play Console)"
+      ;;
     ios)
       check_ios_version || return 1
       local sign=--no-codesign
@@ -92,7 +103,7 @@ check_ios_version() {
 [[ $# -gt 0 ]] || set -- all
 for arg in "$@"; do
   case "$arg" in
-    web | android | ios | ipa) build "$arg" ;;
+    web | android | aab | ios | ipa) build "$arg" ;;
     all)
       for target in web android ios; do
         if can_build "$target"; then
@@ -103,6 +114,6 @@ for arg in "$@"; do
       done
       ;;
     clean) flutter clean ;;
-    *) echo "error: unknown target '$arg' (web, android, ios, ipa, all, clean)" >&2; exit 2 ;;
+    *) echo "error: unknown target '$arg' (web, android, aab, ios, ipa, all, clean)" >&2; exit 2 ;;
   esac
 done
