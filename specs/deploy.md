@@ -98,7 +98,7 @@ browser and the app, so it never passes for production.
 CloudFront adds HSTS, `nosniff`, `Referrer-Policy`, `X-Frame-Options: DENY`
 and a Content Security Policy:
 
-- `/app*`: scripts from the site and CanvasKit
+- `/app/*` and `/app`: scripts from the site and CanvasKit
   (`www.gstatic.com/flutter-canvaskit/`) with `'wasm-unsafe-eval'`, inline
   styles (Flutter injects them), fonts from `fonts.gstatic.com`, Google
   Identity Services (`accounts.google.com/gsi/`: script, style, frame and
@@ -161,7 +161,7 @@ By hand, with admin credentials: `TAG=0.1.<Z>-GA bash scripts/deploy.sh`
 
 ## Caching
 
-The index page (`/`) and the web app (`/app*`) are uploaded with
+The index page (`/`) and the web app (`/app/*`, `/app`) are uploaded with
 `Cache-Control: no-cache`: browsers revalidate every file each time the
 app opens (~35 files), so they never run a stale build. CloudFront keeps
 them anyway, with the site's own cache policy (`SiteFilesCachePolicy`:

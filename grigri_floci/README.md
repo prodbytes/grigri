@@ -12,7 +12,7 @@ own dev servers:
 | Path | Origin |
 |------|--------|
 | default (`/`, anything else) | `grigri_index`, Python `http.server` (`INDEX_PORT`, 2113): `/` is the landing page |
-| `/app*` | Flutter dev server, `flutter run -d web-server --base-href /app/` (`FLUTTER_WEB_PORT`, 7189) |
+| `/app/*`, `/app` | Flutter dev server, `flutter run -d web-server --base-href /app/` (`FLUTTER_WEB_PORT`, 7189) |
 | `/api/*` | The local API: Floci's HTTP API `grigri` (`grigri.execute-api.localhost.floci.io`), its Lambda and table |
 | `/photos/*` | Floci's S3 bucket `grigri-local-photos` (objects under `photos/`) |
 

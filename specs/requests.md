@@ -1953,3 +1953,11 @@ spec.
        location API, so Apple requires the string even though the app only
        requests when-in-use access ([matching](matching.md)).
      - Cost: none.
+
+114. **Fix the issues found in TabCam (2026-10-21): the web app's
+     CloudFront path.** The site's web app behavior was the prefix `/app*`,
+     which also takes `/apple-touch-icon.png`, `/apps…` and the like from
+     the index (and locally sends them to the Flutter dev server). It's now
+     `/app/*` plus `/app` (which the function redirects to `/app/`), in
+     `site.yaml` and the local Floci CloudFront alike. See
+     [deploy](deploy.md). Cost: none (one more cache behavior).

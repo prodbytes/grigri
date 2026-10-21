@@ -506,8 +506,22 @@ Resources:
           CachePolicyId: !Ref SiteFilesCachePolicy
           ResponseHeadersPolicyId: !Ref IndexHeadersPolicy
         CacheBehaviors:
-          # The Flutter web app, built with --base-href /app/
-          - PathPattern: /app*
+          # The Flutter web app, built with --base-href /app/: /app/* and
+          # /app itself (which the function redirects to /app/), never the
+          # prefix /app*, which would take /apple-touch-icon.png, /apps… and
+          # the like from the index too.
+          - PathPattern: /app/*
+            TargetOriginId: site
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            CachePolicyId: !Ref SiteFilesCachePolicy
+            ResponseHeadersPolicyId: !Ref AppHeadersPolicy
+            FunctionAssociations:
+              - EventType: viewer-request
+                FunctionARN: !GetAtt AppIndexFunction.FunctionMetadata.FunctionARN
+          - PathPattern: /app
             TargetOriginId: site
             ViewerProtocolPolicy: redirect-to-https
             Compress: true
