@@ -2,7 +2,7 @@
 # Creates the Grigri CloudFront distribution in Floci. It only routes, as
 # the deployed CloudFront would; the index and the app run on their own dev
 # servers:
-#   /app*     -> Flutter dev server  (http://$GRIGRI_ORIGIN_HOST:$FLUTTER_WEB_PORT)
+#   /app/*, /app -> Flutter dev server  (http://$GRIGRI_ORIGIN_HOST:$FLUTTER_WEB_PORT)
 #   /api/*    -> the local API       (Floci's HTTP API, from 05-api.sh)
 #   /photos/* -> the photos bucket   (Floci's S3, grigri-local-photos)
 #   /pics/*   -> GriGri Pics' bucket (Floci's S3, grigri-local-pics)
@@ -68,12 +68,12 @@ behavior() {
 }
 
 origin_count=2
-behavior_count=1
+behavior_count=2
 api_origins=""
 api_behaviors=""
 if [ -n "$API_HOST" ]; then
   origin_count=5
-  behavior_count=4
+  behavior_count=5
   # The API: Floci itself, on its own port, over HTTP (inside the
   # container). Photos and GriGri Pics: Floci's in-process S3.
   api_origins=$(printf ', {"Id": "api", "DomainName": "%s", "CustomOriginConfig": {"HTTPPort": 4566, "HTTPSPort": 443, "OriginProtocolPolicy": "http-only"}}, {"Id": "photos", "DomainName": "%s.s3.amazonaws.com", "S3OriginConfig": {"OriginAccessIdentity": ""}}, {"Id": "pics", "DomainName": "%s.s3.amazonaws.com", "S3OriginConfig": {"OriginAccessIdentity": ""}}' "$API_HOST" "$PHOTOS_BUCKET" "$PICS_BUCKET")
@@ -90,7 +90,8 @@ distribution=$(aws cloudfront create-distribution \
     \"Origins\": {\"Quantity\": $origin_count, \"Items\": [$(origin app "$WEB_PORT"), $(origin index "$INDEX_PORT")$api_origins]},
     \"DefaultCacheBehavior\": {$(behavior index)},
     \"CacheBehaviors\": {\"Quantity\": $behavior_count, \"Items\": [
-      {\"PathPattern\": \"/app*\", $(behavior app)}$api_behaviors
+      {\"PathPattern\": \"/app/*\", $(behavior app)},
+      {\"PathPattern\": \"/app\", $(behavior app)}$api_behaviors
     ]}
   }")
 

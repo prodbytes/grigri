@@ -39,7 +39,7 @@
     once, then cached in `grigri_api/pics/.cache`.
   - `4-floci`: [Floci](https://floci.io/) as the local CloudFront and the
     local AWS ([grigri_floci/](../grigri_floci), Docker, bound to
-    127.0.0.1): `/app*` to the web app, `/api/*` to the local API,
+    127.0.0.1): `/app/*` and `/app` to the web app, `/api/*` to the local API,
     `/photos/*` to the local photos bucket, `/pics/*` to the local GriGri
     Pics bucket, everything else to the index,
     as in production. Before it starts, `scripts/build-api.sh` builds the
