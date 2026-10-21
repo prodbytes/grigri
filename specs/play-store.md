@@ -42,9 +42,12 @@ The developer account is a **personal** one (nu01.com, identity verified
    uploads are signed with the upload key above).
 4. **Google sign-in**: Play re-signs the app with its app signing key, so
    Google sign-in on installs from Play needs Android OAuth clients
-   (Google Cloud project grigri-511416, package `com.nu01.grigri`) for
-   the **app signing key's SHA-1** (Play Console → Test and release →
-   App integrity) and the upload key's SHA-1. Without them, Google
+   (Google Cloud project grigri-511416, the web client's, package
+   `com.nu01.grigri`), one per key: the **app signing key's SHA-1** (Play
+   Console → Test and release → App integrity) and the upload key's SHA-1.
+   Google allows a package and SHA-1 in one client only, across all
+   projects: one made in another project by mistake must be deleted
+   first. Without them, Google
    sign-in fails on Play installs (Sign in with Apple still works).
 5. **Store listing**: the App Store's copy ([app-store.md](app-store.md#the-versions-page)):
    short description `Join a climbing plan` (80 characters at most), the
