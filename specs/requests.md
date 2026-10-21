@@ -1954,6 +1954,8 @@ spec.
        requests when-in-use access ([matching](matching.md)).
      - Cost: none.
 
+## 2026-10-21
+
 114. **Fix the issues found in TabCam (2026-10-21): the web app's
      CloudFront path.** The site's web app behavior was the prefix `/app*`,
      which also takes `/apple-touch-icon.png`, `/apps…` and the like from
@@ -1961,3 +1963,10 @@ spec.
      `/app/*` plus `/app` (which the function redirects to `/app/`), in
      `site.yaml` and the local Floci CloudFront alike. See
      [deploy](deploy.md). Cost: none (one more cache behavior).
+
+115. **Fix the issues found in TabCam: the specs.** [Platforms](platforms.md)
+     no longer says Android needs no camera permission (the `camera`
+     plugin merges `CAMERA`, which image_picker then asks for) or "the
+     debug key's for now": every signing key needs its own Android OAuth
+     client in grigri-511416. [Play](play-store.md) says one client per
+     key, and that Google allows a package and SHA-1 in one client only.

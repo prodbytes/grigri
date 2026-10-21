@@ -68,15 +68,20 @@ Android, `AndroidManifest.xml` declares sign_in_with_apple's
 loads Apple's JS, which the site's CSP allows.
 
 **Google sign-in** ([sign-in](sign-in.md#per-platform)): Android needs no
-app setting (the Google Cloud project's Android OAuth client for
-`com.nu01.grigri` and the signing key's SHA-1; the debug key's for now);
+app setting, but each key that signs an installed app needs its own
+Android OAuth client for `com.nu01.grigri` and that key's SHA-1, in the
+web client's Google Cloud project (grigri-511416; Google refuses an
+Android client in another project, error 28444): the debug key's, the
+upload key's and Play's app signing key's ([Play](play-store.md));
 iOS takes its client ID and URL scheme from `Info.plist`, filled from
 `Private.xcconfig` like the team; the web renders Google's button, which
 the site's CSP allows.
 
 **Photos** (profile and gear, and the chat's photos and videos) come
 from [image_picker](https://pub.dev/packages/image_picker): Android's photo
-picker and camera app (no permissions to declare), iOS's with
+picker and camera app (image_picker asks for the camera when it's
+declared: the `camera` plugin merges `CAMERA` and `RECORD_AUDIO` into the
+manifest for the route finder), iOS's with
 `NSCameraUsageDescription`, `NSPhotoLibraryUsageDescription` and, for the
 sound of recorded videos, `NSMicrophoneUsageDescription` in `Info.plist`,
 and a file chooser on the web (the site's CSP already allows `data:` and
