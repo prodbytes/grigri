@@ -1245,11 +1245,16 @@ export class Api {
       if (settings.every === 0) return { ads: [], adEvery: 0, adOwners: {} };
       const owners = [...new Set(approved.map((a) => a.ownerId))];
       const [skipped, blocked] = await Promise.all([this.store.skippedAdIds(s.me.id), this.blockedEmails()]);
-      // Owners still Premium in rbacr (each answer kept a minute).
+      // Owners still Premium in rbacr: those granted it directly, from one
+      // list of its holders (kept a minute); the rest (an admin's implied
+      // Premium, a root, a lapsed one) asked one by one, a few at a time,
+      // so a cold function with many advertisers doesn't flood rbacr.
+      const granted = await this.premiumHolders();
       const premium = new Set<string>();
-      await Promise.all(owners.map(async (o) => {
-        if (await this.isPremium(emails[o])) premium.add(o);
-      }));
+      await eachLimited(owners, RBACR_PARALLEL, async (o) => {
+        const email = emails[o]?.toLowerCase();
+        if ((email && granted.has(email)) || (await this.isPremium(email))) premium.add(o);
+      });
       // Demo owners (the showcase's sample advertiser) advertise without Premium.
       const ok = (ownerId: string) =>
         (premium.has(ownerId) || climbers[ownerId]?.demo === true) && climbers[ownerId] !== undefined && !blocked.has(emails[ownerId] ?? '') && !apart.has(ownerId);
@@ -1647,6 +1652,17 @@ export class Api {
     if (blocked) await grants.grant(email, this.blockedRole);
     else await grants.revoke(email, this.blockedRole);
     return { blocked };
+  }
+
+  /** Who holds Premium by a direct grant, by email; none when rbacr can't say (logged): then each is asked. */
+  private async premiumHolders(): Promise<Set<string>> {
+    if (!this.deps.grants) return new Set();
+    try {
+      return await this.deps.grants.holders(this.premiumRole);
+    } catch (e) {
+      console.error(JSON.stringify({ level: 'warn', msg: 'rbacr premium list failed', error: String(e) }));
+      return new Set();
+    }
   }
 
   /** Who's blocked (rbacr's role), by email; none when rbacr can't say (logged). */
@@ -2242,6 +2258,18 @@ export function whereFrom(query: Record<string, string | undefined>): Where {
     where.lon = lon;
   }
   return where;
+}
+
+/** The most rbacr lookups one request has in flight: rbacr serves 20 at once, for every app. */
+const RBACR_PARALLEL = 4;
+
+/** Runs `fn` on each item, at most `limit` at a time. */
+async function eachLimited<T>(items: T[], limit: number, fn: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) await fn(items[next++]!);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
 }
 
 /** Premium: rbacr's premium role (the stage's), or root (roots hold every role). */

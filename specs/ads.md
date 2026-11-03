@@ -185,8 +185,12 @@ them from memory, patched from the change log the plans already read
 (an approved, rejected, edited or deleted ad, a new setting, an owner's
 new name or photo show on the next deck, as before), so an ad's only
 read per deck is one query of the ads I skipped (0.5 read unit, about
-$0.00000006); owners' Premium is still asked of rbacr (each answer kept
-a minute). Each ad write, and a change of the setting, adds a log entry
+$0.00000006); owners' Premium is still rbacr's: those granted it
+directly come from one list of the role's holders (kept a minute), and
+only the others (an admin's implied Premium, a root, a lapsed owner) are
+asked one by one, each answer kept a minute, at most 4 at a time, so a
+cold function with many advertisers can't flood rbacr (which serves 20
+requests at once, for every app). Each ad write, and a change of the setting, adds a log entry
 (1 write unit, $0.000000625). A
 skip is one write ($0.000000625). The skips sit in DynamoDB rather than
 on the device so they hold on every device I use; they cost a few bytes

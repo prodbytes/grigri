@@ -214,6 +214,37 @@ describe('ads', () => {
     expect((await call(ben, 'GET', '/api/discover')).ads).toEqual([]);
   });
 
+  it("advertisers' Premium comes from one list of its holders; the rest asked a few at a time", async () => {
+    await climber(ben, false);
+    await call(root, 'GET', '/api/me');
+    // Twelve paying advertisers, an admin (Premium implied) and a lapsed one.
+    const owners = [...Array.from({ length: 12 }, (_, i) => who(`adv${i}`)), who('boss'), who('gone')];
+    rbacr.give('boss@example.com', 'admin');
+    for (const o of owners) {
+      await climber(o, !['boss', 'gone'].some((n) => o.email!.startsWith(n)));
+      rbacr.give(o.email!, 'premium');
+      const { ad } = await call(o, 'POST', '/api/ads', { text: 'Gear', link: 'https://gear.example.com' });
+      await call(root, 'POST', `/api/admin/ads/${ad.id}/approve`);
+    }
+    rbacr.grants.get('boss@example.com')!.delete('premium');
+    rbacr.grants.get('gone@example.com')!.delete('premium');
+    await call(root, 'PUT', '/api/admin/ads/settings', { every: 10 });
+
+    rbacr.lookups = 0;
+    const deck = await call(ben, 'GET', '/api/discover');
+    expect(new Set(deck.ads.map((a: { ownerId: string }) => a.ownerId)).size).toBe(13);
+    // Only the admin and the lapsed one were asked about (the caller too, maybe).
+    expect(rbacr.lookups).toBeLessThanOrEqual(3);
+
+    // Without the list, everyone is asked, never more than 4 at once.
+    rbacr.failHolders = true;
+    rbacr.lookups = 0;
+    rbacr.maxInFlight = 0;
+    expect((await call(ben, 'GET', '/api/discover')).ads).toHaveLength(13);
+    expect(rbacr.lookups).toBeGreaterThanOrEqual(14);
+    expect(rbacr.maxInFlight).toBeLessThanOrEqual(4);
+  });
+
   it('an ad I skip never shows to me again; others still see it', async () => {
     await climber(ada);
     await climber(ben, false);
