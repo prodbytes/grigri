@@ -52,12 +52,15 @@ each identity holds in each system. Grigri's system in rbacr is `grigri`.
   [grigri_api/src/rbacr.ts](../grigri_api/src/rbacr.ts): one client per
   function instance, shared by the admin check, the role lookups and the
   grants, so a grant drops what that instance kept about the person.
-  Answers are kept a minute (a "yes" never past its grant's end), errors
-  never (rbacr's rule C6: rbacr not knowing the `grigri` system is "no",
-  asked again next time); rbacr's error answers and outages are logged.
-- **Admin** (the Admin tab, [admin.md](admin.md)) is rbacr's too: the API asks
-  rbacr whether my verified email holds the `admin` role of the `grigri`
-  system (roots do), only on the requests that need it (admin routes,
+  The admin check and the role lookups read the same answer (a person's
+  roles in every system, `POST /api/roles`), so one request per person
+  serves both, and lookups asked at once (`GET /api/me` asks both
+  together) share one request. Answers are kept a minute, errors
+  never (rbacr's rule C6: an error is "no", asked again next time);
+  rbacr's error answers and outages are logged.
+- **Admin** (the Admin tab, [admin.md](admin.md)) is rbacr's too: the API reads
+  from my roles whether my verified email holds the `admin` role of the
+  `grigri` system, or is a root, only on the requests that need it (admin routes,
   `GET /api/me`, the deck's match scores, deleting someone else's plan
   photo, route or ad), once per request; `blocked` is checked on every
   request but signing out, alongside the profile read. rbacr needs the `grigri` system and its `admin` role

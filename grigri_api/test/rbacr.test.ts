@@ -5,29 +5,43 @@ const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 
 describe('rbacr admin check', () => {
-  it('asks rbacr about grigri\'s admin role with the root token', async () => {
-    const fetch = vi.fn(async () => json(200, { allowed: true }));
+  const roles = (grigri: string[], globalRoles: string[] = []) => json(200, { email: 'a@example.com', globalRoles, roles: { grigri, other: ['admin'] } });
+
+  it("asks rbacr for the person's roles with the root token: grigri's admin, or a root", async () => {
+    const fetch = vi.fn(async () => roles(['admin', 'premium']));
     const isAdmin = rbacrAdminCheck({ url: 'https://rbacr.example.com/', token: 'rbacr_abc', fetch });
     expect(await isAdmin('Admin@Example.com')).toBe(true);
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe('https://rbacr.example.com/api/check');
+    expect(url).toBe('https://rbacr.example.com/api/roles');
     expect(init.method).toBe('POST');
     expect((init.headers as Record<string, string>).authorization).toBe('Bearer rbacr_abc');
-    expect(JSON.parse(init.body as string)).toEqual({ email: 'admin@example.com', systemId: 'grigri', role: 'admin' });
+    expect(JSON.parse(init.body as string)).toEqual({ email: 'admin@example.com' });
+    expect(await rbacrAdminCheck({ url: 'https://r', token: 't', fetch: async () => roles([], ['root']) })('a@example.com')).toBe(true);
+    // Another system's admin isn't Grigri's.
+    expect(await rbacrAdminCheck({ url: 'https://r', token: 't', fetch: async () => roles(['premium']) })('a@example.com')).toBe(false);
   });
 
-  it('caches answers for a minute, per email', async () => {
+  it('caches answers for a minute, per email, shared with the roles lookup', async () => {
     let now = 0;
-    const fetch = vi.fn(async () => json(200, { allowed: false }));
-    const isAdmin = rbacrAdminCheck({ url: 'https://r', token: 't', fetch, clock: () => now });
+    const fetch = vi.fn(async () => roles([]));
+    const config = { url: 'https://r', token: 't', fetch, clock: () => now };
+    const isAdmin = rbacrAdminCheck(config);
     await isAdmin('a@example.com');
     await isAdmin('A@example.com');
+    expect(await rbacrRoles(config)('a@example.com')).toEqual([]);
     expect(fetch).toHaveBeenCalledTimes(1);
     await isAdmin('b@example.com');
     expect(fetch).toHaveBeenCalledTimes(2);
     now = 60_001;
     await isAdmin('a@example.com');
     expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('asked at once with the roles lookup (GET /api/me), rbacr is asked once', async () => {
+    const fetch = vi.fn(async () => roles(['admin']));
+    const config = { url: 'https://r', token: 't', fetch };
+    expect(await Promise.all([rbacrAdminCheck(config)('a@example.com'), rbacrRoles(config)('a@example.com')])).toEqual([true, ['admin']]);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
   it('fails closed, and never caches a failure', async () => {
@@ -39,21 +53,12 @@ describe('rbacr admin check', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
     const throwing = rbacrAdminCheck({ url: 'https://r', token: 't', fetch: async () => { throw new Error('timeout'); } });
     expect(await throwing('a@example.com')).toBe(false);
-    // A 200 without allowed: true isn't a yes.
-    expect(await rbacrAdminCheck({ url: 'https://r', token: 't', fetch: async () => json(200, { allowed: 'yes' }) })('a@example.com')).toBe(false);
-  });
-
-  it('rbacr not knowing grigri (404) is no, asked again next time (errors are never kept, C6)', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    const fetch = vi.fn(async () => json(404, { error: 'no such system' }));
-    const isAdmin = rbacrAdminCheck({ url: 'https://r', token: 't', fetch });
-    expect(await isAdmin('a@example.com')).toBe(false);
-    expect(await isAdmin('a@example.com')).toBe(false);
-    expect(fetch).toHaveBeenCalledTimes(2);
+    // A 200 that isn't a role list isn't a yes.
+    expect(await rbacrAdminCheck({ url: 'https://r', token: 't', fetch: async () => json(200, { allowed: true }) })('a@example.com')).toBe(false);
   });
 
   it('without a token or URL nobody is an admin, and rbacr is never called', async () => {
-    const fetch = vi.fn(async () => json(200, { allowed: true }));
+    const fetch = vi.fn(async () => roles(['admin']));
     expect(await rbacrAdminCheck({ url: 'https://r', token: ' ', fetch })('a@example.com')).toBe(false);
     expect(await rbacrAdminCheck({ url: '', token: 't', fetch })('a@example.com')).toBe(false);
     expect(fetch).not.toHaveBeenCalled();
