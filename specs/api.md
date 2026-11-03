@@ -76,14 +76,16 @@ themselves, and the API filters objectionable words
   request: the
   session's verified email (`email_verified` true when the session was
   made) holds the `admin` role of rbacr's `grigri` system (rbacr's roots
-  hold every role, so they're admins too). The API asks
-  `POST <RbacrUrl>/api/check` `{email, systemId: "grigri", role: "admin"}`
-  with an rbacr root's API token (template parameter `RbacrToken`, from
-  the repository secret `GRIGRI_RBACR_TOKEN`), with a 2 s timeout, and
-  keeps each answer for 60 s per Lambda instance, so a granted or revoked
-  role shows within a minute. It fails closed: no token, an error or a
-  timeout means not an admin (and isn't kept); rbacr not knowing the
-  `grigri` system or its `admin` role means nobody is. Both stages ask
+  hold every role, so they're admins too). The API reads it from my
+  [roles](roles.md), the same kept answer of `POST <RbacrUrl>/api/roles`
+  `{email}` (no system), so a request needing both (`GET /api/me`) asks
+  rbacr once. It asks with an rbacr root's API token (template parameter
+  `RbacrToken`, from the repository secret `GRIGRI_RBACR_TOKEN`), with a
+  3 s timeout, and keeps each answer for 60 s per Lambda instance, so a
+  granted or revoked role shows within a minute. It fails closed: no
+  token, an error, a timeout or an answer that isn't a role list means
+  not an admin (and isn't kept); rbacr not knowing the `grigri` system or
+  its `admin` role means nobody but the roots is. Both stages ask
   production's rbacr (https://rbacr.nu01.com). Locally the API asks the
   local rbacr with `.env`'s `RBACR_TOKEN`, and in dev mode the header's
   (or `devUser`'s) email counts as verified.

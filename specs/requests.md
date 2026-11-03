@@ -1981,3 +1981,12 @@ spec.
      throttled (then the ads would leave the deck). Owners granted Premium
      directly now come from one list of its holders (kept a minute), and
      the rest are asked at most 4 at a time. See [ads](ads.md).
+
+117. **Use rbacr's cache properly, so the apps ask it less: merge
+     lookups that depend on the same answer.** `GET /api/me` asked rbacr
+     twice about the caller at once: their roles (`POST /api/roles`) and
+     whether they're an admin (`POST /api/check`). The admin check now
+     reads the same kept role list (`admin`, or a root), and rbacr-lib
+     0.1.2 has lookups asked at once share one request, so it's one
+     request per person a minute. See [roles](roles.md) and
+     [API](api.md).

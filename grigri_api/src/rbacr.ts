@@ -3,9 +3,9 @@
 // and the API asks it, and grants and revokes Premium and blocked, with an
 // rbacr API token owned by an rbacr root (only roots may ask about other
 // people, or grant). Calls go through rbacr's client library, rbacr-lib:
-// answers kept a minute (a "yes" never past its grant's end), failures
-// never; checks fail closed. One client per configuration, so a grant
-// drops what the same function instance kept about that person.
+// answers kept a minute, failures never, lookups asked at once sharing
+// one request; checks fail closed. One client per configuration, so a
+// grant drops what the same function instance kept about that person.
 import { RbacrClient } from 'rbacr-lib';
 
 export const RBACR_SYSTEM = 'grigri';
@@ -63,9 +63,16 @@ export function rbacrClient(config: RbacrConfig): RbacrClient | null {
   return client;
 }
 
-/** Whether a verified email is a Grigri admin: rbacr's `grigri` `admin` role (roots hold every role). Fails closed. */
+/**
+ * Whether a verified email is a Grigri admin: rbacr's `grigri` `admin`
+ * role, or a root. Read from the same kept role list as their roles
+ * (rbacrRoles), so a request needing both asks rbacr once. Fails closed.
+ */
 export function rbacrAdminCheck(config: RbacrConfig): AdminCheck {
-  return async (email) => rbacrClient(config)?.allows(email, RBACR_SYSTEM, ADMIN_ROLE) ?? false;
+  return async (email) => {
+    const roles = await rbacrClient(config)?.rolesOf(email, RBACR_SYSTEM);
+    return !!roles && (roles.includes(ADMIN_ROLE) || roles.includes('root'));
+  };
 }
 
 /**
