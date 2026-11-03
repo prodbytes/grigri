@@ -28,7 +28,24 @@ export class FakeRbacr {
     return [...new Set(held)].sort();
   }
 
-  readonly lookup: RolesLookup = async (email) => this.rolesOf(email);
+  /** How many role lookups were asked, and the most at once. */
+  lookups = 0;
+  maxInFlight = 0;
+  private inFlight = 0;
+  /** Holders lists fail (rbacr can't list grants): lookups only. */
+  failHolders = false;
+
+  readonly lookup: RolesLookup = async (email) => {
+    this.lookups++;
+    this.maxInFlight = Math.max(this.maxInFlight, ++this.inFlight);
+    try {
+      // A round trip: lookups asked together overlap.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      return this.rolesOf(email);
+    } finally {
+      this.inFlight--;
+    }
+  };
 
   readonly api: RoleGrants = {
     grant: async (email, role, endsAt) => {
@@ -43,6 +60,7 @@ export class FakeRbacr {
     },
     holders: async (role) => {
       this.check();
+      if (this.failHolders) throw new Error('rbacr answered 503');
       const now = this.clock().getTime();
       return new Set(
         [...this.grants].filter(([, roles]) => roles.has(role) && (roles.get(role) === null || Date.parse(roles.get(role)!) > now)).map(([email]) => email),

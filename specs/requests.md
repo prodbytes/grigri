@@ -1970,3 +1970,14 @@ spec.
      debug key's for now": every signing key needs its own Android OAuth
      client in grigri-511416. [Play](play-store.md) says one client per
      key, and that Google allows a package and SHA-1 in one client only.
+
+## 2026-11-03
+
+116. **Check rbacr's throttling alarm, and that Grigri uses rbacr's client
+     library properly (caching, cost, reliability).** rbacr-lib is used as
+     meant: one client per function instance, answers kept a minute. But a
+     deck asked rbacr about every ad owner at once: with many advertisers,
+     a cold function alone could pass rbacr's 20 requests at once and be
+     throttled (then the ads would leave the deck). Owners granted Premium
+     directly now come from one list of its holders (kept a minute), and
+     the rest are asked at most 4 at a time. See [ads](ads.md).
